@@ -206,9 +206,51 @@ market 前端和 client-core 是两个独立的 API 消费者，都通过 `packa
 
 ## 6. Client Core 架构
 
+### 6.0 路径隔离（测试关键设计）
+
+**所有路径必须可通过环境变量覆盖，严禁在代码中硬编码 `~/.agents/`、`~/.claude/`、`~/.codex/`。**
+
+| 环境变量 | 默认值 | 覆盖目标 |
+|----------|--------|---------|
+| `AAS_HOME` | `~/.agents` | 中央仓库根目录 |
+| `CLAUDE_CONFIG_DIR` | `~/.claude` | Claude 配置目录 |
+| `CODEX_CONFIG_DIR` | `~/.codex` | Codex 配置目录 |
+
+**`AASEngine` 构造函数接受可选的路径配置**：
+
+```typescript
+interface AASPaths {
+  aasHome: string          // 默认 process.env.AAS_HOME ?? '~/.agents'
+  claudeConfigDir: string  // 默认 process.env.CLAUDE_CONFIG_DIR ?? '~/.claude'
+  codexConfigDir: string   // 默认 process.env.CODEX_CONFIG_DIR ?? '~/.codex'
+}
+
+class AASEngine {
+  constructor(paths?: Partial<AASPaths>) { ... }
+  // ...
+}
+```
+
+**测试时使用隔离的临时目录**：
+
+```typescript
+// 测试文件中
+const tmpDir = await fs.mkdtemp('/tmp/aas-test-')
+const engine = new AASEngine({
+  aasHome: path.join(tmpDir, 'agents'),
+  claudeConfigDir: path.join(tmpDir, 'claude'),
+  codexConfigDir: path.join(tmpDir, 'codex'),
+})
+// 测试结束后清理 tmpDir
+```
+
+这样所有 sync 测试都在 `/tmp/aas-test-xxx/` 目录下进行，**不会触碰本机的任何真实配置**。
+
+---
+
 ### 6.1 本地目录结构
 
-`~/.agents/` 为**中央仓库（下载缓存 + 状态）**，各工具目录为**激活内容**。
+`~/.agents/`（或 `$AAS_HOME`）为**中央仓库（下载缓存 + 状态）**，各工具目录为**激活内容**。
 
 **版本策略（MVP）**：每个 slug 只保留当前安装版本，更新时直接覆盖，不支持回滚。版本历史由 market 服务端管理，本地只保存当前版本号用于更新检查。
 
