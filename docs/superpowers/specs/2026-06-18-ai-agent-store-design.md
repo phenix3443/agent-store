@@ -78,9 +78,13 @@ interface BaseItem {
 
 interface InstallHook {
   steps: Array<
-    | { type: 'script'; command: string }   // ⚠️ 安全注意：MVP 阶段信任所有脚本，后续需引入签名验证
+    | { type: 'script'; command: string }
+    //   ⚠️ 安全注意：MVP 阶段信任所有脚本，后续需引入签名验证
     | { type: 'config'; patch: Record<string, unknown> }
+    //   patch 写入 ~/.agents/<category>/<slug>/config.json（初始配置模板）
+    //   不直接修改工具配置，工具配置由 config/ 模块的 sync 负责
     | { type: 'file'; url: string; dest: string }
+    //   dest 是相对于 ~/.agents/<category>/<slug>/ 的路径
   >
 }
 // 示例：MCP 安装需要 file + config 两步
@@ -174,12 +178,16 @@ platform/
 ### 5.2 数据流
 
 ```
-Supabase DB (items, versions, publishers)   # reviews 表 MVP 阶段不建
-    ↑↓
-Next.js API Routes (/api/*)
-    ↑↓
-market 前端页面 ←──── packages/sdk ←──── client-core
+                    Supabase DB
+                    (items, versions, publishers)   # reviews 表 MVP 阶段不建
+                         ↑↓
+                  Next.js API Routes (/api/*)
+                    ↑↓              ↑↓
+          market 前端页面        client-core
+          (via packages/sdk)   (via packages/sdk)
 ```
+
+market 前端和 client-core 是两个独立的 API 消费者，都通过 `packages/sdk` 调用同一套 API Routes，互不串联。
 
 ### 5.3 Supabase 职责
 
@@ -232,6 +240,7 @@ market 前端页面 ←──── packages/sdk ←──── client-core
       "category": "skill",
       "version": "1.0.0",
       "installedAt": "2026-06-18T10:00:00Z",
+      "updatedAt": "2026-06-18T10:00:00Z",
       "compatibleWith": ["claude", "codex"],
       "enabledFor": {
         "claude": true,
@@ -243,6 +252,7 @@ market 前端页面 ←──── packages/sdk ←──── client-core
       "category": "mcp",
       "version": "0.3.1",
       "installedAt": "2026-06-18T11:00:00Z",
+      "updatedAt": "2026-06-18T11:00:00Z",
       "compatibleWith": ["claude"],
       "enabledFor": {
         "claude": true
@@ -268,11 +278,11 @@ aas install <slug>
     │           Provider/MCP：写入空 config.json，install 完成后提示用户运行 aas config <slug>
     │           registry.json 中 enabledFor 默认所有 compatibleWith 工具为 true
     │
-    └── Phase 2：sync（自动触发，对 enabledFor === true 的工具执行）
+    └── Phase 2：sync（自动触发，对 enabledFor === true 的工具执行，不做任何 I/O 交互）
                 │
-                ├── Provider → 写入工具的 providers 配置段，提示用户填写 configSchema 必填项
-                ├── Skill    → 复制 skill.md 到工具的 skills 目录，写入配置引用
-                └── MCP      → 复制 server 文件，写入工具的 mcp_servers 配置段
+                ├── Provider → 深度合并工具的 providers 配置段（config.json 为空时写占位值）
+                ├── Skill    → 复制 skill.md 到工具的 skills 目录，合并写入配置引用
+                └── MCP      → 复制 server 文件，合并写入工具的 mcp_servers 配置段
 ```
 
 ### 6.4 Sync 规则
