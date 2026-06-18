@@ -9,7 +9,13 @@ async function fetchReadme(url: string): Promise<string> {
   try {
     const res = await fetch(url, { next: { revalidate: 3600 } })
     if (!res.ok) return '_README not available._'
-    return res.text()
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.startsWith('text/')) return '_README not available._'
+    const contentLength = res.headers.get('content-length')
+    if (contentLength && parseInt(contentLength, 10) > 524288) return '_README not available._'
+    const text = await res.text()
+    if (text.length > 524288) return '_README not available._'
+    return text
   } catch {
     return '_README not available._'
   }

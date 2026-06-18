@@ -4,11 +4,25 @@ export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const githubUsername = user?.user_metadata['user_name'] as string | undefined
+  if (!githubUsername) {
+    return (
+      <main className="py-8">
+        <h1 className="text-2xl font-semibold text-ray-fg mb-4">Dashboard</h1>
+        <div className="flex h-32 items-center justify-center rounded-xl border border-ray-border bg-ray-surface-1">
+          <p className="text-ray-fg-muted">
+            GitHub username not found in your profile. Please sign out and sign in again.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   // Fetch items submitted by this user (status any, including pending/rejected)
   const { data: myItems } = await supabase
     .from('items')
     .select('id, slug, name, category, status, version, created_at, publishers!inner(name)')
-    .eq('publishers.slug', user?.user_metadata['user_name'] ?? '')
+    .eq('publishers.slug', githubUsername)
     .order('created_at', { ascending: false })
 
   const items = (myItems ?? []) as Array<{
