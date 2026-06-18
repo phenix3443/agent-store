@@ -39,7 +39,7 @@ export async function runList(
       e.category,
       updates.has(e.slug) ? `${SYMBOLS.update} ${updates.get(e.slug)} available` : '',
     ])
-    formatTable(headers, rows, WIDTHS).forEach(out)
+    formatTable(headers, rows, WIDTHS).forEach(line => out(line))
   } else {
     const WIDTHS = [20, 10, 8, 7, 10, 20]
     const headers = ['NAME', 'VERSION', 'CLAUDE', 'CODEX', 'TYPE', 'STATUS']
@@ -51,6 +51,6 @@ export async function runList(
       e.category,
       updates.has(e.slug) ? `${SYMBOLS.update} ${updates.get(e.slug)} available` : '',
     ])
-    formatTable(headers, rows, WIDTHS).forEach(out)
+    formatTable(headers, rows, WIDTHS).forEach(line => out(line))
   }
 }
