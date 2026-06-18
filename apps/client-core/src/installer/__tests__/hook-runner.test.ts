@@ -43,8 +43,8 @@ test('script step throws on non-zero exit', async () => {
 
 test('file step fetches URL and writes to dest', async () => {
   const bytes = new Uint8Array([0x7f, 0x45, 0x4c, 0x46])
-  globalThis.fetch = async (_url: string) =>
-    new Response(bytes, { status: 200 })
+  globalThis.fetch = (async (_url: string) =>
+    new Response(bytes, { status: 200 })) as typeof fetch
 
   await runHook([{ type: 'file', url: 'https://example.com/server', dest: 'server' }], tmpDir)
 
@@ -53,8 +53,8 @@ test('file step fetches URL and writes to dest', async () => {
 })
 
 test('file step throws on non-200 response', async () => {
-  globalThis.fetch = async (_url: string) =>
-    new Response('Not Found', { status: 404 })
+  globalThis.fetch = (async (_url: string) =>
+    new Response('Not Found', { status: 404 })) as typeof fetch
 
   await expect(
     runHook([{ type: 'file', url: 'https://example.com/server', dest: 'server' }], tmpDir)
