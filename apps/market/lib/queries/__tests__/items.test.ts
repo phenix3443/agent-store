@@ -64,32 +64,24 @@ test('getItems returns empty array on empty DB result', async () => {
   expect(data).toHaveLength(0)
 })
 
+function makeSlugMock(data: unknown, error: unknown = null) {
+  const terminal = { single: async () => ({ data, error }) }
+  const limited = { limit: () => terminal }
+  const eq2 = { eq: () => limited }
+  const selected = { eq: () => eq2 }
+  return { from: () => ({ select: () => selected }) }
+}
+
 test('getItemBySlug returns single mapped item', async () => {
-  // Override limit to return single item
-  mockSupabase = {
-    from: () => {
-      const q = {
-        select: () => q,
-        eq: () => Promise.resolve({ data: [mockDBItem], error: null }),
-      } as unknown as ReturnType<typeof makeQueryMock>
-      return q
-    },
-  }
+  mockSupabase = makeSlugMock(mockDBItem) as typeof mockSupabase
   const { data, error } = await getItemBySlug('openai-provider')
   expect(error).toBeNull()
   expect(data?.slug).toBe('openai-provider')
 })
 
 test('getItemBySlug returns null when not found', async () => {
-  mockSupabase = {
-    from: () => {
-      const q = {
-        select: () => q,
-        eq: () => Promise.resolve({ data: [], error: null }),
-      } as unknown as ReturnType<typeof makeQueryMock>
-      return q
-    },
-  }
+  // PGRST116 is the "row not found" code from Supabase .single()
+  mockSupabase = makeSlugMock(null, { code: 'PGRST116', message: 'Not found' }) as typeof mockSupabase
   const { data, error } = await getItemBySlug('nonexistent')
   expect(error).toBeNull()
   expect(data).toBeNull()

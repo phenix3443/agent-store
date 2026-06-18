@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getItems } from '@/lib/queries/items'
+
+export const revalidate = 30
 import { ItemCard } from '@/components/ItemCard'
 import { CategoryTabs } from '@/components/CategoryTabs'
 import { SearchInput } from '@/components/SearchInput'

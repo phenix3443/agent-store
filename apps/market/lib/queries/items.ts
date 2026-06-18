@@ -51,6 +51,9 @@ export async function getItemBySlug(
     .from('items')
     .select(ITEM_SELECT)
     .eq('slug', slug)
+    .eq('status', 'published')
+    .limit(1)
+    .single()
 
   if (error) {
     // PGRST116 = row not found — treat as null, not error
@@ -59,10 +62,9 @@ export async function getItemBySlug(
     return { data: null, error: pgError.message ?? 'Query failed' }
   }
 
-  const rows = (data ?? []) as Array<DBItem & { publishers: DBPublisher }>
-  if (rows.length === 0) return { data: null, error: null }
+  if (!data) return { data: null, error: null }
 
-  return { data: mapItem(rows[0]), error: null }
+  return { data: mapItem(data as DBItem & { publishers: DBPublisher }), error: null }
 }
 
 export async function getFeaturedItems(): Promise<{ data: Item[]; error: string | null }> {
