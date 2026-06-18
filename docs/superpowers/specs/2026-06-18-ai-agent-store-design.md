@@ -221,13 +221,15 @@ market 前端页面 ←──── packages/sdk ←──── client-core
 
 ### 6.3 安装流程（两阶段）
 
+install 命令自动执行两个阶段，Phase 2 也可通过 `aas sync` 手动触发（如工具配置被意外覆盖时）。
+
 ```
 aas install <slug>
     │
     ├── Phase 1：下载到 ~/.agents/<category>/<slug>/
     │           执行 installHook（下载文件、写配置模板）
     │
-    └── Phase 2：sync
+    └── Phase 2：sync（自动触发）
                 ├── enabledFor.claude === true
                 │     → 复制 skill.md 到 ~/.claude/skills/
                 │     → 写入 ~/.claude/settings.json
