@@ -34,5 +34,5 @@ export function formatTable(
 
 export function formatStep(label: string, status?: string): string {
   const padded = ('  ' + label).padEnd(38)
-  return status ? `${padded}${status}` : `  ${label}`
+  return status !== undefined ? `${padded}${status}` : padded
 }
