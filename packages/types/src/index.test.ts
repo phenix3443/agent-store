@@ -136,3 +136,107 @@ describe('Item discriminated union', () => {
     expect(items).toHaveLength(0)
   })
 })
+
+import type {
+  AASPaths,
+  InstalledItem,
+  RegistryJson,
+  ItemDetail,
+  SearchOptions,
+  InstallResult,
+  SyncResult,
+  UpdateAvailable,
+  UpdateResult,
+  ListOptions,
+} from './index'
+
+describe('AASPaths', () => {
+  test('can construct AASPaths with all three directories', () => {
+    const paths: AASPaths = {
+      aasHome: '/tmp/test/agents',
+      claudeConfigDir: '/tmp/test/claude',
+      codexConfigDir: '/tmp/test/codex',
+    }
+    expect(paths.aasHome).toBe('/tmp/test/agents')
+    expect(paths.claudeConfigDir).toBe('/tmp/test/claude')
+    expect(paths.codexConfigDir).toBe('/tmp/test/codex')
+  })
+})
+
+describe('InstalledItem', () => {
+  test('can construct a fully enabled InstalledItem', () => {
+    const item: InstalledItem = {
+      slug: 'openai-provider',
+      category: 'provider',
+      version: '1.0.0',
+      installedAt: '2026-06-18T10:00:00Z',
+      updatedAt: '2026-06-18T10:00:00Z',
+      compatibleWith: ['claude', 'codex'],
+      enabledFor: { claude: true, codex: true },
+    }
+    expect(item.enabledFor.claude).toBe(true)
+    expect(item.enabledFor.codex).toBe(true)
+  })
+
+  test('enabledFor can be partial (MCP only supports claude)', () => {
+    const item: InstalledItem = {
+      slug: 'filesystem-mcp',
+      category: 'mcp',
+      version: '0.1.0',
+      installedAt: '2026-06-18T11:00:00Z',
+      updatedAt: '2026-06-18T11:00:00Z',
+      compatibleWith: ['claude'],
+      enabledFor: { claude: true },
+    }
+    expect(item.enabledFor.codex).toBeUndefined()
+  })
+})
+
+describe('RegistryJson', () => {
+  test('can construct a valid registry with multiple items', () => {
+    const registry: RegistryJson = {
+      installed: [
+        {
+          slug: 'my-skill',
+          category: 'skill',
+          version: '0.3.0',
+          installedAt: '2026-06-18T10:00:00Z',
+          updatedAt: '2026-06-18T10:00:00Z',
+          compatibleWith: ['claude'],
+          enabledFor: { claude: true },
+        },
+      ],
+    }
+    expect(registry.installed).toHaveLength(1)
+    expect(registry.installed[0].slug).toBe('my-skill')
+  })
+})
+
+describe('Result types', () => {
+  test('InstallResult shape', () => {
+    const result: InstallResult = {
+      slug: 'openai-provider',
+      version: '1.0.0',
+      installedAt: '2026-06-18T10:00:00Z',
+    }
+    expect(result.slug).toBe('openai-provider')
+  })
+
+  test('SyncResult shape', () => {
+    const result: SyncResult = {
+      synced: ['openai-provider', 'my-skill'],
+      errors: [{ slug: 'broken-mcp', error: 'server file not found' }],
+    }
+    expect(result.synced).toHaveLength(2)
+    expect(result.errors[0].slug).toBe('broken-mcp')
+  })
+
+  test('UpdateAvailable shape', () => {
+    const update: UpdateAvailable = {
+      slug: 'my-skill',
+      currentVersion: '0.3.0',
+      latestVersion: '0.4.0',
+    }
+    expect(update.latestVersion).toBe('0.4.0')
+  })
+})
