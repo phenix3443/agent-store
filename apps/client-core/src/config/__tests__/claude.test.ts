@@ -59,6 +59,21 @@ test('mcp add writes mcpServers entry with absolute command path', async () => {
   expect(entry.args).toEqual([])
 })
 
+test('mcp add writes remote mcpServers entry for http transport', async () => {
+  await setupItem('mcp', 'test-mcp', {
+    ...mcpManifest,
+    transport: 'http',
+    url: 'https://mcp.example.com',
+  })
+  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, 'add')
+  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
+  const entry = settings.mcpServers['test-mcp']
+  expect(entry).toEqual({
+    type: 'http',
+    url: 'https://mcp.example.com',
+  })
+})
+
 test('mcp remove deletes mcpServers entry', async () => {
   await setupItem('mcp', 'test-mcp', mcpManifest)
   await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, 'add')

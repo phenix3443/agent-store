@@ -86,7 +86,29 @@ test('mapItem maps mcp with transport and serverCommand', () => {
   expect(item.category).toBe('mcp')
   if (item.category !== 'mcp') throw new Error('type narrowing')
   expect(item.transport).toBe('stdio')
+  if (item.transport !== 'stdio') throw new Error('type narrowing')
   expect(item.serverCommand).toBe('./server')
+})
+
+test('mapItem maps remote mcp with url and headers', () => {
+  const item = mapItem({
+    ...baseDBItem,
+    slug: 'remote-browser-mcp',
+    category: 'mcp',
+    metadata: {
+      transport: 'http',
+      url: 'https://mcp.example.com',
+      headers: { Authorization: 'Bearer token' },
+      configSchema: {},
+    },
+  })
+  expect(item.category).toBe('mcp')
+  if (item.category !== 'mcp') throw new Error('type narrowing')
+  expect(item.transport).toBe('http')
+  if (item.transport !== 'http') throw new Error('type narrowing')
+  expect(item.url).toBe('https://mcp.example.com')
+  expect(item.headers).toEqual({ Authorization: 'Bearer token' })
+  expect('serverCommand' in item).toBe(false)
 })
 
 test('mapItem defaults missing mcp fields gracefully', () => {
@@ -98,5 +120,7 @@ test('mapItem defaults missing mcp fields gracefully', () => {
   })
   if (item.category !== 'mcp') throw new Error('type narrowing')
   expect(item.transport).toBe('stdio')
+  if (item.transport !== 'stdio') throw new Error('type narrowing')
   expect(item.serverCommand).toBe('')
+  expect('url' in item).toBe(false)
 })

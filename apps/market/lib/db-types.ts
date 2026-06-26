@@ -42,6 +42,17 @@ export interface DBItem {
   publishers?: DBPublisher
 }
 
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function readStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const entries = Object.entries(value)
+  if (entries.some(([, item]) => typeof item !== 'string')) return undefined
+  return Object.fromEntries(entries) as Record<string, string>
+}
+
 // ── Mapping functions ─────────────────────────────────────────────────────────
 
 export function mapPublisher(row: DBPublisher): Publisher {
@@ -94,11 +105,23 @@ export function mapItem(row: DBItem & { publishers: DBPublisher }): Item {
   }
 
   // mcp
+  const transport = (row.metadata['transport'] ?? 'stdio') as 'stdio' | 'sse' | 'http'
+  if (transport === 'http' || transport === 'sse') {
+    return {
+      ...base,
+      category: 'mcp',
+      transport,
+      url: readString(row.metadata['url']) ?? '',
+      ...(readStringRecord(row.metadata['headers']) ? { headers: readStringRecord(row.metadata['headers']) } : {}),
+      configSchema: (row.metadata['configSchema'] ?? {}) as Record<string, unknown>,
+    } satisfies MCPItem
+  }
+
   return {
     ...base,
     category: 'mcp',
-    transport: (row.metadata['transport'] ?? 'stdio') as 'stdio' | 'sse' | 'http',
-    serverCommand: (row.metadata['serverCommand'] ?? '') as string,
+    transport,
+    serverCommand: readString(row.metadata['serverCommand']) ?? '',
     configSchema: (row.metadata['configSchema'] ?? {}) as Record<string, unknown>,
   } satisfies MCPItem
 }

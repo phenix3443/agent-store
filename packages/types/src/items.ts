@@ -46,12 +46,25 @@ export interface SkillItem extends BaseItem {
   contentUrl: string
 }
 
-export interface MCPItem extends BaseItem {
+interface BaseMCPItem extends BaseItem {
   category: 'mcp'
-  transport: 'stdio' | 'sse' | 'http'
-  /** Runtime command to start the MCP server AFTER install (e.g. "./server", "node server.js") */
-  serverCommand: string
   configSchema: JsonSchema
 }
+
+export interface StdioMCPItem extends BaseMCPItem {
+  transport: 'stdio'
+  /** Runtime command to start the MCP server AFTER install (e.g. "./server", "node server.js") */
+  serverCommand: string
+}
+
+export interface RemoteMCPItem extends BaseMCPItem {
+  transport: 'sse' | 'http'
+  /** Remote MCP endpoint for http / sse transports */
+  url: string
+  /** Optional static headers for remote MCP transports */
+  headers?: Record<string, string>
+}
+
+export type MCPItem = StdioMCPItem | RemoteMCPItem
 
 export type Item = ProviderItem | SkillItem | MCPItem

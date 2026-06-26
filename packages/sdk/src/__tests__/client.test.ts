@@ -211,6 +211,24 @@ const createBody: import('../client').CreateItemBody = {
   tags: ['ai'],
 }
 
+const createRemoteMcpBody: import('../client').CreateItemBody = {
+  slug: 'remote-mcp',
+  name: 'Remote MCP',
+  description: 'A remote MCP',
+  category: 'mcp',
+  version: '1.0.0',
+  readmeUrl: 'https://example.com/readme',
+  icon: 'https://example.com/icon.png',
+  compatibleWith: ['claude', 'codex'],
+  tags: ['mcp'],
+  metadata: {
+    transport: 'http',
+    url: 'https://mcp.example.com',
+    headers: { Authorization: 'Bearer token' },
+    configSchema: {},
+  },
+}
+
 describe('AASClient.createItem', () => {
   test('calls POST /api/items/create with JSON body and returns success', async () => {
     const originalFetch = globalThis.fetch
@@ -239,6 +257,25 @@ describe('AASClient.createItem', () => {
 
     const client = new AASClient()
     await client.createItem(createBody, { cookie: 'sb-token=abc123' })
+
+    globalThis.fetch = originalFetch
+  })
+
+  test('forwards metadata in create body', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(init?.body as string)
+      expect(body.metadata).toEqual({
+        transport: 'http',
+        url: 'https://mcp.example.com',
+        headers: { Authorization: 'Bearer token' },
+        configSchema: {},
+      })
+      return new Response(JSON.stringify({ success: true }), { status: 201 })
+    }
+
+    const client = new AASClient()
+    await client.createItem(createRemoteMcpBody)
 
     globalThis.fetch = originalFetch
   })

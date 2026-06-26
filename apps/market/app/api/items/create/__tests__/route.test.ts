@@ -10,8 +10,9 @@ function makeMockSupabase(opts: {
   user?: typeof mockUser | null
   publisher?: { id: string } | null
   insertError?: { code?: string } | null
+  onInsert?: (row: unknown) => void
 } = {}) {
-  const { user = mockUser, publisher = { id: 'pub-1' }, insertError = null } = opts
+  const { user = mockUser, publisher = { id: 'pub-1' }, insertError = null, onInsert } = opts
 
   return {
     auth: {
@@ -34,7 +35,10 @@ function makeMockSupabase(opts: {
       }
       // items table
       return {
-        insert: async () => ({ error: insertError }),
+        insert: async (row: unknown) => {
+          onInsert?.(row)
+          return { error: insertError }
+        },
       }
     },
   }
@@ -123,4 +127,80 @@ test('POST /api/items/create returns 409 on duplicate slug', async () => {
   }) as unknown as import('next/server').NextRequest
   const res = await POST(req)
   expect(res.status).toBe(409)
+})
+
+test('POST /api/items/create persists metadata from request body', async () => {
+  let inserted: unknown
+  mock.module('@/lib/supabase/server', () => ({
+    createClient: () => makeMockSupabase({ onInsert: row => { inserted = row } }),
+  }))
+
+  const req = new Request('http://localhost/api/items/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...validBody,
+      category: 'mcp',
+      metadata: {
+        transport: 'http',
+        url: 'https://mcp.example.com',
+        headers: { Authorization: 'Bearer token' },
+      },
+    }),
+  }) as unknown as import('next/server').NextRequest
+
+  const res = await POST(req)
+  expect(res.status).toBe(201)
+  expect(inserted).toMatchObject({
+    category: 'mcp',
+    metadata: {
+      transport: 'http',
+      url: 'https://mcp.example.com',
+      headers: { Authorization: 'Bearer token' },
+    },
+  })
+})
+
+test('POST /api/items/create returns 422 when remote mcp metadata misses url', async () => {
+  mock.module('@/lib/supabase/server', () => ({
+    createClient: () => makeMockSupabase(),
+  }))
+
+  const req = new Request('http://localhost/api/items/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...validBody,
+      category: 'mcp',
+      metadata: {
+        transport: 'http',
+      },
+    }),
+  }) as unknown as import('next/server').NextRequest
+
+  const res = await POST(req)
+  expect(res.status).toBe(422)
+  await expect(res.json()).resolves.toMatchObject({ error: 'Missing MCP url' })
+})
+
+test('POST /api/items/create returns 422 when stdio mcp metadata misses serverCommand', async () => {
+  mock.module('@/lib/supabase/server', () => ({
+    createClient: () => makeMockSupabase(),
+  }))
+
+  const req = new Request('http://localhost/api/items/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...validBody,
+      category: 'mcp',
+      metadata: {
+        transport: 'stdio',
+      },
+    }),
+  }) as unknown as import('next/server').NextRequest
+
+  const res = await POST(req)
+  expect(res.status).toBe(422)
+  await expect(res.json()).resolves.toMatchObject({ error: 'Missing MCP serverCommand' })
 })

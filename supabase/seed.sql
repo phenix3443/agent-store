@@ -19,8 +19,8 @@ INSERT INTO items (
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'test-co'),
   ARRAY['claude','codex'], ARRAY['ai','test'], 1000, 'published',
-  $${"steps":[{"type":"config","patch":{"apiKey":"","model":"gpt-4o"}}]}$$,
-  $${"configSchema":{"type":"object","required":["apiKey"],"properties":{"apiKey":{"type":"string","description":"OpenAI API Key"},"model":{"type":"string","description":"Model","default":"gpt-4o"}}},"supportedModels":["gpt-4o","gpt-4o-mini"]}$$
+  $${"steps":[{"type":"config","patch":{"apiKey":"","baseUrl":"https://api.openai.com/v1","model":"gpt-4o"}}]}$$,
+  $${"configSchema":{"type":"object","required":["apiKey"],"properties":{"apiKey":{"type":"string","description":"OpenAI API Key"},"baseUrl":{"type":"string","description":"Base URL","default":"https://api.openai.com/v1"},"model":{"type":"string","description":"Model","default":"gpt-4o"}}},"supportedModels":["gpt-4o","gpt-4o-mini"]}$$
 );
 
 -- Skill: tests script step + skill.md copy to claude skills dir

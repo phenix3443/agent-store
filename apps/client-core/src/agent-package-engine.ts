@@ -1,7 +1,9 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import type { AASPaths } from '@aas/types'
-import { upsertCodexProviderConnection } from './config/codex'
+import { upsertClaudeMcpServer } from './config/claude'
+import { buildPackageStdioMcpServerConfig } from './config/mcp'
+import { upsertCodexMcpServer, upsertCodexProviderConnection } from './config/codex'
 import { resolvePaths } from './paths'
 
 type ToolTarget = 'claude' | 'codex'
@@ -13,7 +15,7 @@ type TargetBinding = true | {
 
 interface BaseComponent {
   id: string
-  type: 'provider' | 'skill'
+  type: 'provider' | 'skill' | 'mcpServer'
   version: string
   name?: string
   description?: string
@@ -39,10 +41,24 @@ interface SkillComponent extends BaseComponent {
   }
 }
 
-type AgentPackageComponent = ProviderComponent | SkillComponent
+interface McpServerComponent extends BaseComponent {
+  type: 'mcpServer'
+  transport: 'stdio' | 'http' | 'sse'
+  command?: string
+  args?: string[]
+  cwd?: string
+  envSchema?: {
+    type?: 'object'
+    properties?: Record<string, unknown>
+  }
+  url?: string
+  headers?: Record<string, string>
+}
+
+type AgentPackageComponent = ProviderComponent | SkillComponent | McpServerComponent
 
 interface AgentPackageManifest {
-  schemaVersion: 1 | 2
+  schemaVersion: 1 | 2 | 3
   name: string
   displayName: string
   version: string
@@ -141,6 +157,34 @@ function skillAdapterFor(binding: TargetBinding | undefined): string {
   return 'skill-file'
 }
 
+function mcpAdapterFor(binding: TargetBinding | undefined): string {
+  if (binding && binding !== true && binding.adapter) return binding.adapter
+  return 'mcp-server'
+}
+
+function readStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const strings = value.filter((item): item is string => typeof item === 'string')
+  return strings.length === value.length ? strings : undefined
+}
+
+function resolveMcpEnv(
+  component: McpServerComponent,
+  packageConfig: Record<string, unknown>
+): Record<string, string> | undefined {
+  const raw = packageConfig[component.id]
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const values = raw as Record<string, unknown>
+  const propertyNames = Object.keys(component.envSchema?.properties ?? {})
+  const env: Record<string, string> = {}
+  const keys = propertyNames.length > 0 ? propertyNames : Object.keys(values)
+  for (const key of keys) {
+    const value = readString(values[key])
+    if (value !== undefined) env[key] = value
+  }
+  return Object.keys(env).length > 0 ? env : undefined
+}
+
 export class AgentPackageEngine {
   private readonly paths: Required<AASPaths>
 
@@ -185,9 +229,23 @@ export class AgentPackageEngine {
       const binding = component.targets[target]
       if (!bindingEnabled(binding)) continue
       if (component.type === 'provider') {
-        await this.syncProviderComponent(manifest, component, packageConfig, target)
+        await this.validateProviderComponent(component, packageConfig)
+      } else if (component.type === 'skill') {
+        await this.validateSkillComponent(manifest, component, target)
       } else {
+        await this.validateMcpServerComponent(manifest, component, packageConfig, target)
+      }
+    }
+
+    for (const component of manifest.components) {
+      const binding = component.targets[target]
+      if (!bindingEnabled(binding)) continue
+      if (component.type === 'provider') {
+        await this.syncProviderComponent(manifest, component, packageConfig, target)
+      } else if (component.type === 'skill') {
         await this.syncSkillComponent(manifest, component, target)
+      } else {
+        await this.syncMcpServerComponent(manifest, component, packageConfig, target)
       }
     }
 
@@ -202,17 +260,65 @@ export class AgentPackageEngine {
     })
   }
 
-  private async syncProviderComponent(
-    manifest: AgentPackageManifest,
+  private async validateProviderComponent(
     component: ProviderComponent,
-    packageConfig: Record<string, unknown>,
-    target: ToolTarget
+    packageConfig: Record<string, unknown>
   ): Promise<void> {
     const componentConfig = (packageConfig[component.id] ?? {}) as Record<string, unknown>
     const apiKey = readString(componentConfig['apiKey'])
     const baseUrlKey = component.provider.baseUrlKey ?? 'baseUrl'
     const baseUrl = readString(componentConfig[baseUrlKey])
     if (!apiKey || !baseUrl) throw new Error(`Missing provider config for ${component.id}`)
+  }
+
+  private async validateSkillComponent(
+    manifest: AgentPackageManifest,
+    component: SkillComponent,
+    target: ToolTarget
+  ): Promise<void> {
+    const adapter = skillAdapterFor(component.targets[target])
+    if (adapter !== 'skill-file') throw new Error(`Unsupported skill adapter: ${adapter}`)
+    const packageDir = join(this.paths.aasHome, 'packages', packageIdOf(manifest))
+    const sourcePath = join(packageDir, 'sources', component.source.repo, component.source.path)
+    await readFile(sourcePath, 'utf-8')
+  }
+
+  private async validateMcpServerComponent(
+    manifest: AgentPackageManifest,
+    component: McpServerComponent,
+    packageConfig: Record<string, unknown>,
+    target: ToolTarget
+  ): Promise<void> {
+    const adapter = mcpAdapterFor(component.targets[target])
+    if (adapter !== 'mcp-server') throw new Error(`Unsupported mcp adapter: ${adapter}`)
+    const packageDir = join(this.paths.aasHome, 'packages', packageIdOf(manifest))
+
+    if (component.transport === 'stdio') {
+      if (!component.command) throw new Error(`Missing MCP command for ${component.id}`)
+      buildPackageStdioMcpServerConfig({
+        command: component.command,
+        args: readStringArray(component.args) ?? component.args ?? [],
+        cwd: component.cwd,
+        env: resolveMcpEnv(component, packageConfig),
+        packageDir,
+      })
+      return
+    }
+
+    if (!component.url) throw new Error(`Missing MCP url for ${componentRef(manifest, component)}`)
+  }
+
+  private async syncProviderComponent(
+    manifest: AgentPackageManifest,
+    component: ProviderComponent,
+    packageConfig: Record<string, unknown>,
+    target: ToolTarget
+  ): Promise<void> {
+    await this.validateProviderComponent(component, packageConfig)
+    const componentConfig = (packageConfig[component.id] ?? {}) as Record<string, unknown>
+    const apiKey = readString(componentConfig['apiKey']) as string
+    const baseUrlKey = component.provider.baseUrlKey ?? 'baseUrl'
+    const baseUrl = readString(componentConfig[baseUrlKey]) as string
 
     if (target === 'claude') {
       const settings = await readClaudeSettings(this.paths.claudeConfigDir)
@@ -240,9 +346,7 @@ export class AgentPackageEngine {
     component: SkillComponent,
     target: ToolTarget
   ): Promise<void> {
-    const adapter = skillAdapterFor(component.targets[target])
-    if (adapter !== 'skill-file') throw new Error(`Unsupported skill adapter: ${adapter}`)
-
+    await this.validateSkillComponent(manifest, component, target)
     const packageDir = join(this.paths.aasHome, 'packages', packageIdOf(manifest))
     const sourcePath = join(packageDir, 'sources', component.source.repo, component.source.path)
     const content = await readFile(sourcePath, 'utf-8')
@@ -251,5 +355,43 @@ export class AgentPackageEngine {
       : join(this.paths.codexConfigDir, 'skills')
     await mkdir(destDir, { recursive: true })
     await writeFile(join(destDir, `${componentRef(manifest, component)}.md`), content)
+  }
+
+  private async syncMcpServerComponent(
+    manifest: AgentPackageManifest,
+    component: McpServerComponent,
+    packageConfig: Record<string, unknown>,
+    target: ToolTarget
+  ): Promise<void> {
+    await this.validateMcpServerComponent(manifest, component, packageConfig, target)
+    const slug = componentRef(manifest, component)
+    const packageDir = join(this.paths.aasHome, 'packages', packageIdOf(manifest))
+
+    if (component.transport === 'stdio') {
+      const entry = buildPackageStdioMcpServerConfig({
+        command: component.command as string,
+        args: readStringArray(component.args) ?? component.args ?? [],
+        cwd: component.cwd,
+        env: resolveMcpEnv(component, packageConfig),
+        packageDir,
+      })
+      if (target === 'claude') {
+        await upsertClaudeMcpServer(this.paths.claudeConfigDir, slug, entry)
+      } else {
+        await upsertCodexMcpServer(this.paths.codexConfigDir, slug, entry)
+      }
+      return
+    }
+
+    const entry = {
+      type: component.transport,
+      url: component.url as string,
+      ...(component.headers ? { headers: component.headers } : {}),
+    }
+    if (target === 'claude') {
+      await upsertClaudeMcpServer(this.paths.claudeConfigDir, slug, entry)
+    } else {
+      await upsertCodexMcpServer(this.paths.codexConfigDir, slug, entry)
+    }
   }
 }

@@ -4,6 +4,7 @@ import { parse, stringify } from '@iarna/toml'
 import type { JsonMap } from '@iarna/toml'
 import { load } from 'js-yaml'
 import type { MCPItem } from '@aas/types'
+import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
 
 const CATEGORY_DIR: Record<string, string> = {
@@ -12,22 +13,34 @@ const CATEGORY_DIR: Record<string, string> = {
   mcp: 'mcps',
 }
 
-function resolveServerCmd(serverCommand: string, itemDir: string): { command: string; args: string[] } {
-  const parts = serverCommand.split(' ')
-  const cmd = parts[0]
-  const resolvedCmd = cmd.startsWith('./') ? join(itemDir, cmd.slice(2)) : cmd
-  return { command: resolvedCmd, args: parts.slice(1) }
+function readRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined
+}
+
+function normalizeConfig(config: Record<string, unknown>): Record<string, unknown> {
+  const legacyMcpServers = readRecord(config['mcpServers'])
+  if (!legacyMcpServers) return config
+
+  const normalized = { ...config }
+  const mcpServers = readRecord(config['mcp_servers']) ?? {}
+  normalized['mcp_servers'] = { ...legacyMcpServers, ...mcpServers }
+  delete normalized['mcpServers']
+  return normalized
 }
 
 async function readConfig(codexConfigDir: string): Promise<Record<string, unknown>> {
   try {
     const raw = await readFile(join(codexConfigDir, 'config.toml'), 'utf-8')
-    return (parse(raw) as unknown as Record<string, unknown>) ?? {}
+    return normalizeConfig((parse(raw) as unknown as Record<string, unknown>) ?? {})
   } catch {
     try {
       const raw = await readFile(join(codexConfigDir, 'config.yaml'), 'utf-8')
       const parsed = load(raw)
-      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {}
+      return parsed && typeof parsed === 'object'
+        ? normalizeConfig(parsed as Record<string, unknown>)
+        : {}
     } catch {
       return {}
     }
@@ -54,6 +67,27 @@ async function writeAuth(codexConfigDir: string, auth: Record<string, unknown>):
     return
   }
   await writeFile(join(codexConfigDir, 'auth.json'), JSON.stringify(auth, null, 2))
+}
+
+export async function upsertCodexMcpServer(
+  codexConfigDir: string,
+  slug: string,
+  entry: McpServerConfig
+): Promise<void> {
+  const config = await readConfig(codexConfigDir)
+  const mcpServers = (config['mcp_servers'] ?? {}) as Record<string, unknown>
+  mcpServers[slug] = entry
+  config['mcp_servers'] = mcpServers
+  await writeConfig(codexConfigDir, config)
+}
+
+export async function removeCodexMcpServer(codexConfigDir: string, slug: string): Promise<void> {
+  const config = await readConfig(codexConfigDir)
+  const mcpServers = (config['mcp_servers'] ?? {}) as Record<string, unknown>
+  delete mcpServers[slug]
+  if (Object.keys(mcpServers).length > 0) config['mcp_servers'] = mcpServers
+  else delete config['mcp_servers']
+  await writeConfig(codexConfigDir, config)
 }
 
 interface CodexProviderConfigInput {
@@ -141,16 +175,12 @@ export async function syncItemToCodex(
   const config = await readConfig(codexConfigDir)
 
   if (category === 'mcp') {
-    const mcpServers = (config['mcpServers'] ?? {}) as Record<string, unknown>
     if (action === 'add') {
       const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
-      const { command, args } = resolveServerCmd(manifest.serverCommand, dir)
-      mcpServers[slug] = { command, args }
+      await upsertCodexMcpServer(codexConfigDir, slug, buildLegacyMcpServerConfig(manifest, dir))
     } else {
-      delete mcpServers[slug]
+      await removeCodexMcpServer(codexConfigDir, slug)
     }
-    config['mcpServers'] = mcpServers
-    await writeConfig(codexConfigDir, config)
   } else if (category === 'skill') {
     const skillsDir = join(codexConfigDir, 'skills')
     const destPath = join(skillsDir, `${slug}.md`)

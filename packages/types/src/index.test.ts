@@ -148,6 +148,67 @@ describe('Item discriminated union', () => {
     expect(mcp.serverCommand).toBe('./server')
   })
 
+  test('remote MCPItem can carry url and headers', () => {
+    const mcp: MCPItem = {
+      id: 'item-4',
+      slug: 'remote-browser-mcp',
+      name: 'Remote Browser MCP',
+      description: 'Remote browser MCP',
+      readmeUrl: 'https://storage.example.com/readme.md',
+      icon: 'https://storage.example.com/icon.png',
+      category: 'mcp',
+      version: '0.2.0',
+      publisher: { id: 'pub-4', slug: 'carol', name: 'Carol', avatarUrl: '', tier: 'community' },
+      compatibleWith: ['claude', 'codex'],
+      tags: ['browser'],
+      downloads: 120,
+      rating: 0,
+      status: 'published',
+      installHook: { steps: [] },
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      transport: 'http',
+      url: 'https://mcp.example.com',
+      headers: { Authorization: 'Bearer token' },
+      configSchema: {},
+    }
+    expect(mcp.transport).toBe('http')
+    expect(mcp.url).toBe('https://mcp.example.com')
+    expect(mcp.headers).toEqual({ Authorization: 'Bearer token' })
+    expect(mcp.serverCommand).toBeUndefined()
+  })
+
+  test('MCPItem enforces transport-specific required fields', () => {
+    const base = {
+      id: 'item-5',
+      slug: 'invalid-mcp',
+      name: 'Invalid MCP',
+      description: 'Invalid MCP',
+      readmeUrl: 'https://storage.example.com/readme.md',
+      icon: 'https://storage.example.com/icon.png',
+      category: 'mcp' as const,
+      version: '0.1.0',
+      publisher: { id: 'pub-5', slug: 'eve', name: 'Eve', avatarUrl: '', tier: 'community' as const },
+      compatibleWith: ['claude' as const],
+      tags: [],
+      downloads: 0,
+      rating: 0,
+      status: 'published' as const,
+      installHook: { steps: [] },
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      configSchema: {},
+    }
+
+    // @ts-expect-error stdio MCP requires serverCommand
+    const missingServerCommand: MCPItem = { ...base, transport: 'stdio' }
+    // @ts-expect-error remote MCP requires url
+    const missingUrl: MCPItem = { ...base, transport: 'http' }
+
+    expect(missingServerCommand).toBeDefined()
+    expect(missingUrl).toBeDefined()
+  })
+
   test('Item union narrows correctly by category', () => {
     const items: Item[] = []  // just testing that the union type compiles
     expect(items).toHaveLength(0)

@@ -11,6 +11,45 @@ interface CreateItemBody {
   icon: string
   compatibleWith: string[]
   tags: string[]
+  metadata?: Record<string, unknown>
+}
+
+function readRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  const record = readRecord(value)
+  return !!record && Object.values(record).every(item => typeof item === 'string')
+}
+
+function validateMcpMetadata(metadata: unknown): string | undefined {
+  const record = readRecord(metadata) ?? {}
+  const transport = readString(record['transport']) ?? 'stdio'
+
+  if (!['stdio', 'http', 'sse'].includes(transport)) {
+    return 'Invalid MCP transport'
+  }
+
+  if (transport === 'stdio' && !readString(record['serverCommand'])) {
+    return 'Missing MCP serverCommand'
+  }
+
+  if ((transport === 'http' || transport === 'sse') && !readString(record['url'])) {
+    return 'Missing MCP url'
+  }
+
+  if (record['headers'] !== undefined && !isStringRecord(record['headers'])) {
+    return 'Invalid MCP headers'
+  }
+
+  return undefined
 }
 
 export async function POST(request: NextRequest) {
@@ -40,6 +79,13 @@ export async function POST(request: NextRequest) {
   const validCategories = ['provider', 'skill', 'mcp']
   if (!validCategories.includes(body.category)) {
     return NextResponse.json({ error: 'Invalid category' }, { status: 422 })
+  }
+
+  if (body.category === 'mcp') {
+    const metadataError = validateMcpMetadata(body.metadata)
+    if (metadataError) {
+      return NextResponse.json({ error: metadataError }, { status: 422 })
+    }
   }
 
   // Look up publisher by GitHub username
@@ -74,7 +120,7 @@ export async function POST(request: NextRequest) {
     compatible_with: body.compatibleWith ?? [],
     tags: body.tags ?? [],
     install_hook: { steps: [] },
-    metadata: {},
+    metadata: body.metadata ?? {},
     status: 'pending',
   })
 

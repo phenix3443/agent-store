@@ -20,6 +20,7 @@ export interface CreateItemBody {
   icon: string
   compatibleWith: string[]
   tags: string[]
+  metadata?: Record<string, unknown>
 }
 
 export interface PublisherWithItems {

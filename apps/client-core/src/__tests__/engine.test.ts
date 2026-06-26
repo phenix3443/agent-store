@@ -18,6 +18,12 @@ const mcpItem: MCPItem = {
   transport: 'stdio', serverCommand: './server', configSchema: { type: 'object' },
 }
 
+const remoteMcpItem: MCPItem = {
+  ...baseItem, slug: 'remote-mcp', category: 'mcp',
+  transport: 'http', url: 'https://mcp.example.com', headers: { Authorization: 'Bearer token' },
+  configSchema: { type: 'object' },
+}
+
 const providerItem: ProviderItem = {
   ...baseItem, slug: 'test-provider', category: 'provider',
   configSchema: { type: 'object', properties: { apiKey: { type: 'string' } } },
@@ -97,6 +103,36 @@ test('enable mcp: writes mcpServers to claude settings', async () => {
   expect(reg.installed[0].enabledFor.claude).toBe(true)
 })
 
+test('enable mcp: writes mcp server to codex config', async () => {
+  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  await engine.install('test-mcp')
+  await engine.enable('test-mcp', 'codex')
+  const config = await readFile(join(codexDir, 'config.toml'), 'utf-8')
+  expect(config).toContain('[mcp_servers.test-mcp]')
+  expect(config).toContain('type = "stdio"')
+  const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
+  expect(reg.installed[0].enabledFor.codex).toBe(true)
+})
+
+test('enable remote mcp: writes remote entry to claude and codex configs', async () => {
+  mockFetch({ '/api/items/remote-mcp': { item: remoteMcpItem } })
+  await engine.install('remote-mcp')
+  await engine.enable('remote-mcp', 'claude')
+  await engine.enable('remote-mcp', 'codex')
+
+  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
+  expect(settings.mcpServers?.['remote-mcp']).toEqual({
+    type: 'http',
+    url: 'https://mcp.example.com',
+    headers: { Authorization: 'Bearer token' },
+  })
+
+  const config = await readFile(join(codexDir, 'config.toml'), 'utf-8')
+  expect(config).toContain('[mcp_servers.remote-mcp]')
+  expect(config).toContain('type = "http"')
+  expect(config).toContain('url = "https://mcp.example.com"')
+})
+
 test('disable mcp: removes mcpServers entry and sets enabledFor false', async () => {
   mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
   await engine.install('test-mcp')
@@ -145,6 +181,17 @@ test('info returns ItemDetail with manifest data', async () => {
   expect(detail.slug).toBe('test-mcp')
   expect(detail.name).toBe('Test')
   expect(detail.serverCommand).toBe('./server')
+})
+
+test('info returns remote MCP detail fields', async () => {
+  mockFetch({ '/api/items/remote-mcp': { item: remoteMcpItem } })
+  await engine.install('remote-mcp')
+  const detail = await engine.info('remote-mcp')
+  expect(detail.slug).toBe('remote-mcp')
+  expect(detail.transport).toBe('http')
+  expect(detail.url).toBe('https://mcp.example.com')
+  expect(detail.headers).toEqual({ Authorization: 'Bearer token' })
+  expect(detail.serverCommand).toBeUndefined()
 })
 
 test('getConfigSchema returns schema and current values', async () => {

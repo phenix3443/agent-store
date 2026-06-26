@@ -97,6 +97,10 @@ export interface ItemDetail {
   transport?: 'stdio' | 'sse' | 'http'
   /** mcp only: runtime command written to tool config after install */
   serverCommand?: string
+  /** mcp only: remote endpoint for http / sse transports */
+  url?: string
+  /** mcp only: optional static headers for remote transports */
+  headers?: Record<string, string>
   /** skill only */
   contentUrl?: string
 }

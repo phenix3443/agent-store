@@ -222,7 +222,8 @@ export class AASEngineImpl implements AASEngine {
       name: string; description: string; readmeUrl: string; icon: string
       publisher: import('@aas/types').Publisher; tags: string[]; downloads: number
       configSchema?: import('@aas/types').JsonSchema; supportedModels?: string[]
-      transport?: 'stdio' | 'sse' | 'http'; serverCommand?: string; contentUrl?: string
+      transport?: 'stdio' | 'sse' | 'http'; serverCommand?: string
+      url?: string; headers?: Record<string, string>; contentUrl?: string
     }
     let currentConfig: Record<string, unknown> | undefined
     try {
@@ -242,6 +243,8 @@ export class AASEngineImpl implements AASEngine {
       supportedModels: manifest.supportedModels,
       transport: manifest.transport,
       serverCommand: manifest.serverCommand,
+      url: manifest.url,
+      headers: manifest.headers,
       contentUrl: manifest.contentUrl,
     }
   }

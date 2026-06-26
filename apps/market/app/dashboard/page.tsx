@@ -1,5 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 
+interface DashboardItemRow {
+  id: string
+  slug: string
+  name: string
+  category: string
+  status: string
+  version: string
+  created_at: string
+  publishers: Array<{ name: string }> | null
+}
+
+interface DashboardItem {
+  id: string
+  slug: string
+  name: string
+  category: string
+  status: string
+  version: string
+  created_at: string
+  publisher: { name: string } | null
+}
+
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -25,11 +47,16 @@ export default async function DashboardPage() {
     .eq('publishers.slug', githubUsername)
     .order('created_at', { ascending: false })
 
-  const items = (myItems ?? []) as Array<{
-    id: string; slug: string; name: string;
-    category: string; status: string; version: string; created_at: string;
-    publishers: { name: string } | null
-  }>
+  const items: DashboardItem[] = ((myItems ?? []) as DashboardItemRow[]).map(item => ({
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    category: item.category,
+    status: item.status,
+    version: item.version,
+    created_at: item.created_at,
+    publisher: item.publishers?.[0] ?? null,
+  }))
 
   const statusLabel: Record<string, string> = {
     published: '✓ Published',
