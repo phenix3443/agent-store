@@ -10,12 +10,12 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  official:  'bg-ray-official/10 text-ray-official   border-ray-official/20',
-  verified:  'bg-ray-verified/10 text-ray-verified   border-ray-verified/20',
-  community: 'bg-ray-fg-muted/10 text-ray-fg-secondary border-ray-fg-muted/20',
-  provider:  'bg-ray-surface-3  text-ray-fg-secondary border-ray-border',
-  skill:     'bg-ray-surface-3  text-ray-fg-secondary border-ray-border',
-  mcp:       'bg-ray-surface-3  text-ray-fg-secondary border-ray-border',
+  official: 'bg-store-amber/10 text-store-amber border-store-amber/30',
+  verified: 'bg-[#58a6f0]/10 text-[#58a6f0] border-[#58a6f0]/30',
+  community: 'bg-store-text-3/10 text-store-text-2 border-store-text-3/30',
+  provider: 'bg-[#58a6f0]/10 text-[#58a6f0] border-[#58a6f0]/30',
+  skill: 'bg-store-green/10 text-store-green border-store-green/30',
+  mcp: 'bg-store-amber/10 text-store-amber border-store-amber/30',
 }
 
 export function Badge({ variant, children }: BadgeProps) {
