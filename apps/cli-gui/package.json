@@ -7,8 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "build:sidecar": "bash scripts/build-sidecar.sh",
+    "tauri:dev": "bun run build:sidecar && tauri dev",
+    "tauri:build": "bun run build:sidecar && tauri build",
     "type-check": "tsc --noEmit",
     "test": "bun test",
     "clean": "rm -rf dist *.tsbuildinfo"
