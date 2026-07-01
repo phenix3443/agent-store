@@ -48,12 +48,22 @@ function buildItem(type: PublishType, vals: Record<string, string>): Item {
   if (vals.transport === 'stdio') {
     return { ...base, category: 'mcp', transport: 'stdio', serverCommand: vals.command ?? '', configSchema: {} }
   }
+  let headers: Record<string, string> | undefined
+  if (vals.headers) {
+    try {
+      headers = JSON.parse(vals.headers)
+    } catch {
+      headers = undefined
+    }
+  }
+
   return {
     ...base,
     category: 'mcp',
     transport: (vals.transport as 'sse' | 'http') ?? 'http',
     url: vals.url ?? '',
     configSchema: {},
+    ...(headers ? { headers } : {}),
   }
 }
 

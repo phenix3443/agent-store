@@ -5,7 +5,7 @@ beforeEach(() => { localStorage.clear() })
 afterEach(() => { cleanup() })
 
 const { PublishModal } = await import('../PublishModal')
-const { ClientStateProvider } = await import('../ClientStateProvider')
+const { ClientStateProvider, useClientState } = await import('../ClientStateProvider')
 
 function renderModal(onOpenChange: (open: boolean) => void = () => {}) {
   return render(
@@ -41,4 +41,30 @@ test('submitting closes the modal', () => {
   fireEvent.change(screen.getByLabelText('名称'), { target: { value: 'My Provider' } })
   fireEvent.click(screen.getByText('发布'))
   expect(onOpenChange).toHaveBeenCalledWith(false)
+})
+
+test('mcp transport=http submits headers as parsed JSON on the built item', () => {
+  let latestItems: import('@aas/types').Item[] = []
+  function Probe() {
+    const { userItems } = useClientState()
+    latestItems = userItems
+    return null
+  }
+
+  render(
+    <ClientStateProvider>
+      <PublishModal open onOpenChange={() => {}} />
+      <Probe />
+    </ClientStateProvider>
+  )
+
+  fireEvent.click(screen.getByText('MCP'))
+  fireEvent.change(screen.getByLabelText('传输方式'), { target: { value: 'http' } })
+  fireEvent.change(screen.getByLabelText('远程地址'), { target: { value: 'https://example.com/mcp' } })
+  fireEvent.change(screen.getByLabelText('Headers（JSON）'), {
+    target: { value: '{"Authorization": "Bearer xyz"}' },
+  })
+  fireEvent.click(screen.getByText('发布'))
+
+  expect(latestItems[0]).toMatchObject({ headers: { Authorization: 'Bearer xyz' } })
 })
