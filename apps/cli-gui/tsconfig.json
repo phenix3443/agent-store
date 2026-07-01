@@ -6,7 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": ["bun"],
+    "types": ["bun", "@testing-library/jest-dom"],
     "paths": {
       "@/*": ["./src/*"]
     }
