@@ -1,0 +1,10 @@
+{
+  "store": {
+    "nav": { "explore": "Explore", "docs": "Docs", "publish": "Publish" },
+    "categories": { "all": "Explore", "provider": "Providers", "skill": "Skills", "mcp": "MCP" },
+    "sort": { "all": "All", "new": "Newest", "popular": "Popular", "rating": "Top rated" },
+    "search": { "placeholder": "Search items, tags, or descriptions…" },
+    "card": { "install": "Install", "installed": "Installed" },
+    "lang": { "zh": "中文", "en": "English" }
+  }
+}
