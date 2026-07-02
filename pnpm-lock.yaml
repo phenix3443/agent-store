@@ -123,7 +123,7 @@ importers:
         specifier: ^5.4.0
         version: 5.4.5
 
-  apps/market:
+  apps/store:
     dependencies:
       '@aas/types':
         specifier: workspace:*

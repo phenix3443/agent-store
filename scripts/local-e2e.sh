@@ -14,7 +14,7 @@ rm -rf "$AAS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
 mkdir -p "$AAS_HOME" "$CLAUDE_CONFIG_DIR/skills" "$CODEX_CONFIG_DIR"
 
 echo ""
-echo "=== search: verify market is reachable ==="
+echo "=== search: verify store is reachable ==="
 $AAS search test
 
 echo ""

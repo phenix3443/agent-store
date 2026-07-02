@@ -4,8 +4,8 @@
 -- Two groups of rows:
 -- 1. "Test Co" publisher + its 3 items: functional fixtures exercised by
 --    scripts/local-e2e.sh (install/config/enable/disable round-trip).
--- 2. The Web Store mock catalog (apps/market/lib/mock/publishers.ts and
---    apps/market/lib/mock/items.ts): 4 publishers / 7 items, seeded here so
+-- 2. The Web Store mock catalog (apps/store/lib/mock/publishers.ts and
+--    apps/store/lib/mock/items.ts): 4 publishers / 7 items, seeded here so
 --    the GUI's "浏览" search results (real Supabase via `search` RPC) stay
 --    visually consistent with what the Web Store shows from its static
 --    mock module.

@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: rgba(130,130,150,0.32); border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  :root {
+    --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    --wall: radial-gradient(130% 120% at 26% -12%, #2c2647 0%, #16161c 52%, #0b0b0f 100%);
+    --win: #17171b; --sidebar: #1e1e24; --content: #141417; --chrome: #1e1e24;
+    --panel: #23232a; --panel-2: #2b2b32;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.15);
+    --text: #edeef1; --text-2: #9a9aa6; --text-3: #64646e;
+    --accent: #7c82ff; --accent-fg: #fff; --accent-soft: rgba(124,130,255,0.16);
+    --green: #3ad29f; --green-soft: rgba(58,210,159,0.15);
+    --amber: #f0b34a; --star: #f0b34a; --red: #f3675f; --red-soft: rgba(243,103,95,0.14);
+    --code-bg: rgba(255,255,255,0.055); --term-bg: #0c0c10;
+    --shadow: 0 34px 90px rgba(0,0,0,0.62);
+  }
+  [data-theme="light"] {
+    --wall: radial-gradient(130% 120% at 26% -12%, #e7e4f7 0%, #eeeef2 52%, #e3e3ea 100%);
+    --win: #ffffff; --sidebar: #f4f4f7; --content: #fbfbfc; --chrome: #ececf0;
+    --panel: #ffffff; --panel-2: #f5f5f8;
+    --border: rgba(0,0,0,0.09); --border-strong: rgba(0,0,0,0.16);
+    --text: #191920; --text-2: #5d5d68; --text-3: #9797a2;
+    --accent: #5b54e8; --accent-fg: #fff; --accent-soft: rgba(91,84,232,0.10);
+    --green: #16a06a; --green-soft: rgba(22,160,106,0.12);
+    --amber: #cf8a16; --star: #e0a020; --red: #e0483f; --red-soft: rgba(224,72,63,0.10);
+    --code-bg: rgba(0,0,0,0.045); --term-bg: #17171d;
+    --shadow: 0 34px 90px rgba(0,0,0,0.22);
+  }
+  @keyframes omFade { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes omDrawer { from { transform: translateX(30px); opacity: 0 } to { transform: none; opacity: 1 } }
+  @keyframes omPop { from { opacity: 0; transform: translateY(10px) scale(.985) } to { opacity: 1; transform: none } }
+  @keyframes omBlink { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="width: 100%; min-height: 100vh; background: var(--wall); font-family: var(--sans); display: flex; flex-direction: column; align-items: center; padding: 26px 24px 40px; gap: 18px;">
+
+  <!-- ===== TOP SWITCHER ===== -->
+  <div style="display: flex; align-items: center; gap: 14px;">
+    <div style="display: flex; padding: 4px; background: rgba(0,0,0,0.28); border: 1px solid var(--border-strong); border-radius: 12px; gap: 3px; backdrop-filter: blur(8px);">
+      <div onClick="{{ onWeb }}" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; cursor: pointer; background: {{ seg.web.bg }};">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="{{ seg.web.fg }}" stroke-width="1.4"></circle><path d="M1.8 8h12.4M8 1.8c1.7 1.7 2.6 3.9 2.6 6.2S9.7 12.5 8 14.2C6.3 12.5 5.4 10.3 5.4 8S6.3 3.5 8 1.8z" stroke="{{ seg.web.fg }}" stroke-width="1.4"></path></svg>
+        <span style="font-size: 13px; font-weight: 650; color: {{ seg.web.fg }};">Web 端 · Store</span>
+      </div>
+      <div onClick="{{ onCli }}" style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 8px; cursor: pointer; background: {{ seg.cli.bg }};">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.8" y="2.6" width="12.4" height="10.8" rx="2" stroke="{{ seg.cli.fg }}" stroke-width="1.4"></rect><path d="M4.4 6l2 2-2 2M7.6 10.2h3.4" stroke="{{ seg.cli.fg }}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="font-size: 13px; font-weight: 650; color: {{ seg.cli.fg }};">CLI 客户端</span>
+      </div>
+    </div>
+    <div onClick="{{ onToggleTheme }}" style="width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(0,0,0,0.28); border: 1px solid var(--border-strong); font-size: 16px;">{{ themeIcon }}</div>
+  </div>
+
+  <!-- =========================================================== -->
+  <!-- ============ WEB STORE ============ -->
+  <!-- =========================================================== -->
+  <sc-if value="{{ isWeb }}" hint-placeholder-val="{{ true }}">
+    <div data-screen-label="Web Store" style="width: 1200px; height: 764px; border-radius: 14px; overflow: hidden; background: var(--win); box-shadow: var(--shadow); display: flex; flex-direction: column; position: relative;">
+
+      <!-- browser chrome -->
+      <div style="height: 46px; flex-shrink: 0; background: var(--chrome); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; padding: 0 16px;">
+        <div style="display: flex; gap: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;"></div>
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #febc2e;"></div>
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #28c840;"></div>
+        </div>
+        <div style="flex: 1; max-width: 460px; margin: 0 auto; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 13px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border);">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><rect x="2.5" y="5.5" width="7" height="5" rx="1" stroke="var(--green)" stroke-width="1.2"></rect><path d="M4 5.5V4a2 2 0 014 0v1.5" stroke="var(--green)" stroke-width="1.2"></path></svg>
+          <span style="font-size: 12px; color: var(--text-2); font-family: var(--mono);">agent-store.dev</span>
+          <span style="font-size: 12px; color: var(--text-3); font-family: var(--mono);">{{ web.urlPath }}</span>
+        </div>
+        <div style="width: 44px;"></div>
+      </div>
+
+      <!-- app header -->
+      <div style="height: 64px; flex-shrink: 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 20px; padding: 0 22px;">
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <div style="width: 32px; height: 32px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path><path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+          </div>
+          <div>
+            <div style="font-size: 15px; font-weight: 750; color: var(--text); letter-spacing: -0.3px;">Agent Store</div>
+            <div style="font-size: 9.5px; color: var(--text-3); font-family: var(--mono); letter-spacing: 0.3px;">registry for AI agents</div>
+          </div>
+        </div>
+        <div style="flex: 1;"></div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="font-size: 13px; font-weight: 600; color: var(--text);">探索</span>
+          <span style="font-size: 13px; font-weight: 500; color: var(--text-2);">文档</span>
+        </div>
+        <div onClick="{{ web.onPublish }}" style="display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 10px; background: var(--accent); cursor: pointer; box-shadow: 0 4px 14px var(--accent-soft);" style-hover="filter: brightness(1.08)">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2.5v8M2.5 6.5h8" stroke="#fff" stroke-width="1.7" stroke-linecap="round"></path></svg>
+          <span style="font-size: 12.5px; font-weight: 650; color: #fff;">发布</span>
+        </div>
+        <div onClick="{{ web.onOpenMe }}" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #7c82ff, #b06ad9); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;">Y</div>
+      </div>
+
+      <!-- body -->
+      <div style="flex: 1; min-height: 0; display: flex;">
+        <!-- main scroll -->
+        <div style="flex: 1; min-width: 0; overflow-y: auto; padding: 20px 22px;">
+
+          <!-- featured carousel -->
+          <sc-if value="{{ web.showFeatured }}" hint-placeholder-val="{{ true }}">
+            <div style="position: relative; margin-bottom: 22px;">
+              <div onClick="{{ featured.onOpen }}" style="border-radius: 16px; padding: 24px 26px; background: linear-gradient(120deg, var(--accent-soft), transparent 62%), var(--panel); border: 1px solid var(--accent); display: flex; align-items: center; gap: 22px; cursor: pointer; min-height: 128px;">
+                <div style="width: 64px; height: 64px; border-radius: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; background: {{ featured.softBg }}; color: {{ featured.color }};">{{ featured.glyph }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 9px;">
+                    <span style="font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.7px; padding: 3px 8px; border-radius: 5px; background: var(--accent-soft);">{{ featured.badge }}</span>
+                    <span style="font-size: 10.5px; font-weight: 600; color: var(--text-2); padding: 3px 8px; border-radius: 5px; background: var(--code-bg);">{{ featured.typeLabel }}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-top: 9px;">
+                    <span style="font-size: 21px; font-weight: 750; color: var(--text); letter-spacing: -0.3px; font-family: var(--mono);">{{ featured.name }}</span>
+                    <span style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: {{ featured.tierColor }}; background: {{ featured.tierSoft }};">{{ featured.tierLabel }}</span>
+                  </div>
+                  <div style="font-size: 13px; color: var(--text-2); line-height: 1.55; margin-top: 6px; max-width: 560px;">{{ featured.desc }}</div>
+                  <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
+                    <span style="font-size: 12px; color: var(--text-3); font-family: var(--mono);">↓ {{ featured.dl }}</span>
+                    <span style="font-size: 12px; color: var(--star); font-family: var(--mono);">★ {{ featured.rating }}</span>
+                    <span style="font-size: 12px; color: var(--text-3); font-family: var(--mono);">{{ featured.ver }}</span>
+                  </div>
+                </div>
+              </div>
+              <div onClick="{{ featured.onPrev }}" style="position: absolute; top: 50%; left: 12px; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--panel); border: 1px solid var(--border); color: var(--text-2); font-size: 15px;" style-hover="color: var(--text); border-color: var(--accent)">‹</div>
+              <div onClick="{{ featured.onNext }}" style="position: absolute; top: 50%; right: 12px; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--panel); border: 1px solid var(--border); color: var(--text-2); font-size: 15px;" style-hover="color: var(--text); border-color: var(--accent)">›</div>
+              <div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px;">
+                <sc-for list="{{ featured.dots }}" as="d" hint-placeholder-count="3">
+                  <div onClick="{{ d.onClick }}" style="width: {{ d.w }}; height: 6px; border-radius: 999px; cursor: pointer; background: {{ d.bg }}; transition: width 0.25s, background 0.25s;"></div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 13px;">
+
+            <div style="display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
+              <sc-for list="{{ web.sortTabs }}" as="t" hint-placeholder-count="4">
+                <div onClick="{{ t.onClick }}" style="padding: 5px 13px; border-radius: 7px; cursor: pointer; font-size: 11.5px; font-weight: 600; color: {{ t.fg }}; background: {{ t.bg }};" style-hover="color: var(--text)">{{ t.label }}</div>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
+                <sc-for list="{{ web.typeChips }}" as="t" hint-placeholder-count="5">
+                  <div onClick="{{ t.onClick }}" style="display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 7px; cursor: pointer; font-size: 11.5px; font-weight: 600; color: {{ t.fg }}; background: {{ t.bg }};" style-hover="color: var(--text)"><span style="font-size: 12px;">{{ t.glyph }}</span><span>{{ t.label }}</span></div>
+                </sc-for>
+              </div>
+              <div onClick="{{ web.onToggleVerified }}" style="display: flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px; background: {{ web.vChipBg }}; border: 1px solid {{ web.vChipBorder }}; cursor: pointer;">
+                <div style="width: 30px; height: 18px; border-radius: 9px; padding: 2px; display: flex; justify-content: {{ web.vJustify }}; background: {{ web.vTrack }};">
+                  <div style="width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35);"></div>
+                </div>
+                <span style="font-size: 11.5px; font-weight: 550; color: {{ web.vChipFg }};">仅已验证</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; width: 220px; height: 34px; padding: 0 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);" style-focus-within="border-color: var(--accent)">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.3" stroke="var(--text-3)" stroke-width="1.4"></circle><path d="M9.2 9.2l3 3" stroke="var(--text-3)" stroke-width="1.4" stroke-linecap="round"></path></svg>
+                <input value="{{ web.q }}" onInput="{{ web.onSearch }}" placeholder="搜索…" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-family: var(--sans); font-size: 12.5px; color: var(--text);" />
+                <span style="font-size: 10px; color: var(--text-3); font-family: var(--mono); padding: 2px 6px; border-radius: 5px; background: var(--code-bg);">⌘K</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- grid -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+            <sc-for list="{{ gridPkgs }}" as="p" hint-placeholder-count="9">
+              <div onClick="{{ p.onOpen }}" style="display: flex; flex-direction: column; gap: 11px; padding: 15px 15px 14px; border-radius: 13px; border: 1px solid var(--border); background: var(--panel); cursor: pointer;" style-hover="border-color: var(--border-strong)">
+                <div style="display: flex; align-items: flex-start; gap: 11px;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                      <span style="font-size: 13.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono);">{{ p.name }}</span>
+                      <sc-if value="{{ p.showTierBadge }}" hint-placeholder-val="{{ false }}">
+                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="flex-shrink: 0;"><circle cx="8" cy="8" r="6.4" stroke="{{ p.tierBadgeColor }}" stroke-width="1.3"></circle><path d="M6 8l1.5 1.5L11 6" stroke="{{ p.tierBadgeColor }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      </sc-if>
+                    </div>
+                    <div onClick="{{ p.onAuthor }}" style="font-size: 11px; color: var(--text-3); margin-top: 2px; width: fit-content;" style-hover="color: var(--accent)">{{ p.author }}</div>
+                  </div>
+                  <span style="font-size: 9.5px; font-weight: 600; color: {{ p.color }}; padding: 3px 7px; border-radius: 5px; background: {{ p.softBg }}; flex-shrink: 0;">{{ p.typeLabel }}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-2); line-height: 1.5; height: 36px; overflow: hidden;">{{ p.desc }}</div>
+                <div style="display: flex; align-items: center; gap: 13px; margin-top: 1px;">
+                  <span style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">↓ {{ p.dl }}</span>
+                  <span style="font-size: 11px; color: var(--star); font-family: var(--mono);">★ {{ p.rating }}</span>
+                  <div style="flex: 1;"></div>
+                  <div onClick="{{ p.onFav }}" style="width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: var(--code-bg)">
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="{{ p.heartFill }}"><path d="M8 13.5S2.5 10 2.5 6.2A2.7 2.7 0 018 4.4a2.7 2.7 0 015.5 1.8C13.5 10 8 13.5 8 13.5z" stroke="{{ p.heartStroke }}" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+                  </div>
+                  <sc-if value="{{ p.installed }}" hint-placeholder-val="{{ false }}">
+                    <span style="display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 650; color: var(--green);">
+                      <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.8L5 9.2L10.5 3.5" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>已装
+                    </span>
+                  </sc-if>
+                  <sc-if value="{{ p.notInstalled }}" hint-placeholder-val="{{ true }}">
+                    <div onClick="{{ p.onInstall }}" style="padding: 5px 12px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--border-strong); font-size: 11.5px; font-weight: 650; color: var(--text); cursor: pointer;" style-hover="border-color: var(--accent); color: var(--accent)">安装</div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ web.empty }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; gap: 10px;">
+              <div style="font-size: 30px; opacity: 0.4;">🔍</div>
+              <div style="font-size: 13.5px; font-weight: 600; color: var(--text-2);">没有找到匹配的资源</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- ===== DETAIL DRAWER ===== -->
+      <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ web.onCloseDetail }}" style="position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,0.4); display: flex; justify-content: flex-end; animation: omFade .14s ease both;">
+          <div onClick="{{ stop }}" style="width: 480px; height: 100%; background: var(--win); border-left: 1px solid var(--border-strong); overflow-y: auto; animation: omDrawer .2s ease both;">
+            <div style="padding: 22px 24px;">
+              <div style="display: flex; align-items: flex-start; gap: 15px;">
+                <div style="width: 58px; height: 58px; border-radius: 14px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 27px; background: {{ detail.softBg }}; color: {{ detail.color }};">{{ detail.glyph }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 7px;">
+                    <span style="font-size: 19px; font-weight: 750; color: var(--text); font-family: var(--mono); letter-spacing: -0.3px;">{{ detail.name }}</span>
+                    <span style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: {{ detail.tierColor }}; background: {{ detail.tierSoft }};">{{ detail.tierLabel }}</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: var(--text-2); margin-top: 3px;"><span onClick="{{ detail.onAuthor }}" style="cursor: pointer;" style-hover="color: var(--accent)">{{ detail.author }}</span> · <span style="color: {{ detail.color }};">{{ detail.typeLabel }}</span></div>
+                </div>
+                <div onClick="{{ detail.onFav }}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border);" style-hover="background: var(--panel)">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="{{ detail.heartFill }}"><path d="M8 13.5S2.5 10 2.5 6.2A2.7 2.7 0 018 4.4a2.7 2.7 0 015.5 1.8C13.5 10 8 13.5 8 13.5z" stroke="{{ detail.heartStroke }}" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+                </div>
+                <div onClick="{{ web.onCloseDetail }}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); border: 1px solid var(--border);" style-hover="background: var(--panel)">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M4 4l7 7M11 4l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+                </div>
+              </div>
+
+              <!-- install command -->
+              <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--term-bg); border: 1px solid var(--border); margin: 18px 0;">
+                <span style="color: var(--green); font-family: var(--mono); font-size: 13px;">$</span>
+                <span style="flex: 1; color: #e6e6ea; font-family: var(--mono); font-size: 13px;">{{ detail.installCmd }}</span>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.6" stroke="var(--text-2)" stroke-width="1.3"></rect><path d="M3 10.5V4a1.5 1.5 0 011.5-1.5H11" stroke="var(--text-2)" stroke-width="1.3"></path></svg>
+              </div>
+
+              <!-- stats -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 9px; margin-bottom: 18px;">
+                <div style="padding: 12px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 15px; font-weight: 750; color: var(--text); font-family: var(--mono);">{{ detail.dl }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">下载</div>
+                </div>
+                <div style="padding: 12px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 15px; font-weight: 750; color: var(--star); font-family: var(--mono);">★ {{ detail.rating }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">{{ detail.reviews }} 评价</div>
+                </div>
+                <div style="padding: 12px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 15px; font-weight: 750; color: var(--text); font-family: var(--mono);">{{ detail.ver }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">版本</div>
+                </div>
+                <div style="padding: 12px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 15px; font-weight: 750; color: var(--text); font-family: var(--mono);">{{ detail.meta }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">{{ detail.metaLabel }}</div>
+                </div>
+              </div>
+
+              <!-- primary action -->
+              <sc-if value="{{ detail.installed }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 44px; border-radius: 11px; background: var(--green-soft); border: 1px solid var(--green); font-size: 14px; font-weight: 700; color: var(--green); margin-bottom: 22px;">
+                  <svg width="15" height="15" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.8L5 9.2L10.5 3.5" stroke="var(--green)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg>已安装到 CLI 客户端
+                </div>
+              </sc-if>
+              <sc-if value="{{ detail.notInstalled }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ detail.onInstall }}" style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 44px; border-radius: 11px; background: var(--accent); font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 0 6px 18px var(--accent-soft); margin-bottom: 22px;" style-hover="filter: brightness(1.08)">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2v8M4 6.5l3.5 3.5L11 6.5M3 12.5h9" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>安装到 CLI 客户端
+                </div>
+              </sc-if>
+
+              <!-- tabs -->
+              <div style="display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--panel); margin-bottom: 16px;">
+                <sc-for list="{{ detail.tabs }}" as="tab" hint-placeholder-count="3">
+                  <div onClick="{{ tab.onClick }}" style="flex: 1; text-align: center; padding: 7px 0; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 650; background: {{ tab.bg }}; color: {{ tab.fg }};">{{ tab.label }}</div>
+                </sc-for>
+              </div>
+
+              <!-- README tab -->
+              <sc-if value="{{ detail.isReadme }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <sc-for list="{{ detail.readme }}" as="b" hint-placeholder-count="5">
+                    <sc-if value="{{ b.isH }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 14px; font-weight: 750; color: var(--text); margin-top: 6px;">{{ b.text }}</div>
+                    </sc-if>
+                    <sc-if value="{{ b.isP }}" hint-placeholder-val="{{ true }}">
+                      <div style="font-size: 13px; color: var(--text-2); line-height: 1.65;">{{ b.text }}</div>
+                    </sc-if>
+                    <sc-if value="{{ b.isCode }}" hint-placeholder-val="{{ false }}">
+                      <div style="padding: 11px 14px; border-radius: 9px; background: var(--term-bg); border: 1px solid var(--border); font-family: var(--mono); font-size: 12.5px; color: #e6e6ea;">{{ b.text }}</div>
+                    </sc-if>
+                    <sc-if value="{{ b.isLi }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; gap: 9px; font-size: 13px; color: var(--text-2); line-height: 1.6;"><span style="color: {{ detail.color }};">▹</span><span>{{ b.text }}</span></div>
+                    </sc-if>
+                  </sc-for>
+                  <div style="display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px;">
+                    <sc-for list="{{ detail.tags }}" as="t" hint-placeholder-count="3">
+                      <span style="font-size: 11px; font-weight: 550; color: var(--text-2); padding: 4px 10px; border-radius: 6px; background: var(--code-bg); font-family: var(--mono);">#{{ t }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- REVIEWS tab -->
+              <sc-if value="{{ detail.isReviews }}" hint-placeholder-val="{{ false }}">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); margin-bottom: 14px;">
+                    <div style="text-align: center;">
+                      <div style="font-size: 30px; font-weight: 800; color: var(--text); font-family: var(--mono); line-height: 1;">{{ detail.rating }}</div>
+                      <div style="font-size: 11px; color: var(--star); margin-top: 5px;">{{ detail.starGlyphs }}</div>
+                    </div>
+                    <div style="flex: 1;">
+                      <div style="font-size: 12.5px; color: var(--text-2);">{{ detail.reviews }} 条评价</div>
+                      <div style="font-size: 11px; color: var(--text-3); margin-top: 3px;">来自使用过该资源的开发者</div>
+                    </div>
+                    <div style="padding: 8px 14px; border-radius: 9px; border: 1px solid var(--border-strong); font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer;" style-hover="border-color: var(--accent); color: var(--accent)">写评价</div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 11px;">
+                    <sc-for list="{{ detail.reviewList }}" as="r" hint-placeholder-count="3">
+                      <div style="padding: 13px 15px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 9px;">
+                          <div style="width: 26px; height: 26px; border-radius: 50%; background: {{ r.avatarBg }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff;">{{ r.initial }}</div>
+                          <span style="font-size: 12.5px; font-weight: 650; color: var(--text); font-family: var(--mono);">{{ r.u }}</span>
+                          <span style="font-size: 11px; color: var(--star);">{{ r.stars }}</span>
+                          <div style="flex: 1;"></div>
+                          <span style="font-size: 10.5px; color: var(--text-3);">{{ r.d }}</span>
+                        </div>
+                        <div style="font-size: 12.5px; color: var(--text-2); line-height: 1.6; margin-top: 8px;">{{ r.t }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- VERSIONS tab -->
+              <sc-if value="{{ detail.isVersions }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 1px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border);">
+                  <sc-for list="{{ detail.versions }}" as="v" hint-placeholder-count="3">
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel);">
+                      <span style="font-size: 12.5px; font-weight: 650; color: var(--text); font-family: var(--mono);">{{ v.ver }}</span>
+                      <sc-if value="{{ v.latest }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-size: 9.5px; font-weight: 700; color: var(--green); padding: 1px 6px; border-radius: 4px; background: var(--green-soft);">latest</span>
+                      </sc-if>
+                      <span style="flex: 1; font-size: 12px; color: var(--text-2);">{{ v.note }}</span>
+                      <span style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">{{ v.date }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PUBLISHER PROFILE DRAWER ===== -->
+      <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ web.onCloseProfile }}" style="position: absolute; inset: 0; z-index: 45; background: rgba(0,0,0,0.4); display: flex; justify-content: flex-end; animation: omFade .14s ease both;">
+          <div onClick="{{ stop }}" style="width: 480px; height: 100%; background: var(--win); border-left: 1px solid var(--border-strong); overflow-y: auto; animation: omDrawer .2s ease both;">
+            <div style="padding: 24px;">
+              <div style="display: flex; align-items: center; justify-content: flex-end;">
+                <div onClick="{{ web.onCloseProfile }}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); border: 1px solid var(--border);" style-hover="background: var(--panel)">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M4 4l7 7M11 4l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 15px; margin-top: 4px;">
+                <div style="width: 62px; height: 62px; border-radius: 16px; flex-shrink: 0; background: {{ profile.avatarBg }}; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; color: #fff;">{{ profile.initial }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 7px;">
+                    <span style="font-size: 19px; font-weight: 750; color: var(--text); font-family: var(--mono);">{{ profile.name }}</span>
+                    <span style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: {{ profile.tierColor }}; background: {{ profile.tierSoft }};">{{ profile.tierLabel }}</span>
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-3); margin-top: 4px;">发布者 · {{ profile.count }} 个资源</div>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; margin: 20px 0;">
+                <div style="padding: 13px 12px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 17px; font-weight: 750; color: var(--text); font-family: var(--mono);">{{ profile.count }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">资源</div>
+                </div>
+                <div style="padding: 13px 12px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 17px; font-weight: 750; color: var(--text); font-family: var(--mono);">{{ profile.totalDl }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">总下载</div>
+                </div>
+                <div style="padding: 13px 12px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border);">
+                  <div style="font-size: 17px; font-weight: 750; color: var(--star); font-family: var(--mono);">★ {{ profile.avgRating }}</div>
+                  <div style="font-size: 10px; color: var(--text-3); margin-top: 2px;">平均分</div>
+                </div>
+              </div>
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 11px;">发布的资源</div>
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <sc-for list="{{ profile.pkgs }}" as="p" hint-placeholder-count="3">
+                  <div onClick="{{ p.onOpen }}" style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 11px; border: 1px solid var(--border); background: var(--panel); cursor: pointer;" style-hover="border-color: var(--border-strong)">
+                    <div style="width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 13px; font-weight: 700; color: var(--text); font-family: var(--mono);">{{ p.name }}</div>
+                      <div style="font-size: 11px; color: var(--text-3); margin-top: 2px;">↓ {{ p.dl }} · ★ {{ p.rating }}</div>
+                    </div>
+                    <span style="font-size: 9.5px; font-weight: 600; color: {{ p.color }}; padding: 3px 7px; border-radius: 5px; background: {{ p.softBg }};">{{ p.typeLabel }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== PUBLISH MODAL ===== -->
+      <sc-if value="{{ publishOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ web.onClosePublish }}" style="position: absolute; inset: 0; z-index: 50; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; animation: omFade .15s ease both;">
+          <div onClick="{{ stop }}" style="width: 480px; background: var(--win); border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); animation: omPop .18s ease both;">
+            <div style="padding: 20px 24px 14px; border-bottom: 1px solid var(--border);">
+              <div style="font-size: 16px; font-weight: 750; color: var(--text);">发布资源到 Store</div>
+              <div style="font-size: 11.5px; color: var(--text-3); margin-top: 3px; font-family: var(--mono);">agent-store publish</div>
+            </div>
+            <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 15px; max-height: 440px; overflow-y: auto;">
+              <div>
+                <div style="font-size: 11.5px; font-weight: 600; color: var(--text-2); margin-bottom: 7px;">资源类型</div>
+                <div style="display: flex; gap: 7px;">
+                  <sc-for list="{{ publish.typeOptions }}" as="t" hint-placeholder-count="4">
+                    <div onClick="{{ t.onClick }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 0; border-radius: 9px; border: 1px solid {{ t.border }}; background: {{ t.bg }}; cursor: pointer;">
+                      <span style="font-size: 16px; color: {{ t.color }};">{{ t.glyph }}</span>
+                      <span style="font-size: 11px; font-weight: 600; color: {{ t.fg }};">{{ t.label }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <sc-for list="{{ publish.fields }}" as="fd" hint-placeholder-count="4">
+                <div>
+                  <div style="font-size: 11.5px; font-weight: 600; color: var(--text-2); margin-bottom: 6px;">{{ fd.label }}</div>
+                  <sc-if value="{{ fd.isText }}" hint-placeholder-val="{{ true }}">
+                    <input value="{{ fd.value }}" onInput="{{ fd.onInput }}" placeholder="{{ fd.ph }}" style="width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-family: var(--mono); font-size: 12.5px; outline: none;" />
+                  </sc-if>
+                  <sc-if value="{{ fd.isSelect }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                      <sc-for list="{{ fd.options }}" as="op" hint-placeholder-count="3">
+                        <div onClick="{{ op.onClick }}" style="padding: 7px 12px; border-radius: 8px; border: 1px solid {{ op.border }}; background: {{ op.bg }}; color: {{ op.fg }}; cursor: pointer; font-size: 12px; font-weight: 600;">{{ op.label }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <div style="padding: 14px 24px 18px; display: flex; gap: 9px; justify-content: flex-end; border-top: 1px solid var(--border);">
+              <div onClick="{{ web.onClosePublish }}" style="padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border-strong); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-2);" style-hover="background: var(--panel)">取消</div>
+              <div onClick="{{ publish.onConfirm }}" style="padding: 9px 20px; border-radius: 9px; background: var(--accent); cursor: pointer; font-size: 13px; font-weight: 650; color: #fff;" style-hover="filter: brightness(1.08)">发布</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </sc-if>
+
+  <!-- =========================================================== -->
+  <!-- ============ CLI CLIENT ============ -->
+  <!-- =========================================================== -->
+  <sc-if value="{{ isCli }}" hint-placeholder-val="{{ false }}">
+    <div data-screen-label="CLI Client" style="width: 1200px; height: 764px; border-radius: 14px; overflow: hidden; background: var(--win); box-shadow: var(--shadow); display: flex; flex-direction: column; position: relative;">
+
+      <!-- title bar -->
+      <div style="height: 44px; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--sidebar); display: flex; align-items: center; padding: 0 16px; position: relative;">
+        <div style="display: flex; gap: 8px;">
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #ff5f57;"></div>
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #febc2e;"></div>
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #28c840;"></div>
+        </div>
+        <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="var(--text-3)" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+          <span style="font-size: 12.5px; font-weight: 650; color: var(--text-2); letter-spacing: -0.1px;">Agent Store CLI</span>
+        </div>
+      </div>
+
+      <div style="flex: 1; min-height: 0; display: flex;">
+
+      <!-- col1: activity rail -->
+      <div style="width: 58px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center;">
+        <div style="display: flex; flex-direction: column; gap: 7px; width: 100%; align-items: center; margin-top: 16px;">
+          <sc-for list="{{ cli.filterChips }}" as="c" hint-placeholder-count="4">
+            <div onClick="{{ c.onClick }}" title="{{ c.label }}" style="position: relative; width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: {{ c.railBg }};" style-hover="background: var(--panel-2)">
+              <div style="position: absolute; left: -8px; top: 11px; width: 3px; height: 20px; border-radius: 0 2px 2px 0; background: {{ c.railBar }};"></div>
+              <span style="font-size: 20px; color: {{ c.railColor }};">{{ c.glyph }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex: 1;"></div>
+        <div onClick="{{ settings.onOpen }}" title="设置" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #7c82ff, #b06ad9); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer; margin-bottom: 16px;">Y</div>
+      </div>
+
+      <!-- col2: list panel -->
+      <div style="width: 320px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column;">
+        <div style="height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid var(--border);">
+          <span style="flex: 1; font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.8px;">{{ cli.activeTypeLabel }}</span>
+        </div>
+        <div style="padding: 12px 14px 8px; position: relative;">
+          <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 7px 0 11px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border);">
+            <svg width="12" height="12" viewBox="0 0 13 13" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="var(--text-3)" stroke-width="1.4"></circle><path d="M8.5 8.5l3 3" stroke="var(--text-3)" stroke-width="1.4" stroke-linecap="round"></path></svg>
+            <input value="{{ cli.searchValue }}" placeholder="搜索，或用 @ 过滤…" style="flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-family: var(--mono); font-size: 12px; color: var(--accent);" />
+            <sc-if value="{{ cli.hasSearch }}" hint-placeholder-val="{{ false }}">
+              <div onClick="{{ cli.onClearSearch }}" title="清除" style="width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); flex-shrink: 0;" style-hover="background: var(--panel-2); color: var(--text)">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+              </div>
+            </sc-if>
+            <div onClick="{{ cli.onToggleFilterMenu }}" title="筛选过滤" style="width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3); flex-shrink: 0;" style-hover="background: var(--panel-2); color: var(--text)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1.5 2.5h11l-4.2 5v4l-2.6 1.3v-5.3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg>
+            </div>
+          </div>
+          <sc-if value="{{ cli.filterMenuOpen }}" hint-placeholder-val="{{ false }}">
+            <div onMouseLeave="{{ cli.onCloseFilterMenu }}" style="position: absolute; left: 14px; right: 14px; top: 46px; z-index: 30; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 10px; padding: 6px; box-shadow: 0 18px 44px rgba(0,0,0,0.45); animation: omPop .14s ease both;">
+              <div style="font-size: 9.5px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; padding: 6px 9px 4px;">发现</div>
+              <sc-for list="{{ cli.filterDiscovery }}" as="o" hint-placeholder-count="4">
+                <div onClick="{{ o.onClick }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 7px; cursor: pointer; background: {{ o.activeBg }};" style-hover="background: var(--panel-2)">
+                  <span style="flex: 1; font-size: 12.5px; font-weight: 550; color: {{ o.activeFg }};">{{ o.label }}</span>
+                  <span style="font-size: 10.5px; color: var(--text-3); font-family: var(--mono);">{{ o.token }}</span>
+                </div>
+              </sc-for>
+              <div style="height: 1px; background: var(--border); margin: 5px 6px;"></div>
+              <div style="font-size: 9.5px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; padding: 6px 9px 4px;">状态</div>
+              <sc-for list="{{ cli.filterStatus }}" as="o" hint-placeholder-count="4">
+                <div onClick="{{ o.onClick }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 7px; cursor: pointer; background: {{ o.activeBg }};" style-hover="background: var(--panel-2)">
+                  <span style="flex: 1; font-size: 12.5px; font-weight: 550; color: {{ o.activeFg }};">{{ o.label }}</span>
+                  <span style="font-size: 10.5px; color: var(--text-3); font-family: var(--mono);">{{ o.token }}</span>
+                </div>
+              </sc-for>
+              <div style="height: 1px; background: var(--border); margin: 5px 6px;"></div>
+              <div style="font-size: 9.5px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; padding: 6px 9px 4px;">目标应用</div>
+              <sc-for list="{{ cli.apps }}" as="a" hint-placeholder-count="4">
+                <div onClick="{{ a.onSelect }}" style="display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 7px; cursor: pointer; background: {{ a.rowBg }};" style-hover="background: var(--panel-2)">
+                  <div style="width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; background: {{ a.color }};">{{ a.letter }}</div>
+                  <span style="flex: 1; font-size: 12.5px; font-weight: 550; color: var(--text);">{{ a.label }}</span>
+                  <sc-if value="{{ a.active }}" hint-placeholder-val="{{ false }}">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.8L5 9.2L10.5 3.5" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 14px;">
+          <!-- INSTALLED section -->
+          <sc-if value="{{ cli.showInstalledSection }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 6px;">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="var(--text-2)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="flex: 1; font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px;">已安装</span>
+            <span style="font-size: 10px; font-weight: 700; color: #fff; background: var(--text-3); padding: 1px 7px; border-radius: 20px; font-family: var(--mono);">{{ cli.installedCount }}</span>
+          </div>
+          <sc-for list="{{ cli.installedList }}" as="p" hint-placeholder-count="4">
+            <div onClick="{{ p.onOpen }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; background: {{ p.rowSelBg }}; border-left: 2px solid {{ p.rowSelBar }};" style-hover="background: var(--panel)">
+              <div style="width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.name }}</span>
+                  <sc-if value="{{ p.outdated }}" hint-placeholder-val="{{ false }}"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--amber); flex-shrink: 0;"></span></sc-if>
+                </div>
+                <div style="font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.author }} · {{ p.typeLabel }}</div>
+              </div>
+              <div onClick="{{ p.onToggle }}" style="width: 30px; height: 18px; border-radius: 9px; padding: 2px; display: flex; cursor: pointer; flex-shrink: 0; justify-content: {{ p.knobJustify }}; background: {{ p.trackBg }};">
+                <div style="width: 14px; height: 14px; border-radius: 50%; background: #fff;"></div>
+              </div>
+            </div>
+          </sc-for>
+          </sc-if>
+
+          <!-- RECOMMENDED section -->
+          <sc-if value="{{ cli.showRecommendedSection }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 6px; padding: 14px 8px 6px;">
+            <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="var(--text-2)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span style="flex: 1; font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px;">推荐</span>
+            <span style="font-size: 10px; font-weight: 700; color: #fff; background: var(--text-3); padding: 1px 7px; border-radius: 20px; font-family: var(--mono);">{{ cli.recommendedCount }}</span>
+          </div>
+          <sc-for list="{{ cli.recommendedList }}" as="p" hint-placeholder-count="4">
+            <div onClick="{{ p.onOpen }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; background: {{ p.rowSelBg }}; border-left: 2px solid {{ p.rowSelBar }};" style-hover="background: var(--panel)">
+              <div style="width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.name }}</span>
+                  <sc-if value="{{ p.showTierBadge }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" style="flex-shrink: 0;"><circle cx="8" cy="8" r="6.4" stroke="{{ p.tierBadgeColor }}" stroke-width="1.3"></circle><path d="M6 8l1.5 1.5L11 6" stroke="{{ p.tierBadgeColor }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></sc-if>
+                </div>
+                <div style="font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">★ {{ p.rating }} · ↓ {{ p.dl }}</div>
+              </div>
+              <div onClick="{{ p.onInstall }}" style="padding: 4px 10px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--border-strong); font-size: 11px; font-weight: 650; color: var(--text); cursor: pointer; flex-shrink: 0;" style-hover="border-color: var(--accent); color: var(--accent)">安装</div>
+            </div>
+          </sc-for>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- main -->
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--content);">
+        <div style="height: 56px; flex-shrink: 0; border-bottom: 1px solid var(--border); display: none; align-items: center; gap: 14px; padding: 0 22px;">
+          <div style="min-width: 0;">
+            <div style="font-size: 15px; font-weight: 750; color: var(--text); letter-spacing: -0.2px;">{{ cli.headerTitle }}</div>
+            <div style="font-size: 11.5px; color: var(--text-3); margin-top: 1px;">{{ cli.headerSub }}</div>
+          </div>
+          <div style="flex: 1;"></div>
+          <sc-if value="{{ cli.showUpdateAll }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ cli.onUpdateAll }}" style="display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 9px; background: var(--accent); cursor: pointer;" style-hover="filter: brightness(1.08)">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 019-3M12 7a5 5 0 01-9 3M9 2v2.5H11.5M5 12V9.5H2.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              <span style="font-size: 12.5px; font-weight: 650; color: #fff;">全部更新</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex: 1; min-height: 0; overflow-y: auto;">
+          <!-- col3 detail rendered here -->
+          <sc-if value="{{ cli.detailEmpty }}" hint-placeholder-val="{{ true }}">
+            <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--text-3);">
+              <div style="width: 60px; height: 60px; border-radius: 16px; background: var(--panel); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 4v10l-7 4-7-4V7z" stroke="var(--text-3)" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="font-size: 13.5px; font-weight: 600; color: var(--text-2);">从左侧选择一个资源查看详情</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 28px 32px;">
+              <!-- HEADER (full width) -->
+              <div style="display: flex; align-items: flex-start; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid var(--border);">
+                <div style="width: 84px; height: 84px; border-radius: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 40px; background: {{ detail.softBg }}; color: {{ detail.color }};">{{ detail.glyph }}</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 9px;">
+                    <span style="font-size: 25px; font-weight: 750; color: var(--text); font-family: var(--mono); letter-spacing: -0.4px;">{{ detail.name }}</span>
+                    <span style="font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: {{ detail.tierColor }}; background: {{ detail.tierSoft }};">{{ detail.tierLabel }}</span>
+                    <span style="font-size: 11px; font-weight: 650; padding: 3px 9px; border-radius: 999px; color: {{ detail.statusColor }}; border: 1px solid {{ detail.statusColor }};">{{ detail.statusLabel }}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 12px; margin-top: 7px; font-size: 12.5px; color: var(--text-2);">
+                    <span onClick="{{ detail.onAuthor }}" style="cursor: pointer; font-weight: 600;" style-hover="color: var(--accent)">{{ detail.author }}</span>
+                    <span style="color: var(--border-strong);">|</span>
+                    <span style="color: var(--text-3);">&#8595; {{ detail.dl }}</span>
+                    <span style="color: var(--star);">&#9733; {{ detail.rating }} ({{ detail.reviews }})</span>
+                    <span style="color: {{ detail.color }}; font-weight: 600;">{{ detail.typeLabel }}</span>
+                  </div>
+                  <div style="font-size: 13px; color: var(--text-2); line-height: 1.6; margin-top: 11px; max-width: 620px;">{{ detail.desc }}</div>
+                  <div style="display: flex; align-items: center; gap: 9px; margin-top: 16px;">
+                    <sc-if value="{{ detail.installed }}" hint-placeholder-val="{{ true }}">
+                      <div style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 15px; border-radius: 7px; background: var(--green-soft); border: 1px solid var(--green); font-size: 12px; font-weight: 650; color: var(--green);"><svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.8L5 9.2L10.5 3.5" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>已安装</div>
+                    </sc-if>
+                    <sc-if value="{{ detail.notInstalled }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ detail.onInstall }}" style="display: flex; align-items: center; height: 32px; padding: 0 18px; border-radius: 7px; background: var(--accent); font-size: 12px; font-weight: 650; color: #fff; cursor: pointer;" style-hover="filter: brightness(1.08)">安装</div>
+                    </sc-if>
+                    <div onClick="{{ detail.onFav }}" style="width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border-strong);" style-hover="background: var(--panel)"><svg width="16" height="16" viewBox="0 0 16 16" fill="{{ detail.heartFill }}"><path d="M8 13.5S2.5 10 2.5 6.2A2.7 2.7 0 018 4.4a2.7 2.7 0 015.5 1.8C13.5 10 8 13.5 8 13.5z" stroke="{{ detail.heartStroke }}" stroke-width="1.4" stroke-linejoin="round"></path></svg></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BODY: two columns -->
+              <div style="display: flex; gap: 30px; align-items: flex-start; padding-top: 20px;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px; background: var(--term-bg); border: 1px solid var(--border); margin-bottom: 20px;">
+                    <span style="color: var(--green); font-family: var(--mono); font-size: 13px;">$</span>
+                    <span style="flex: 1; color: #e6e6ea; font-family: var(--mono); font-size: 13px;">{{ detail.installCmd }}</span>
+                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.6" stroke="var(--text-2)" stroke-width="1.3"></rect><path d="M3 10.5V4a1.5 1.5 0 011.5-1.5H11" stroke="var(--text-2)" stroke-width="1.3"></path></svg>
+                  </div>
+                  <div style="display: flex; gap: 22px; border-bottom: 1px solid var(--border); margin-bottom: 20px;">
+                    <sc-for list="{{ detail.tabs }}" as="tab" hint-placeholder-count="3">
+                      <div onClick="{{ tab.onClick }}" style="padding: 0 0 11px; cursor: pointer; font-size: 13px; font-weight: 650; color: {{ tab.underlineFg }}; border-bottom: 2px solid {{ tab.underline }}; margin-bottom: -1px;">{{ tab.label }}</div>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ detail.isReadme }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: flex; flex-direction: column; gap: 11px;">
+                      <sc-for list="{{ detail.readme }}" as="b" hint-placeholder-count="5">
+                        <sc-if value="{{ b.isH }}" hint-placeholder-val="{{ false }}"><div style="font-size: 17px; font-weight: 750; color: var(--text); margin-top: 8px; padding-bottom: 7px; border-bottom: 1px solid var(--border);">{{ b.text }}</div></sc-if>
+                        <sc-if value="{{ b.isP }}" hint-placeholder-val="{{ true }}"><div style="font-size: 13.5px; color: var(--text-2); line-height: 1.7;">{{ b.text }}</div></sc-if>
+                        <sc-if value="{{ b.isCode }}" hint-placeholder-val="{{ false }}"><div style="padding: 12px 15px; border-radius: 9px; background: var(--term-bg); border: 1px solid var(--border); font-family: var(--mono); font-size: 12.5px; color: #e6e6ea;">{{ b.text }}</div></sc-if>
+                        <sc-if value="{{ b.isLi }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 9px; font-size: 13.5px; color: var(--text-2); line-height: 1.6;"><span style="color: {{ detail.color }};">&#9657;</span><span>{{ b.text }}</span></div></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ detail.isReviews }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 11px;">
+                      <sc-for list="{{ detail.reviewList }}" as="r" hint-placeholder-count="3">
+                        <div style="padding: 14px 16px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border);">
+                          <div style="display: flex; align-items: center; gap: 9px;">
+                            <div style="width: 26px; height: 26px; border-radius: 50%; background: {{ r.avatarBg }}; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff;">{{ r.initial }}</div>
+                            <span style="font-size: 12.5px; font-weight: 650; color: var(--text); font-family: var(--mono);">{{ r.u }}</span>
+                            <span style="font-size: 11px; color: var(--star);">{{ r.stars }}</span>
+                            <div style="flex: 1;"></div>
+                            <span style="font-size: 10.5px; color: var(--text-3);">{{ r.d }}</span>
+                          </div>
+                          <div style="font-size: 12.5px; color: var(--text-2); line-height: 1.6; margin-top: 8px;">{{ r.t }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ detail.isVersions }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-direction: column; gap: 1px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border);">
+                      <sc-for list="{{ detail.versions }}" as="v" hint-placeholder-count="3">
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--panel);">
+                          <span style="font-size: 12.5px; font-weight: 650; color: var(--text); font-family: var(--mono);">{{ v.ver }}</span>
+                          <sc-if value="{{ v.latest }}" hint-placeholder-val="{{ false }}"><span style="font-size: 9.5px; font-weight: 700; color: var(--green); padding: 1px 6px; border-radius: 4px; background: var(--green-soft);">latest</span></sc-if>
+                          <span style="flex: 1; font-size: 12px; color: var(--text-2);">{{ v.note }}</span>
+                          <span style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">{{ v.date }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+
+                <!-- SIDEBAR -->
+                <div style="width: 248px; flex-shrink: 0;">
+                  <div style="margin-bottom: 24px;">
+                    <div style="font-size: 14.5px; font-weight: 700; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px;">安装信息</div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px;"><span style="font-size: 12px; color: var(--text-3);">标识</span><span style="font-size: 12px; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ detail.name }}</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px;"><span style="font-size: 12px; color: var(--text-3);">版本</span><span style="font-size: 12px; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">v{{ detail.ver }}</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px;"><span style="font-size: 12px; color: var(--text-3);">更新时间</span><span style="font-size: 12px; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ detail.updatedAgo }}</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px;"><span style="font-size: 12px; color: var(--text-3);">{{ detail.metaLabel }}</span><span style="font-size: 12px; color: var(--accent); font-family: var(--mono);">{{ detail.meta }}</span></div>
+                  </div>
+                  <div style="margin-bottom: 24px;">
+                    <div style="font-size: 14.5px; font-weight: 700; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px;">市场</div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 9px;"><span style="font-size: 12px; color: var(--text-3);">发布</span><span style="font-size: 12px; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">{{ detail.publishedAgo }}</span></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px;"><span style="font-size: 12px; color: var(--text-3);">最近发布</span><span style="font-size: 12px; color: var(--text); font-family: var(--mono);">{{ detail.releasedAgo }}</span></div>
+                  </div>
+                  <div style="margin-bottom: 24px;">
+                    <div style="font-size: 14.5px; font-weight: 700; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px;">分类</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                      <sc-for list="{{ detail.categories }}" as="c" hint-placeholder-count="3"><span style="font-size: 11px; font-weight: 550; color: var(--text-2); padding: 3px 9px; border-radius: 5px; border: 1px solid var(--border-strong);">{{ c }}</span></sc-for>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font-size: 14.5px; font-weight: 700; color: var(--text); padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px;">资源</div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                      <sc-for list="{{ detail.resources }}" as="r" hint-placeholder-count="3">
+                        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text-2);" style-hover="color: var(--accent)">
+                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M5 3H3.5A1.5 1.5 0 002 4.5v6A1.5 1.5 0 003.5 12h6a1.5 1.5 0 001.5-1.5V9M8 2h4v4M12 2L6.5 7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                          <span style="font-size: 12.5px; font-weight: 500;">{{ r.label }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </div><!-- /col row -->
+      <!-- ===== PROVIDER EDIT MODAL ===== -->
+      <sc-if value="{{ cli.edit.open }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ cli.edit.onClose }}" style="position: absolute; inset: 0; z-index: 60; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; animation: omFade .15s ease both;">
+          <div onClick="{{ stop }}" style="width: 540px; max-height: 86%; display: flex; flex-direction: column; background: var(--win); border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); animation: omPop .18s ease both;">
+            <div style="padding: 20px 24px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
+              <input value="{{ cli.edit.nameValue }}" onInput="{{ cli.edit.onNameInput }}" placeholder="配置名称" style="font-size: 16px; font-weight: 750; color: var(--text); background: transparent; border: none; border-bottom: 1px dashed transparent; outline: none; width: 100%; padding: 0 0 2px; font-family: var(--sans);" style-focus="border-bottom-color: var(--border-strong)" />
+              <div style="font-size: 11.5px; color: var(--text-3); margin-top: 3px; font-family: var(--mono);">配置名称 · 点击可修改 · {{ cli.app.label }}</div>
+            </div>
+            <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto;">
+              <sc-for list="{{ cli.edit.fields }}" as="fd" hint-placeholder-count="6">
+                <div>
+                  <div style="font-size: 11.5px; font-weight: 600; color: var(--text-2); margin-bottom: 6px;">{{ fd.label }}</div>
+                  <sc-if value="{{ fd.isText }}" hint-placeholder-val="{{ true }}">
+                    <input value="{{ fd.value }}" onInput="{{ fd.onInput }}" placeholder="{{ fd.ph }}" style="width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-family: var(--mono); font-size: 12.5px; outline: none;" />
+                  </sc-if>
+                  <sc-if value="{{ fd.isReadonly }}" hint-placeholder-val="{{ false }}">
+                    <div style="width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--code-bg); color: var(--text-2); font-family: var(--mono); font-size: 12.5px; display: flex; align-items: center; gap: 7px;">
+                      {{ fd.value }}
+                      <span style="margin-left: auto; font-size: 10px; color: var(--text-3);">不可修改</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ fd.isSelect }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                      <sc-for list="{{ fd.options }}" as="op" hint-placeholder-count="10">
+                        <div onClick="{{ op.onClick }}" style="min-width: 34px; text-align: center; padding: 7px 11px; border-radius: 8px; border: 1px solid {{ op.border }}; background: {{ op.bg }}; color: {{ op.fg }}; cursor: pointer; font-size: 12px; font-weight: 600; font-family: var(--mono);">{{ op.label }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ fd.hasHelp }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 10.5px; color: var(--text-3); line-height: 1.55; margin-top: 6px;">{{ fd.help }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+
+              <!-- 模型白名单 -->
+              <div>
+                <div style="font-size: 11.5px; font-weight: 600; color: var(--text-2); margin-bottom: 6px;">模型白名单</div>
+                <div style="display: flex; gap: 7px;">
+                  <input value="{{ cli.edit.wlDraft }}" onInput="{{ cli.edit.onWlDraft }}" placeholder="输入模型名称，如 claude-*" style="flex: 1; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-family: var(--mono); font-size: 12.5px; outline: none;" />
+                  <div onClick="{{ cli.edit.onWlAdd }}" style="padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border-strong); cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text); display: flex; align-items: center;" style-hover="border-color: var(--accent); color: var(--accent)">添加</div>
+                </div>
+                <sc-if value="{{ cli.edit.whitelist }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                    <sc-for list="{{ cli.edit.whitelist }}" as="w" hint-placeholder-count="1">
+                      <div style="display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 7px; background: var(--code-bg); font-family: var(--mono); font-size: 11.5px; color: var(--text);">
+                        {{ w.label }}
+                        <span onClick="{{ w.onRemove }}" style="cursor: pointer; color: var(--text-3); font-size: 13px;" style-hover="color: var(--red)">×</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div style="font-size: 10.5px; color: var(--text-3); line-height: 1.5; margin-top: 7px;">留空表示不限制。支持 claude-* 前缀匹配、anthropic/claude-* 带供应商前缀匹配。</div>
+              </div>
+
+              <!-- 模型映射 -->
+              <div>
+                <div style="font-size: 11.5px; font-weight: 600; color: var(--text-2); margin-bottom: 6px;">模型映射</div>
+                <div style="display: flex; align-items: center; gap: 7px;">
+                  <input value="{{ cli.edit.mapFromDraft }}" onInput="{{ cli.edit.onMapFrom }}" placeholder="CLI 模型（如 claude-*）" style="flex: 1; min-width: 0; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-family: var(--mono); font-size: 12px; outline: none;" />
+                  <span style="color: var(--text-3);">→</span>
+                  <input value="{{ cli.edit.mapToDraft }}" onInput="{{ cli.edit.onMapTo }}" placeholder="供应商模型（如 kimi-k2）" style="flex: 1; min-width: 0; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font-family: var(--mono); font-size: 12px; outline: none;" />
+                  <div onClick="{{ cli.edit.onMapAdd }}" style="padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border-strong); cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text); display: flex; align-items: center;" style-hover="border-color: var(--accent); color: var(--accent)">添加</div>
+                </div>
+                <sc-if value="{{ cli.edit.hasMapping }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                    <sc-for list="{{ cli.edit.mapping }}" as="m" hint-placeholder-count="1">
+                      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 8px; background: var(--code-bg); font-family: var(--mono); font-size: 11.5px; color: var(--text);">
+                        <span style="flex: 1;">{{ m.from }}</span>
+                        <span style="color: var(--text-3);">→</span>
+                        <span style="flex: 1;">{{ m.to }}</span>
+                        <span onClick="{{ m.onRemove }}" style="cursor: pointer; color: var(--text-3); font-size: 14px;" style-hover="color: var(--red)">×</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <div style="font-size: 10.5px; color: var(--text-3); line-height: 1.5; margin-top: 7px;">把 CLI 请求的模型名改写为供应商实际模型。支持精确、通配符与前缀映射。</div>
+              </div>
+
+              <!-- CLI 配置折叠 -->
+              <div style="border: 1px solid var(--border); border-radius: 11px; overflow: hidden;">
+                <div onClick="{{ cli.edit.onToggleCli }}" style="display: flex; align-items: center; gap: 9px; padding: 13px 15px; cursor: pointer;">
+                  <span style="color: var(--text-3); font-size: 12px;">{{ cli.edit.cliChevron }}</span>
+                  <span style="font-size: 13px; font-weight: 650; color: var(--text);">CLI 配置</span>
+                  <span style="font-size: 10px; font-weight: 700; color: #fff; background: #3b82f6; padding: 2px 8px; border-radius: 5px;">Codex</span>
+                </div>
+                <sc-if value="{{ cli.edit.cliOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding: 0 15px 14px;">
+                    <div style="font-size: 11px; color: var(--text-2); line-height: 1.6;">针对目标 CLI 的额外覆盖项（如 Codex 的 <span style="font-family: var(--mono); color: var(--accent);">model_reasoning_effort</span>、<span style="font-family: var(--mono); color: var(--accent);">wire_api</span>）。留空则沿用全局默认。</div>
+                    <textarea placeholder='{\n  "model_reasoning_effort": "high"\n}' style="width: 100%; height: 74px; margin-top: 9px; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--term-bg); color: #e6e6ea; font-family: var(--mono); font-size: 11.5px; outline: none; resize: none;"></textarea>
+                  </div>
+                </sc-if>
+              </div>
+
+              <!-- 可用性监控 -->
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="flex: 1;">
+                  <div style="font-size: 13px; font-weight: 600; color: var(--text);">可用性监控</div>
+                  <div style="font-size: 10.5px; color: var(--text-3); margin-top: 2px;">启用后会定期健康检查，监控此供应商的可用性</div>
+                </div>
+                <span style="font-size: 11px; color: var(--text-3);">{{ cli.edit.healthLabel }}</span>
+                <div onClick="{{ cli.edit.onToggleHealth }}" style="width: 38px; height: 22px; border-radius: 11px; padding: 2px; display: flex; cursor: pointer; justify-content: {{ cli.edit.healthKnob }}; background: {{ cli.edit.healthTrack }};">
+                  <div style="width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35);"></div>
+                </div>
+              </div>
+            </div>
+            <div style="padding: 14px 24px 18px; display: flex; gap: 9px; justify-content: flex-end; border-top: 1px solid var(--border); flex-shrink: 0;">
+              <div onClick="{{ cli.edit.onClose }}" style="padding: 9px 16px; border-radius: 9px; border: 1px solid var(--border-strong); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-2);" style-hover="background: var(--panel)">取消</div>
+              <div onClick="{{ cli.edit.onSave }}" style="padding: 9px 20px; border-radius: 9px; background: var(--accent); cursor: pointer; font-size: 13px; font-weight: 650; color: #fff;" style-hover="filter: brightness(1.08)">保存</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== SETTINGS MODAL ===== -->
+      <sc-if value="{{ settings.open }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ settings.onClose }}" style="position: absolute; inset: 0; z-index: 60; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; animation: omFade .15s ease both;">
+          <div onClick="{{ stop }}" style="width: 620px; height: 440px; background: var(--win); border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); display: flex; overflow: hidden; animation: omPop .18s ease both;">
+            <!-- left nav -->
+            <div style="width: 168px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--border); padding: 18px 12px; display: flex; flex-direction: column; gap: 3px;">
+              <div style="font-size: 14px; font-weight: 750; color: var(--text); padding: 0 8px 14px;">设置</div>
+              <sc-for list="{{ settings.tabs }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.onClick }}" style="padding: 9px 11px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; background: {{ t.bg }}; color: {{ t.fg }};">{{ t.label }}</div>
+              </sc-for>
+            </div>
+            <!-- content -->
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <div style="height: 50px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; padding: 0 16px;">
+                <div onClick="{{ settings.onClose }}" style="width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3);" style-hover="background: var(--panel)">
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M4 4l7 7M11 4l-7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg>
+                </div>
+              </div>
+              <div style="flex: 1; overflow-y: auto; padding: 4px 26px 26px;">
+
+                <!-- ACCOUNT -->
+                <sc-if value="{{ settings.isAccount }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border);">
+                      <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #7c82ff, #b06ad9); display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 700; color: #fff; flex-shrink: 0;">Y</div>
+                      <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 15px; font-weight: 700; color: var(--text);">you@dev</div>
+                        <div style="display: flex; align-items: center; gap: 5px; margin-top: 3px;">
+                          <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ settings.statusColor }};"></span>
+                          <span style="font-size: 12px; color: var(--text-2);">{{ settings.statusText }}</span>
+                        </div>
+                      </div>
+                      <div onClick="{{ settings.onToggleLogin }}" style="padding: 8px 16px; border-radius: 9px; border: 1px solid var(--border-strong); cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text);" style-hover="border-color: var(--accent); color: var(--accent)">{{ settings.loginBtnLabel }}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); margin-top: 12px;">
+                      <div>
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text);">订阅计划</div>
+                        <div style="font-size: 11.5px; color: var(--text-3); margin-top: 2px;">Pro · 无限私有资源</div>
+                      </div>
+                      <span style="font-size: 11px; font-weight: 700; color: var(--accent); padding: 4px 10px; border-radius: 6px; background: var(--accent-soft);">PRO</span>
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--text-3); line-height: 1.6; margin-top: 14px;">登录后可发布私有资源、跨设备同步已安装的技能 / MCP / 供应商 / 插件，并接收更新推送。</div>
+                  </div>
+                </sc-if>
+
+                <!-- GENERAL -->
+                <sc-if value="{{ settings.isGeneral }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div onClick="{{ onToggleTheme }}" style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); cursor: pointer;" style-hover="border-color: var(--border-strong)">
+                      <span style="font-size: 16px;">{{ themeIcon }}</span>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text);">主题</div>
+                        <div style="font-size: 11.5px; color: var(--text-3); margin-top: 2px;">当前：{{ themeLabel }}模式</div>
+                      </div>
+                      <span style="font-size: 12px; color: var(--accent); font-weight: 600;">切换</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border);">
+                      <div style="width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; background: {{ cli.app.color }};">{{ cli.app.letter }}</div>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text);">默认目标应用</div>
+                        <div style="font-size: 11.5px; color: var(--text-3); margin-top: 2px;">{{ cli.app.label }} · {{ cli.app.path }}</div>
+                      </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); position: relative;">
+                      <div style="flex: 1;">
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text);">界面语言</div>
+                        <div style="font-size: 11.5px; color: var(--text-3); margin-top: 2px;">Language · 目前支持中英文，更多语言即将上线</div>
+                      </div>
+                      <div onClick="{{ settings.lang.onToggle }}" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 9px; background: var(--content); border: 1px solid var(--border-strong); cursor: pointer; min-width: 118px;">
+                        <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text);">{{ settings.lang.currentLabel }}</span>
+                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                      </div>
+                      <sc-if value="{{ settings.lang.menuOpen }}" hint-placeholder-val="{{ false }}">
+                        <div style="position: absolute; right: 18px; top: 62px; z-index: 20; width: 190px; background: var(--panel); border: 1px solid var(--border-strong); border-radius: 11px; padding: 5px; box-shadow: 0 18px 40px rgba(0,0,0,0.4);">
+                          <sc-for list="{{ settings.lang.options }}" as="l" hint-placeholder-count="5">
+                            <div onClick="{{ l.onClick }}" style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; cursor: {{ l.cursor }}; background: {{ l.rowBg }};">
+                              <div style="flex: 1;">
+                                <div style="font-size: 12.5px; font-weight: 600; color: {{ l.labelColor }};">{{ l.label }}</div>
+                                <div style="font-size: 10px; color: var(--text-3); margin-top: 1px;">{{ l.sub }}</div>
+                              </div>
+                              <sc-if value="{{ l.active }}" hint-placeholder-val="{{ false }}">
+                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.8L5 9.2L10.5 3.5" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                              </sc-if>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <!-- ABOUT -->
+                <sc-if value="{{ settings.isAbout }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 0; gap: 12px;">
+                    <div style="width: 52px; height: 52px; border-radius: 14px; background: var(--accent); display: flex; align-items: center; justify-content: center;">
+                      <svg width="28" height="28" viewBox="0 0 18 18" fill="none"><path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path><path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+                    </div>
+                    <div style="font-size: 15px; font-weight: 750; color: var(--text);">Agent Store CLI</div>
+                    <div style="font-size: 12px; color: var(--text-3); font-family: var(--mono);">v1.4.0 · registry client</div>
+                    <div style="display: flex; gap: 18px; margin-top: 6px;">
+                      <span style="font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer;">文档</span>
+                      <span style="font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer;">GitHub</span>
+                      <span style="font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer;">检查更新</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1248,&quot;height&quot;:840}}">
+class Component extends DCLogic {
+  TYPE = {
+    skill:    { label: '技能', color: '#3ad29f', soft: 'rgba(58,210,159,0.16)', metaLabel: '大小' },
+    mcp:      { label: 'MCP', color: '#f0b34a', soft: 'rgba(240,179,74,0.16)', metaLabel: '工具' },
+    provider: { label: '供应商', color: '#58a6f0', soft: 'rgba(88,166,240,0.16)', metaLabel: '延迟' },
+  };
+
+  // Publisher tiers — mirrors supabase publishers.tier (official / verified / community)
+  TIERS = {
+    official:  { label: '官方', color: '#f0b34a', soft: 'rgba(240,179,74,0.18)' },
+    verified:  { label: '已验证', color: '#58a6f0', soft: 'rgba(88,166,240,0.18)' },
+    community: { label: '社区', color: '#8b8b96', soft: 'rgba(139,139,150,0.16)' },
+  };
+  PUBLISHER_TIER = { anthropic: 'official', aws: 'official', obra: 'verified', upstash: 'verified', openrouter: 'verified', addyosmani: 'community', community: 'community', ylsagi: 'community', you: 'community' };
+  tierOf = (author) => this.PUBLISHER_TIER[author] || 'community';
+
+  // Category / nav icons — 1em sized, currentColor, so containers' font-size + color drive them.
+  icon(type) {
+    const svg = (children, filled) => React.createElement('svg', { key: type, viewBox: '0 0 24 24', width: '1em', height: '1em', fill: filled ? 'currentColor' : 'none', stroke: filled ? 'none' : 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round', style: { display: 'block' } }, children);
+    const p = (d, k) => React.createElement('path', { key: k, d });
+    const r = (x, y, w, h, rx, k) => React.createElement('rect', { key: k, x, y, width: w, height: h, rx });
+    switch (type) {
+      case 'provider': return svg([p('M4 8.5h13l-3.2-3.2', 'a'), p('M20 15.5H7l3.2 3.2', 'b')]);
+      case 'skill': return svg(p('M12 2.6c.55 4.9 2.9 7.25 7.8 7.8-4.9.55-7.25 2.9-7.8 7.8-.55-4.9-2.9-7.25-7.8-7.8 4.9-.55 7.25-2.9 7.8-7.8Z', 's'), true);
+      case 'mcp': return svg([r(3, 4.5, 18, 6.4, 2, 'r1'), r(3, 13.1, 18, 6.4, 2, 'r2'), p('M6.6 7.7h.02', 'd1'), p('M6.6 16.3h.02', 'd2')]);
+      case 'fav': return svg(p('M12 20.5C7 16.8 4 13.9 4 10.4A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 8 2.4c0 3.5-3 6.4-8 10.1Z', 'h'), true);
+      case 'browse': return svg([p('M5 9h14l-1 4.4a2 2 0 0 1-2 1.5H8a2 2 0 0 1-2-1.5Z', 'g1'), p('M5 9 6.4 5h11.2L19 9', 'g2'), p('M9.5 14.9V20h5v-5.1', 'g3')]);
+      case 'updates': return svg([p('M20 6.6A8 8 0 1 0 21.2 12.8', 'u1'), p('M20.2 3v4h-4', 'u2')]);
+      case 'all': default: return svg([r(4, 4, 7, 7, 1.7, 'a1'), r(13, 4, 7, 7, 1.7, 'a2'), r(4, 13, 7, 7, 1.7, 'a3'), r(13, 13, 7, 7, 1.7, 'a4')]);
+    }
+  }
+
+  APPS = [
+    { key: 'claude', label: 'Claude Code', letter: 'C', color: '#d2785a', path: '~/.claude' },
+    { key: 'codex', label: 'Codex', letter: 'X', color: '#10a37f', path: '~/.codex' },
+  ];
+
+  BASE_PKGS = [
+    { id: 'pdf-processing', type: 'skill', author: 'anthropic', verified: true, dl: '142k', rating: '4.8', reviews: '5.6k', ver: '1.2.0', meta: '3.2MB', tags: ['document', 'pdf'], desc: '抽取、拆分、合并 PDF，填写表单并提取结构化数据。' },
+    { id: 'frontend-design', type: 'skill', author: 'addyosmani', verified: false, dl: '78k', rating: '4.6', reviews: '3.9k', ver: '2.0.1', meta: '1.1MB', tags: ['ui', 'a11y', 'design'], desc: '组件架构、设计系统与 WCAG 2.1 AA 无障碍规范落地。' },
+    { id: 'superpowers', type: 'skill', author: 'obra', verified: true, dl: '203k', rating: '4.9', reviews: '8.1k', ver: '4.2.0', meta: '640KB', tags: ['meta', 'workflow', 'planning'], desc: '一套让 agent 学会规划、验证与自我纠错的元技能，显著提升复杂任务成功率。' },
+    { id: 'security-review', type: 'skill', author: 'addyosmani', verified: false, dl: '44k', rating: '4.5', reviews: '2.2k', ver: '1.1.0', meta: '410KB', tags: ['security', 'owasp'], desc: 'OWASP Top 10 防护、鉴权模式、密钥管理与依赖审计。' },
+    { id: 'filesystem', type: 'mcp', author: 'anthropic', verified: true, dl: '388k', rating: '4.7', reviews: '6.7k', ver: '0.8.1', meta: '8', tags: ['fs', 'io'], desc: '读写本地文件系统，带沙箱路径白名单与只读模式。' },
+    { id: 'github', type: 'mcp', author: 'anthropic', verified: true, dl: '296k', rating: '4.6', reviews: '5.1k', ver: '0.6.2', meta: '26', tags: ['git', 'api'], desc: 'Issues、PR、仓库与代码搜索的完整 GitHub API 封装。' },
+    { id: 'postgres', type: 'mcp', author: 'community', verified: false, dl: '71k', rating: '4.3', reviews: '1.8k', ver: '0.4.0', meta: '6', tags: ['db', 'sql'], desc: '只读查询任意 PostgreSQL，自动 schema 反射与结果分页。' },
+    { id: 'context7', type: 'mcp', author: 'upstash', verified: true, dl: '118k', rating: '4.7', reviews: '3.3k', ver: '1.0.0', meta: '2', tags: ['docs', 'rag'], desc: '为任意库拉取版本精确的最新文档上下文，减少幻觉。' },
+    { id: 'yls', type: 'provider', author: 'ylsagi', verified: false, dl: '32k', rating: '4.7', reviews: '210', ver: '2.0.0', meta: '96ms', tags: ['relay', 'codex'], desc: 'YLS AGI 中转端点，兼容 Claude 与 Codex，支持模型映射与多协议自动转换。' },
+    { id: 'openrouter', type: 'provider', author: 'openrouter', verified: false, dl: '98k', rating: '4.6', reviews: '870', ver: '1.3.0', meta: '120ms', tags: ['relay', 'multi-model'], desc: '聚合 300+ 模型的中转端点，自动路由与失败回退。' },
+    { id: 'aws-bedrock', type: 'provider', author: 'aws', verified: true, dl: '64k', rating: '4.5', reviews: '540', ver: '1.1.2', meta: '208ms', tags: ['enterprise', 'bedrock'], desc: '企业级托管的 Claude 端点，IAM 鉴权与私有网络接入。' },
+    { id: 'ollama-local', type: 'provider', author: 'community', verified: false, dl: '112k', rating: '4.7', reviews: '1.4k', ver: '0.9.0', meta: '11ms', tags: ['local', 'offline'], desc: '本地 Ollama 端点预设，零延迟离线运行开源模型。' },
+  ];
+
+  // Category-specific metadata (mirrors items.metadata JSONB in supabase)
+  PROVIDER_MODELS = {
+    yls: ['claude-sonnet-4', 'claude-opus-4', 'gpt-4o', 'gpt-4o-mini'],
+    openrouter: ['claude-sonnet-4', 'gpt-4o', 'gemini-2.0-flash', 'llama-3.3-70b'],
+    'aws-bedrock': ['claude-sonnet-4', 'claude-haiku-4'],
+    'ollama-local': ['llama3.2', 'qwen2.5-coder', 'deepseek-r1'],
+  };
+  supportedModelsOf = (id) => this.PROVIDER_MODELS[id] || ['claude-sonnet-4', 'gpt-4o'];
+  // MCP transport shapes (stdio → serverCommand, remote → url + headers)
+  MCP_META = {
+    filesystem: { transport: 'stdio', serverCommand: 'npx -y @modelcontextprotocol/server-filesystem ~/code' },
+    github:     { transport: 'http', url: 'https://api.githubcopilot.com/mcp/', headers: { Authorization: 'Bearer ${GITHUB_TOKEN}' } },
+    postgres:   { transport: 'stdio', serverCommand: 'npx -y @modelcontextprotocol/server-postgres $DB_URL' },
+    context7:   { transport: 'sse', url: 'https://mcp.context7.com/sse', headers: { 'X-API-Key': '${CONTEXT7_KEY}' } },
+  };
+  mcpMetaOf = (id) => this.MCP_META[id] || { transport: 'stdio', serverCommand: './server' };
+  contentUrlOf = (id) => 'https://store.supabase.co/skills/' + id + '.zip';
+
+  CATS = [
+    { key: 'all', label: '探索' },
+    { key: 'provider', label: '供应商' },
+    { key: 'skill', label: '技能' },
+    { key: 'mcp', label: 'MCP' },
+  ];
+
+  SORTS = [{ key: 'all', label: '全部' }, { key: 'recent', label: '最近新增' }, { key: 'popular', label: '最流行' }, { key: 'rating', label: '评分最高' }];
+
+  // 每种资源类型发布时需要的配置字段
+  FIELD_SCHEMAS = {
+    provider: [
+      { key: 'name', label: '供应商名称', ph: 'my-provider', mono: true },
+      { key: 'homepage', label: '官网', ph: 'https://example.com', mono: true },
+      { key: 'baseUrl', label: 'API 地址', ph: 'https://api.anthropic.com', mono: true },
+      { key: 'supportedModels', label: '支持的模型', ph: 'claude-sonnet-4, gpt-4o（逗号分隔）', mono: true },
+    ],
+    skill: [
+      { key: 'name', label: '技能名称', ph: 'pdf-processing', mono: true },
+      { key: 'repo', label: 'GitHub 仓库', ph: 'anthropics/skills', mono: true },
+      { key: 'contentUrl', label: '下载地址 (contentUrl)', ph: 'https://.../skill.zip', mono: true },
+      { key: 'category', label: '分类', kind: 'select', options: ['Document', 'Engineering', 'Security', 'Testing', 'Git', 'General'] },
+      { key: 'installMethod', label: '安装方式', kind: 'select', options: ['默认（复制到 skills 目录）', '自定义安装脚本'] },
+      { key: 'installScript', label: '安装脚本', ph: './install.sh 或 npm run setup', mono: true, when: (v) => v.installMethod === '自定义安装脚本' },
+    ],
+    mcp: [
+      { key: 'name', label: '服务器名称', ph: 'filesystem', mono: true },
+      { key: 'homepage', label: '官网地址', ph: 'https://github.com/modelcontextprotocol/servers', mono: true },
+      { key: 'transport', label: '传输方式', kind: 'select', options: ['stdio', 'sse', 'http'] },
+      { key: 'command', label: '启动命令', ph: 'npx -y @modelcontextprotocol/server-filesystem ~/code', mono: true, when: (v) => (v.transport || 'stdio') === 'stdio' },
+      { key: 'url', label: '服务地址 (URL)', ph: 'https://mcp.example.com/sse', mono: true, when: (v) => v.transport === 'sse' || v.transport === 'http' },
+      { key: 'headers', label: '请求头 Headers（可选）', ph: 'Authorization: Bearer xxx，多个用逗号分隔', mono: true, when: (v) => v.transport === 'sse' || v.transport === 'http' },
+      { key: 'env', label: '环境变量（可选）', ph: 'API_TOKEN=xxx，多个用逗号分隔', mono: true, when: (v) => (v.transport || 'stdio') === 'stdio' },
+    ],
+  };
+  PFIELD_DEFAULTS = {
+    provider: { auth: 'API Key' },
+    skill: { category: 'General', installMethod: '默认（复制到 skills 目录）' },
+    mcp: { transport: 'stdio' },
+  };
+
+  REVIEW_POOL = [
+    { u: 'lin_dev', r: 5, t: '集成顺滑，文档清晰，装上就能用。', d: '2天前' },
+    { u: 'kaito', r: 5, t: '比自己手写配置省事太多，强烈推荐。', d: '1周前' },
+    { u: 'm_zhao', r: 4, t: '整体不错，偶尔需要手动重连一次。', d: '2周前' },
+    { u: 'devon', r: 5, t: '更新很勤，维护者响应 issue 很快。', d: '3周前' },
+    { u: 'sara_k', r: 4, t: '功能齐全，希望能补充更多示例。', d: '1月前' },
+    { u: 'oss_fan', r: 5, t: '开箱即用，和 Claude Code 配合完美。', d: '1月前' },
+    { u: 'quill', r: 3, t: '能用，但大项目下稍慢，期待优化。', d: '2月前' },
+    { u: 'nova', r: 5, t: '团队已全面切换到它来管理，稳定。', d: '2月前' },
+  ];
+  AVATAR_COLORS = ['#7c82ff', '#3ad29f', '#f0b34a', '#58a6f0', '#c07cf0', '#f3675f'];
+  LANGS = [
+    { code: 'zh', label: '中文', sub: '简体中文', enabled: true },
+    { code: 'en', label: 'English', sub: 'English', enabled: true },
+    { code: 'ja', label: '日本語', sub: '即将支持', enabled: false },
+    { code: 'ko', label: '한국어', sub: '即将支持', enabled: false },
+    { code: 'es', label: 'Español', sub: '即将支持', enabled: false },
+  ];
+
+  state = {
+    surface: 'web',
+    theme: 'dark',
+    web: { cat: 'all', q: '', sel: null, detailTab: 'readme', profile: null, verified: false, sort: 'all' },
+    publishOpen: false,
+    settingsOpen: false, settingsTab: 'account', loggedIn: true, uiLang: 'zh', langMenuOpen: false,
+    pform: { type: 'skill', vals: { desc: '', category: 'General', installMethod: '默认（复制到 skills 目录）' } },
+    favorites: { superpowers: true, filesystem: true },
+    userPkgs: [], dupPkgs: [],
+    cli: { app: 'claude', section: 'installed', appMenuOpen: false, filter: 'all', listFilter: 'all', filterMenuOpen: false },
+    installed: {
+      'filesystem':      { ver: '0.7.0', apps: { claude: true, codex: true } },
+      'github':          { ver: '0.6.2', apps: { claude: true, codex: false } },
+      'pdf-processing':  { ver: '1.2.0', apps: { claude: true, codex: false } },
+      'superpowers':     { ver: '4.2.0', apps: { claude: true, codex: false } },
+      'yls':             { ver: '1.9.0', apps: { claude: true, codex: true }, config: { name: 'yls-me', provider: 'yls', baseUrl: 'https://code.ylsagi.com/codex', homepage: 'https://docs.ylsagi.io/', apiKey: 'yls-xxxxxxxxxxxxxxxxxxxx1234', endpoint: '', upstreamProtocol: '自动检测', authType: 'Bearer', customHeader: '', icon: '默认', level: '1', whitelist: [], mapping: [], healthCheck: false } },
+    },
+    cliEditId: null, cliEditVals: {},
+    term: [
+      { text: '$ agent-store login', color: '#c7c7d0' },
+      { text: '✓ 已登录 as you@dev · 5 个包已同步', color: '#3ad29f' },
+    ],
+  };
+
+  allPkgs = () => [...this.state.userPkgs, ...this.BASE_PKGS];
+  pkg = (id) => [...this.state.dupPkgs, ...this.allPkgs()].find(p => p.id === id);
+  duplicateProvider = (id) => {
+    const orig = this.pkg(id); const inst = this.state.installed[id];
+    let newId = id + '-copy'; let i = 2;
+    while (this.state.installed[newId] || this.pkg(newId)) { newId = id + '-copy' + i; i++; }
+    const cfg = { ...(inst && inst.config ? inst.config : this.defaultProviderConfig(id)) };
+    cfg.name = (cfg.name || id) + '-copy';
+    const dupPkg = { ...orig, id: newId };
+    this.setState(st => ({ dupPkgs: [dupPkg, ...st.dupPkgs], installed: { ...st.installed, [newId]: { ver: inst ? inst.ver : orig.ver, apps: { ...(inst ? inst.apps : {}) }, config: cfg } } }));
+    this.pushTerm([{ text: '$ agent-store duplicate ' + id, color: '#c7c7d0' }, { text: '✓ 已复制为 ' + newId + '（请修改其 API 密钥）', color: '#3ad29f' }]);
+  };
+  installName = (p) => p.id;
+  installCmd = (p) => 'agent-store add ' + p.id;
+  numOf = (s) => { if (!s) return 0; const n = parseFloat(s); return s.includes('k') ? n * 1000 : n; };
+  hashOf = (s) => Math.abs([...s].reduce((a, c) => a + c.charCodeAt(0), 0));
+  statLine = (p) => {
+    const h = this.hashOf(p.id);
+    const sr = (97 + (h % 29) / 10).toFixed(1);
+    if (p.type === 'provider') {
+      const reqs = (800 + (h * 37) % 9000).toLocaleString('en-US');
+      const tokens = (((h * 13) % 40000) / 100 + 20).toFixed(2) + 'M';
+      const cost = 'US$' + ((h * 97) % 300000 / 100 + 50).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return '成功率 ' + sr + '% · 请求数 ' + reqs + ' · Tokens ' + tokens + ' · 花费 ' + cost;
+    }
+    const reqs = ((h % 180 + 12) / 10).toFixed(1) + 'k';
+    return '成功率 ' + sr + '% · 调用 ' + reqs + ' 次';
+  };
+
+  pushTerm = (lines) => this.setState(st => ({ term: [...st.term, ...lines].slice(-6) }));
+  setSurface = (s) => this.setState({ surface: s });
+  toggleTheme = () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' }));
+
+  setWeb = (patch) => this.setState(st => ({ web: { ...st.web, ...patch } }));
+  setCat = (c) => this.setWeb({ cat: c });
+  setSearch = (e) => { const v = e.target.value; this.setWeb({ q: v }); };
+  toggleVerified = () => this.setState(st => ({ web: { ...st.web, verified: !st.web.verified } }));
+  cycleSort = () => this.setState(st => { const i = this.SORTS.findIndex(s => s.key === st.web.sort); return { web: { ...st.web, sort: this.SORTS[(i + 1) % this.SORTS.length].key } }; });
+  stepFeatured = (d) => { this.setState(st => ({ featIdx: (st.featIdx || 0) + d })); this._restartFeatTimer(); };
+  goFeatured = (i) => { this.setState({ featIdx: i }); this._restartFeatTimer(); };
+  setSort = (key) => this.setWeb({ sort: key });
+  recencyOf = (id) => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 100000; return h; };
+  openDetail = (id) => this.setWeb({ sel: id, detailTab: 'readme', profile: null });
+  closeDetail = () => this.setWeb({ sel: null });
+  setTab = (t) => this.setWeb({ detailTab: t });
+  openProfile = (author) => this.setWeb({ profile: author, sel: null });
+  closeProfile = () => this.setWeb({ profile: null });
+
+  toggleFav = (id) => this.setState(st => { const f = { ...st.favorites }; if (f[id]) delete f[id]; else f[id] = true; return { favorites: f }; });
+
+  freshPform = (type) => ({ type, vals: { desc: '', ...(this.PFIELD_DEFAULTS[type] || {}) } });
+  openPublish = () => this.setState({ publishOpen: true, pform: this.freshPform('skill') });
+  closePublish = () => this.setState({ publishOpen: false });
+  setPType = (type) => this.setState(st => ({ pform: { type, vals: { ...(this.PFIELD_DEFAULTS[type] || {}), ...st.pform.vals } } }));
+  setPVal = (key, value) => this.setState(st => ({ pform: { ...st.pform, vals: { ...st.pform.vals, [key]: value } } }));
+  confirmPublish = () => {
+    const f = this.state.pform; const v = f.vals || {};
+    const id = (v.name || 'my-resource').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const metaDefault = { skill: '—', mcp: '1', provider: '—' }[f.type] || '—';
+    const p = { id, type: f.type, author: 'you', verified: false, status: 'pending', dl: '0', rating: '新', reviews: '0', ver: '1.0.0', meta: metaDefault, tags: ['new', f.type], desc: v.desc || '（暂无描述）', config: { ...v } };
+    if (f.type === 'provider' && v.supportedModels) p.supportedModels = v.supportedModels.split(',').map(s => s.trim()).filter(Boolean);
+    if (f.type === 'skill' && v.contentUrl) p.contentUrl = v.contentUrl;
+    if (f.type === 'mcp') { p.transport = v.transport || 'stdio'; if (v.command) p.serverCommand = v.command; if (v.url) p.url = v.url; }
+    this.setState(st => ({ userPkgs: [p, ...st.userPkgs.filter(x => x.id !== id)], publishOpen: false, web: { ...st.web, cat: 'all', sort: 'recent', sel: id, detailTab: 'readme' } }));
+  };
+
+  setCliApp = (k) => this.setState(st => ({ cli: { ...st.cli, app: k, appMenuOpen: false } }));
+  toggleCliAppMenu = () => this.setState(st => ({ cli: { ...st.cli, appMenuOpen: !st.cli.appMenuOpen } }));
+  setCliSection = (s) => this.setState(st => ({ cli: { ...st.cli, section: s } }));
+  setCliFilter = (f) => this.setState(st => ({ cli: { ...st.cli, filter: f } }));
+  toggleFilterMenu = () => this.setState(st => ({ cli: { ...st.cli, filterMenuOpen: !st.cli.filterMenuOpen } }));
+  closeFilterMenu = () => this.setState(st => st.cli.filterMenuOpen ? ({ cli: { ...st.cli, filterMenuOpen: false } }) : {});
+  setListFilter = (f) => this.setState(st => ({ cli: { ...st.cli, listFilter: f, filterMenuOpen: false } }));
+  openSettings = () => this.setState({ settingsOpen: true, settingsTab: 'account' });
+  closeSettings = () => this.setState({ settingsOpen: false, langMenuOpen: false });
+  toggleLangMenu = () => this.setState(st => ({ langMenuOpen: !st.langMenuOpen }));
+  setUiLang = (code) => this.setState({ uiLang: code, langMenuOpen: false });
+  setSettingsTab = (t) => this.setState({ settingsTab: t });
+  toggleLogin = () => this.setState(st => ({ loggedIn: !st.loggedIn }));
+
+  PROVIDER_FORM = [
+    { key: 'provider', label: '供应商名称', kind: 'readonly' },
+    { key: 'baseUrl', label: 'API 地址', ph: 'https://api.anthropic.com', mono: true },
+    { key: 'homepage', label: '官网地址', ph: 'https://docs.example.com', mono: true },
+    { key: 'apiKey', label: 'API 密钥', ph: 'sk-...', mono: true },
+    { key: 'endpoint', label: 'API 端点（可选）', ph: '留空使用默认，如 /v1/chat/completions', mono: true, help: '覆盖平台默认端点。留空使用默认（claude: /v1/messages，codex: /responses）。GLM 模型请使用 /v1/chat/completions' },
+    { key: 'upstreamProtocol', label: '上游协议', kind: 'select', options: ['自动检测', 'openai_chat', 'claude_messages', 'codex_responses'], help: '指定上游 API 的协议类型。自动检测时根据端点判断；openai_chat 时自动转换请求与响应格式' },
+    { key: 'authType', label: '认证方式', kind: 'select', options: ['Bearer', 'X-API-Key', '自定义'], help: '默认使用 Bearer。Anthropic 官方 API 请选择 X-API-Key。如需自定义请在下方输入 Header 名称' },
+    { key: 'customHeader', label: '自定义 Header 名称', ph: '如 Authorization、X-Custom-Key', mono: true },
+    { key: 'icon', label: '图标', kind: 'select', options: ['默认', 'anthropic', 'openai', 'google', 'adobe'] },
+    { key: 'level', label: '优先级分组', kind: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], help: '数字越小优先级越高，Level 1 会被优先尝试，失败后依次尝试 Level 2、Level 3 等' },
+  ];
+  defaultProviderConfig = (id) => ({ provider: id, name: id, baseUrl: 'https://api.example.com', homepage: '', apiKey: '', endpoint: '', upstreamProtocol: '自动检测', authType: 'Bearer', customHeader: '', icon: '默认', level: '1', whitelist: [], mapping: [], enabled: true, healthCheck: false });
+  addWhitelist = () => this.setState(st => { const v = st.cliEditVals; const d = (v.wlDraft || '').trim(); if (!d) return {}; return { cliEditVals: { ...v, whitelist: [...(v.whitelist || []), d], wlDraft: '' } }; });
+  removeWhitelist = (i) => this.setState(st => { const wl = [...(st.cliEditVals.whitelist || [])]; wl.splice(i, 1); return { cliEditVals: { ...st.cliEditVals, whitelist: wl } }; });
+  addMapping = () => this.setState(st => { const v = st.cliEditVals; const f = (v.mapFromDraft || '').trim(); const t = (v.mapToDraft || '').trim(); if (!f || !t) return {}; return { cliEditVals: { ...v, mapping: [...(v.mapping || []), { from: f, to: t }], mapFromDraft: '', mapToDraft: '' } }; });
+  removeMapping = (i) => this.setState(st => { const m = [...(st.cliEditVals.mapping || [])]; m.splice(i, 1); return { cliEditVals: { ...st.cliEditVals, mapping: m } }; });
+  toggleEditFlag = (key) => this.setState(st => ({ cliEditVals: { ...st.cliEditVals, [key]: !st.cliEditVals[key] } }));
+  openCliEdit = (id) => this.setState(st => ({ cliEditId: id, cliEditVals: { ...(st.installed[id] && st.installed[id].config ? st.installed[id].config : this.defaultProviderConfig(id)) } }));
+  closeCliEdit = () => this.setState({ cliEditId: null });
+  setCliEditVal = (key, value) => this.setState(st => ({ cliEditVals: { ...st.cliEditVals, [key]: value } }));
+  saveCliEdit = () => {
+    const id = this.state.cliEditId; const v = this.state.cliEditVals;
+    const { wlDraft, mapFromDraft, mapToDraft, cliConfigOpen, ...clean } = v;
+    this.setState(st => ({ installed: { ...st.installed, [id]: { ...st.installed[id], config: { ...clean } } }, cliEditId: null }));
+    this.pushTerm([{ text: '$ agent-store config ' + id + ' --set', color: '#c7c7d0' }, { text: '✓ 已更新 ' + id + ' 的供应商配置', color: '#3ad29f' }]);
+  };
+
+  install = (id) => {
+    const p = this.pkg(id);
+    this.setState(st => { if (st.installed[id]) return {}; const apps = { claude: false, codex: false }; apps[st.cli.app] = true; const entry = { ver: p.ver, apps }; if (p.type === 'provider') entry.config = this.defaultProviderConfig(id); return { installed: { ...st.installed, [id]: entry } }; });
+    this.pushTerm([{ text: '$ ' + this.installCmd(p), color: '#c7c7d0' }, { text: '✓ 已安装 ' + id + '@' + p.ver + ' → ' + this.APPS.find(a => a.key === this.state.cli.app).label, color: '#3ad29f' }]);
+  };
+  uninstall = (id) => { this.setState(st => { const cp = { ...st.installed }; delete cp[id]; return { installed: cp }; }); this.pushTerm([{ text: '$ agent-store remove ' + id, color: '#c7c7d0' }, { text: '✓ 已移除 ' + id, color: '#f0b34a' }]); };
+  toggleEnable = (id) => {
+    const app = this.state.cli.app; let next;
+    this.setState(st => { const cur = st.installed[id]; next = !cur.apps[app]; return { installed: { ...st.installed, [id]: { ...cur, apps: { ...cur.apps, [app]: next } } } }; });
+    const appLabel = this.APPS.find(a => a.key === app).label;
+    this.pushTerm([{ text: '$ agent-store ' + (next ? 'enable' : 'disable') + ' ' + id + ' --app ' + app, color: '#c7c7d0' }, { text: (next ? '✓ 已启用 ' : '○ 已停用 ') + id + ' @ ' + appLabel, color: next ? '#3ad29f' : '#9a9aa6' }]);
+  };
+  update = (id) => { const p = this.pkg(id); this.setState(st => ({ installed: { ...st.installed, [id]: { ...st.installed[id], ver: p.ver } } })); this.pushTerm([{ text: '$ agent-store update ' + id, color: '#c7c7d0' }, { text: '✓ 已更新 ' + id + ' → ' + p.ver, color: '#3ad29f' }]); };
+  updateAll = () => { const outdated = Object.keys(this.state.installed).filter(id => this.state.installed[id].ver !== this.pkg(id).ver); this.setState(st => { const cp = { ...st.installed }; outdated.forEach(id => { cp[id] = { ...cp[id], ver: this.pkg(id).ver }; }); return { installed: cp }; }); this.pushTerm([{ text: '$ agent-store update --all', color: '#c7c7d0' }, { text: '✓ 已更新 ' + outdated.length + ' 个包至最新', color: '#3ad29f' }]); };
+
+  starGlyphs = (r) => { const n = Math.round(parseFloat(r) || 0); return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n); };
+
+  agoOf(id, salt) {
+    const opts = [['刚刚', '5 分钟前', '1 小时前', '3 小时前', '今天'], ['2 天前', '1 周前', '2 周前', '1 个月前'], ['3 个月前', '半年前', '1 年前', '2 年前']];
+    const h = Math.abs([...(id + ':' + salt)].reduce((a, c) => a + c.charCodeAt(0), 0));
+    const bucket = salt === 0 ? opts[0] : (salt === 1 ? opts[2] : opts[1]);
+    return bucket[h % bucket.length];
+  }
+
+  genVersions(ver) {
+    const parts = ver.split('.').map(Number);
+    const notes = ['当前最新版本', '稳定性与性能优化', '修复若干问题'];
+    const dates = ['最近更新', '1 个月前', '3 个月前'];
+    const out = [{ ver: 'v' + ver, note: notes[0], date: dates[0], latest: true }];
+    let [a, b, c] = parts;
+    for (let i = 1; i < 3; i++) { if (c > 0) c -= 1; else if (b > 0) { b -= 1; c = 2; } else if (a > 0) { a -= 1; b = 9; } out.push({ ver: 'v' + [a, b, c].join('.'), note: notes[i], date: dates[i], latest: false }); }
+    return out;
+  }
+
+  genReadme(p) {
+    const t = this.TYPE[p.type];
+    const usage = {
+      skill: '安装后 agent 会在相关任务中自动加载该技能，无需额外配置。',
+      mcp: '安装后自动注册为 MCP 服务器，agent 可直接调用其暴露的工具。',
+      provider: '安装后作为可切换的 API 端点预设，一键切换即可对全部会话生效。',
+    }[p.type];
+    // installHook.steps — mirrors items.install_hook (script / config / file)
+    const steps = {
+      skill: ['file · 下载 skill 内容到 ~/.agents/skills/' + p.id, 'config · 注册到已启用的工具目录'],
+      mcp: (this.mcpMetaOf(p.id).transport === 'stdio')
+        ? ['script · 拉取并构建服务器二进制', 'config · 写入 mcpServers.' + p.id + '（stdio）']
+        : ['config · 写入 mcpServers.' + p.id + '（' + this.mcpMetaOf(p.id).transport + ' 远程端点）'],
+      provider: ['config · 写入端点预设（baseUrl / apiKey / model）', 'script · 同步到 Claude 与 Codex 配置'],
+    }[p.type] || [];
+    const facts = [];
+    if (p.type === 'provider') facts.push({ type: 'li', text: '支持的模型：' + this.supportedModelsOf(p.id).join('、') });
+    if (p.type === 'mcp') { const m = this.mcpMetaOf(p.id); facts.push({ type: 'li', text: '传输方式：' + m.transport }); facts.push({ type: 'li', text: (m.transport === 'stdio' ? '启动命令：' + m.serverCommand : '服务地址：' + m.url) }); }
+    if (p.type === 'skill') facts.push({ type: 'li', text: '下载地址：' + this.contentUrlOf(p.id) });
+    return [
+      { type: 'h', text: '概述' }, { type: 'p', text: p.desc },
+      { type: 'h', text: '安装' }, { type: 'code', text: this.installCmd(p) },
+      { type: 'h', text: '安装步骤' }, ...steps.map(s => ({ type: 'li', text: s })),
+      { type: 'h', text: '适用场景' }, { type: 'p', text: usage }, ...facts,
+      { type: 'li', text: '类型：' + t.label + '（' + p.type + '）' },
+      { type: 'li', text: '维护者：' + p.author + ' · ' + this.TIERS[this.tierOf(p.author)].label },
+      { type: 'li', text: '当前版本：v' + p.ver },
+    ];
+  }
+
+  decorate(p) {
+    const t = this.TYPE[p.type];
+    const tierKey = this.tierOf(p.author);
+    const tier = this.TIERS[tierKey];
+    const status = p.status || 'published';
+    const STATUS = { published: { label: '已发布', color: 'var(--green)' }, pending: { label: '审核中', color: 'var(--amber)' }, rejected: { label: '已拒绝', color: 'var(--red)' } };
+    const extra = {};
+    if (p.type === 'provider') extra.supportedModels = p.supportedModels || this.supportedModelsOf(p.id);
+    if (p.type === 'skill') extra.contentUrl = p.contentUrl || this.contentUrlOf(p.id);
+    if (p.type === 'mcp') { const m = this.mcpMetaOf(p.id); extra.transport = p.transport || m.transport; extra.serverCommand = p.serverCommand || m.serverCommand; extra.mcpUrl = p.url || m.url; extra.mcpHeaders = m.headers; }
+    return { ...p, name: this.installName(p), glyph: this.icon(p.type), color: t.color, softBg: t.soft, typeLabel: t.label, metaLabel: t.metaLabel,
+      tierKey, tierLabel: tier.label, tierColor: tier.color, tierSoft: tier.soft, showTierBadge: tierKey !== 'community', tierBadgeColor: tier.color,
+      status, statusLabel: STATUS[status].label, statusColor: STATUS[status].color,
+      installed: !!this.state.installed[p.id], notInstalled: !this.state.installed[p.id], faved: !!this.state.favorites[p.id], ...extra };
+  }
+  heartOf = (id) => this.state.favorites[id] ? { heartFill: 'var(--red)', heartStroke: 'var(--red)' } : { heartFill: 'none', heartStroke: 'var(--text-3)' };
+
+  reviewsFor(p) {
+    const start = Math.abs([...p.id].reduce((a, ch) => a + ch.charCodeAt(0), 0)) % this.REVIEW_POOL.length;
+    const out = [];
+    for (let i = 0; i < 3; i++) { const r = this.REVIEW_POOL[(start + i) % this.REVIEW_POOL.length]; out.push({ ...r, initial: r.u[0].toUpperCase(), stars: '★'.repeat(r.r), avatarBg: this.AVATAR_COLORS[(start + i) % this.AVATAR_COLORS.length] }); }
+    return out;
+  }
+
+  I18N = {
+    'CLI 客户端':'CLI Client','CLI 配置':'CLI Config','Language · 目前支持中英文，更多语言即将上线':'Language · Chinese & English for now, more coming soon','Pro · 无限私有资源':'Pro · Unlimited private resources','Web 端 · Store':'Web · Store','一键上架。':'publish in one command.','下载':'Downloads','不可修改':'Read-only','主题':'Theme','仅已验证':'Verified only','从左侧选择一个资源查看详情':'Select a resource on the left to view its details','保存':'Save','全部更新':'Update all','写评价':'Write a review','分类':'Category','分类 · Category':'Category','切换':'Switch','发布':'Publish','发布你的资源':'Publish your resource','发布的资源':'Published','发布资源到 Store':'Publish a resource to the Store','发现':'Discover','取消':'Cancel','可用性监控':'Availability monitoring','启用后会定期健康检查，监控此供应商的可用性':"When on, periodically health-checks this provider's availability",'安装':'Install','安装信息':'Install info','安装到 CLI 客户端':'Install to CLI client','已安装':'Installed','已安装到 CLI 客户端':'Installed to CLI client','已装':'Installed','市场':'Marketplace','平均分':'Avg rating','总下载':'Total downloads','我的收藏':'My favorites','把 CLI 请求的模型名改写为供应商实际模型。支持精确、通配符与前缀映射。':"Rewrite the model name in CLI requests to the provider's real model. Supports exact, wildcard and prefix mapping.",'探索':'Explore','推荐':'Recommended','文档':'Docs','更新时间':'Updated','最近发布':'Latest release','本周精选':'Featured this week','来自使用过该资源的开发者':'From developers who have used this resource','标识':'Identifier','检查更新':'Check for updates','模型映射':'Model mapping','模型白名单':'Model allowlist','没有找到匹配的资源':'No matching resources found','添加':'Add','版本':'Version','状态':'Status','用':'Use','界面语言':'Interface language','留空表示不限制。支持 claude-* 前缀匹配、anthropic/claude-* 带供应商前缀匹配。':'Leave blank for no limit. Supports claude-* prefix and anthropic/claude-* vendor-prefixed matching.','登录后可发布私有资源、跨设备同步已安装的技能 / MCP / 供应商 / 插件，并接收更新推送。':'Sign in to publish private resources, sync installed skills / MCP / providers across devices, and receive update notifications.','目标应用':'Target app','订阅计划':'Subscription plan','设置':'Settings','资源':'Resources','资源类型':'Resource type','针对目标 CLI 的额外覆盖项（如 Codex 的':"Extra overrides for the target CLI (e.g. Codex's",'默认目标应用':'Default target app','）。留空则沿用全局默认。':'). Leave blank to use the global default.',
+    'API 地址':'API URL','探索':'Explore','本周精选':'Featured','编辑推荐':'Editor\'s Pick','热门上升':'Trending','API 密钥':'API key','API 端点（可选）':'API endpoint (optional)','API_TOKEN=xxx，多个用逗号分隔':'API_TOKEN=xxx, comma-separated for multiple','Authorization: Bearer xxx，多个用逗号分隔':'Authorization: Bearer xxx, comma-separated for multiple','GitHub 仓库':'GitHub repo','Issues、PR、仓库与代码搜索的完整 GitHub API 封装。':'A full GitHub API wrapper for issues, PRs, repos and code search.','Marketplace 页面':'Marketplace page','OWASP Top 10 防护、鉴权模式、密钥管理与依赖审计。':'OWASP Top 10 protection, auth patterns, secrets management and dependency auditing.','YLS AGI 中转端点，兼容 Claude 与 Codex，支持模型映射与多协议自动转换。':'YLS AGI relay endpoint, compatible with Claude and Codex, with model mapping and multi-protocol auto-conversion.','claude-sonnet-4, gpt-4o（逗号分隔）':'claude-sonnet-4, gpt-4o (comma-separated)','config · 注册到已启用的工具目录':'config · register into enabled tools','config · 写入端点预设（baseUrl / apiKey / model）':'config · write endpoint preset (baseUrl / apiKey / model)','script · 同步到 Claude 与 Codex 配置':'script · sync to Claude and Codex config','script · 拉取并构建服务器二进制':'script · fetch and build the server binary','✓ 已登录 as you@dev · 5 个包已同步':'✓ Signed in as you@dev · 5 packages synced','一句话描述这个资源做什么…':'Describe in one line what this resource does…','一套让 agent 学会规划、验证与自我纠错的元技能，显著提升复杂任务成功率。':'A set of meta-skills that teach agents to plan, verify and self-correct — boosting success on complex tasks.','上游协议':'Upstream protocol','下载地址 (contentUrl)':'Download URL (contentUrl)','亮色':'Light','企业级托管的 Claude 端点，IAM 鉴权与私有网络接入。':'Enterprise-hosted Claude endpoint with IAM auth and private-network access.','优先级分组':'Priority grouping','传输方式':'Transport','供应商':'Provider','供应商名称':'Provider name','修复若干问题':'Fixed various issues','全部':'All','关于':'About','功能齐全，希望能补充更多示例。':'Feature-complete — would love more examples.','即将支持':'Coming soon','只读查询任意 PostgreSQL，自动 schema 反射与结果分页。':'Read-only queries on any PostgreSQL, with automatic schema reflection and result pagination.','可更新':'Updatable','启动命令':'Start command','团队已全面切换到它来管理，稳定。':'Our team fully switched to it for management — rock solid.','图标':'Icon','大小':'Size','如 Authorization、X-Custom-Key':'e.g. Authorization, X-Custom-Key','安装后 agent 会在相关任务中自动加载该技能，无需额外配置。':'After install the agent auto-loads this skill in relevant tasks — no extra config.','安装后作为可切换的 API 端点预设，一键切换即可对全部会话生效。':'Installed as a switchable API endpoint preset; one switch applies to all sessions.','安装后自动注册为 MCP 服务器，agent 可直接调用其暴露的工具。':'Auto-registered as an MCP server after install; the agent can call its exposed tools directly.','安装方式':'Install method','安装步骤':'Install steps','安装脚本':'Install script','官方':'Official','官网':'Website','官网 / 文档':'Website / Docs','官网地址':'Website URL','审核中':'Pending','工具':'Tools','已发布':'Published','已启用':'Enabled','已拒绝':'Rejected','已登录':'Signed in','已禁用':'Disabled','已验证':'Verified','延迟':'Latency','开箱即用，和 Claude Code 配合完美。':'Works out of the box — pairs perfectly with Claude Code.','当前最新版本':'Current latest version','所有包均为最新':'All packages are up to date','技能':'Skill','技能名称':'Skill name','抽取、拆分、合并 PDF，填写表单并提取结构化数据。':'Extract, split and merge PDFs, fill forms and pull structured data.','指定上游 API 的协议类型。自动检测时根据端点判断；openai_chat 时自动转换请求与响应格式':'Specify the upstream API protocol. Auto-detect infers it from the endpoint; openai_chat auto-converts request/response formats.','支持的模型':'Supported models','数字越小优先级越高，Level 1 会被优先尝试，失败后依次尝试 Level 2、Level 3 等':'Lower number = higher priority. Level 1 is tried first, then Level 2, Level 3, and so on.','整体不错，偶尔需要手动重连一次。':'Good overall — occasionally needs a manual reconnect.','新':'New','暗色':'Dark','更新':'Updates','更新很勤，维护者响应 issue 很快。':'Updated frequently — maintainer responds to issues fast.','最热门':'Most popular','最近更新':'Recently updated','服务器名称':'Server name','服务地址 (URL)':'Server address (URL)','未启用':'Off','未登录':'Not signed in','本地 Ollama 端点预设，零延迟离线运行开源模型。':'Local Ollama endpoint preset — run open-source models offline with zero latency.','概览':'Overview','概述':'Overview','比自己手写配置省事太多，强烈推荐。':'So much easier than hand-writing config — highly recommended.','浏览商店':'Browse store','源码仓库 (GitHub)':'Source repo (GitHub)','环境变量（可选）':'Environment variables (optional)','留空使用默认，如 /v1/chat/completions':'Leave blank for default, e.g. /v1/chat/completions','登录':'Sign in','社区':'Community','稳定性与性能优化':'Stability and performance improvements','简介':'Description','类型':'Type','精选':'Featured','组件架构、设计系统与 WCAG 2.1 AA 无障碍规范落地。':'Component architecture, design systems and WCAG 2.1 AA accessibility.','聚合 300+ 模型的中转端点，自动路由与失败回退。':'A relay endpoint aggregating 300+ models with auto-routing and failover.','能用，但大项目下稍慢，期待优化。':'Works, but a bit slow on big projects — hoping for optimization.','自动检测':'Auto-detect','自定义':'Custom','自定义 Header 名称':'Custom header name','自定义安装脚本':'Custom install script','覆盖平台默认端点。留空使用默认（claude: /v1/messages，codex: /responses）。GLM 模型请使用 /v1/chat/completions':'Override the platform default endpoint. Leave blank for default (claude: /v1/messages, codex: /responses). Use /v1/chat/completions for GLM models.','认证方式':'Auth method','评价':'Reviews','评分最高':'Highest rated','请求头 Headers（可选）':'Request headers (optional)','读写本地文件系统，带沙箱路径白名单与只读模式。':'Read/write the local filesystem with sandboxed path allowlist and read-only mode.','账户':'Account','退出登录':'Sign out','适用场景':'Use cases','通用':'General','集成顺滑，文档清晰，装上就能用。':'Smooth integration, clear docs — works right after install.','默认':'Default','默认使用 Bearer。Anthropic 官方 API 请选择 X-API-Key。如需自定义请在下方输入 Header 名称':"Uses Bearer by default. Choose X-API-Key for Anthropic's official API. To customize, enter a header name below.",'默认（复制到 skills 目录）':'Default (copy to skills dir)','（暂无描述）':'(No description)','为任意库拉取版本精确的最新文档上下文，减少幻觉。':'Pull version-accurate, up-to-date docs context for any library to reduce hallucination.','搜索 providers、skills、MCP…':'Search providers, skills, MCP…','搜索，或用 @ 过滤…':'Search, or filter with @…','清除':'Clear','筛选过滤':'Filter','配置名称':'Config name','输入模型名称，如 claude-*':'Enter a model name, e.g. claude-*','CLI 模型（如 claude-*）':'CLI model (e.g. claude-*)','供应商模型（如 kimi-k2）':'Provider model (e.g. kimi-k2)','点击可修改':'click to edit',
+    '1 个月前':'1 month ago','1 周前':'1 week ago','1 小时前':'1 hour ago','1 年前':'1 year ago','1周前':'1w ago','1月前':'1mo ago','2 周前':'2 weeks ago','2 天前':'2 days ago','2 年前':'2 years ago','2周前':'2w ago','2天前':'2d ago','2月前':'2mo ago','3 个月前':'3 months ago','3 小时前':'3 hours ago','3周前':'3w ago','5 分钟前':'5 minutes ago','半年前':'6 months ago','今天':'Today','刚刚':'Just now'
+  };
+  I18N_PATTERNS = [
+    [/^(全部|供应商|技能|MCP|我的收藏)\s*·\s*(\S+)\s*个结果$/, (m,c,n)=>(({ '全部':'All','供应商':'Providers','技能':'Skills','MCP':'MCP','我的收藏':'My favorites' })[c])+' · '+n+' results'],
+    [/成功率\s*([\d.]+)%\s*·\s*请求数\s*(\S+)\s*·\s*Tokens\s*(\S+)\s*·\s*花费\s*(\S+)/, 'Success $1% · $2 reqs · $3 tokens · $4 spent'],
+    [/成功率\s*([\d.]+)%\s*·\s*调用\s*(\S+)\s*次/, 'Success $1% · $2 calls'],
+    [/(.+?)\s*上共\s*(\d+)\/(\d+)\s*个已启用/, '$1 · $2/$3 enabled'],
+    [/直接从 registry 安装到本地并注册到\s*(.+)/, 'Install locally from the registry and register to $1'],
+    [/(\d+)\s*个包有新版本/, '$1 packages have updates'],
+    [/✓ 已更新\s*(\d+)\s*个包至最新/, '✓ Updated $1 packages to latest'],
+    [/✓ 已更新\s*(\S+)\s*的供应商配置/, '✓ Updated provider config for $1'],
+    [/✓ 已复制为\s*(\S+?)（请修改其 API 密钥）/, '✓ Copied as $1 (please change its API key)'],
+    [/✓ 已安装\s*(.+?)\s*→\s*(.+)/, '✓ Installed $1 → $2'],
+    [/✓ 已移除\s*(\S+)/, '✓ Removed $1'],
+    [/✓ 已启用\s*(.+)/, '✓ Enabled $1'],
+    [/○ 已停用\s*(.+)/, '○ Disabled $1'],
+    [/file · 下载 skill 内容到\s*(\S+)/, 'file · download skill content to $1'],
+    [/config · 写入 mcpServers\.(\S+?)（stdio）/, 'config · write mcpServers.$1 (stdio)'],
+    [/config · 写入 mcpServers\.(\S+?)（(\S+?) 远程端点）/, 'config · write mcpServers.$1 ($2 remote endpoint)'],
+    [/支持的模型：/, 'Supported models: '],
+    [/传输方式：/, 'Transport: '],
+    [/启动命令：/, 'Start command: '],
+    [/服务地址：/, 'Server address: '],
+    [/下载地址：/, 'Download URL: '],
+    [/当前版本：v/, 'Current version: v'],
+    [/维护者：/, 'Maintainer: '],
+    [/类型：/, 'Type: '],
+    [/配置名称\s*·\s*点击可修改\s*·\s*(.+)/, 'Config name · click to edit · $1']
+  ];
+  toEN(s) {
+    if (s == null) return s;
+    const str = String(s); const trimmed = str.trim();
+    if (!trimmed) return str;
+    const d = this.I18N[trimmed];
+    if (d) return str.replace(trimmed, d);
+    let r = str;
+    for (const [re, rep] of this.I18N_PATTERNS) r = r.replace(re, rep);
+    return r;
+  }
+  _i18nWalk() {
+    const en = this.state.uiLang === 'en';
+    const root = document.getElementById('dc-root') || document.body;
+    if (!root) return;
+    const map = this._i18nMap || (this._i18nMap = new WeakMap());
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => { const p = n.parentNode; return (p && (p.nodeName === 'SCRIPT' || p.nodeName === 'STYLE')) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }
+    });
+    const nodes = []; let cur; while ((cur = walker.nextNode())) nodes.push(cur);
+    for (const n of nodes) {
+      const val = n.nodeValue; let rec = map.get(n);
+      if (!rec || (val !== rec.zh && val !== rec.en)) { rec = { zh: val, en: this.toEN(val) }; map.set(n, rec); }
+      const want = en ? rec.en : rec.zh;
+      if (val !== want) n.nodeValue = want;
+    }
+    const pmap = this._i18nPMap || (this._i18nPMap = new WeakMap());
+    root.querySelectorAll('[placeholder]').forEach((el) => {
+      const val = el.getAttribute('placeholder'); let rec = pmap.get(el);
+      if (!rec || (val !== rec.zh && val !== rec.en)) { rec = { zh: val, en: this.toEN(val) }; pmap.set(el, rec); }
+      const want = en ? rec.en : rec.zh;
+      if (val !== want) el.setAttribute('placeholder', want);
+    });
+    const tmap = this._i18nTMap || (this._i18nTMap = new WeakMap());
+    root.querySelectorAll('[title]').forEach((el) => {
+      const val = el.getAttribute('title'); let rec = tmap.get(el);
+      if (!rec || (val !== rec.zh && val !== rec.en)) { rec = { zh: val, en: this.toEN(val) }; tmap.set(el, rec); }
+      const want = en ? rec.en : rec.zh;
+      if (val !== want) el.setAttribute('title', want);
+    });
+  }
+  _anyOverlay = () => { const st = this.state; return !!st.web.sel || st.publishOpen || st.settingsOpen || !!st.web.profile; };
+  _restartFeatTimer = () => {
+    if (this._featTimer) clearInterval(this._featTimer);
+    this._featTimer = setInterval(() => {
+      if (!document.hidden && this.state.surface === 'web' && !this._anyOverlay()) this.setState(st => ({ featIdx: (st.featIdx || 0) + 1 }));
+    }, 5000);
+  };
+  componentDidMount() { this._i18nWalk(); this._restartFeatTimer(); }
+  componentWillUnmount() { if (this._featTimer) clearInterval(this._featTimer); }
+  componentDidUpdate() { this._i18nWalk(); }
+
+  renderVals() {
+    const st = this.state;
+    const w = st.web;
+    const app = this.APPS.find(a => a.key === st.cli.app);
+    const base = this.allPkgs();
+
+    // filters
+    let list = base.filter(p => w.cat === 'all' || w.cat === 'fav' || p.type === w.cat);
+    if (w.cat === 'fav') list = list.filter(p => st.favorites[p.id]);
+    if (w.verified) list = list.filter(p => p.verified);
+    if (w.q.trim()) { const q = w.q.toLowerCase(); list = list.filter(p => p.id.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.tags.some(tg => tg.includes(q)) || p.author.includes(q)); }
+    if (w.sort === 'rating') list = [...list].sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+    else if (w.sort === 'popular') list = [...list].sort((a, b) => this.numOf(b.dl) - this.numOf(a.dl));
+    else if (w.sort === 'recent') list = [...list].sort((a, b) => this.recencyOf(b.id) - this.recencyOf(a.id));
+
+    const gridPkgs = list.map(p => { const d = this.decorate(p); const h = this.heartOf(p.id); return { ...d, ...h, onOpen: () => this.openDetail(p.id), onInstall: (e) => { e.stopPropagation(); this.install(p.id); }, onFav: (e) => { e.stopPropagation(); this.toggleFav(p.id); }, onAuthor: (e) => { e.stopPropagation(); this.openProfile(p.author); } }; });
+
+    const cats = this.CATS.map(c => { const count = c.key === 'all' ? '' : base.filter(p => p.type === c.key).length; const active = w.cat === c.key; return { ...c, glyph: this.icon(c.key), count, bg: active ? 'var(--accent-soft)' : 'transparent', fg: active ? 'var(--accent)' : 'var(--text-2)', onClick: () => this.setCat(c.key) }; });
+
+    const favCount = Object.keys(st.favorites).length;
+    const featIds = ['superpowers', 'pdf-processing', 'frontend-design'].filter(id => this.pkg(id));
+    const fIdx = ((this.state.featIdx || 0) % featIds.length + featIds.length) % featIds.length;
+    const featBadges = ['本周精选', '编辑推荐', '热门上升'];
+    const featuredPkg = this.decorate(this.pkg(featIds[fIdx]));
+    const featured = {
+      ...featuredPkg,
+      badge: featBadges[fIdx % featBadges.length],
+      onOpen: () => this.openDetail(featIds[fIdx]),
+      onPrev: (e) => { if (e) e.stopPropagation(); this.stepFeatured(-1); },
+      onNext: (e) => { if (e) e.stopPropagation(); this.stepFeatured(1); },
+      dots: featIds.map((id, i) => ({
+        onClick: (e) => { if (e) e.stopPropagation(); this.goFeatured(i); },
+        w: i === fIdx ? '18px' : '6px',
+        bg: i === fIdx ? 'var(--accent)' : 'var(--border)',
+      })),
+    };
+
+    // detail
+    let detail = null;
+    if (w.sel) {
+      const raw = this.pkg(w.sel);
+      if (raw) {
+        const p = this.decorate(raw); const h = this.heartOf(raw.id);
+        const tabs = [{ key: 'readme', label: '概览' }, { key: 'reviews', label: '评价' }, { key: 'versions', label: '版本' }].map(tb => ({ ...tb, bg: w.detailTab === tb.key ? 'var(--win)' : 'transparent', fg: w.detailTab === tb.key ? 'var(--text)' : 'var(--text-3)', underline: w.detailTab === tb.key ? 'var(--accent)' : 'transparent', underlineFg: w.detailTab === tb.key ? 'var(--text)' : 'var(--text-3)', onClick: () => this.setTab(tb.key) }));
+        detail = { ...p, ...h, installCmd: this.installCmd(p), starGlyphs: this.starGlyphs(p.rating),
+          tabs, isReadme: w.detailTab === 'readme', isReviews: w.detailTab === 'reviews', isVersions: w.detailTab === 'versions',
+          readme: this.genReadme(raw).map(b => ({ ...b, isH: b.type === 'h', isP: b.type === 'p', isCode: b.type === 'code', isLi: b.type === 'li', text: b.text })),
+          reviewList: this.reviewsFor(raw), versions: this.genVersions(raw.ver),
+          updatedAgo: this.agoOf(raw.id, 0), publishedAgo: this.agoOf(raw.id, 1), releasedAgo: this.agoOf(raw.id, 2),
+          categories: [this.TYPE[raw.type].label].concat((raw.tags || []).slice(0, 3)),
+          resources: raw.type === 'provider' ? [{ label: '官网 / 文档' }, { label: 'Marketplace 页面' }] : [{ label: '官网 / 文档' }, { label: '源码仓库 (GitHub)' }, { label: 'Marketplace 页面' }],
+          onInstall: () => this.install(p.id), onFav: () => this.toggleFav(p.id), onAuthor: () => this.openProfile(p.author) };
+      }
+    }
+
+    // profile
+    let profile = null;
+    if (w.profile) {
+      const mine = base.filter(p => p.author === w.profile);
+      const totalDlNum = mine.reduce((s, p) => s + this.numOf(p.dl), 0);
+      const totalDl = totalDlNum >= 1000 ? (totalDlNum / 1000).toFixed(0) + 'k' : String(totalDlNum);
+      const ratings = mine.map(p => parseFloat(p.rating)).filter(n => !isNaN(n));
+      const avg = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '—';
+      const ptier = this.TIERS[this.tierOf(w.profile)];
+      profile = { name: w.profile, initial: w.profile[0].toUpperCase(), verified: mine.some(p => p.verified), tierLabel: ptier.label, tierColor: ptier.color, tierSoft: ptier.soft, count: mine.length, totalDl, avgRating: avg, avatarBg: this.AVATAR_COLORS[Math.abs([...w.profile].reduce((a, ch) => a + ch.charCodeAt(0), 0)) % this.AVATAR_COLORS.length],
+        pkgs: mine.map(p => { const d = this.decorate(p); return { ...d, onOpen: () => this.openDetail(p.id) }; }) };
+    }
+
+    // publish
+    const pf = st.pform; const pv = pf.vals || {};
+    const pfSchema = (this.FIELD_SCHEMAS[pf.type] || []).concat([{ key: 'desc', label: '简介', ph: '一句话描述这个资源做什么…' }]);
+    const publish = {
+      onConfirm: this.confirmPublish,
+      fields: pfSchema.filter(fd => !fd.when || fd.when(pv)).map(fd => ({
+        key: fd.key, label: fd.label, ph: fd.ph || '', mono: !!fd.mono,
+        value: pv[fd.key] || '', isSelect: fd.kind === 'select', isText: fd.kind !== 'select',
+        onInput: (e) => this.setPVal(fd.key, e.target.value),
+        options: (fd.options || []).map(op => ({ label: op, active: (pv[fd.key] || '') === op, bg: (pv[fd.key] || '') === op ? 'var(--accent-soft)' : 'var(--panel)', fg: (pv[fd.key] || '') === op ? 'var(--accent)' : 'var(--text-2)', border: (pv[fd.key] || '') === op ? 'var(--accent)' : 'var(--border-strong)', onClick: () => this.setPVal(fd.key, op) })),
+      })),
+      typeOptions: ['provider', 'skill', 'mcp'].map(k => { const t = this.TYPE[k]; const sel = pf.type === k; return { key: k, label: t.label, glyph: this.icon(k), color: t.color, bg: sel ? t.soft : 'var(--panel)', border: sel ? t.color : 'var(--border-strong)', fg: sel ? 'var(--text)' : 'var(--text-2)', onClick: () => this.setPType(k) }; }),
+    };
+
+    // ===== CLI =====
+    const cliApps = this.APPS.map(a => ({ ...a, active: a.key === st.cli.app, rowBg: a.key === st.cli.app ? 'var(--accent-soft)' : 'transparent', chipBg: a.key === st.cli.app ? 'var(--accent-soft)' : 'transparent', chipFg: a.key === st.cli.app ? 'var(--accent)' : 'var(--text-2)', chipBorder: a.key === st.cli.app ? 'var(--accent)' : 'var(--border)', iconOpacity: a.key === st.cli.app ? '1' : '0.4', ring: a.key === st.cli.app ? '0 0 0 2px var(--accent)' : 'none', isClaude: a.key === 'claude', isCodex: a.key === 'codex', isGemini: a.key === 'gemini', isOpenCode: a.key === 'opencode', onSelect: () => this.setCliApp(a.key) }));
+    const cf = st.cli.filter;
+    const matchFilter = (id) => { const p = this.pkg(id); return cf === 'all' || (p && p.type === cf); };
+    const installedIds = Object.keys(st.installed).filter(matchFilter);
+    const updatesIds = Object.keys(st.installed).filter(id => this.pkg(id) && st.installed[id].ver !== this.pkg(id).ver && matchFilter(id));
+    const allUpdatesCount = Object.keys(st.installed).filter(id => this.pkg(id) && st.installed[id].ver !== this.pkg(id).ver).length;
+    const navDef = [
+      { key: 'browse', label: '浏览商店', glyph: this.icon('browse'), badge: 0, showBadge: false },
+      { key: 'updates', label: '更新', glyph: this.icon('updates'), badge: allUpdatesCount, badgeColor: 'var(--amber)', showBadge: allUpdatesCount > 0 },
+    ];
+    const filterChips = [{ key: 'provider', label: '供应商' }, { key: 'skill', label: '技能' }, { key: 'mcp', label: 'MCP' }].map(c => {
+      c = { ...c, glyph: this.icon(c.key) };
+      const active = cf === c.key;
+      return { ...c, active, bg: active ? 'var(--accent-soft)' : 'var(--panel)', fg: active ? 'var(--accent)' : 'var(--text-2)', border: active ? 'var(--accent)' : 'var(--border)', navBg: active ? 'var(--accent-soft)' : 'transparent', navFg: active ? 'var(--accent)' : 'var(--text-2)', railColor: active ? 'var(--accent)' : 'var(--text-3)', railBg: active ? 'var(--accent-soft)' : 'transparent', railBar: active ? 'var(--accent)' : 'transparent', onClick: () => this.setCliFilter(c.key) };
+    });
+    const cliNav = navDef.map(n => { const active = st.cli.section === n.key; return { ...n, bg: active ? 'var(--accent-soft)' : 'transparent', fg: active ? 'var(--accent)' : 'var(--text-2)', onClick: () => this.setCliSection(n.key) }; });
+
+    const installedList = installedIds.map(id => { const p = this.decorate(this.pkg(id)); const inst = st.installed[id]; const enabled = !!inst.apps[st.cli.app]; const outdated = inst.ver !== p.ver; return { ...p, outdated, latest: 'v' + p.ver, installLine: this.statLine(p), selected: id === w.sel, rowSelBg: id === w.sel ? 'var(--accent-soft)' : 'transparent', rowSelBar: id === w.sel ? 'var(--accent)' : 'transparent', enabled, enabledLabel: enabled ? '已启用' : '未启用', knobJustify: enabled ? 'flex-end' : 'flex-start', trackBg: enabled ? 'var(--accent)' : 'var(--border-strong)', onToggle: (e) => { e.stopPropagation(); this.toggleEnable(id); }, onUninstall: (e) => { e.stopPropagation(); this.uninstall(id); }, isProvider: p.type === 'provider', onEdit: (e) => { e.stopPropagation(); this.openCliEdit(id); }, onDuplicate: (e) => { e.stopPropagation(); this.duplicateProvider(id); }, onOpen: () => { this.openDetail(id); } }; });
+    const browseList = base.filter(p => cf === 'all' || p.type === cf).map(p => { const d = this.decorate(p); return { ...d, selected: p.id === w.sel, rowSelBg: p.id === w.sel ? 'var(--accent-soft)' : 'transparent', rowSelBar: p.id === w.sel ? 'var(--accent)' : 'transparent', onInstall: (e) => { if (e) e.stopPropagation(); this.install(p.id); }, onOpen: () => this.openDetail(p.id) }; });
+    const recommendedList = browseList.filter(p => p.notInstalled);
+    const lf = st.cli.listFilter;
+    let instView = installedList, recView = recommendedList;
+    if (lf === 'updates') instView = installedList.filter(p => p.outdated);
+    else if (lf === 'enabled') instView = installedList.filter(p => p.enabled);
+    else if (lf === 'disabled') instView = installedList.filter(p => !p.enabled);
+    else if (lf === 'popular') recView = [...recommendedList].sort((a, b) => this.numOf(b.dl) - this.numOf(a.dl));
+    else if (lf === 'featured') recView = recommendedList.filter(p => p.verified);
+    const showInstalled = ['all', 'installed', 'updates', 'enabled', 'disabled'].includes(lf);
+    const showRecommended = ['all', 'recommended', 'featured', 'popular', 'recent'].includes(lf);
+    const FOPTS = { featured: '精选', popular: '最热门', recent: '最近发布', recommended: '推荐', installed: '已安装', updates: '可更新', enabled: '已启用', disabled: '已禁用' };
+    const mkOpt = (key) => ({ key, token: '@' + key, label: FOPTS[key], active: lf === key, activeBg: lf === key ? 'var(--accent-soft)' : 'transparent', activeFg: lf === key ? 'var(--accent)' : 'var(--text)', onClick: () => this.setListFilter(key) });
+    const filterDiscovery = ['featured', 'popular', 'recent', 'recommended'].map(mkOpt);
+    const filterStatus = ['installed', 'updates', 'enabled', 'disabled'].map(mkOpt);
+    const searchValue = lf === 'all' ? '' : ('@' + lf);
+    const updatesList = updatesIds.map(id => { const p = this.decorate(this.pkg(id)); return { ...p, current: 'v' + st.installed[id].ver, latest: 'v' + p.ver, onUpdate: () => this.update(id) }; });
+
+    const cliHeaders = {
+      installed: { title: '已安装', sub: app.label + ' 上共 ' + installedList.filter(p => p.enabled).length + '/' + installedList.length + ' 个已启用' },
+      browse: { title: '浏览商店', sub: '直接从 registry 安装到本地并注册到 ' + app.label },
+      updates: { title: '更新', sub: updatesIds.length > 0 ? (updatesIds.length + ' 个包有新版本') : '所有包均为最新' },
+    };
+    const ch = cliHeaders[st.cli.section];
+
+    const catName = w.cat === 'fav' ? '我的收藏' : this.CATS.find(c => c.key === w.cat).label;
+
+    return {
+      theme: st.theme, themeIcon: st.theme === 'dark' ? '🌙' : '☀️', themeLabel: st.theme === 'dark' ? '暗色' : '亮色', onToggleTheme: this.toggleTheme,
+      isWeb: st.surface === 'web', isCli: st.surface === 'cli', onWeb: () => this.setSurface('web'), onCli: () => this.setSurface('cli'),
+      seg: { web: { bg: st.surface === 'web' ? 'var(--accent)' : 'transparent', fg: st.surface === 'web' ? '#fff' : 'var(--text-2)' }, cli: { bg: st.surface === 'cli' ? 'var(--accent)' : 'transparent', fg: st.surface === 'cli' ? '#fff' : 'var(--text-2)' } },
+      stop: (e) => e.stopPropagation(),
+
+      web: {
+        q: w.q, onSearch: this.setSearch, urlPath: w.profile ? ('/@' + w.profile) : (w.sel ? ('/p/' + w.sel) : '/explore'),
+        onToggleVerified: this.toggleVerified, vJustify: w.verified ? 'flex-end' : 'flex-start', vTrack: w.verified ? 'var(--accent)' : 'var(--border-strong)',
+        vChipBg: w.verified ? 'var(--accent-soft)' : 'var(--panel)', vChipBorder: w.verified ? 'var(--accent)' : 'var(--border)', vChipFg: w.verified ? 'var(--accent)' : 'var(--text-2)',
+        onFavCat: () => this.setCat('fav'), favCount, favCatBg: w.cat === 'fav' ? 'var(--accent-soft)' : 'transparent', favCatFg: w.cat === 'fav' ? 'var(--accent)' : 'var(--text-2)',
+        showFeatured: w.cat === 'all' && !w.q.trim() && !w.verified,
+        resultLabel: catName + ' · ' + gridPkgs.length + ' 个结果', empty: gridPkgs.length === 0,
+        sortLabel: this.SORTS.find(s => s.key === w.sort).label, onSort: this.cycleSort,
+        sortTabs: this.SORTS.map(s => ({ label: s.label, onClick: () => this.setSort(s.key), bg: w.sort === s.key ? 'var(--win)' : 'transparent', fg: w.sort === s.key ? 'var(--text)' : 'var(--text-3)' })),
+        typeChips: [
+          ...this.CATS.map(c => { const active = w.cat === c.key; return { label: c.label, glyph: this.icon(c.key), onClick: () => this.setCat(c.key), bg: active ? 'var(--win)' : 'transparent', fg: active ? 'var(--text)' : 'var(--text-3)' }; }),
+          { label: '收藏', glyph: '★', onClick: () => this.setCat('fav'), bg: w.cat === 'fav' ? 'var(--win)' : 'transparent', fg: w.cat === 'fav' ? 'var(--star)' : 'var(--text-3)' },
+        ],
+        onCloseDetail: this.closeDetail, onCloseProfile: this.closeProfile,
+        onPublish: this.openPublish, onClosePublish: this.closePublish, onOpenMe: () => this.openProfile('you'),
+      },
+      cats, gridPkgs, featured,
+      detailOpen: !!detail, detail,
+      profileOpen: !!profile, profile,
+      publishOpen: st.publishOpen, publish,
+
+      settings: {
+        open: st.settingsOpen, onOpen: this.openSettings, onClose: this.closeSettings,
+        loggedIn: st.loggedIn, statusText: st.loggedIn ? '已登录' : '未登录', statusColor: st.loggedIn ? 'var(--green)' : 'var(--text-3)',
+        onToggleLogin: this.toggleLogin, loginBtnLabel: st.loggedIn ? '退出登录' : '登录',
+        tabs: [{ key: 'account', label: '账户' }, { key: 'general', label: '通用' }, { key: 'about', label: '关于' }].map(tb => ({ ...tb, active: st.settingsTab === tb.key, bg: st.settingsTab === tb.key ? 'var(--accent-soft)' : 'transparent', fg: st.settingsTab === tb.key ? 'var(--accent)' : 'var(--text-2)', onClick: () => this.setSettingsTab(tb.key) })),
+        isAccount: st.settingsTab === 'account', isGeneral: st.settingsTab === 'general', isAbout: st.settingsTab === 'about',
+        lang: {
+          menuOpen: st.langMenuOpen, onToggle: this.toggleLangMenu,
+          currentLabel: (this.LANGS.find(l => l.code === st.uiLang) || this.LANGS[0]).label,
+          options: this.LANGS.map(l => ({ ...l, active: l.code === st.uiLang, onClick: () => { if (l.enabled) this.setUiLang(l.code); }, rowBg: l.code === st.uiLang ? 'var(--accent-soft)' : 'transparent', labelColor: l.enabled ? 'var(--text)' : 'var(--text-3)', cursor: l.enabled ? 'pointer' : 'default' })),
+        },
+      },
+      cli: {
+        app, apps: cliApps, appMenuOpen: st.cli.appMenuOpen, onToggleAppMenu: this.toggleCliAppMenu, nav: cliNav,
+        isInstalled: st.cli.section === 'installed', isBrowse: st.cli.section === 'browse', isUpdates: st.cli.section === 'updates',
+        headerTitle: ch.title, headerSub: ch.sub, showUpdateAll: st.cli.section === 'updates' && updatesIds.length > 0, onUpdateAll: this.updateAll,
+        installedList: instView, browseList, updatesList, recommendedList: recView, installedCount: instView.length, recommendedCount: recView.length, hasUpdates: updatesIds.length > 0, noUpdates: updatesIds.length === 0, term: st.term,
+        showInstalledSection: showInstalled, showRecommendedSection: showRecommended,
+        filterMenuOpen: st.cli.filterMenuOpen, onToggleFilterMenu: this.toggleFilterMenu, onCloseFilterMenu: this.closeFilterMenu, filterDiscovery, filterStatus, searchValue,
+        hasSearch: searchValue !== '', onClearSearch: () => this.setListFilter('all'),
+        detailEmpty: !detail, activeTypeLabel: (this.TYPE[cf] ? this.TYPE[cf].label : '全部'),
+        filterChips, filterActiveLabel: this.CATS ? '' : '',
+        edit: {
+          open: !!st.cliEditId, id: st.cliEditId, configName: st.cliEditVals.name || st.cliEditId,
+          nameValue: st.cliEditVals.name || '', onNameInput: (e) => this.setCliEditVal('name', e.target.value),
+          onClose: this.closeCliEdit, onSave: this.saveCliEdit,
+          fields: this.PROVIDER_FORM.map(fd => ({
+            label: fd.label, ph: fd.ph || '', help: fd.help || '', hasHelp: !!fd.help, value: st.cliEditVals[fd.key] || '',
+            isSelect: fd.kind === 'select', isText: fd.kind !== 'select' && fd.kind !== 'readonly', isReadonly: fd.kind === 'readonly',
+            onInput: (e) => this.setCliEditVal(fd.key, e.target.value),
+            options: (fd.options || []).map(op => ({ label: op, active: (st.cliEditVals[fd.key] || '') === op, bg: (st.cliEditVals[fd.key] || '') === op ? 'var(--accent-soft)' : 'var(--panel)', fg: (st.cliEditVals[fd.key] || '') === op ? 'var(--accent)' : 'var(--text-2)', border: (st.cliEditVals[fd.key] || '') === op ? 'var(--accent)' : 'var(--border-strong)', onClick: () => this.setCliEditVal(fd.key, op) })),
+          })),
+          whitelist: (st.cliEditVals.whitelist || []).map((w, i) => ({ label: w, onRemove: () => this.removeWhitelist(i) })),
+          wlDraft: st.cliEditVals.wlDraft || '', onWlDraft: (e) => this.setCliEditVal('wlDraft', e.target.value), onWlAdd: this.addWhitelist,
+          mapping: (st.cliEditVals.mapping || []).map((m, i) => ({ from: m.from, to: m.to, onRemove: () => this.removeMapping(i) })),
+          hasMapping: (st.cliEditVals.mapping || []).length > 0,
+          mapFromDraft: st.cliEditVals.mapFromDraft || '', mapToDraft: st.cliEditVals.mapToDraft || '',
+          onMapFrom: (e) => this.setCliEditVal('mapFromDraft', e.target.value), onMapTo: (e) => this.setCliEditVal('mapToDraft', e.target.value), onMapAdd: this.addMapping,
+          enabledOn: st.cliEditVals.enabled !== false, onToggleEnabled: () => this.toggleEditFlag('enabled'),
+          enabledKnob: st.cliEditVals.enabled !== false ? 'flex-end' : 'flex-start', enabledTrack: st.cliEditVals.enabled !== false ? 'var(--accent)' : 'var(--border-strong)', enabledLabel: st.cliEditVals.enabled !== false ? '已启用' : '未启用',
+          healthOn: !!st.cliEditVals.healthCheck, onToggleHealth: () => this.toggleEditFlag('healthCheck'),
+          healthKnob: st.cliEditVals.healthCheck ? 'flex-end' : 'flex-start', healthTrack: st.cliEditVals.healthCheck ? 'var(--accent)' : 'var(--border-strong)', healthLabel: st.cliEditVals.healthCheck ? '已启用' : '未启用',
+          cliOpen: !!st.cliEditVals.cliConfigOpen, onToggleCli: () => this.toggleEditFlag('cliConfigOpen'),
+          cliChevron: st.cliEditVals.cliConfigOpen ? '▾' : '▸',
+        },
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>
