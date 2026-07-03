@@ -1,5 +1,5 @@
 export interface RelayProcessOps {
-  spawnDetached: (scriptPath: string) => number
+  spawnDetached: () => number
   isRunning: (pid: number) => boolean
   kill: (pid: number) => void
   readPidFile: () => Promise<number | null>
@@ -26,7 +26,7 @@ export async function runRelay(
       out(`  relay already running (pid ${running})`)
       return
     }
-    const pid = ops.spawnDetached(new URL('../relay-daemon.ts', import.meta.url).pathname)
+    const pid = ops.spawnDetached()
     await ops.writePidFile(pid)
     out(`  relay started (pid ${pid})`)
     return

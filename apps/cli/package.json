@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc",
-    "build:bin": "bun build ./src/index.ts --compile --outfile ../../bin/aas",
+    "build:bin": "bash scripts/build-bin.sh",
     "type-check": "tsc --noEmit",
     "test": "bun test",
     "clean": "rm -rf dist *.tsbuildinfo"

@@ -11,6 +11,7 @@ import { runSync } from './commands/sync'
 import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
+import { startRelayServer, resolvePaths } from '@aas/client-core'
 import { readFile, writeFile, rm } from 'fs/promises'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -32,11 +33,22 @@ Commands:
   list [--for <tool>]              List installed items
   info <slug>                      Show item details`
 
+// Re-invokes this same CLI (whether running via `bun run src/index.ts` or as a
+// `bun build --compile` binary) with a hidden `__relay-daemon` argument, so the
+// spawned process resolves correctly in both forms. `import.meta.url`-based
+// script paths don't survive `--compile` (the file isn't on disk in the
+// bundled binary), so self-re-invocation via argv is the only form that works
+// in both.
+function selfInvocation(): string[] {
+  const looksLikeScript = process.argv[1]?.endsWith('.ts') || process.argv[1]?.endsWith('.js')
+  return looksLikeScript ? [process.execPath, process.argv[1] as string] : [process.execPath]
+}
+
 function realRelayOps() {
   const pidFile = join(process.env['AAS_HOME'] ?? join(homedir(), '.agents'), 'relay.pid')
   return {
-    spawnDetached: (scriptPath: string) => {
-      const proc = Bun.spawn(['bun', scriptPath], { stdio: ['ignore', 'ignore', 'ignore'] })
+    spawnDetached: () => {
+      const proc = Bun.spawn([...selfInvocation(), '__relay-daemon'], { stdio: ['ignore', 'ignore', 'ignore'] })
       proc.unref()
       return proc.pid
     },
@@ -74,6 +86,11 @@ async function main(): Promise<void> {
     case 'sync':      await runSync(engine, rest); break
     case 'update':    await runUpdate(engine, rest); break
     case 'relay':     await runRelay(rest, realRelayOps()); break
+    case '__relay-daemon': {
+      const paths = resolvePaths()
+      startRelayServer({ aasHome: paths.aasHome })
+      return // keep the process alive; Bun.serve holds the event loop open
+    }
     case '__rpc': {
       const code = await runRpc(engine, rest)
       process.exit(code)

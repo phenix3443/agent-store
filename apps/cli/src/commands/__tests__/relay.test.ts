@@ -10,7 +10,7 @@ function makeOps(overrides?: Partial<RelayProcessOps>): RelayProcessOps & { spaw
   return {
     spawned,
     killed,
-    spawnDetached: (scriptPath: string) => { spawned.push(scriptPath); return 12345 },
+    spawnDetached: () => { spawned.push('spawned'); return 12345 },
     isRunning: () => true,
     kill: (pid: number) => { killed.push(pid) },
     readPidFile: async () => storedPid,
