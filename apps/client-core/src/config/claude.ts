@@ -3,11 +3,20 @@ import { join } from 'path'
 import type { MCPItem } from '@aas/types'
 import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
+import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
+import { RELAY_PORT } from '../relay/server'
 
 const CATEGORY_DIR: Record<string, string> = {
   provider: 'providers',
   skill: 'skills',
   mcp: 'mcps',
+}
+
+export const RELAY_AUTH_TOKEN_SENTINEL = 'aas-relay'
+
+interface ClaudeRelayState {
+  originalBaseUrl: string | null
+  originalAuthToken: string | null
 }
 
 async function readSettings(claudeConfigDir: string): Promise<Record<string, unknown>> {
@@ -99,4 +108,40 @@ export async function syncItemToClaude(
     }
     await writeSettings(claudeConfigDir, settings)
   }
+}
+
+export async function enableRelayForClaude(aasHome: string, claudeConfigDir: string): Promise<void> {
+  const settings = await readSettings(claudeConfigDir)
+  const env = (settings['env'] ?? {}) as Record<string, unknown>
+
+  const existingSnapshot = await readRelayState<ClaudeRelayState>(aasHome, 'claude')
+  if (!existingSnapshot) {
+    await writeRelayState<ClaudeRelayState>(aasHome, 'claude', {
+      originalBaseUrl: typeof env['ANTHROPIC_BASE_URL'] === 'string' ? env['ANTHROPIC_BASE_URL'] : null,
+      originalAuthToken: typeof env['ANTHROPIC_AUTH_TOKEN'] === 'string' ? env['ANTHROPIC_AUTH_TOKEN'] : null,
+    })
+  }
+
+  env['ANTHROPIC_BASE_URL'] = `http://127.0.0.1:${RELAY_PORT}`
+  env['ANTHROPIC_AUTH_TOKEN'] = RELAY_AUTH_TOKEN_SENTINEL
+  settings['env'] = env
+  await writeSettings(claudeConfigDir, settings)
+}
+
+export async function disableRelayForClaude(aasHome: string, claudeConfigDir: string): Promise<void> {
+  const snapshot = await readRelayState<ClaudeRelayState>(aasHome, 'claude')
+  const settings = await readSettings(claudeConfigDir)
+  const env = (settings['env'] ?? {}) as Record<string, unknown>
+
+  if (snapshot?.originalBaseUrl != null) env['ANTHROPIC_BASE_URL'] = snapshot.originalBaseUrl
+  else delete env['ANTHROPIC_BASE_URL']
+
+  if (snapshot?.originalAuthToken != null) env['ANTHROPIC_AUTH_TOKEN'] = snapshot.originalAuthToken
+  else delete env['ANTHROPIC_AUTH_TOKEN']
+
+  if (Object.keys(env).length > 0) settings['env'] = env
+  else delete settings['env']
+
+  await writeSettings(claudeConfigDir, settings)
+  await clearRelayState(aasHome, 'claude')
 }
