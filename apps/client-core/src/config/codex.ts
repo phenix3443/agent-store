@@ -6,11 +6,21 @@ import { load } from 'js-yaml'
 import type { MCPItem } from '@aas/types'
 import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
+import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
+import { RELAY_PORT } from '../relay/server'
 
 const CATEGORY_DIR: Record<string, string> = {
   provider: 'providers',
   skill: 'skills',
   mcp: 'mcps',
+}
+
+const RELAY_PROVIDER_KEY = 'aas-relay'
+
+interface CodexRelayState {
+  originalModelProvider: string | null
+  originalModelProviders: Record<string, unknown> | null
+  originalAuth: Record<string, unknown> | null
 }
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -205,4 +215,58 @@ export async function syncItemToCodex(
       await removeCodexProviderConnection(codexConfigDir, slug)
     }
   }
+}
+
+export async function enableRelayForCodex(aasHome: string, codexConfigDir: string): Promise<void> {
+  const config = await readConfig(codexConfigDir)
+  const auth = await readAuth(codexConfigDir)
+
+  const existingSnapshot = await readRelayState<CodexRelayState>(aasHome, 'codex')
+  if (!existingSnapshot) {
+    await writeRelayState<CodexRelayState>(aasHome, 'codex', {
+      originalModelProvider: typeof config['model_provider'] === 'string' ? config['model_provider'] : null,
+      originalModelProviders: (config['model_providers'] as Record<string, unknown> | undefined) ?? null,
+      originalAuth: Object.keys(auth).length > 0 ? auth : null,
+    })
+  }
+
+  const providers = (config['model_providers'] ?? {}) as Record<string, unknown>
+  providers[RELAY_PROVIDER_KEY] = {
+    name: RELAY_PROVIDER_KEY,
+    base_url: `http://127.0.0.1:${RELAY_PORT}`,
+    wire_api: 'responses',
+    requires_openai_auth: false,
+  }
+  config['model_providers'] = providers
+  config['model_provider'] = RELAY_PROVIDER_KEY
+  config['preferred_auth_method'] = 'apikey'
+
+  auth['OPENAI_API_KEY'] = RELAY_PROVIDER_KEY
+
+  await writeConfig(codexConfigDir, config)
+  await writeAuth(codexConfigDir, auth)
+}
+
+export async function disableRelayForCodex(
+  aasHome: string,
+  codexConfigDir: string,
+  options?: { preserveOfficialAuthOnSwitch?: boolean }
+): Promise<void> {
+  const snapshot = await readRelayState<CodexRelayState>(aasHome, 'codex')
+  const config = await readConfig(codexConfigDir)
+
+  if (snapshot?.originalModelProvider != null) config['model_provider'] = snapshot.originalModelProvider
+  else delete config['model_provider']
+
+  if (snapshot?.originalModelProviders != null) config['model_providers'] = snapshot.originalModelProviders
+  else delete config['model_providers']
+
+  await writeConfig(codexConfigDir, config)
+
+  if (!options?.preserveOfficialAuthOnSwitch) {
+    const restoredAuth = snapshot?.originalAuth ?? {}
+    await writeAuth(codexConfigDir, restoredAuth)
+  }
+
+  await clearRelayState(aasHome, 'codex')
 }
