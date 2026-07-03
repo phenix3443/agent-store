@@ -1,17 +1,11 @@
-import { AppStateProvider, useAppState } from './state/AppState'
-import { TitleBar } from './components/TitleBar'
-import { Sidebar } from './components/Sidebar'
+import { AppStateProvider } from './state/AppState'
 import { TerminalLogProvider } from './state/TerminalLog'
+import { TitleBar } from './components/TitleBar'
+import { IconRail } from './components/IconRail'
+import { ResourceList } from './components/ResourceList'
+import { DetailPanel } from './components/DetailPanel'
+import { InfoSidebar } from './components/InfoSidebar'
 import { TerminalPane } from './components/TerminalPane'
-import { InstalledList } from './components/InstalledList'
-import { BrowseList } from './components/BrowseList'
-
-function SectionContent() {
-  const { section } = useAppState()
-  if (section === 'installed') return <InstalledList />
-  if (section === 'browse') return <BrowseList />
-  return <p className="font-mono text-sm text-store-text-2">section content goes here (Task 9+)</p>
-}
 
 export function App() {
   return (
@@ -20,10 +14,10 @@ export function App() {
         <div className="flex h-screen w-screen flex-col overflow-hidden rounded-xl border border-store-border-strong bg-store-win text-store-text">
           <TitleBar />
           <div className="flex flex-1 overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto p-6">
-              <SectionContent />
-            </main>
+            <IconRail />
+            <ResourceList />
+            <DetailPanel />
+            <InfoSidebar />
           </div>
           <TerminalPane />
         </div>

@@ -1,14 +1,11 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
-export type Section = 'installed' | 'browse' | 'updates' | 'favorites'
 export type AgentApp = 'claude' | 'codex'
 export type NavView = 'browse' | 'updates'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
 export type ListFilter = 'all' | 'popular' | 'recent' | 'installed' | 'enabled' | 'disabled' | 'favorites'
 
 interface AppStateValue {
-  section: Section
-  setSection: (s: Section) => void
   agentApp: AgentApp
   setAgentApp: (a: AgentApp) => void
   navView: NavView
@@ -28,7 +25,6 @@ interface AppStateValue {
 const AppStateContext = createContext<AppStateValue | null>(null)
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [section, setSection] = useState<Section>('installed')
   const [agentApp, setAgentApp] = useState<AgentApp>('claude')
   const [navView, setNavView] = useState<NavView>('browse')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
@@ -49,7 +45,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   return (
     <AppStateContext.Provider
       value={{
-        section, setSection, agentApp, setAgentApp,
+        agentApp, setAgentApp,
         navView, setNavView, categoryFilter, setCategoryFilter,
         listFilter, setListFilter, selectedSlug, setSelectedSlug,
         favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
