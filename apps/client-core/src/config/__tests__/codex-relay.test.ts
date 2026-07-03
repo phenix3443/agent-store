@@ -49,8 +49,26 @@ test('disableRelayForCodex restores the original model_provider and auth.json by
 
   const config = await readConfig()
   expect(config['model_provider']).toBeUndefined()
+  expect(config['preferred_auth_method']).toBeUndefined()
   const auth = await readAuth()
   expect(auth['OPENAI_API_KEY']).toBe('sk-original')
+})
+
+test('disableRelayForCodex restores a pre-existing preferred_auth_method', async () => {
+  await mkdir(codexDir, { recursive: true })
+  await writeFile(
+    join(codexDir, 'config.toml'),
+    'preferred_auth_method = "chatgpt"\n'
+  )
+
+  await enableRelayForCodex(aasHome, codexDir)
+  const enabledConfig = await readConfig()
+  expect(enabledConfig['preferred_auth_method']).toBe('apikey')
+
+  await disableRelayForCodex(aasHome, codexDir)
+
+  const config = await readConfig()
+  expect(config['preferred_auth_method']).toBe('chatgpt')
 })
 
 test('preserveOfficialAuthOnSwitch=true leaves auth.json untouched on disable', async () => {

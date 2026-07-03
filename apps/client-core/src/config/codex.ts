@@ -21,6 +21,7 @@ interface CodexRelayState {
   originalModelProvider: string | null
   originalModelProviders: Record<string, unknown> | null
   originalAuth: Record<string, unknown> | null
+  originalPreferredAuthMethod: string | null
 }
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
@@ -227,6 +228,7 @@ export async function enableRelayForCodex(aasHome: string, codexConfigDir: strin
       originalModelProvider: typeof config['model_provider'] === 'string' ? config['model_provider'] : null,
       originalModelProviders: (config['model_providers'] as Record<string, unknown> | undefined) ?? null,
       originalAuth: Object.keys(auth).length > 0 ? auth : null,
+      originalPreferredAuthMethod: typeof config['preferred_auth_method'] === 'string' ? config['preferred_auth_method'] : null,
     })
   }
 
@@ -260,6 +262,9 @@ export async function disableRelayForCodex(
 
   if (snapshot?.originalModelProviders != null) config['model_providers'] = snapshot.originalModelProviders
   else delete config['model_providers']
+
+  if (snapshot?.originalPreferredAuthMethod != null) config['preferred_auth_method'] = snapshot.originalPreferredAuthMethod
+  else delete config['preferred_auth_method']
 
   await writeConfig(codexConfigDir, config)
 

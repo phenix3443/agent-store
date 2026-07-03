@@ -12,8 +12,8 @@ import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
 import { startRelayServer, resolvePaths } from '@aas/client-core'
-import { readFile, writeFile, rm } from 'fs/promises'
-import { join } from 'path'
+import { readFile, writeFile, rm, mkdir } from 'fs/promises'
+import { join, dirname } from 'path'
 import { homedir } from 'os'
 
 const USAGE = `aas — AI Agent Store CLI
@@ -59,7 +59,10 @@ function realRelayOps() {
     readPidFile: async () => {
       try { return Number((await readFile(pidFile, 'utf-8')).trim()) } catch { return null }
     },
-    writePidFile: async (pid: number) => { await writeFile(pidFile, String(pid)) },
+    writePidFile: async (pid: number) => {
+      await mkdir(dirname(pidFile), { recursive: true })
+      await writeFile(pidFile, String(pid))
+    },
     removePidFile: async () => { await rm(pidFile, { force: true }) },
   }
 }
