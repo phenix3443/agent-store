@@ -435,3 +435,48 @@ test('enable/disable on a skill item is unaffected by the relay change', async (
 
 // suppress unused variable warning for skillItem
 void skillItem
+
+test('duplicateProvider: copies config into a new slug and registers it disabled', async () => {
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await engine.install('test-provider')
+  await writeFile(
+    join(aasHome, 'providers', 'test-provider', 'config.json'),
+    JSON.stringify({ apiKey: 'k', baseUrl: 'https://x.com' })
+  )
+
+  const result = await engine.duplicateProvider('test-provider')
+  expect(result.newSlug).toBe('test-provider-copy')
+
+  const manifest = JSON.parse(
+    await readFile(join(aasHome, 'providers', 'test-provider-copy', 'manifest.json'), 'utf-8')
+  )
+  expect(manifest.slug).toBe('test-provider-copy')
+
+  const config = JSON.parse(
+    await readFile(join(aasHome, 'providers', 'test-provider-copy', 'config.json'), 'utf-8')
+  )
+  expect(config).toEqual({ apiKey: 'k', baseUrl: 'https://x.com' })
+
+  const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
+  const newEntry = reg.installed.find((e: { slug: string }) => e.slug === 'test-provider-copy')
+  expect(newEntry.enabledFor).toEqual({})
+  expect(newEntry.category).toBe('provider')
+})
+
+test('duplicateProvider: increments the suffix when the copy slug is taken', async () => {
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await engine.install('test-provider')
+  await engine.duplicateProvider('test-provider')
+  const second = await engine.duplicateProvider('test-provider')
+  expect(second.newSlug).toBe('test-provider-copy-2')
+})
+
+test('duplicateProvider: throws for a non-provider item', async () => {
+  mockFetch({ '/api/items/test-skill': { item: skillItem } })
+  await engine.install('test-skill')
+  await expect(engine.duplicateProvider('test-skill')).rejects.toThrow('Only providers can be duplicated')
+})
+
+test('duplicateProvider: throws when the slug is not installed', async () => {
+  await expect(engine.duplicateProvider('missing')).rejects.toThrow('Item not installed')
+})

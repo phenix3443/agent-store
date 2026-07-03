@@ -18,7 +18,7 @@ import {
   getCodexAppliedProviderConnection, syncItemToCodex, enableRelayForCodex, disableRelayForCodex,
 } from './config/codex'
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
-import { readProviderConnection } from './config/provider'
+import { duplicateProviderConnection, readProviderConnection } from './config/provider'
 
 export class AASEngineImpl implements AASEngine {
   private readonly paths: Required<AASPaths>
@@ -251,6 +251,37 @@ export class AASEngineImpl implements AASEngine {
       headers: manifest.headers,
       contentUrl: manifest.contentUrl,
     }
+  }
+
+  async duplicateProvider(slug: string): Promise<{ newSlug: string }> {
+    const registry = await readRegistry(this.paths.aasHome)
+    const entry = findEntry(registry, slug)
+    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    if (entry.category !== 'provider') throw new Error(`Only providers can be duplicated: ${slug}`)
+
+    let newSlug = `${slug}-copy`
+    let suffix = 2
+    while (findEntry(registry, newSlug)) {
+      newSlug = `${slug}-copy-${suffix}`
+      suffix += 1
+    }
+
+    const sourceDir = itemDir(this.paths.aasHome, 'provider', slug)
+    const targetDir = itemDir(this.paths.aasHome, 'provider', newSlug)
+    await duplicateProviderConnection(sourceDir, targetDir, newSlug)
+
+    const now = new Date().toISOString()
+    const newEntry: InstalledItem = {
+      slug: newSlug,
+      category: 'provider',
+      version: entry.version,
+      installedAt: now,
+      updatedAt: now,
+      compatibleWith: entry.compatibleWith,
+      enabledFor: {},
+    }
+    await writeRegistry(this.paths.aasHome, upsertEntry(registry, newEntry))
+    return { newSlug }
   }
 
   private async _syncToTarget(

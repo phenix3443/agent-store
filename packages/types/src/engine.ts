@@ -127,4 +127,6 @@ export interface AASEngine {
   update(slug?: string): Promise<UpdateResult[]>
   list(options?: ListOptions): Promise<InstalledItem[]>
   info(slug: string): Promise<ItemDetail>
+  /** Duplicates an installed provider's local config into a new slug. Throws if slug is not an installed provider. */
+  duplicateProvider(slug: string): Promise<{ newSlug: string }>
 }
