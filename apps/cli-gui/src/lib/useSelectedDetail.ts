@@ -6,7 +6,7 @@ import { useAppState } from '../state/AppState'
 export type SelectedDetail = (ItemDetail & { installed: true }) | (Item & { installed: false })
 
 export function useSelectedDetail(): SelectedDetail | null {
-  const { selectedSlug } = useAppState()
+  const { selectedSlug, installedVersion } = useAppState()
   const [detail, setDetail] = useState<SelectedDetail | null>(null)
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function useSelectedDetail(): SelectedDetail | null {
     return () => {
       cancelled = true
     }
-  }, [selectedSlug])
+  }, [selectedSlug, installedVersion])
 
   return detail
 }

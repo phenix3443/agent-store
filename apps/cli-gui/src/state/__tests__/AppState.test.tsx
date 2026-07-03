@@ -9,6 +9,7 @@ function Probe() {
     navView, setNavView, categoryFilter, setCategoryFilter,
     listFilter, setListFilter, selectedSlug, setSelectedSlug,
     favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
+    installedVersion, bumpInstalledVersion,
   } = useAppState()
   return (
     <div>
@@ -18,12 +19,14 @@ function Probe() {
       <span data-testid="selected">{selectedSlug ?? 'none'}</span>
       <span data-testid="favorites">{[...favoriteSlugs].join(',')}</span>
       <span data-testid="terminal">{String(terminalExpanded)}</span>
+      <span data-testid="installed-version">{installedVersion}</span>
       <button onClick={() => setNavView('updates')}>set-nav</button>
       <button onClick={() => setCategoryFilter('provider')}>set-category</button>
       <button onClick={() => setListFilter('installed')}>set-filter</button>
       <button onClick={() => setSelectedSlug('filesystem')}>select</button>
       <button onClick={() => toggleFavorite('filesystem')}>toggle-fav</button>
       <button onClick={() => setTerminalExpanded(true)}>expand-terminal</button>
+      <button onClick={bumpInstalledVersion}>bump-installed-version</button>
     </div>
   )
 }
@@ -44,6 +47,7 @@ test('defaults: browse nav, all category, all filter, no selection, no favorites
   expect(screen.getByTestId('selected').textContent).toBe('none')
   expect(screen.getByTestId('favorites').textContent).toBe('')
   expect(screen.getByTestId('terminal').textContent).toBe('false')
+  expect(screen.getByTestId('installed-version').textContent).toBe('0')
 })
 
 test('setters update their respective fields', () => {
@@ -66,4 +70,10 @@ test('toggleFavorite adds then removes a slug', () => {
   expect(screen.getByTestId('favorites').textContent).toBe('filesystem')
   fireEvent.click(screen.getByText('toggle-fav'))
   expect(screen.getByTestId('favorites').textContent).toBe('')
+})
+
+test('bumpInstalledVersion increments the counter', () => {
+  renderProbe()
+  fireEvent.click(screen.getByText('bump-installed-version'))
+  expect(screen.getByTestId('installed-version').textContent).toBe('1')
 })

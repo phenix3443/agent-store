@@ -16,7 +16,7 @@ const USE_CASE_COPY: Record<string, string> = {
 type Tab = 'overview' | 'reviews' | 'versions'
 
 export function DetailPanel() {
-  const { favoriteSlugs, toggleFavorite } = useAppState()
+  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion } = useAppState()
   const { appendLine } = useTerminalLog()
   const detail = useSelectedDetail()
   const [tab, setTab] = useState<Tab>('overview')
@@ -35,6 +35,7 @@ export function DetailPanel() {
     try {
       const result = await callRpc<{ version: string }>('install', [detail.slug])
       appendLine(`✓ 已安装 ${detail.slug} ${result.version}`, 'green')
+      bumpInstalledVersion()
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }

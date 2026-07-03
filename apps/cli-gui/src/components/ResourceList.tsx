@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, ItemDetail } from '@aas/types'
+import type { Item, InstalledItem, ItemDetail, UpdateAvailable } from '@aas/types'
 import { Search } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type ListFilter } from '../state/AppState'
@@ -23,11 +23,13 @@ const FILTER_TOKENS: { key: Exclude<ListFilter, 'all'>; label: string }[] = [
 export function ResourceList() {
   const {
     agentApp, setAgentApp, categoryFilter, listFilter, setListFilter,
-    selectedSlug, setSelectedSlug, favoriteSlugs,
+    selectedSlug, setSelectedSlug, favoriteSlugs, navView,
+    installedVersion, bumpInstalledVersion,
   } = useAppState()
   const { appendLine } = useTerminalLog()
   const [installed, setInstalled] = useState<EnrichedInstalledItem[]>([])
   const [catalog, setCatalog] = useState<Item[]>([])
+  const [updates, setUpdates] = useState<UpdateAvailable[]>([])
   const [textQuery, setTextQuery] = useState('')
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false)
   const [editingSlug, setEditingSlug] = useState<string | null>(null)
@@ -42,11 +44,20 @@ export function ResourceList() {
     setCatalog(await callRpc<Item[]>('search', ['']))
   }
 
+  async function refreshUpdates() {
+    setUpdates(await callRpc<UpdateAvailable[]>('checkUpdates'))
+  }
+
   useEffect(() => {
     refreshInstalled()
     refreshCatalog()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [installedVersion])
+
+  useEffect(() => {
+    if (navView === 'updates') refreshUpdates()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navView])
 
   const installedSlugs = useMemo(() => new Set(installed.map((i) => i.slug)), [installed])
 
@@ -110,7 +121,7 @@ export function ResourceList() {
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
-    refreshInstalled()
+    bumpInstalledVersion()
   }
 
   async function uninstall(item: EnrichedInstalledItem) {
@@ -122,7 +133,7 @@ export function ResourceList() {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
     if (selectedSlug === item.slug) setSelectedSlug(null)
-    refreshInstalled()
+    bumpInstalledVersion()
   }
 
   async function install(item: Item) {
@@ -133,7 +144,7 @@ export function ResourceList() {
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
-    refreshInstalled()
+    bumpInstalledVersion()
   }
 
   async function duplicateProvider(item: EnrichedInstalledItem) {
@@ -144,6 +155,30 @@ export function ResourceList() {
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
+    bumpInstalledVersion()
+  }
+
+  async function updateAll() {
+    appendLine('$ aas update')
+    try {
+      await callRpc('update')
+      appendLine('✓ 已全部更新', 'green')
+    } catch (err) {
+      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
+    }
+    refreshUpdates()
+    refreshInstalled()
+  }
+
+  async function updateOne(slug: string) {
+    appendLine(`$ aas update ${slug}`)
+    try {
+      await callRpc('update', [slug])
+      appendLine(`✓ 已更新 ${slug}`, 'green')
+    } catch (err) {
+      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
+    }
+    refreshUpdates()
     refreshInstalled()
   }
 
@@ -203,7 +238,7 @@ export function ResourceList() {
         )}
       </div>
 
-      {showInstalledSection(listFilter) && (
+      {navView === 'browse' && showInstalledSection(listFilter) && (
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-medium text-store-text-2">
             已安装 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
@@ -271,7 +306,7 @@ export function ResourceList() {
         </div>
       )}
 
-      {showRecommendedSection(listFilter) && (
+      {navView === 'browse' && showRecommendedSection(listFilter) && (
         <div>
           <p className="mb-2 text-xs font-medium text-store-text-2">
             推荐 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleRecommended.length}</span>
@@ -306,6 +341,50 @@ export function ResourceList() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {navView === 'updates' && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-2 text-xs font-medium text-store-text-2">
+              更新 <span className="rounded-full bg-store-panel-2 px-1.5">{updates.length}</span>
+            </p>
+            {updates.length > 0 && (
+              <button
+                type="button"
+                onClick={updateAll}
+                className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+              >
+                全部更新
+              </button>
+            )}
+          </div>
+          {updates.length === 0 ? (
+            <p className="text-sm text-store-text-2">所有包均为最新</p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {updates.map((item) => (
+                <div
+                  key={item.slug}
+                  className="rounded-lg border border-store-border bg-store-panel px-3 py-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-store-text">
+                      {item.slug} v{item.currentVersion} → v{item.latestVersion}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => updateOne(item.slug)}
+                      className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                    >
+                      更新
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

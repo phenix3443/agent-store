@@ -1,6 +1,6 @@
 import { test, expect, afterEach, mock, spyOn } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
-import { AppStateProvider } from '../../state/AppState'
+import { AppStateProvider, useAppState } from '../../state/AppState'
 import { TerminalLogProvider, useTerminalLog } from '../../state/TerminalLog'
 import * as rpcModule from '../../lib/rpc'
 import { ResourceList } from '../ResourceList'
@@ -60,11 +60,17 @@ function TerminalProbe() {
   return <div data-testid="log-count">{lines.length}</div>
 }
 
+function NavViewProbe() {
+  const { setNavView } = useAppState()
+  return <button onClick={() => setNavView('updates')}>show-updates</button>
+}
+
 async function renderList(handlers?: Record<string, (...args: unknown[]) => unknown>) {
   mockRpc(defaultHandlers(handlers))
   return render(
     <AppStateProvider>
       <TerminalLogProvider>
+        <NavViewProbe />
         <ResourceList />
         <TerminalProbe />
       </TerminalLogProvider>
@@ -137,4 +143,49 @@ test('复制 is not shown for non-provider installed items', async () => {
   await waitFor(() => screen.getByText('filesystem'))
   const filesystemRow = screen.getByText('filesystem').closest('div')
   expect(filesystemRow?.parentElement?.textContent).not.toContain('复制')
+})
+
+test('switching to the updates nav view renders checkUpdates results instead of installed/recommended groups', async () => {
+  const checkUpdates = mock(() => [
+    { slug: 'filesystem', currentVersion: '0.8.0', latestVersion: '0.8.1' },
+  ])
+  await renderList({ checkUpdates })
+  await waitFor(() => screen.getByText('context7'))
+  fireEvent.click(screen.getByText('show-updates'))
+  await waitFor(() => expect(checkUpdates).toHaveBeenCalled())
+  expect(screen.queryByText('已安装')).not.toBeInTheDocument()
+  expect(screen.queryByText('推荐')).not.toBeInTheDocument()
+  expect(screen.getByText('filesystem v0.8.0 → v0.8.1')).toBeInTheDocument()
+})
+
+test('clicking 全部更新 calls update with no slug argument', async () => {
+  const checkUpdates = mock(() => [
+    { slug: 'filesystem', currentVersion: '0.8.0', latestVersion: '0.8.1' },
+  ])
+  const update = mock(() => [])
+  await renderList({ checkUpdates, update })
+  fireEvent.click(screen.getByText('show-updates'))
+  await waitFor(() => screen.getByText('全部更新'))
+  fireEvent.click(screen.getByText('全部更新'))
+  await waitFor(() => expect(update).toHaveBeenCalledWith())
+})
+
+test('clicking a row 更新 button calls update with that row slug', async () => {
+  const checkUpdates = mock(() => [
+    { slug: 'filesystem', currentVersion: '0.8.0', latestVersion: '0.8.1' },
+  ])
+  const update = mock(() => [])
+  await renderList({ checkUpdates, update })
+  fireEvent.click(screen.getByText('show-updates'))
+  await waitFor(() => screen.getByText('filesystem v0.8.0 → v0.8.1'))
+  fireEvent.click(screen.getByRole('button', { name: '更新' }))
+  await waitFor(() => expect(update).toHaveBeenCalledWith('filesystem'))
+})
+
+test('zero updates shows the up-to-date message', async () => {
+  const checkUpdates = mock(() => [])
+  await renderList({ checkUpdates })
+  fireEvent.click(screen.getByText('show-updates'))
+  await waitFor(() => expect(checkUpdates).toHaveBeenCalled())
+  expect(screen.getByText('所有包均为最新')).toBeInTheDocument()
 })

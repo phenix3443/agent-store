@@ -20,6 +20,8 @@ interface AppStateValue {
   toggleFavorite: (slug: string) => void
   terminalExpanded: boolean
   setTerminalExpanded: (v: boolean) => void
+  installedVersion: number
+  bumpInstalledVersion: () => void
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null)
@@ -32,6 +34,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [favoriteSlugs, setFavoriteSlugs] = useState<Set<string>>(new Set())
   const [terminalExpanded, setTerminalExpanded] = useState(false)
+  const [installedVersion, setInstalledVersion] = useState(0)
+
+  function bumpInstalledVersion() {
+    setInstalledVersion((prev) => prev + 1)
+  }
 
   function toggleFavorite(slug: string) {
     setFavoriteSlugs((prev) => {
@@ -49,6 +56,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         navView, setNavView, categoryFilter, setCategoryFilter,
         listFilter, setListFilter, selectedSlug, setSelectedSlug,
         favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
+        installedVersion, bumpInstalledVersion,
       }}
     >
       {children}
