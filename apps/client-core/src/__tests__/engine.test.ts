@@ -522,3 +522,23 @@ test('parsePricingFromUrl: returns a non-empty mock pricing table', async () => 
     expect(typeof entry.output).toBe('number')
   }
 })
+
+test('listLocalConfigs returns the seeded default when nothing is configured', async () => {
+  const configs = await engine.listLocalConfigs()
+  expect(configs).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
+})
+
+test('addLocalConfig, updateLocalConfig, toggleLocalConfig, removeLocalConfig round-trip through the engine', async () => {
+  const added = await engine.addLocalConfig('Second')
+  expect(added.port).toBe(18880)
+
+  const renamed = await engine.updateLocalConfig(added.id, { name: 'Renamed' })
+  expect(renamed.name).toBe('Renamed')
+
+  const toggled = await engine.toggleLocalConfig(added.id)
+  expect(toggled.enabled).toBe(false)
+
+  await engine.removeLocalConfig(added.id)
+  const remaining = await engine.listLocalConfigs()
+  expect(remaining).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
+})

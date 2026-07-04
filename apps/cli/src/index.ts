@@ -12,7 +12,7 @@ import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
 import { runUsage } from './commands/usage'
-import { startRelayServer, resolvePaths } from '@aas/client-core'
+import { runRelayDaemon, resolvePaths } from '@aas/client-core'
 import { readFile, writeFile, rm, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
 import { homedir } from 'os'
@@ -94,8 +94,8 @@ async function main(): Promise<void> {
     case 'usage':     await runUsage(engine, rest); break
     case '__relay-daemon': {
       const paths = resolvePaths()
-      startRelayServer({ aasHome: paths.aasHome })
-      return // keep the process alive; Bun.serve holds the event loop open
+      await runRelayDaemon(paths.aasHome)
+      return
     }
     case '__rpc': {
       const code = await runRpc(engine, rest)

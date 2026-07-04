@@ -21,6 +21,11 @@ function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
     duplicateProvider: async () => ({ newSlug: 'openai-provider-copy' }),
     getUsageSummary: async () => [],
     parsePricingFromUrl: async () => ({}),
+    listLocalConfigs: async () => [],
+    addLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true }),
+    removeLocalConfig: async () => undefined,
+    updateLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true }),
+    toggleLocalConfig: async () => ({ id: 'x', name: 'x', port: 18780, enabled: true }),
     ...overrides,
   } as unknown as AASEngine
 }
@@ -101,4 +106,18 @@ test('runRpc calls getUsageSummary and returns its rows', async () => {
   const code = await runRpc(makeEngine({ getUsageSummary: getUsageSummary as AASEngine['getUsageSummary'] }), ['getUsageSummary', '[]'], s => lines.push(s))
   expect(code).toBe(0)
   expect(JSON.parse(lines[0]).data).toEqual(rows)
+})
+
+test('listLocalConfigs dispatches to engine.listLocalConfigs', async () => {
+  const calls: unknown[][] = []
+  const listLocalConfigs = async (...args: unknown[]) => { calls.push(args); return [] }
+  const lines: string[] = []
+  const code = await runRpc(
+    makeEngine({ listLocalConfigs: listLocalConfigs as AASEngine['listLocalConfigs'] }),
+    ['listLocalConfigs'],
+    s => lines.push(s)
+  )
+  expect(code).toBe(0)
+  expect(calls).toEqual([[]])
+  expect(JSON.parse(lines[0]).data).toEqual([])
 })

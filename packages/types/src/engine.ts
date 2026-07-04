@@ -168,4 +168,14 @@ export interface AASEngine {
   getUsageSummary(options?: UsageSummaryOptions): Promise<UsageSummaryRow[]>
   /** Fetches a provider's pricing page and extracts a draft pricing table for user review. Returns mock data in this iteration. */
   parsePricingFromUrl(url: string): Promise<Record<string, ModelPricing>>
+  /** Lists all local relay listen-port configurations. */
+  listLocalConfigs(): Promise<LocalRelayConfig[]>
+  /** Adds a new local relay configuration on the next free port, enabled by default. */
+  addLocalConfig(name: string): Promise<LocalRelayConfig>
+  /** Removes a local relay configuration. Throws if it's the last remaining one. */
+  removeLocalConfig(id: string): Promise<void>
+  /** Renames and/or changes the port of a local relay configuration. */
+  updateLocalConfig(id: string, patch: { name?: string; port?: number }): Promise<LocalRelayConfig>
+  /** Flips a local relay configuration's enabled flag. */
+  toggleLocalConfig(id: string): Promise<LocalRelayConfig>
 }

@@ -18,6 +18,11 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   duplicateProvider: (e, a) => e.duplicateProvider(a[0] as string),
   getUsageSummary: (e, a) => e.getUsageSummary(a[0] as UsageSummaryOptions | undefined),
   parsePricingFromUrl: (e, a) => e.parsePricingFromUrl(a[0] as string),
+  listLocalConfigs: (e) => e.listLocalConfigs(),
+  addLocalConfig: (e, a) => e.addLocalConfig(a[0] as string),
+  removeLocalConfig: (e, a) => e.removeLocalConfig(a[0] as string),
+  updateLocalConfig: (e, a) => e.updateLocalConfig(a[0] as string, a[1] as { name?: string; port?: number }),
+  toggleLocalConfig: (e, a) => e.toggleLocalConfig(a[0] as string),
 }
 
 export async function runRpc(

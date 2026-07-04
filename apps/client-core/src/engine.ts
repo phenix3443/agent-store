@@ -3,7 +3,7 @@ import { join } from 'path'
 import type {
   AASEngine, AASPaths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,
-  UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson,
+  UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson, LocalRelayConfig,
 } from '@aas/types'
 import { AASClient } from '@aas/sdk'
 import { resolvePaths, itemDir } from './paths'
@@ -17,6 +17,11 @@ import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './co
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { getDailySummary } from './usage/queries'
+import {
+  listLocalConfigs as _listLocalConfigs, addLocalConfig as _addLocalConfig,
+  removeLocalConfig as _removeLocalConfig, updateLocalConfig as _updateLocalConfig,
+  toggleLocalConfig as _toggleLocalConfig,
+} from './relay/local-configs'
 
 export class AASEngineImpl implements AASEngine {
   private readonly paths: Required<AASPaths>
@@ -281,6 +286,26 @@ export class AASEngineImpl implements AASEngine {
     return {
       'example-model': { input: 1, output: 5 },
     }
+  }
+
+  async listLocalConfigs(): Promise<LocalRelayConfig[]> {
+    return _listLocalConfigs(this.paths.aasHome)
+  }
+
+  async addLocalConfig(name: string): Promise<LocalRelayConfig> {
+    return _addLocalConfig(this.paths.aasHome, name)
+  }
+
+  async removeLocalConfig(id: string): Promise<void> {
+    return _removeLocalConfig(this.paths.aasHome, id)
+  }
+
+  async updateLocalConfig(id: string, patch: { name?: string; port?: number }): Promise<LocalRelayConfig> {
+    return _updateLocalConfig(this.paths.aasHome, id, patch)
+  }
+
+  async toggleLocalConfig(id: string): Promise<LocalRelayConfig> {
+    return _toggleLocalConfig(this.paths.aasHome, id)
   }
 
   private _hasOtherEnabledProvider(registry: RegistryJson, excludeSlug: string, target: ToolTarget): boolean {
