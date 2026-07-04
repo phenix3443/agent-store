@@ -103,3 +103,48 @@ test('routes /responses to the codex target', async () => {
   await fetch(`http://127.0.0.1:${server.port}/responses`, { method: 'POST', body: '{}' })
   expect(capturedUrl).toBe('https://upstream.example.com/responses')
 })
+
+test('returns 403 and does not forward when the requested model is not in the whitelist', async () => {
+  await installProvider('test-provider', { codex: true }, {
+    apiKey: 'sk-test', baseUrl: 'https://upstream.example.com', whitelist: ['claude-*'],
+  })
+
+  let called = false
+  const fetchImpl = (async (_url: string) => {
+    called = true
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  const res = await fetch(`http://127.0.0.1:${server.port}/responses`, {
+    method: 'POST',
+    body: JSON.stringify({ model: 'gpt-4o' }),
+  })
+
+  expect(res.status).toBe(403)
+  expect(called).toBe(false)
+})
+
+test('forwards to the endpoint override path instead of the route default when connection.endpoint is set', async () => {
+  await installProvider('test-provider', { claude: true }, {
+    apiKey: 'sk-test', baseUrl: 'https://upstream.example.com', endpoint: '/v1/chat/completions',
+  })
+
+  let capturedUrl: string | undefined
+  const fetchImpl = (async (url: string) => {
+    capturedUrl = url
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ model: 'claude-3-5-sonnet' }),
+  })
+
+  expect(capturedUrl).toBe('https://upstream.example.com/v1/chat/completions')
+})

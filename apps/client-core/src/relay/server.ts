@@ -4,6 +4,7 @@ import { itemDir } from '../paths'
 import { readProviderConnection } from '../config/provider'
 import { forwardRequest } from './forward'
 import { recordUsageAsync } from '../usage/record-usage'
+import { isModelAllowed } from './model-whitelist'
 
 export const RELAY_PORT = 18780
 
@@ -50,9 +51,20 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
       }
 
       const body = await req.json().catch(() => ({}))
+      const requestedModelForGate = typeof (body as Record<string, unknown>)['model'] === 'string'
+        ? (body as Record<string, unknown>)['model'] as string
+        : undefined
+      if (requestedModelForGate && !isModelAllowed(requestedModelForGate, connection.whitelist)) {
+        return Response.json(
+          { error: `model ${requestedModelForGate} is not in the whitelist for provider ${provider.slug}` },
+          { status: 403 }
+        )
+      }
+
+      const forwardPath = connection.endpoint || url.pathname
       const startedAt = Date.now()
       const upstreamResponse = await forwardRequest(
-        url.pathname,
+        forwardPath,
         body,
         {
           baseUrl: connection.baseUrl,
