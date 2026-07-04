@@ -213,7 +213,7 @@ test('setConfig writes config.json', async () => {
   expect(config.apiKey).toBe('sk-test')
 })
 
-test('enabling a provider disables other providers for the same target', async () => {
+test('enabling a second provider for the same target does not disable the first', async () => {
   const secondProviderItem: ProviderItem = {
     ...providerItem,
     slug: 'test-provider-2',
@@ -237,59 +237,18 @@ test('enabling a provider disables other providers for the same target', async (
   await engine.enable('test-provider', 'claude')
   await engine.enable('test-provider-2', 'claude')
 
-  // Provider enable now points Claude at the local relay rather than writing the
-  // real per-provider credential, so the settings only reflect the relay sentinel.
   const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
   expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('aas-relay')
   expect(settings.env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:18780')
 
-  const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
-  const first = reg.installed.find((item: { slug: string }) => item.slug === 'test-provider')
-  const second = reg.installed.find((item: { slug: string }) => item.slug === 'test-provider-2')
-  expect(first.enabledFor.claude).toBe(false)
-  expect(second.enabledFor.claude).toBe(true)
-})
-
-test('list reflects actual active provider from Claude config', async () => {
-  const secondProviderItem: ProviderItem = {
-    ...providerItem,
-    slug: 'test-provider-2',
-    name: 'Second Provider',
-  }
-  mockFetch({
-    '/api/items/test-provider': { item: providerItem },
-    '/api/items/test-provider-2': { item: secondProviderItem },
-  })
-  await engine.install('test-provider')
-  await engine.install('test-provider-2')
-  await engine.setConfig('test-provider', {
-    apiKey: 'sk-1',
-    baseUrl: 'https://api.one.example/v1',
-  })
-  await engine.setConfig('test-provider-2', {
-    apiKey: 'sk-2',
-    baseUrl: 'https://api.two.example/v1',
-  })
-  await engine.enable('test-provider', 'claude')
-
-  await writeFile(
-    join(claudeDir, 'settings.json'),
-    JSON.stringify({
-      env: {
-        ANTHROPIC_BASE_URL: 'https://api.two.example/v1',
-        ANTHROPIC_AUTH_TOKEN: 'sk-2',
-      },
-    })
-  )
-
-  const items = await engine.list()
-  const first = items.find(item => item.slug === 'test-provider')
-  const second = items.find(item => item.slug === 'test-provider-2')
-  expect(first?.enabledFor.claude).toBe(false)
+  const list = await engine.list()
+  const first = list.find(item => item.slug === 'test-provider')
+  const second = list.find(item => item.slug === 'test-provider-2')
+  expect(first?.enabledFor.claude).toBe(true)
   expect(second?.enabledFor.claude).toBe(true)
 })
 
-test('info reflects actual active provider from Codex config', async () => {
+test('list and info report enabledFor from the registry without needing config-file reconciliation', async () => {
   const secondProviderItem: ProviderItem = {
     ...providerItem,
     slug: 'test-provider-2',
@@ -306,34 +265,19 @@ test('info reflects actual active provider from Codex config', async () => {
   })
   await engine.install('test-provider')
   await engine.install('test-provider-2')
-  await engine.setConfig('test-provider', {
-    apiKey: 'shared-key',
-    baseUrl: 'https://api.shared.example/v1',
-  })
-  await engine.setConfig('test-provider-2', {
-    apiKey: 'shared-key',
-    baseUrl: 'https://api.shared.example/v1',
-  })
-  await engine.enable('test-provider', 'codex')
+  await engine.setConfig('test-provider', { apiKey: 'shared-key', baseUrl: 'https://api.shared.example/v1' })
+  await engine.setConfig('test-provider-2', { apiKey: 'shared-key', baseUrl: 'https://api.shared.example/v1' })
 
-  await writeFile(
-    join(codexDir, 'config.toml'),
-    'model_provider = "test-provider-2"\npreferred_auth_method = "apikey"\n' +
-      '[model_providers.test-provider-2]\n' +
-      'name = "test-provider-2"\n' +
-      'base_url = "https://api.shared.example/v1"\n' +
-      'wire_api = "responses"\n' +
-      'requires_openai_auth = false\n'
-  )
-  await writeFile(join(codexDir, 'auth.json'), JSON.stringify({ OPENAI_API_KEY: 'shared-key' }))
+  await engine.enable('test-provider', 'codex')
+  await engine.enable('test-provider-2', 'codex')
 
   const list = await engine.list()
   const detail = await engine.info('test-provider-2')
   const other = await engine.info('test-provider')
   expect(list.find(item => item.slug === 'test-provider-2')?.enabledFor.codex).toBe(true)
-  expect(list.find(item => item.slug === 'test-provider')?.enabledFor.codex).toBe(false)
+  expect(list.find(item => item.slug === 'test-provider')?.enabledFor.codex).toBe(true)
   expect(detail.enabledFor.codex).toBe(true)
-  expect(other.enabledFor.codex).toBe(false)
+  expect(other.enabledFor.codex).toBe(true)
 })
 
 test('sync adds all enabled items to target configs', async () => {

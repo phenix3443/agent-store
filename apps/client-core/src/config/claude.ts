@@ -53,17 +53,6 @@ export async function removeClaudeMcpServer(claudeConfigDir: string, slug: strin
   await writeSettings(claudeConfigDir, settings)
 }
 
-export async function getClaudeAppliedProviderConnection(
-  claudeConfigDir: string
-): Promise<{ apiKey?: string; baseUrl?: string }> {
-  const settings = await readSettings(claudeConfigDir)
-  const env = (settings['env'] ?? {}) as Record<string, unknown>
-  return {
-    apiKey: typeof env['ANTHROPIC_AUTH_TOKEN'] === 'string' ? env['ANTHROPIC_AUTH_TOKEN'] : undefined,
-    baseUrl: typeof env['ANTHROPIC_BASE_URL'] === 'string' ? env['ANTHROPIC_BASE_URL'] : undefined,
-  }
-}
-
 export async function syncItemToClaude(
   slug: string,
   category: 'provider' | 'skill' | 'mcp',

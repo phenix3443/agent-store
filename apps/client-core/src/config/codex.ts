@@ -160,21 +160,6 @@ export async function removeCodexProviderConnection(
   await writeAuth(codexConfigDir, auth)
 }
 
-export async function getCodexAppliedProviderConnection(
-  codexConfigDir: string
-): Promise<{ apiKey?: string; baseUrl?: string; providerKey?: string }> {
-  const config = await readConfig(codexConfigDir)
-  const auth = await readAuth(codexConfigDir)
-  const providerKey = typeof config['model_provider'] === 'string' ? config['model_provider'] : undefined
-  const providers = (config['model_providers'] ?? {}) as Record<string, unknown>
-  const provider = providerKey ? (providers[providerKey] as Record<string, unknown> | undefined) : undefined
-  return {
-    providerKey,
-    apiKey: typeof auth['OPENAI_API_KEY'] === 'string' ? auth['OPENAI_API_KEY'] : undefined,
-    baseUrl: provider && typeof provider['base_url'] === 'string' ? provider['base_url'] : undefined,
-  }
-}
-
 export async function syncItemToCodex(
   slug: string,
   category: 'provider' | 'skill' | 'mcp',
