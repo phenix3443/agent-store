@@ -11,6 +11,7 @@ import { runSync } from './commands/sync'
 import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
+import { runUsage } from './commands/usage'
 import { startRelayServer, resolvePaths } from '@aas/client-core'
 import { readFile, writeFile, rm, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
@@ -29,6 +30,7 @@ Commands:
   config <slug>                    Configure an item's settings
   sync [--for <tool>]              Sync enabled items to tool configs
   relay <start|stop|status>        Manage the local provider relay
+  usage [--days N] [--provider <slug>] [--for <claude|codex>]   Show usage and cost summary
   update [slug]                    Update installed items
   list [--for <tool>]              List installed items
   info <slug>                      Show item details`
@@ -89,6 +91,7 @@ async function main(): Promise<void> {
     case 'sync':      await runSync(engine, rest); break
     case 'update':    await runUpdate(engine, rest); break
     case 'relay':     await runRelay(rest, realRelayOps()); break
+    case 'usage':      await runUsage(engine, rest); break
     case '__relay-daemon': {
       const paths = resolvePaths()
       startRelayServer({ aasHome: paths.aasHome })
