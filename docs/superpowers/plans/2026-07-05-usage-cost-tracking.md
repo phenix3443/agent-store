@@ -601,10 +601,16 @@ test('recordRequest: a null cost is not added to the rollup total and increments
 test('recordRequest: prunes request_logs older than 30 days but keeps daily_rollups', () => {
   const db = openUsageDb(dir)
   const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString()
+  const oldDay = oldDate.slice(0, 10)
   db.run(
     `INSERT INTO request_logs (created_at, provider_slug, target, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, status_code, latency_ms, is_streaming, is_fallback)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [oldDate, 'openai-provider', 'codex', 'gpt-5', 1, 1, 0, 0, 0.001, 200, 100, 0, 0]
+  )
+  db.run(
+    `INSERT INTO daily_rollups (date, provider_slug, target, model, request_count, success_count, unpriced_request_count, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [oldDay, 'openai-provider', 'codex', 'gpt-5', 1, 1, 0, 1, 1, 0, 0, 0.001]
   )
   recordRequest(db, {
     providerSlug: 'openai-provider', target: 'codex', model: 'gpt-5',
@@ -612,9 +618,9 @@ test('recordRequest: prunes request_logs older than 30 days but keeps daily_roll
     costUsd: 0.001, statusCode: 200, latencyMs: 100, isStreaming: false,
   })
   const logs = db.query('SELECT * FROM request_logs').all()
-  expect(logs).toHaveLength(1) // the 40-day-old row was pruned; only today's new row remains
+  expect(logs).toHaveLength(1) // the 40-day-old detail row was pruned; only today's new row remains
   const rollups = db.query('SELECT * FROM daily_rollups').all()
-  expect(rollups).toHaveLength(2) // rollups are never pruned — today's and the old date's both remain
+  expect(rollups).toHaveLength(2) // rollups are never pruned — the seeded old-day rollup and today's new one both remain
 })
 ```
 
