@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     case 'sync':      await runSync(engine, rest); break
     case 'update':    await runUpdate(engine, rest); break
     case 'relay':     await runRelay(rest, realRelayOps()); break
-    case 'usage':      await runUsage(engine, rest); break
+    case 'usage':     await runUsage(engine, rest); break
     case '__relay-daemon': {
       const paths = resolvePaths()
       startRelayServer({ aasHome: paths.aasHome })
