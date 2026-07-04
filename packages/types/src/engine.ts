@@ -59,6 +59,11 @@ export interface ModelPricing {
   cacheWrite?: number
 }
 
+export interface RelayStatus {
+  running: boolean
+  pid?: number
+}
+
 export interface LocalRelayConfig {
   id: string
   name: string
@@ -185,6 +190,8 @@ export interface AASEngine {
   getUsageSummary(options?: UsageSummaryOptions): Promise<UsageSummaryRow[]>
   /** Returns the N most recent raw request-log rows, newest first. */
   getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]>
+  /** Reports whether the local relay daemon process is currently running. */
+  getRelayStatus(): Promise<RelayStatus>
   /** Fetches a provider's pricing page and extracts a draft pricing table for user review. Returns mock data in this iteration. */
   parsePricingFromUrl(url: string): Promise<Record<string, ModelPricing>>
   /** Lists all local relay listen-port configurations. */

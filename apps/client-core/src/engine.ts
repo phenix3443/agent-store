@@ -4,7 +4,7 @@ import type {
   AASEngine, AASPaths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,
   UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson, LocalRelayConfig,
-  RecentRequestRow,
+  RecentRequestRow, RelayStatus,
 } from '@aas/types'
 import { AASClient } from '@aas/sdk'
 import { resolvePaths, itemDir } from './paths'
@@ -18,6 +18,7 @@ import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './co
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { getDailySummary, getRecentRequests } from './usage/queries'
+import { getRelayDaemonStatus } from './relay/daemon-status'
 import {
   listLocalConfigs as _listLocalConfigs, addLocalConfig as _addLocalConfig,
   removeLocalConfig as _removeLocalConfig, updateLocalConfig as _updateLocalConfig,
@@ -285,6 +286,10 @@ export class AASEngineImpl implements AASEngine {
 
   async getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]> {
     return getRecentRequests(this.paths.aasHome, options)
+  }
+
+  async getRelayStatus(): Promise<RelayStatus> {
+    return getRelayDaemonStatus(this.paths.aasHome)
   }
 
   async parsePricingFromUrl(_url: string): Promise<Record<string, ModelPricing>> {

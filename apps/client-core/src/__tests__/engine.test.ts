@@ -557,3 +557,18 @@ test('addLocalConfig, updateLocalConfig, toggleLocalConfig, removeLocalConfig ro
   const remaining = await engine.listLocalConfigs()
   expect(remaining).toEqual([{ id: 'default', name: '默认', port: 18780, enabled: true }])
 })
+
+test('getRelayStatus reports not running when no daemon pid file exists', async () => {
+  const status = await engine.getRelayStatus()
+  expect(status).toEqual({ running: false })
+})
+
+test('getRelayStatus reports running when the pid file names a live process', async () => {
+  const { writeFile } = await import('fs/promises')
+  const { join } = await import('path')
+  await writeFile(join(aasHome, 'relay.pid'), String(process.pid))
+
+  const status = await engine.getRelayStatus()
+
+  expect(status).toEqual({ running: true, pid: process.pid })
+})

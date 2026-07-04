@@ -16,6 +16,7 @@ export type {
   UsageSummaryRow,
   UsageSummaryOptions,
   RecentRequestRow,
+  RelayStatus,
   LocalRelayConfig,
 } from './engine'
 export type { RegistryJson } from './registry'
