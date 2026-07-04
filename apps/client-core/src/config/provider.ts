@@ -13,6 +13,12 @@ export interface ProviderConnection {
   modelMapping?: Record<string, string>
   pricingUrl?: string
   pricing?: Record<string, ModelPricing>
+  homepage?: string
+  endpoint?: string
+  upstreamProtocol?: string
+  level?: number
+  whitelist?: string[]
+  healthCheck?: boolean
 }
 
 function readString(value: unknown): string | undefined {
@@ -61,6 +67,20 @@ function readPricing(value: unknown): Record<string, ModelPricing> | undefined {
   return result
 }
 
+function readNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined
+}
+
+function readStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined
+  if (value.some((entry) => typeof entry !== 'string')) return undefined
+  return value as string[]
+}
+
 export async function readProviderConnection(itemDir: string): Promise<ProviderConnection> {
   try {
     const raw = JSON.parse(await readFile(join(itemDir, 'config.json'), 'utf-8')) as Record<string, unknown>
@@ -75,6 +95,12 @@ export async function readProviderConnection(itemDir: string): Promise<ProviderC
       modelMapping: readModelMapping(raw['modelMapping']),
       pricingUrl: readString(raw['pricingUrl']),
       pricing: readPricing(raw['pricing']),
+      homepage: readString(raw['homepage']),
+      endpoint: readString(raw['endpoint']),
+      upstreamProtocol: readString(raw['upstreamProtocol']),
+      level: readNumber(raw['level']),
+      whitelist: readStringArray(raw['whitelist']),
+      healthCheck: readBoolean(raw['healthCheck']),
     }
   } catch {
     return {}

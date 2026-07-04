@@ -106,3 +106,51 @@ test('readProviderConnection ignores a malformed pricing entry (non-numeric inpu
   const conn = await readProviderConnection(dir)
   expect(conn.pricing).toBeUndefined()
 })
+
+test('readProviderConnection reads homepage, endpoint, upstreamProtocol, level, whitelist, healthCheck', async () => {
+  await writeFile(join(dir, 'config.json'), JSON.stringify({
+    apiKey: 'k',
+    homepage: 'https://docs.example.com',
+    endpoint: '/v1/chat/completions',
+    upstreamProtocol: 'openai_chat',
+    level: 2,
+    whitelist: ['claude-*', 'gpt-4o'],
+    healthCheck: true,
+  }))
+  const conn = await readProviderConnection(dir)
+  expect(conn.homepage).toBe('https://docs.example.com')
+  expect(conn.endpoint).toBe('/v1/chat/completions')
+  expect(conn.upstreamProtocol).toBe('openai_chat')
+  expect(conn.level).toBe(2)
+  expect(conn.whitelist).toEqual(['claude-*', 'gpt-4o'])
+  expect(conn.healthCheck).toBe(true)
+})
+
+test('readProviderConnection returns undefined for absent new fields', async () => {
+  await writeFile(join(dir, 'config.json'), JSON.stringify({ apiKey: 'k' }))
+  const conn = await readProviderConnection(dir)
+  expect(conn.homepage).toBeUndefined()
+  expect(conn.endpoint).toBeUndefined()
+  expect(conn.upstreamProtocol).toBeUndefined()
+  expect(conn.level).toBeUndefined()
+  expect(conn.whitelist).toBeUndefined()
+  expect(conn.healthCheck).toBeUndefined()
+})
+
+test('readProviderConnection ignores a non-numeric level', async () => {
+  await writeFile(join(dir, 'config.json'), JSON.stringify({ apiKey: 'k', level: 'high' }))
+  const conn = await readProviderConnection(dir)
+  expect(conn.level).toBeUndefined()
+})
+
+test('readProviderConnection ignores a whitelist with a non-string entry', async () => {
+  await writeFile(join(dir, 'config.json'), JSON.stringify({ apiKey: 'k', whitelist: ['claude-*', 42] }))
+  const conn = await readProviderConnection(dir)
+  expect(conn.whitelist).toBeUndefined()
+})
+
+test('readProviderConnection ignores a non-boolean healthCheck', async () => {
+  await writeFile(join(dir, 'config.json'), JSON.stringify({ apiKey: 'k', healthCheck: 'yes' }))
+  const conn = await readProviderConnection(dir)
+  expect(conn.healthCheck).toBeUndefined()
+})
