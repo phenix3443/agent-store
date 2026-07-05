@@ -42,6 +42,38 @@ const catalogItem = {
   createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z', configSchema: {},
 }
 
+const providerCatalogItem = {
+  id: 'i2', slug: 'test-provider', name: 'test-provider', description: '测试供应商',
+  readmeUrl: '', icon: '', category: 'provider', version: '1.0.0', publisher,
+  compatibleWith: ['claude'], tags: [], downloads: 0, rating: 0,
+  status: 'published', installHook: { steps: [] },
+  createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z', configSchema: {},
+}
+
+const providerTreeList = [
+  {
+    slug: 'test-provider', category: 'provider', version: '1.0.0',
+    installedAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    compatibleWith: ['claude'], enabledFor: { claude: true },
+  },
+  {
+    slug: 'test-provider-copy', category: 'provider', version: '1.0.0',
+    installedAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    compatibleWith: ['claude'], enabledFor: { claude: true }, parentSlug: 'test-provider',
+  },
+]
+
+const providerTreeInfoBySlug: Record<string, unknown> = {
+  'test-provider': {
+    ...providerTreeList[0], name: 'test-provider', description: '测试供应商', readmeUrl: '', icon: '',
+    publisher, tags: [], downloads: 0,
+  },
+  'test-provider-copy': {
+    ...providerTreeList[1], name: 'test-provider-copy', description: '测试供应商', readmeUrl: '', icon: '',
+    publisher, tags: [], downloads: 0,
+  },
+}
+
 function mockRpc(handlers: Record<string, (...args: unknown[]) => unknown>) {
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args: unknown[] = []) =>
     handlers[method]?.(...args)) as typeof rpcModule.callRpc)
@@ -141,20 +173,22 @@ test('toggling enable for the active agent app calls enable/disable', async () =
   await waitFor(() => expect(disable).toHaveBeenCalledWith('filesystem', 'claude'))
 })
 
-test('clicking 复制 on a provider row calls duplicateProvider and logs the new slug', async () => {
+test('clicking + on a provider row calls duplicateProvider and logs the new slug', async () => {
   const duplicateProvider = mock(() => ({ newSlug: 'yls-copy' }))
-  await renderList({ duplicateProvider })
+  await renderList({
+    duplicateProvider,
+    info: (slug: unknown) => (slug === 'yls-copy' ? infoBySlug['yls'] : infoBySlug[slug as string]),
+  })
   await waitFor(() => screen.getByText('yls'))
-  fireEvent.click(screen.getByText('复制'))
+  fireEvent.click(screen.getByLabelText('新增子配置 yls'))
   await waitFor(() => expect(duplicateProvider).toHaveBeenCalledWith('yls'))
   expect(screen.getByTestId('log-count').textContent).not.toBe('0')
 })
 
-test('复制 is not shown for non-provider installed items', async () => {
+test('新增子配置 button is not shown for non-provider installed items', async () => {
   await renderList()
   await waitFor(() => screen.getByText('filesystem'))
-  const filesystemRow = screen.getByText('filesystem').closest('div')
-  expect(filesystemRow?.parentElement?.textContent).not.toContain('复制')
+  expect(screen.queryByLabelText('新增子配置 filesystem')).not.toBeInTheDocument()
 })
 
 test('the installed list shows an update badge and a real 更新 button for a package with an available update', async () => {
@@ -229,4 +263,65 @@ test('selecting the @updates token filters the installed list to only updatable 
   fireEvent.click(screen.getByText('@updates · 有更新'))
   expect(screen.queryByText('filesystem')).not.toBeInTheDocument()
   expect(screen.getByText('yls')).toBeInTheDocument()
+})
+
+test('shows a + button on a root provider row and renders duplicated children indented beneath it', async () => {
+  await renderListWithCategory('provider', {
+    list: () => providerTreeList,
+    info: (slug: unknown) => providerTreeInfoBySlug[slug as string],
+  })
+  await screen.findByText('test-provider')
+  expect(screen.getByLabelText('新增子配置 test-provider')).toBeInTheDocument()
+  expect(await screen.findByText('test-provider-copy')).toBeInTheDocument()
+})
+
+test('clicking + on a provider row calls duplicateProvider and opens the new child for editing', async () => {
+  let duplicatedSlug: string | undefined
+  await renderListWithCategory('provider', {
+    list: () => providerTreeList,
+    info: (slug: unknown) => providerTreeInfoBySlug[slug as string],
+    duplicateProvider: (...args: unknown[]) => {
+      duplicatedSlug = args[0] as string
+      return { newSlug: 'test-provider-copy' }
+    },
+  })
+  fireEvent.click(await screen.findByLabelText('新增子配置 test-provider'))
+  await waitFor(() => expect(duplicatedSlug).toBe('test-provider'))
+  expect(await screen.findByText('编辑 test-provider-copy')).toBeInTheDocument()
+})
+
+test('removing a child row calls uninstall with the child slug, not the parent', async () => {
+  let uninstalledSlug: string | undefined
+  await renderListWithCategory('provider', {
+    list: () => providerTreeList,
+    info: (slug: unknown) => providerTreeInfoBySlug[slug as string],
+    uninstall: (...args: unknown[]) => { uninstalledSlug = args[0] as string },
+  })
+  await screen.findByText('test-provider-copy')
+  fireEvent.click(screen.getByLabelText('删除 test-provider-copy'))
+  await waitFor(() => expect(uninstalledSlug).toBe('test-provider-copy'))
+})
+
+test('recommended section shows an already-installed provider with a 配置 button', async () => {
+  await renderListWithCategory('provider', {
+    list: () => providerTreeList,
+    info: (slug: unknown) => providerTreeInfoBySlug[slug as string],
+    search: () => [providerCatalogItem],
+  })
+  const recommendedButtons = await screen.findAllByRole('button', { name: '配置' })
+  expect(recommendedButtons.length).toBeGreaterThan(0)
+})
+
+test('clicking 配置 on an already-installed recommended provider duplicates it, not re-installs it', async () => {
+  let calledMethod: string | undefined
+  await renderListWithCategory('provider', {
+    list: () => providerTreeList,
+    info: (slug: unknown) =>
+      slug === 'x' ? providerTreeInfoBySlug['test-provider'] : providerTreeInfoBySlug[slug as string],
+    search: () => [providerCatalogItem],
+    duplicateProvider: () => { calledMethod = 'duplicateProvider'; return { newSlug: 'x' } },
+    install: () => { calledMethod = 'install'; return { version: '1.0.0' } },
+  })
+  fireEvent.click((await screen.findAllByRole('button', { name: '配置' }))[0]!)
+  await waitFor(() => expect(calledMethod).toBe('duplicateProvider'))
 })

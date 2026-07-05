@@ -76,10 +76,22 @@ export function ResourceList() {
   const installedSlugs = useMemo(() => new Set(installed.map((i) => i.slug)), [installed])
   const updatableSlugs = useMemo(() => new Set(updates.map((u) => u.slug)), [updates])
 
+  const rootInstalled = useMemo(() => installed.filter((i) => !i.parentSlug), [installed])
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, EnrichedInstalledItem[]>()
+    for (const item of installed) {
+      if (!item.parentSlug) continue
+      const list = map.get(item.parentSlug) ?? []
+      list.push(item)
+      map.set(item.parentSlug, list)
+    }
+    return map
+  }, [installed])
+
   const visibleInstalled = useMemo(
     () =>
       filterInstalledByListFilter(
-        installed.filter(
+        rootInstalled.filter(
           (i) => matchesCategoryFilter(i.category, categoryFilter) && matchesText(i.name, i.description, textQuery)
         ),
         listFilter,
@@ -87,14 +99,14 @@ export function ResourceList() {
         favoriteSlugs,
         updatableSlugs
       ),
-    [installed, categoryFilter, textQuery, listFilter, agentApp, favoriteSlugs, updatableSlugs]
+    [rootInstalled, categoryFilter, textQuery, listFilter, agentApp, favoriteSlugs, updatableSlugs]
   )
 
   const recommendedBase = useMemo(
     () =>
       catalog.filter(
         (item) =>
-          !installedSlugs.has(item.slug) &&
+          (!installedSlugs.has(item.slug) || item.category === 'provider') &&
           matchesCategoryFilter(item.category, categoryFilter) &&
           matchesText(item.name, item.description, textQuery)
       ),
@@ -163,11 +175,30 @@ export function ResourceList() {
     bumpInstalledVersion()
   }
 
-  async function duplicateProvider(item: EnrichedInstalledItem) {
+  async function addChildConfig(item: EnrichedInstalledItem) {
     appendLine(`$ aas duplicate ${item.slug}`)
     try {
       const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
-      appendLine(`✓ 已复制 ${item.slug} → ${result.newSlug}`, 'green')
+      appendLine(`✓ 已新增子配置 ${result.newSlug}`, 'green')
+      setEditingSlug(result.newSlug)
+    } catch (err) {
+      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
+    }
+    bumpInstalledVersion()
+  }
+
+  async function configureProvider(item: Item) {
+    appendLine(`$ aas configure ${item.slug}`)
+    try {
+      if (installedSlugs.has(item.slug)) {
+        const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
+        appendLine(`✓ 已新增子配置 ${result.newSlug}`, 'green')
+        setEditingSlug(result.newSlug)
+      } else {
+        await callRpc('install', [item.slug])
+        appendLine(`✓ 已安装 ${item.slug}`, 'green')
+        setEditingSlug(item.slug)
+      }
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
@@ -300,70 +331,95 @@ export function ResourceList() {
             {visibleInstalled.map((item) => {
               const enabled = !!item.enabledFor[agentApp]
               return (
-                <div
-                  key={item.slug}
-                  onClick={() => setSelectedSlug(item.slug)}
-                  className={`cursor-pointer rounded-lg border px-3 py-2 ${
-                    selectedSlug === item.slug ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-store-text">{item.name}</p>
-                      <p className="text-xs text-store-text-3">
-                        {item.publisher.name} · {item.category}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {updatableSlugs.has(item.slug) && (
-                        <>
-                          <span className="rounded-md bg-store-amber-soft px-2 py-1 text-xs text-store-amber">有更新</span>
-                          <button
-                            type="button"
-                            onClick={() => updateOne(item.slug)}
-                            className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90"
-                          >
-                            更新
-                          </button>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        aria-label={`为 ${agentApp} ${enabled ? '禁用' : '启用'} ${item.slug}`}
-                        onClick={() => toggleEnabled(item)}
-                        className={`rounded-md px-2 py-1 text-xs ${
-                          enabled ? 'bg-store-green-soft text-store-green' : 'bg-store-panel-2 text-store-text-2'
-                        }`}
-                      >
-                        {enabled ? '已启用' : '已禁用'}
-                      </button>
-                      {item.category === 'provider' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setEditingSlug(item.slug)}
-                            className="text-xs text-store-text-2 hover:text-store-text"
-                          >
-                            编辑
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => duplicateProvider(item)}
-                            className="text-xs text-store-text-2 hover:text-store-text"
-                          >
-                            复制
-                          </button>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => uninstall(item)}
-                        className="text-xs text-store-red hover:opacity-80"
-                      >
-                        卸载
-                      </button>
+                <div key={item.slug}>
+                  <div
+                    onClick={() => setSelectedSlug(item.slug)}
+                    className={`cursor-pointer rounded-lg border px-3 py-2 ${
+                      selectedSlug === item.slug ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-store-text">{item.name}</p>
+                        <p className="text-xs text-store-text-3">
+                          {item.publisher.name} · {item.category}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {updatableSlugs.has(item.slug) && (
+                          <>
+                            <span className="rounded-md bg-store-amber-soft px-2 py-1 text-xs text-store-amber">有更新</span>
+                            <button
+                              type="button"
+                              onClick={() => updateOne(item.slug)}
+                              className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90"
+                            >
+                              更新
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={`为 ${agentApp} ${enabled ? '禁用' : '启用'} ${item.slug}`}
+                          onClick={() => toggleEnabled(item)}
+                          className={`rounded-md px-2 py-1 text-xs ${
+                            enabled ? 'bg-store-green-soft text-store-green' : 'bg-store-panel-2 text-store-text-2'
+                          }`}
+                        >
+                          {enabled ? '已启用' : '已禁用'}
+                        </button>
+                        {item.category === 'provider' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSlug(item.slug)}
+                              className="text-xs text-store-text-2 hover:text-store-text"
+                            >
+                              编辑
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`新增子配置 ${item.slug}`}
+                              onClick={() => addChildConfig(item)}
+                              className="text-xs text-store-text-2 hover:text-store-text"
+                            >
+                              +
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => uninstall(item)}
+                          className="text-xs text-store-red hover:opacity-80"
+                        >
+                          卸载
+                        </button>
+                      </div>
                     </div>
                   </div>
+                  {item.category === 'provider' && (childrenByParent.get(item.slug)?.length ?? 0) > 0 && (
+                    <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-store-border pl-3">
+                      {childrenByParent.get(item.slug)!.map((child) => (
+                        <div
+                          key={child.slug}
+                          onClick={() => setSelectedSlug(child.slug)}
+                          className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs ${
+                            selectedSlug === child.slug ? 'bg-store-accent-soft text-store-accent' : 'text-store-text-2 hover:bg-store-panel'
+                          }`}
+                        >
+                          <span className="font-mono">{child.slug}</span>
+                          <button
+                            type="button"
+                            aria-label={`删除 ${child.slug}`}
+                            onClick={(e) => { e.stopPropagation(); uninstall(child) }}
+                            className="text-store-text-3 hover:text-store-red"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -396,11 +452,12 @@ export function ResourceList() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
-                      install(item)
+                      if (item.category === 'provider') configureProvider(item)
+                      else install(item)
                     }}
                     className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
                   >
-                    安装
+                    {item.category === 'provider' ? '配置' : '安装'}
                   </button>
                 </div>
               </div>
