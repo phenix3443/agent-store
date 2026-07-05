@@ -4,10 +4,10 @@ import { CategoryIcon } from '../CategoryIcon'
 
 afterEach(() => cleanup())
 
-test('renders a provider icon with the accent color tint', () => {
+test('renders a provider icon with the provider color tint', () => {
   const { container } = render(<CategoryIcon category="provider" />)
   const badge = container.firstElementChild as HTMLElement
-  expect(badge.className).toContain('store-accent')
+  expect(badge.className).toContain('store-provider')
 })
 
 test('renders a skill icon with the green color tint', () => {

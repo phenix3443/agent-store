@@ -25,6 +25,8 @@ const config: Config = {
           amber: 'var(--amber)',
           'amber-soft': 'var(--amber-soft)',
           red: 'var(--red)',
+          provider: 'var(--provider)',
+          'provider-soft': 'var(--provider-soft)',
         },
       },
     },

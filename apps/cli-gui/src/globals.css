@@ -22,6 +22,8 @@
   --amber: #f0b34a;
   --amber-soft: rgba(240, 179, 74, 0.16);
   --red: #f3675f;
+  --provider: #58a6f0;
+  --provider-soft: rgba(88, 166, 240, 0.16);
 }
 
 body {

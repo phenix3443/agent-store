@@ -3,7 +3,7 @@ import { ArrowLeftRight, Sparkles, Boxes } from 'lucide-react'
 type Category = 'provider' | 'skill' | 'mcp'
 
 const CATEGORY_CONFIG: Record<Category, { icon: typeof ArrowLeftRight; bgClass: string; textClass: string }> = {
-  provider: { icon: ArrowLeftRight, bgClass: 'bg-store-accent-soft', textClass: 'text-store-accent' },
+  provider: { icon: ArrowLeftRight, bgClass: 'bg-store-provider-soft', textClass: 'text-store-provider' },
   skill: { icon: Sparkles, bgClass: 'bg-store-green-soft', textClass: 'text-store-green' },
   mcp: { icon: Boxes, bgClass: 'bg-store-amber-soft', textClass: 'text-store-amber' },
 }

@@ -4,7 +4,6 @@ import { TitleBar } from './components/TitleBar'
 import { IconRail } from './components/IconRail'
 import { ResourceList } from './components/ResourceList'
 import { DetailPanel } from './components/DetailPanel'
-import { TerminalPane } from './components/TerminalPane'
 import { Overview } from './components/Overview'
 
 function MainArea() {
@@ -30,7 +29,6 @@ export function App() {
             <IconRail />
             <MainArea />
           </div>
-          <TerminalPane />
         </div>
       </TerminalLogProvider>
     </AppStateProvider>

@@ -27,7 +27,6 @@ test('renders the icon rail and the Overview dashboard by default', async () => 
   expect(screen.getByLabelText('供应商')).toBeInTheDocument()
   expect(await screen.findByText('概览')).toBeInTheDocument()
   expect(await screen.findByText('供应商')).toBeInTheDocument()
-  expect(screen.getByLabelText('展开终端')).toBeInTheDocument()
 })
 
 test('clicking 供应商 switches to the browse three-pane layout', async () => {
