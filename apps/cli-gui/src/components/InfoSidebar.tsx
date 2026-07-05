@@ -1,65 +1,87 @@
 import { ExternalLink } from 'lucide-react'
 import type { SelectedDetail } from '../lib/useSelectedDetail'
+import { TYPE_META } from '../lib/detailContent'
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="flex justify-between">
-      <dt className="text-store-text-3">{label}</dt>
-      <dd className="text-store-text">{value}</dd>
+    <div className="mb-2 flex items-center justify-between gap-2.5">
+      <dt className="text-xs text-store-text-3">{label}</dt>
+      <dd className={`max-w-[150px] truncate text-xs ${accent ? 'font-mono text-store-accent' : 'font-mono text-store-text'}`}>
+        {value}
+      </dd>
     </div>
   )
 }
 
+function SectionHeading({ children }: { children: string }) {
+  return (
+    <h3 className="mb-3 border-b border-store-border pb-2 text-[14.5px] font-bold text-store-text">{children}</h3>
+  )
+}
+
+function Pill({ children }: { children: string }) {
+  return (
+    <span className="rounded-md border border-store-border-strong px-2.5 py-1 text-[11px] font-medium text-store-text-2">
+      {children}
+    </span>
+  )
+}
+
+const RESOURCE_ROWS: Record<'provider' | 'skill' | 'mcp', string[]> = {
+  provider: ['官网 / 文档', 'Marketplace 页面'],
+  skill: ['官网 / 文档', '源码仓库 (GitHub)', 'Marketplace 页面'],
+  mcp: ['官网 / 文档', '源码仓库 (GitHub)', 'Marketplace 页面'],
+}
+
+function formatDate(value?: string): string {
+  if (!value) return '—'
+  return new Date(value).toLocaleDateString()
+}
+
 export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
+  const createdAt = 'createdAt' in detail ? detail.createdAt : undefined
+  const categories = [TYPE_META[detail.category].label, ...detail.tags.slice(0, 3)]
+
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-6 overflow-y-auto border-l border-store-border bg-store-sidebar p-4">
       <div>
-        <h3 className="mb-2 text-xs font-semibold text-store-text-2">安装信息</h3>
-        <dl className="flex flex-col gap-1 text-xs">
+        <SectionHeading>安装信息</SectionHeading>
+        <dl>
           <Row label="标识" value={detail.slug} />
           <Row label="版本" value={`v${detail.version}`} />
-          {detail.installed && (
-            <Row label="更新时间" value={new Date(detail.updatedAt).toLocaleDateString()} />
-          )}
+          <Row label="更新时间" value={formatDate(detail.updatedAt)} />
+          <Row label={TYPE_META[detail.category].metaLabel} value="—" accent />
         </dl>
       </div>
 
-      {!detail.installed && (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold text-store-text-2">市场</h3>
-          <dl className="flex flex-col gap-1 text-xs">
-            <Row label="发布" value={new Date(detail.createdAt).toLocaleDateString()} />
-            <Row label="最近发布" value={new Date(detail.updatedAt).toLocaleDateString()} />
-          </dl>
-        </div>
-      )}
+      <div>
+        <SectionHeading>市场</SectionHeading>
+        <dl>
+          <Row label="发布" value={formatDate(createdAt)} />
+          <Row label="最近发布" value={formatDate(detail.updatedAt)} />
+        </dl>
+      </div>
 
-      {detail.tags.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold text-store-text-2">分类</h3>
-          <div className="flex flex-wrap gap-1">
-            {detail.tags.map((tag) => (
-              <span key={tag} className="rounded-md bg-store-panel-2 px-2 py-0.5 text-xs text-store-text-2">
-                {tag}
-              </span>
-            ))}
-          </div>
+      <div>
+        <SectionHeading>分类</SectionHeading>
+        <div className="flex flex-wrap gap-1.5">
+          {categories.map((tag, i) => (
+            <Pill key={`${tag}-${i}`}>{tag}</Pill>
+          ))}
         </div>
-      )}
+      </div>
 
-      {detail.readmeUrl && (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold text-store-text-2">资源</h3>
-          <a
-            href={detail.readmeUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 text-xs text-store-accent hover:underline"
-          >
-            <ExternalLink size={12} /> 官网 / 文档
-          </a>
+      <div>
+        <SectionHeading>资源</SectionHeading>
+        <div className="flex flex-col gap-2.5">
+          {RESOURCE_ROWS[detail.category].map((label) => (
+            <div key={label} className="flex cursor-pointer items-center gap-2 text-store-text-2 hover:text-store-accent">
+              <ExternalLink size={13} />
+              <span className="text-xs font-medium">{label}</span>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </aside>
   )
 }
