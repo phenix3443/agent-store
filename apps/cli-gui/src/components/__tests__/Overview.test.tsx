@@ -55,7 +55,63 @@ test('shows a consumption trend card with today/7-day/30-day totals', async () =
   render(<AppStateProvider><Overview /></AppStateProvider>)
 
   expect(await screen.findByText('消耗趋势')).toBeInTheDocument()
-  expect(await screen.findByText('3 请求')).toBeInTheDocument()
+  expect(await screen.findByText('总请求数')).toBeInTheDocument()
+  expect(await screen.findByText('3')).toBeInTheDocument()
+})
+
+test('trend card shows a tab selector and switches stats between periods', async () => {
+  spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args?: unknown[]) => {
+    if (method === 'list') return []
+    if (method === 'getUsageSummary') {
+      const days = (args?.[0] as { days?: number } | undefined)?.days
+      if (days === 1) return [{ date: '2026-07-05', providerSlug: 'p', target: 'claude', model: 'a', requestCount: 3, successCount: 3, unpricedRequestCount: 0, inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0.01 }]
+      if (days === 7) return [{ date: '2026-07-05', providerSlug: 'p', target: 'claude', model: 'a', requestCount: 20, successCount: 20, unpricedRequestCount: 0, inputTokens: 100, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0.05 }]
+      return []
+    }
+    if (method === 'getRelayStatus') return { running: false }
+    if (method === 'listLocalConfigs') return []
+    if (method === 'getRecentRequests') return []
+    if (method === 'checkUpdates') return []
+    throw new Error(`unexpected RPC in Overview test: ${method}`)
+  }) as typeof rpcModule.callRpc)
+
+  render(<AppStateProvider><Overview /></AppStateProvider>)
+
+  expect(await screen.findByText('总请求数')).toBeInTheDocument()
+  expect(await screen.findByText('3')).toBeInTheDocument()
+  expect(screen.queryByText('20')).not.toBeInTheDocument()
+
+  fireEvent.click(screen.getByText('近 7 天'))
+
+  expect(await screen.findByText('20')).toBeInTheDocument()
+  expect(screen.queryByText('3')).not.toBeInTheDocument()
+})
+
+test('trend card shows a distinct-model count as 模型分布', async () => {
+  spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args?: unknown[]) => {
+    if (method === 'list') return []
+    if (method === 'getUsageSummary') {
+      const days = (args?.[0] as { days?: number } | undefined)?.days
+      if (days === 1) {
+        return [
+          { date: '2026-07-05', providerSlug: 'p', target: 'claude', model: 'a', requestCount: 1, successCount: 1, unpricedRequestCount: 0, inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0 },
+          { date: '2026-07-05', providerSlug: 'p', target: 'codex', model: 'b', requestCount: 1, successCount: 1, unpricedRequestCount: 0, inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0 },
+        ]
+      }
+      return []
+    }
+    if (method === 'getRelayStatus') return { running: false }
+    if (method === 'listLocalConfigs') return []
+    if (method === 'getRecentRequests') return []
+    if (method === 'checkUpdates') return []
+    throw new Error(`unexpected RPC in Overview test: ${method}`)
+  }) as typeof rpcModule.callRpc)
+
+  render(<AppStateProvider><Overview /></AppStateProvider>)
+
+  expect(await screen.findByText('模型分布')).toBeInTheDocument()
+  const modelStat = (await screen.findByText('模型分布')).closest('div')!
+  expect(modelStat.textContent).toContain('2')
 })
 
 test('shows a local relay status card that navigates to the local-relay view on click', async () => {
@@ -96,9 +152,28 @@ test('shows the 5 most recent requests and opens the proxy log modal from 查看
   render(<AppStateProvider><Overview /></AppStateProvider>)
 
   expect(await screen.findByText('最近请求')).toBeInTheDocument()
-  expect(await screen.findByText('p1')).toBeInTheDocument()
+  expect(await screen.findByText(/p1/)).toBeInTheDocument()
   fireEvent.click(screen.getByText('查看全部'))
   expect(await screen.findByText('代理请求日志')).toBeInTheDocument()
+})
+
+test('recent request rows show a colored status dot and mapped client name', async () => {
+  spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string) => {
+    if (method === 'list') return []
+    if (method === 'getUsageSummary') return []
+    if (method === 'getRelayStatus') return { running: false }
+    if (method === 'listLocalConfigs') return []
+    if (method === 'getRecentRequests') {
+      return [{ id: 1, createdAt: '2026-07-05T00:00:00Z', providerSlug: 'p1', target: 'claude', model: 'm1', inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0.001, statusCode: 502, latencyMs: 100, isStreaming: false, isFallback: false }]
+    }
+    if (method === 'checkUpdates') return []
+    throw new Error(`unexpected RPC in Overview test: ${method}`)
+  }) as typeof rpcModule.callRpc)
+
+  render(<AppStateProvider><Overview /></AppStateProvider>)
+
+  expect(await screen.findByText('Claude Code')).toBeInTheDocument()
+  expect(await screen.findByText('502')).toHaveClass('text-store-red')
 })
 
 test('shows up to 4 updatable packages with a real 更新 button', async () => {

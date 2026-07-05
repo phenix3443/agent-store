@@ -14,7 +14,7 @@ function row(overrides: Partial<UsageSummaryRow>): UsageSummaryRow {
   }
 }
 
-test('renders an svg polyline with one point per distinct date', () => {
+test('renders an svg polyline and a filled area path with one point per distinct date', () => {
   const rows = [
     row({ date: '2026-07-01', costUsd: 1 }),
     row({ date: '2026-07-01', providerSlug: 'q', costUsd: 2 }),
@@ -26,7 +26,8 @@ test('renders an svg polyline with one point per distinct date', () => {
   const polyline = container.querySelector('polyline')
   expect(polyline).not.toBeNull()
   const points = polyline!.getAttribute('points')!.trim().split(' ')
-  expect(points).toHaveLength(2) // 2 distinct dates, costs summed per date (3 and 3)
+  expect(points).toHaveLength(2)
+  expect(container.querySelector('path')).not.toBeNull()
 })
 
 test('renders a flat line with no crash when there is no data', () => {

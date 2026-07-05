@@ -29,8 +29,11 @@ export function UsageTrendChart({ rows }: { rows: UsageSummaryRow[] }) {
     })
     .join(' ')
 
+  const areaPath = `M${points.split(' ')[0]!.replace(',', ' ')} L${points.replace(/ /g, ' L')} L${WIDTH},${HEIGHT} L0,${HEIGHT} Z`
+
   return (
     <svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="text-store-accent">
+      <path d={areaPath} fill="currentColor" opacity={0.15} stroke="none" />
       <polyline points={points} fill="none" stroke="currentColor" strokeWidth={2} />
     </svg>
   )

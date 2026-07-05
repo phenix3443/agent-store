@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { TrendingUp } from 'lucide-react'
 import type { InstalledItem, LocalRelayConfig, RecentRequestRow, RelayStatus, UpdateAvailable, UsageSummaryRow } from '@aas/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
@@ -23,6 +24,7 @@ export function Overview() {
   const [recentRequests, setRecentRequests] = useState<RecentRequestRow[]>([])
   const [logModalOpen, setLogModalOpen] = useState(false)
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
+  const [trendPeriod, setTrendPeriod] = useState<'today' | 'last7Days' | 'last30Days'>('today')
 
   useEffect(() => {
     callRpc<InstalledItem[]>('list').then(setInstalled)
@@ -48,15 +50,13 @@ export function Overview() {
   }, [])
 
   function summarize(rows: UsageSummaryRow[]) {
-    return rows.reduce(
-      (acc, r) => ({
-        requestCount: acc.requestCount + r.requestCount,
-        successCount: acc.successCount + r.successCount,
-        costUsd: acc.costUsd + r.costUsd,
-        tokens: acc.tokens + r.inputTokens + r.outputTokens,
-      }),
-      { requestCount: 0, successCount: 0, costUsd: 0, tokens: 0 }
-    )
+    return {
+      requestCount: rows.reduce((sum, r) => sum + r.requestCount, 0),
+      successCount: rows.reduce((sum, r) => sum + r.successCount, 0),
+      costUsd: rows.reduce((sum, r) => sum + r.costUsd, 0),
+      tokens: rows.reduce((sum, r) => sum + r.inputTokens + r.outputTokens, 0),
+      modelCount: new Set(rows.map((r) => r.model)).size,
+    }
   }
 
   function successRateLabel(summary: ReturnType<typeof summarize>) {
@@ -72,6 +72,12 @@ export function Overview() {
   async function updateOne(slug: string) {
     await callRpc('update', [slug])
     callRpc<UpdateAvailable[]>('checkUpdates').then(setUpdates)
+  }
+
+  function activePeriodRows(): UsageSummaryRow[] {
+    if (trendPeriod === 'today') return today
+    if (trendPeriod === 'last7Days') return last7Days
+    return last30Days
   }
 
   return (
@@ -98,28 +104,56 @@ export function Overview() {
       </div>
 
       <div className="rounded-xl border border-store-border bg-store-panel p-4">
-        <p className="mb-3 text-sm font-medium text-store-text">消耗趋势</p>
-        <div className="mb-4 grid grid-cols-3 gap-4 text-xs text-store-text-2">
-          <div>
-            <p>今日</p>
-            <p className="text-base font-semibold text-store-text">{summarize(today).requestCount} 请求</p>
-            <p>{summarize(today).tokens} tokens</p>
-            <p>${summarize(today).costUsd.toFixed(4)}</p>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
+              <TrendingUp size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-store-text">消耗趋势</p>
+              <p className="text-xs text-store-text-2">用量数据统计</p>
+            </div>
           </div>
-          <div>
-            <p>近 7 天</p>
-            <p className="text-base font-semibold text-store-text">{summarize(last7Days).requestCount} 请求</p>
-            <p>{summarize(last7Days).tokens} tokens</p>
-            <p>${summarize(last7Days).costUsd.toFixed(4)}</p>
-          </div>
-          <div>
-            <p>近 30 天</p>
-            <p className="text-base font-semibold text-store-text">{summarize(last30Days).requestCount} 请求</p>
-            <p>{summarize(last30Days).tokens} tokens</p>
-            <p>${summarize(last30Days).costUsd.toFixed(4)}</p>
+          <div className="flex gap-1 rounded-lg border border-store-border bg-store-panel-2 p-1 text-xs">
+            {(
+              [
+                { key: 'today', label: '今日' },
+                { key: 'last7Days', label: '近 7 天' },
+                { key: 'last30Days', label: '近 30 天' },
+              ] as const
+            ).map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setTrendPeriod(p.key)}
+                className={`rounded-md px-2 py-1 ${trendPeriod === p.key ? 'bg-store-panel text-store-text' : 'text-store-text-2'}`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
         </div>
+
         <UsageTrendChart rows={last7Days} />
+
+        <div className="mt-4 grid grid-cols-4 gap-3 text-xs">
+          <div className="rounded-lg bg-store-accent-soft p-3">
+            <p className="text-store-text-2">总费用</p>
+            <p className="mt-1 text-base font-semibold text-store-text">${summarize(activePeriodRows()).costUsd.toFixed(4)}</p>
+          </div>
+          <div className="rounded-lg bg-store-panel-2 p-3">
+            <p className="text-store-text-2">总 Tokens</p>
+            <p className="mt-1 text-base font-semibold text-store-text">{summarize(activePeriodRows()).tokens}</p>
+          </div>
+          <div className="rounded-lg bg-store-green-soft p-3">
+            <p className="text-store-text-2">总请求数</p>
+            <p className="mt-1 text-base font-semibold text-store-text">{summarize(activePeriodRows()).requestCount}</p>
+          </div>
+          <div className="rounded-lg bg-store-accent-soft p-3">
+            <p className="text-store-text-2">模型分布</p>
+            <p className="mt-1 text-base font-semibold text-store-text">{summarize(activePeriodRows()).modelCount}</p>
+          </div>
+        </div>
       </div>
 
       <button
@@ -144,12 +178,19 @@ export function Overview() {
         </div>
         <div className="flex flex-col gap-1">
           {recentRequests.map((row) => (
-            <div key={row.id} className="flex items-center justify-between text-xs text-store-text-2">
-              <span>{row.target} · {row.model}</span>
-              <span>
-                {row.providerSlug}
-                {row.isFallback ? '（降级）' : ''}
-              </span>
+            <div key={row.id} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className={`h-1.5 w-1.5 rounded-full ${row.statusCode < 400 ? 'bg-store-green' : 'bg-store-red'}`} />
+                <span className="font-medium text-store-text">{row.target === 'claude' ? 'Claude Code' : 'Codex'}</span>
+                <span className="font-mono text-store-text-2">
+                  {row.model} → {row.providerSlug}
+                  {row.isFallback ? '（降级）' : ''}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-store-text-3">
+                <span>{row.latencyMs}ms</span>
+                <span className={row.statusCode < 400 ? 'text-store-green' : 'text-store-red'}>{row.statusCode}</span>
+              </div>
             </div>
           ))}
         </div>
