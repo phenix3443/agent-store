@@ -50,10 +50,17 @@ export function Overview() {
     return rows.reduce(
       (acc, r) => ({
         requestCount: acc.requestCount + r.requestCount,
+        successCount: acc.successCount + r.successCount,
         costUsd: acc.costUsd + r.costUsd,
+        tokens: acc.tokens + r.inputTokens + r.outputTokens,
       }),
-      { requestCount: 0, costUsd: 0 }
+      { requestCount: 0, successCount: 0, costUsd: 0, tokens: 0 }
     )
+  }
+
+  function successRateLabel(summary: ReturnType<typeof summarize>) {
+    if (summary.requestCount === 0) return '—'
+    return `${Math.round((summary.successCount / summary.requestCount) * 100)}%`
   }
 
   function goToCategory(category: InstalledItem['category']) {
@@ -92,16 +99,19 @@ export function Overview() {
           <div>
             <p>今日</p>
             <p className="text-base font-semibold text-store-text">{summarize(today).requestCount} 请求</p>
+            <p>{summarize(today).tokens} tokens</p>
             <p>${summarize(today).costUsd.toFixed(4)}</p>
           </div>
           <div>
             <p>近 7 天</p>
             <p className="text-base font-semibold text-store-text">{summarize(last7Days).requestCount} 请求</p>
+            <p>{summarize(last7Days).tokens} tokens</p>
             <p>${summarize(last7Days).costUsd.toFixed(4)}</p>
           </div>
           <div>
             <p>近 30 天</p>
             <p className="text-base font-semibold text-store-text">{summarize(last30Days).requestCount} 请求</p>
+            <p>{summarize(last30Days).tokens} tokens</p>
             <p>${summarize(last30Days).costUsd.toFixed(4)}</p>
           </div>
         </div>
@@ -115,7 +125,9 @@ export function Overview() {
       >
         <p className="text-sm font-medium text-store-text">本地代理</p>
         <p className="text-xs text-store-text-2">
-          {relayStatus.running ? `运行中 · ${localConfigs.length} 个监听配置` : '未运行'}
+          {relayStatus.running
+            ? `运行中 · ${localConfigs.length} 个监听配置 · 今日 ${summarize(today).requestCount} 请求 · 成功率 ${successRateLabel(summarize(today))}`
+            : '未运行'}
         </p>
       </button>
 
