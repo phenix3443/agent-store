@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { InstalledItem, LocalRelayConfig, RecentRequestRow, RelayStatus, UpdateAvailable, UsageSummaryRow } from '@aas/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
+import { CategoryIcon } from './CategoryIcon'
 import { ProxyLogModal } from './ProxyLogModal'
 import { UsageTrendChart } from './UsageTrendChart'
 
@@ -83,9 +84,12 @@ export function Overview() {
             key={category}
             type="button"
             onClick={() => goToCategory(category)}
-            className="flex flex-col items-start gap-1 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
+            className="flex items-center justify-between gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
           >
-            <span className="text-xs font-medium text-store-text-2">{label}</span>
+            <div className="flex items-center gap-3">
+              <CategoryIcon category={category} />
+              <span className="text-xs font-medium text-store-text-2">{label}</span>
+            </div>
             <span className="text-2xl font-semibold text-store-text">
               {installed.filter((i) => i.category === category).length}
             </span>

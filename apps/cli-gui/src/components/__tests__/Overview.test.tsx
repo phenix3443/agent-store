@@ -32,6 +32,9 @@ test('shows a count card per category from the list RPC', async () => {
   expect(await screen.findByText('供应商')).toBeInTheDocument()
   expect(await screen.findByText('技能')).toBeInTheDocument()
   expect(await screen.findByText('MCP')).toBeInTheDocument()
+
+  const providerCard = (await screen.findByText('供应商')).closest('button')!
+  expect(providerCard.querySelector('svg')).not.toBeNull()
 })
 
 test('shows a consumption trend card with today/7-day/30-day totals', async () => {
