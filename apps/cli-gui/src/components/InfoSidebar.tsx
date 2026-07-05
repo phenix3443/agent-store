@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react'
-import { useSelectedDetail } from '../lib/useSelectedDetail'
+import type { SelectedDetail } from '../lib/useSelectedDetail'
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -10,15 +10,9 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function InfoSidebar() {
-  const detail = useSelectedDetail()
-
-  if (!detail) {
-    return <aside className="w-64 shrink-0 border-l border-store-border bg-store-sidebar" />
-  }
-
+export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
   return (
-    <aside className="flex w-64 shrink-0 flex-col gap-6 overflow-y-auto border-l border-store-border bg-store-sidebar p-4">
+    <aside className="flex w-[248px] shrink-0 flex-col gap-6 overflow-y-auto border-l border-store-border bg-store-sidebar p-4">
       <div>
         <h3 className="mb-2 text-xs font-semibold text-store-text-2">安装信息</h3>
         <dl className="flex flex-col gap-1 text-xs">

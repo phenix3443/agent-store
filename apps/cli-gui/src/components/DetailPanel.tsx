@@ -6,6 +6,7 @@ import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useSelectedDetail } from '../lib/useSelectedDetail'
 import { LocalProviderDetail, isLocalProviderSlug } from './LocalProviderDetail'
+import { InfoSidebar } from './InfoSidebar'
 
 const CATEGORY_LABEL: Record<string, string> = { provider: '供应商', skill: '技能', mcp: 'MCP' }
 
@@ -62,6 +63,7 @@ export function DetailPanel() {
   const rating = 'rating' in detail ? detail.rating : 0
 
   return (
+    <div className="flex flex-1 overflow-hidden">
     <div className="flex-1 overflow-y-auto p-6">
       <div className="flex items-start gap-4">
         <div className="h-12 w-12 shrink-0 rounded-xl bg-store-panel-2" />
@@ -185,6 +187,8 @@ export function DetailPanel() {
       {tab === 'versions' && (
         <p className="mt-4 text-sm text-store-text-2">当前版本：v{detail.version}</p>
       )}
+    </div>
+    <InfoSidebar detail={detail} />
     </div>
   )
 }
