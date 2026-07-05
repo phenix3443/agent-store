@@ -9,6 +9,7 @@
     "beforeDevCommand": "pnpm dev"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Agent Store CLI",
