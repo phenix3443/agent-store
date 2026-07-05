@@ -1,31 +1,35 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Item, InstalledItem, ItemDetail, LocalRelayConfig, UpdateAvailable } from '@aas/types'
-import { Search } from 'lucide-react'
+import { Search, Filter, Check, RadioTower } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
-import { useAppState, type ListFilter } from '../state/AppState'
+import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { ProviderEditModal } from './ProviderEditModal'
 import { LOCAL_PROVIDER_SENTINEL } from './LocalProviderDetail'
+import { CategoryIcon } from './CategoryIcon'
 import {
   matchesCategoryFilter, matchesText, enrichInstalled, filterInstalledByListFilter,
   filterRecommendedByListFilter, showInstalledSection, showRecommendedSection,
   type EnrichedInstalledItem,
 } from '../lib/resources'
 
-const FILTER_TOKENS: { key: Exclude<ListFilter, 'all'>; label: string }[] = [
-  { key: 'popular', label: '最热门' },
-  { key: 'recent', label: '最近发布' },
-  { key: 'installed', label: '已安装' },
-  { key: 'enabled', label: '已启用' },
-  { key: 'disabled', label: '已禁用' },
-  { key: 'favorites', label: '收藏' },
-  { key: 'updates', label: '有更新' },
+const FOPTS: Record<Exclude<ListFilter, 'all'>, string> = {
+  featured: '精选', popular: '最热门', recent: '最近发布', recommended: '推荐',
+  installed: '已安装', updates: '可更新', enabled: '已启用', disabled: '已禁用',
+}
+
+const DISCOVERY_TOKENS: Exclude<ListFilter, 'all'>[] = ['featured', 'popular', 'recent', 'recommended']
+const STATUS_TOKENS: Exclude<ListFilter, 'all'>[] = ['installed', 'updates', 'enabled', 'disabled']
+
+const APP_OPTIONS: { key: AgentApp; label: string; letter: string; color: string }[] = [
+  { key: 'claude', label: 'Claude Code', letter: 'C', color: '#d2785a' },
+  { key: 'codex', label: 'Codex', letter: 'X', color: '#10a37f' },
 ]
 
 export function ResourceList() {
   const {
     agentApp, setAgentApp, categoryFilter, listFilter, setListFilter,
-    selectedSlug, setSelectedSlug, favoriteSlugs, navView,
+    selectedSlug, setSelectedSlug, navView,
     installedVersion, bumpInstalledVersion,
   } = useAppState()
   const { appendLine } = useTerminalLog()
@@ -96,10 +100,9 @@ export function ResourceList() {
         ),
         listFilter,
         agentApp,
-        favoriteSlugs,
         updatableSlugs
       ),
-    [rootInstalled, categoryFilter, textQuery, listFilter, agentApp, favoriteSlugs, updatableSlugs]
+    [rootInstalled, categoryFilter, textQuery, listFilter, agentApp, updatableSlugs]
   )
 
   const recommendedBase = useMemo(
@@ -114,8 +117,8 @@ export function ResourceList() {
   )
 
   const visibleRecommended = useMemo(
-    () => filterRecommendedByListFilter(recommendedBase, listFilter, favoriteSlugs),
-    [recommendedBase, listFilter, favoriteSlugs]
+    () => filterRecommendedByListFilter(recommendedBase, listFilter),
+    [recommendedBase, listFilter]
   )
 
   function handleSearchInput(value: string) {
@@ -134,22 +137,15 @@ export function ResourceList() {
     setTokenMenuOpen(false)
   }
 
+  function selectApp(key: AgentApp) {
+    setAgentApp(key)
+    setTokenMenuOpen(false)
+  }
+
   function clearSearch() {
     setTextQuery('')
     setListFilter('all')
     setTokenMenuOpen(false)
-  }
-
-  async function toggleEnabled(item: EnrichedInstalledItem) {
-    const isEnabled = !!item.enabledFor[agentApp]
-    appendLine(`$ aas ${isEnabled ? 'disable' : 'enable'} ${item.slug} --for ${agentApp}`)
-    try {
-      await callRpc(isEnabled ? 'disable' : 'enable', [item.slug, agentApp])
-      appendLine(`✓ ${item.slug} ${isEnabled ? '已禁用' : '已启用'} (${agentApp})`, 'green')
-    } catch (err) {
-      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
-    }
-    bumpInstalledVersion()
   }
 
   async function uninstall(item: EnrichedInstalledItem) {
@@ -205,68 +201,96 @@ export function ResourceList() {
     bumpInstalledVersion()
   }
 
-  async function updateOne(slug: string) {
-    appendLine(`$ aas update ${slug}`)
-    try {
-      await callRpc('update', [slug])
-      appendLine(`✓ 已更新 ${slug}`, 'green')
-    } catch (err) {
-      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
-    }
-    refreshUpdates()
-    refreshInstalled()
-  }
-
   const searchValue = listFilter === 'all' ? textQuery : `@${listFilter}`
 
   return (
     <div className="flex w-80 shrink-0 flex-col gap-4 overflow-y-auto border-r border-store-border p-4">
-      <div className="flex gap-1 rounded-lg border border-store-border bg-store-panel p-1 text-xs">
-        <button
-          type="button"
-          onClick={() => setAgentApp('claude')}
-          className={`flex-1 rounded-md px-2 py-1.5 ${agentApp === 'claude' ? 'bg-store-panel-2 text-store-text' : 'text-store-text-2'}`}
-        >
-          Claude Code
-        </button>
-        <button
-          type="button"
-          onClick={() => setAgentApp('codex')}
-          className={`flex-1 rounded-md px-2 py-1.5 ${agentApp === 'codex' ? 'bg-store-panel-2 text-store-text' : 'text-store-text-2'}`}
-        >
-          Codex
-        </button>
-      </div>
-
       <div className="relative">
-        <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-store-text-3" />
-        <input
-          type="text"
-          value={searchValue}
-          onChange={(e) => handleSearchInput(e.target.value)}
-          placeholder="搜索，或用 @ 过滤…"
-          className="w-full rounded-lg border border-store-border bg-store-panel py-2 pl-8 pr-8 text-sm text-store-text"
-        />
-        {(textQuery !== '' || listFilter !== 'all') && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-store-text-3" />
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => handleSearchInput(e.target.value)}
+              placeholder="搜索，或用 @ 过滤…"
+              className="w-full rounded-lg border border-store-border bg-store-panel py-2 pl-8 pr-8 font-mono text-sm text-store-accent"
+            />
+            {(textQuery !== '' || listFilter !== 'all') && (
+              <button
+                type="button"
+                aria-label="清除"
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-store-text-3 hover:text-store-text"
+              >
+                ×
+              </button>
+            )}
+          </div>
           <button
             type="button"
-            aria-label="清除"
-            onClick={clearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-store-text-3 hover:text-store-text"
+            aria-label="筛选过滤"
+            title="筛选过滤"
+            onClick={() => setTokenMenuOpen((v) => !v)}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+              tokenMenuOpen ? 'border-store-accent bg-store-accent-soft text-store-accent' : 'border-store-border bg-store-panel text-store-text-3 hover:text-store-text'
+            }`}
           >
-            ×
+            <Filter size={14} />
           </button>
-        )}
+        </div>
+
         {tokenMenuOpen && (
-          <div className="absolute z-10 mt-1 w-full rounded-lg border border-store-border bg-store-content p-1 shadow-lg">
-            {FILTER_TOKENS.map((t) => (
+          <div
+            onMouseLeave={() => setTokenMenuOpen(false)}
+            className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-store-border-strong bg-store-content p-1.5 shadow-lg"
+          >
+            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">发现</p>
+            {DISCOVERY_TOKENS.map((key) => (
               <button
-                key={t.key}
+                key={key}
                 type="button"
-                onClick={() => selectToken(t.key)}
-                className="block w-full rounded-md px-2 py-1.5 text-left text-xs text-store-text hover:bg-store-panel-2"
+                onClick={() => selectToken(key)}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
+                  listFilter === key ? 'bg-store-accent-soft text-store-accent' : 'text-store-text hover:bg-store-panel-2'
+                }`}
               >
-                @{t.key} · {t.label}
+                <span className="flex-1 text-xs font-medium">{FOPTS[key]}</span>
+                <span className="font-mono text-[10px] text-store-text-3">@{key}</span>
+              </button>
+            ))}
+            <div className="my-1 h-px bg-store-border" />
+            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">状态</p>
+            {STATUS_TOKENS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => selectToken(key)}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left ${
+                  listFilter === key ? 'bg-store-accent-soft text-store-accent' : 'text-store-text hover:bg-store-panel-2'
+                }`}
+              >
+                <span className="flex-1 text-xs font-medium">{FOPTS[key]}</span>
+                <span className="font-mono text-[10px] text-store-text-3">@{key}</span>
+              </button>
+            ))}
+            <div className="my-1 h-px bg-store-border" />
+            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">目标应用</p>
+            {APP_OPTIONS.map((app) => (
+              <button
+                key={app.key}
+                type="button"
+                onClick={() => selectApp(app.key)}
+                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-store-panel-2"
+              >
+                <span
+                  className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded text-[9px] font-bold text-white"
+                  style={{ background: app.color }}
+                >
+                  {app.letter}
+                </span>
+                <span className="flex-1 text-xs font-medium text-store-text">{app.label}</span>
+                {agentApp === app.key && <Check size={13} className="text-store-accent" />}
               </button>
             ))}
           </div>
@@ -277,13 +301,18 @@ export function ResourceList() {
         <div>
           <div
             onClick={() => setSelectedSlug(LOCAL_PROVIDER_SENTINEL)}
-            className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 ${
+            className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
               selectedSlug === LOCAL_PROVIDER_SENTINEL ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-store-text">local</span>
-              <span className="rounded-full bg-store-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-store-accent">内置</span>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
+                <RadioTower size={16} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-bold text-store-text">local</span>
+                <span className="rounded-full bg-store-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-store-accent">内置</span>
+              </div>
             </div>
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <span className="text-xs text-store-text-3">
@@ -294,20 +323,19 @@ export function ResourceList() {
               </button>
             </div>
           </div>
-          <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-store-border pl-3">
+          <div className="mt-1 flex flex-col gap-1">
             {localConfigs.map((config) => (
               <div
                 key={config.id}
                 onClick={() => setSelectedSlug(`${LOCAL_PROVIDER_SENTINEL}:${config.id}`)}
-                className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs ${
+                className={`relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pl-[30px] pr-2 text-xs ${
                   selectedSlug === `${LOCAL_PROVIDER_SENTINEL}:${config.id}` ? 'bg-store-accent-soft text-store-accent' : 'text-store-text-2 hover:bg-store-panel'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className={`h-1.5 w-1.5 rounded-full ${config.enabled ? 'bg-store-green' : 'bg-store-text-3'}`} />
-                  <span>{config.name}</span>
-                  <span className="font-mono text-store-text-3">:{config.port}</span>
-                </div>
+                <span className="pointer-events-none absolute left-4 top-0 h-1/2 w-2 rounded-bl-md border-b border-l border-store-border-strong" />
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${config.enabled ? 'bg-store-green' : 'bg-store-text-3'}`} />
+                <span className="flex-1 truncate">{config.name}</span>
+                <span className="font-mono text-store-text-3">:{config.port}</span>
                 <button
                   type="button"
                   aria-label={`删除 ${config.name}`}
@@ -325,89 +353,62 @@ export function ResourceList() {
       {navView === 'browse' && showInstalledSection(listFilter) && (
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-medium text-store-text-2">
-            已安装 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
+            已添加 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
           </p>
           <div className="flex flex-col gap-1">
             {visibleInstalled.map((item) => {
-              const enabled = !!item.enabledFor[agentApp]
+              const outdated = updatableSlugs.has(item.slug)
               return (
                 <div key={item.slug}>
                   <div
                     onClick={() => setSelectedSlug(item.slug)}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 ${
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 ${
                       selectedSlug === item.slug ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-store-text">{item.name}</p>
-                        <p className="text-xs text-store-text-3">
-                          {item.publisher.name} · {item.category}
-                        </p>
+                    <CategoryIcon category={item.category} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate font-mono text-sm font-bold text-store-text">{item.name}</span>
+                        {outdated && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-store-amber" />}
                       </div>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        {updatableSlugs.has(item.slug) && (
-                          <>
-                            <span className="rounded-md bg-store-amber-soft px-2 py-1 text-xs text-store-amber">有更新</span>
-                            <button
-                              type="button"
-                              onClick={() => updateOne(item.slug)}
-                              className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90"
-                            >
-                              更新
-                            </button>
-                          </>
-                        )}
+                      <p className="truncate text-xs text-store-text-3">
+                        {item.publisher.name} · {item.category}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {item.category === 'provider' && (
                         <button
                           type="button"
-                          aria-label={`为 ${agentApp} ${enabled ? '禁用' : '启用'} ${item.slug}`}
-                          onClick={() => toggleEnabled(item)}
-                          className={`rounded-md px-2 py-1 text-xs ${
-                            enabled ? 'bg-store-green-soft text-store-green' : 'bg-store-panel-2 text-store-text-2'
-                          }`}
+                          aria-label={`新增子配置 ${item.slug}`}
+                          onClick={() => addChildConfig(item)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-store-text-3 hover:bg-store-panel-2 hover:text-store-text"
                         >
-                          {enabled ? '已启用' : '已禁用'}
+                          +
                         </button>
-                        {item.category === 'provider' && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => setEditingSlug(item.slug)}
-                              className="text-xs text-store-text-2 hover:text-store-text"
-                            >
-                              编辑
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`新增子配置 ${item.slug}`}
-                              onClick={() => addChildConfig(item)}
-                              className="text-xs text-store-text-2 hover:text-store-text"
-                            >
-                              +
-                            </button>
-                          </>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => uninstall(item)}
-                          className="text-xs text-store-red hover:opacity-80"
-                        >
-                          卸载
-                        </button>
-                      </div>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={`卸载 ${item.slug}`}
+                        onClick={() => uninstall(item)}
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-store-text-3 hover:bg-store-panel-2 hover:text-store-red"
+                      >
+                        ×
+                      </button>
                     </div>
                   </div>
                   {item.category === 'provider' && (childrenByParent.get(item.slug)?.length ?? 0) > 0 && (
-                    <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-store-border pl-3">
+                    <div className="mt-1 flex flex-col gap-1">
                       {childrenByParent.get(item.slug)!.map((child) => (
                         <div
                           key={child.slug}
                           onClick={() => setSelectedSlug(child.slug)}
-                          className={`flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs ${
+                          className={`relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pl-[30px] pr-2 text-xs ${
                             selectedSlug === child.slug ? 'bg-store-accent-soft text-store-accent' : 'text-store-text-2 hover:bg-store-panel'
                           }`}
                         >
-                          <span className="font-mono">{child.slug}</span>
+                          <span className="pointer-events-none absolute left-4 top-0 h-1/2 w-2 rounded-bl-md border-b border-l border-store-border-strong" />
+                          <span className="flex-1 truncate font-mono">{child.slug}</span>
                           <button
                             type="button"
                             aria-label={`删除 ${child.slug}`}

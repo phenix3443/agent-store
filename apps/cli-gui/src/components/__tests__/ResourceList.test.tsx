@@ -127,15 +127,53 @@ test('renders installed and recommended groups', async () => {
   await waitFor(() => expect(screen.getByText('filesystem')).toBeInTheDocument())
   expect(screen.getByText('yls')).toBeInTheDocument()
   expect(screen.getByText('context7')).toBeInTheDocument()
-  expect(screen.getByText('已安装')).toBeInTheDocument()
+  expect(screen.getByText('已添加')).toBeInTheDocument()
   expect(screen.getByText('推荐')).toBeInTheDocument()
+})
+
+test('does not render a persistent Claude Code / Codex tab bar above the search box', async () => {
+  await renderList()
+  await waitFor(() => screen.getByText('filesystem'))
+  expect(screen.queryByText('Claude Code')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Codex' })).not.toBeInTheDocument()
+})
+
+test('the search input uses accent-colored mono text', async () => {
+  await renderList()
+  const input = await screen.findByPlaceholderText('搜索，或用 @ 过滤…')
+  expect(input.className).toContain('font-mono')
+  expect(input.className).toContain('text-store-accent')
+})
+
+test('the filter funnel button opens the dropdown with 发现/状态/目标应用 sections', async () => {
+  await renderList()
+  await waitFor(() => screen.getByText('context7'))
+  fireEvent.click(screen.getByLabelText('筛选过滤'))
+  expect(screen.getByText('发现')).toBeInTheDocument()
+  expect(screen.getByText('状态')).toBeInTheDocument()
+  expect(screen.getByText('目标应用')).toBeInTheDocument()
+  expect(screen.getByText('精选')).toBeInTheDocument()
+  expect(screen.getByText('推荐', { selector: 'span' })).toBeInTheDocument()
+  expect(screen.getByText('可更新')).toBeInTheDocument()
+  expect(screen.queryByText('收藏')).not.toBeInTheDocument()
+  expect(screen.getByText('Claude Code')).toBeInTheDocument()
+  expect(screen.getByText('Codex')).toBeInTheDocument()
+})
+
+test('selecting 目标应用 · Codex in the filter dropdown switches the active agent app', async () => {
+  const disable = mock(() => undefined)
+  await renderList({ disable })
+  await waitFor(() => screen.getByText('filesystem'))
+  fireEvent.click(screen.getByLabelText('筛选过滤'))
+  fireEvent.click(screen.getByText('Codex'))
+  expect(screen.queryByText('发现')).not.toBeInTheDocument()
 })
 
 test('typing @ opens the filter token menu; selecting @installed hides the recommended group', async () => {
   await renderList()
   await waitFor(() => screen.getByText('context7'))
   fireEvent.change(screen.getByPlaceholderText('搜索，或用 @ 过滤…'), { target: { value: '@' } })
-  fireEvent.click(screen.getByText('@installed · 已安装'))
+  fireEvent.click(screen.getByText('已安装'))
   expect(screen.queryByText('context7')).not.toBeInTheDocument()
   expect(screen.getByText('filesystem')).toBeInTheDocument()
 })
@@ -157,20 +195,19 @@ test('clicking 安装 on a recommended item calls install and refreshes', async 
   expect(screen.getByTestId('log-count').textContent).not.toBe('0')
 })
 
-test('clicking 卸载 on an installed item calls uninstall', async () => {
+test('clicking the × uninstall icon on an installed item calls uninstall', async () => {
   const uninstall = mock(() => undefined)
   await renderList({ uninstall })
   await waitFor(() => screen.getByText('filesystem'))
-  fireEvent.click(screen.getAllByText('卸载')[0])
+  fireEvent.click(screen.getByLabelText('卸载 filesystem'))
   await waitFor(() => expect(uninstall).toHaveBeenCalledWith('filesystem'))
 })
 
-test('toggling enable for the active agent app calls enable/disable', async () => {
-  const disable = mock(() => undefined)
-  await renderList({ disable })
+test('installed rows no longer render an 已启用/已禁用 toggle pill or an 编辑 button', async () => {
+  await renderList()
   await waitFor(() => screen.getByText('filesystem'))
-  fireEvent.click(screen.getByLabelText('为 claude 禁用 filesystem'))
-  await waitFor(() => expect(disable).toHaveBeenCalledWith('filesystem', 'claude'))
+  expect(screen.queryByLabelText('为 claude 禁用 filesystem')).not.toBeInTheDocument()
+  expect(screen.queryByText('编辑')).not.toBeInTheDocument()
 })
 
 test('clicking + on a provider row calls duplicateProvider and logs the new slug', async () => {
@@ -191,17 +228,15 @@ test('新增子配置 button is not shown for non-provider installed items', asy
   expect(screen.queryByLabelText('新增子配置 filesystem')).not.toBeInTheDocument()
 })
 
-test('the installed list shows an update badge and a real 更新 button for a package with an available update', async () => {
+test('the installed list shows an amber outdated dot next to the name for a package with an available update, with no update button', async () => {
   const checkUpdates = mock(() => [
     { slug: 'filesystem', currentVersion: '0.8.0', latestVersion: '0.8.1' },
   ])
-  const update = mock(() => [])
-  await renderList({ checkUpdates, update })
-  await waitFor(() => screen.getByText('filesystem'))
-  expect(await screen.findByText('有更新')).toBeInTheDocument()
-  const updateButton = screen.getByRole('button', { name: '更新' })
-  fireEvent.click(updateButton)
-  await waitFor(() => expect(update).toHaveBeenCalledWith('filesystem'))
+  await renderList({ checkUpdates })
+  const name = await screen.findByText('filesystem')
+  await waitFor(() => expect(name.parentElement?.querySelector('.bg-store-amber')).not.toBeNull())
+  expect(screen.queryByRole('button', { name: '更新' })).not.toBeInTheDocument()
+  expect(screen.queryByText('有更新')).not.toBeInTheDocument()
 })
 
 function SetCategoryFilter({ category }: { category: 'provider' | 'skill' }) {
@@ -238,7 +273,7 @@ test('clicking the local row sets selectedSlug to the sentinel', async () => {
   await renderListWithCategory('provider', {
     listLocalConfigs: () => [{ id: 'default', name: '默认', port: 18780, enabled: true }],
   })
-  const localRow = (await screen.findByText('local')).closest('div')!.parentElement!
+  const localRow = (await screen.findByText('local')).closest('[class*="border-store"]')! as HTMLElement
   fireEvent.click(localRow)
   await waitFor(() => expect(localRow.className).toContain('border-store-accent'))
 })
@@ -258,9 +293,8 @@ test('selecting the @updates token filters the installed list to only updatable 
   ])
   await renderList({ checkUpdates })
   await waitFor(() => screen.getByText('filesystem'))
-  await waitFor(() => screen.getByText('有更新'))
   fireEvent.change(screen.getByPlaceholderText('搜索，或用 @ 过滤…'), { target: { value: '@' } })
-  fireEvent.click(screen.getByText('@updates · 有更新'))
+  fireEvent.click(screen.getByText('可更新'))
   expect(screen.queryByText('filesystem')).not.toBeInTheDocument()
   expect(screen.getByText('yls')).toBeInTheDocument()
 })

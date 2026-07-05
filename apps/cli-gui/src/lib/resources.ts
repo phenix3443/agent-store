@@ -32,8 +32,8 @@ export function enrichInstalled(item: InstalledItem, detail: ItemDetail): Enrich
   }
 }
 
-const INSTALLED_SECTION_FILTERS: ListFilter[] = ['all', 'installed', 'enabled', 'disabled', 'favorites', 'updates']
-const RECOMMENDED_SECTION_FILTERS: ListFilter[] = ['all', 'popular', 'recent', 'favorites']
+const INSTALLED_SECTION_FILTERS: ListFilter[] = ['all', 'installed', 'enabled', 'disabled', 'updates']
+const RECOMMENDED_SECTION_FILTERS: ListFilter[] = ['all', 'featured', 'popular', 'recent', 'recommended']
 
 export function showInstalledSection(filter: ListFilter): boolean {
   return INSTALLED_SECTION_FILTERS.includes(filter)
@@ -47,25 +47,18 @@ export function filterInstalledByListFilter(
   items: EnrichedInstalledItem[],
   filter: ListFilter,
   agentApp: AgentApp,
-  favoriteSlugs: Set<string>,
   updatableSlugs: Set<string> = new Set()
 ): EnrichedInstalledItem[] {
   if (filter === 'enabled') return items.filter((i) => !!i.enabledFor[agentApp])
   if (filter === 'disabled') return items.filter((i) => !i.enabledFor[agentApp])
-  if (filter === 'favorites') return items.filter((i) => favoriteSlugs.has(i.slug))
   if (filter === 'updates') return items.filter((i) => updatableSlugs.has(i.slug))
   return items
 }
 
-export function filterRecommendedByListFilter(
-  items: Item[],
-  filter: ListFilter,
-  favoriteSlugs: Set<string>
-): Item[] {
+export function filterRecommendedByListFilter(items: Item[], filter: ListFilter): Item[] {
   if (filter === 'popular') return [...items].sort((a, b) => b.downloads - a.downloads)
   if (filter === 'recent') {
     return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
-  if (filter === 'favorites') return items.filter((i) => favoriteSlugs.has(i.slug))
   return items
 }

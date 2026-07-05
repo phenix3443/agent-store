@@ -54,21 +54,15 @@ test('enrichInstalled: merges detail fields onto the installed entry with rating
 
 test('filterInstalledByListFilter: "enabled"/"disabled" filter by the active agent app', () => {
   const enriched = [enrichInstalled(installedItem, itemDetail)]
-  expect(filterInstalledByListFilter(enriched, 'enabled', 'claude', new Set()).length).toBe(1)
-  expect(filterInstalledByListFilter(enriched, 'enabled', 'codex', new Set()).length).toBe(0)
-  expect(filterInstalledByListFilter(enriched, 'disabled', 'codex', new Set()).length).toBe(1)
-})
-
-test('filterInstalledByListFilter: "favorites" filters by the favorite set', () => {
-  const enriched = [enrichInstalled(installedItem, itemDetail)]
-  expect(filterInstalledByListFilter(enriched, 'favorites', 'claude', new Set()).length).toBe(0)
-  expect(filterInstalledByListFilter(enriched, 'favorites', 'claude', new Set(['filesystem'])).length).toBe(1)
+  expect(filterInstalledByListFilter(enriched, 'enabled', 'claude').length).toBe(1)
+  expect(filterInstalledByListFilter(enriched, 'enabled', 'codex').length).toBe(0)
+  expect(filterInstalledByListFilter(enriched, 'disabled', 'codex').length).toBe(1)
 })
 
 test('filterInstalledByListFilter: "all" and other filters pass everything through', () => {
   const enriched = [enrichInstalled(installedItem, itemDetail)]
-  expect(filterInstalledByListFilter(enriched, 'all', 'claude', new Set()).length).toBe(1)
-  expect(filterInstalledByListFilter(enriched, 'popular', 'claude', new Set()).length).toBe(1)
+  expect(filterInstalledByListFilter(enriched, 'all', 'claude').length).toBe(1)
+  expect(filterInstalledByListFilter(enriched, 'popular', 'claude').length).toBe(1)
 })
 
 test('filterInstalledByListFilter: "updates" filters to only slugs with an available update', () => {
@@ -80,7 +74,7 @@ test('filterInstalledByListFilter: "updates" filters to only slugs with an avail
   ]
   const updatableSlugs = new Set(['b'])
 
-  const result = filterInstalledByListFilter(items, 'updates', 'claude', new Set(), updatableSlugs)
+  const result = filterInstalledByListFilter(items, 'updates', 'claude', updatableSlugs)
 
   expect(result.map((i) => i.slug)).toEqual(['b'])
 })
@@ -88,7 +82,7 @@ test('filterInstalledByListFilter: "updates" filters to only slugs with an avail
 test('filterInstalledByListFilter: "updates" with no available updates returns an empty array', () => {
   const items = [{ ...enrichInstalled(installedItem, itemDetail), slug: 'a' }]
 
-  const result = filterInstalledByListFilter(items, 'updates', 'claude', new Set(), new Set())
+  const result = filterInstalledByListFilter(items, 'updates', 'claude', new Set())
 
   expect(result).toEqual([])
 })
@@ -96,20 +90,20 @@ test('filterInstalledByListFilter: "updates" with no available updates returns a
 test('filterRecommendedByListFilter: "popular" sorts by downloads descending', () => {
   const low: Item = { ...catalogItem, slug: 'low', downloads: 10 }
   const high: Item = { ...catalogItem, slug: 'high', downloads: 999 }
-  const sorted = filterRecommendedByListFilter([low, high], 'popular', new Set())
+  const sorted = filterRecommendedByListFilter([low, high], 'popular')
   expect(sorted.map(i => i.slug)).toEqual(['high', 'low'])
 })
 
 test('filterRecommendedByListFilter: "recent" sorts by createdAt descending', () => {
   const older: Item = { ...catalogItem, slug: 'older', createdAt: '2026-01-01T00:00:00Z' }
   const newer: Item = { ...catalogItem, slug: 'newer', createdAt: '2026-06-01T00:00:00Z' }
-  const sorted = filterRecommendedByListFilter([older, newer], 'recent', new Set())
+  const sorted = filterRecommendedByListFilter([older, newer], 'recent')
   expect(sorted.map(i => i.slug)).toEqual(['newer', 'older'])
 })
 
-test('filterRecommendedByListFilter: "favorites" filters by the favorite set', () => {
-  expect(filterRecommendedByListFilter([catalogItem], 'favorites', new Set()).length).toBe(0)
-  expect(filterRecommendedByListFilter([catalogItem], 'favorites', new Set(['context7'])).length).toBe(1)
+test('filterRecommendedByListFilter: "featured"/"recommended" pass everything through unchanged', () => {
+  expect(filterRecommendedByListFilter([catalogItem], 'featured')).toEqual([catalogItem])
+  expect(filterRecommendedByListFilter([catalogItem], 'recommended')).toEqual([catalogItem])
 })
 
 test('showInstalledSection / showRecommendedSection: "all" shows both, status filters only show installed, discovery filters only show recommended', () => {
@@ -119,6 +113,8 @@ test('showInstalledSection / showRecommendedSection: "all" shows both, status fi
   expect(showRecommendedSection('enabled')).toBe(false)
   expect(showInstalledSection('popular')).toBe(false)
   expect(showRecommendedSection('popular')).toBe(true)
-  expect(showInstalledSection('favorites')).toBe(true)
-  expect(showRecommendedSection('favorites')).toBe(true)
+  expect(showInstalledSection('featured')).toBe(false)
+  expect(showRecommendedSection('featured')).toBe(true)
+  expect(showInstalledSection('recommended')).toBe(false)
+  expect(showRecommendedSection('recommended')).toBe(true)
 })
