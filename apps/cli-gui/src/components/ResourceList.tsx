@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, ItemDetail, LocalRelayConfig, UpdateAvailable } from '@aas/types'
-import { Search, Filter, Check, RadioTower } from 'lucide-react'
+import type { Item, InstalledItem, ItemDetail, UpdateAvailable } from '@aas/types'
+import { Search, Filter, Check } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
-import { LOCAL_PROVIDER_SENTINEL } from './LocalProviderDetail'
 import { CategoryIcon } from './CategoryIcon'
 import {
   matchesCategoryFilter, matchesText, enrichInstalled, filterInstalledByListFilter,
@@ -38,7 +37,6 @@ export function ResourceList() {
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
   const [textQuery, setTextQuery] = useState('')
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false)
-  const [localConfigs, setLocalConfigs] = useState<LocalRelayConfig[]>([])
 
   function openConfigEditor(slug: string) {
     setEditingConfigSlug(slug)
@@ -48,20 +46,6 @@ export function ResourceList() {
   function selectResource(slug: string) {
     setEditingConfigSlug(null)
     setSelectedSlug(slug)
-  }
-
-  async function refreshLocal() {
-    setLocalConfigs(await callRpc<LocalRelayConfig[]>('listLocalConfigs'))
-  }
-
-  async function addLocalPort() {
-    await callRpc('addLocalConfig', ['新配置'])
-    refreshLocal()
-  }
-
-  async function removeLocalPort(id: string) {
-    await callRpc('removeLocalConfig', [id])
-    refreshLocal()
   }
 
   async function refreshInstalled() {
@@ -82,7 +66,6 @@ export function ResourceList() {
     refreshInstalled()
     refreshCatalog()
     refreshUpdates()
-    refreshLocal()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installedVersion])
 
@@ -118,10 +101,6 @@ export function ResourceList() {
     () =>
       catalog.filter(
         (item) =>
-          // The built-in local relay is already pinned at the top of the installed
-          // section (LOCAL_PROVIDER_SENTINEL); drop the catalog "local" row so it
-          // isn't shown twice in the CLI client.
-          item.slug !== 'local' &&
           (!installedSlugs.has(item.slug) || item.category === 'provider') &&
           matchesCategoryFilter(item.category, categoryFilter) &&
           matchesText(item.name, item.description, textQuery)
@@ -311,71 +290,10 @@ export function ResourceList() {
         )}
       </div>
 
-      {navView === 'browse' && categoryFilter === 'provider' && showInstalledSection(listFilter) && (
-        <div>
-          <div
-            onClick={() => selectResource(LOCAL_PROVIDER_SENTINEL)}
-            className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 ${
-              selectedSlug === LOCAL_PROVIDER_SENTINEL ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
-            }`}
-          >
-            <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
-              <RadioTower size={16} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="whitespace-nowrap font-mono text-sm font-bold text-store-text">local</span>
-                <span className="whitespace-nowrap rounded-full bg-store-accent-soft px-1.5 py-0.5 text-[10px] font-medium text-store-accent">
-                  内置
-                </span>
-              </div>
-              <div className="truncate text-[10.5px] text-store-text-3">
-                {localConfigs.length} 个配置 · {localConfigs.filter((c) => c.enabled).length} 个运行中
-              </div>
-            </div>
-            <button
-              type="button"
-              aria-label="新增本地监听配置"
-              onClick={(e) => {
-                e.stopPropagation()
-                addLocalPort()
-              }}
-              className="shrink-0 text-store-text-2 hover:text-store-text"
-            >
-              +
-            </button>
-          </div>
-          <div className="mt-1 flex flex-col gap-1">
-            {localConfigs.map((config) => (
-              <div
-                key={config.id}
-                onClick={() => selectResource(`${LOCAL_PROVIDER_SENTINEL}:${config.id}`)}
-                className={`relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pl-[30px] pr-2 text-xs ${
-                  selectedSlug === `${LOCAL_PROVIDER_SENTINEL}:${config.id}` ? 'bg-store-accent-soft text-store-accent' : 'text-store-text-2 hover:bg-store-panel'
-                }`}
-              >
-                <span className="pointer-events-none absolute left-4 top-0 h-1/2 w-2 rounded-bl-md border-b border-l border-store-border-strong" />
-                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${config.enabled ? 'bg-store-green' : 'bg-store-text-3'}`} />
-                <span className="flex-1 truncate">{config.name}</span>
-                <span className="font-mono text-store-text-3">:{config.port}</span>
-                <button
-                  type="button"
-                  aria-label={`删除 ${config.name}`}
-                  onClick={(e) => { e.stopPropagation(); removeLocalPort(config.id) }}
-                  className="text-store-text-3 hover:text-store-red"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {navView === 'browse' && showInstalledSection(listFilter) && (
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-medium text-store-text-2">
-            已添加 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
+            已配置 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
           </p>
           <div className="flex flex-col gap-1">
             {visibleInstalled.map((item) => {

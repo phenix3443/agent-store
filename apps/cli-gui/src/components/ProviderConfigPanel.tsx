@@ -36,9 +36,16 @@ const HELP = {
   upstreamProtocol: '指定上游 API 的协议类型。自动检测时根据端点判断；openai_chat 时自动转换请求与响应格式',
   authType: '默认使用 Bearer。Anthropic 官方 API 请选择 X-API-Key。',
   level: '数字越小优先级越高，Level 1 会被优先尝试，失败后依次尝试 Level 2、Level 3 等',
+  localBaseUrl: '本地代理的监听地址。把 Claude Code / Codex 的 API 地址指向这里即可。',
 }
 
-function toEditValues(current: Record<string, unknown> | undefined, fallbackName: string): EditValues {
+const LOCAL_DEFAULT_BASE_URL = 'http://127.0.0.1:18100'
+
+function toEditValues(
+  current: Record<string, unknown> | undefined,
+  fallbackName: string,
+  isLocal = false
+): EditValues {
   const c = current ?? {}
   const rawAuthType = c['authType']
   const authType: EditValues['authType'] =
@@ -53,9 +60,9 @@ function toEditValues(current: Record<string, unknown> | undefined, fallbackName
   const whitelist = Array.isArray(c['whitelist']) ? (c['whitelist'] as string[]) : []
 
   return {
-    name: String(c['name'] ?? fallbackName),
-    apiKey: String(c['apiKey'] ?? ''),
-    baseUrl: String(c['baseUrl'] ?? ''),
+    name: String(c['name'] ?? (isLocal ? '默认' : fallbackName)),
+    apiKey: String(c['apiKey'] ?? (isLocal ? 'built-in' : '')),
+    baseUrl: String(c['baseUrl'] ?? (isLocal ? LOCAL_DEFAULT_BASE_URL : '')),
     homepage: String(c['homepage'] ?? ''),
     endpointPath: String(c['endpointPath'] ?? ''),
     upstreamProtocol: String(c['upstreamProtocol'] ?? '自动检测'),
@@ -90,6 +97,7 @@ function toConfigPayload(values: EditValues): Record<string, unknown> {
 
 export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps) {
   const [providerName, setProviderName] = useState(slug)
+  const [rootSlug, setRootSlug] = useState(slug)
   const [targets, setTargets] = useState<Partial<Record<ToolTarget, boolean>>>({})
   const [values, setValues] = useState<EditValues>(toEditValues(undefined, slug))
   const [moreOpen, setMoreOpen] = useState(false)
@@ -104,9 +112,11 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
 
   useEffect(() => {
     callRpc<ItemDetail>('info', [slug]).then((detail) => {
+      const root = detail.parentSlug ?? slug
+      setRootSlug(root)
       setTargets(detail.enabledFor)
       setProviderName(String(detail.currentConfig?.['provider'] ?? detail.name ?? slug))
-      setValues(toEditValues(detail.currentConfig, slug))
+      setValues(toEditValues(detail.currentConfig, slug, root === 'local'))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
@@ -163,10 +173,11 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
     setHelpTip({ text, x: Math.round(r.left + r.width / 2), y: Math.round(r.bottom + 6) })
   }
 
+  const isLocal = rootSlug === 'local'
   const nameEmpty = values.name.trim() === ''
   const noTargets = !targets.claude && !targets.codex
   const noApiKey = values.apiKey.trim() === ''
-  const showWarn = noTargets || noApiKey
+  const showWarn = noTargets || (!isLocal && noApiKey)
   const warnText = noTargets
     ? '尚未选择适用客户端，此配置已保存但不会对任何 CLI 生效'
     : '尚未填写 API 密钥，此配置已保存但暂时无法使用'
@@ -230,18 +241,34 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
           </div>
         </div>
 
-        <div className="col-span-2">
-          <label htmlFor="provider-apiKey" className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-            API 密钥 <span className="text-store-red">*</span>
-          </label>
-          <input
-            id="provider-apiKey"
-            value={values.apiKey}
-            onChange={(e) => persist({ ...values, apiKey: e.target.value })}
-            placeholder="sk-..."
-            className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
-          />
-        </div>
+        {isLocal ? (
+          <div className="col-span-2">
+            <label htmlFor="provider-baseUrl" className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
+              API 地址
+              <HelpIcon text={HELP.localBaseUrl} onShow={showHelp} onHide={() => setHelpTip(null)} />
+            </label>
+            <input
+              id="provider-baseUrl"
+              value={values.baseUrl}
+              onChange={(e) => persist({ ...values, baseUrl: e.target.value })}
+              placeholder="http://127.0.0.1:18100"
+              className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
+            />
+          </div>
+        ) : (
+          <div className="col-span-2">
+            <label htmlFor="provider-apiKey" className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
+              API 密钥 <span className="text-store-red">*</span>
+            </label>
+            <input
+              id="provider-apiKey"
+              value={values.apiKey}
+              onChange={(e) => persist({ ...values, apiKey: e.target.value })}
+              placeholder="sk-..."
+              className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
+            />
+          </div>
+        )}
       </div>
 
       <div className="mx-7 mt-4 max-w-[620px] overflow-hidden rounded-xl border border-store-border">
@@ -264,18 +291,20 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
                 {providerName}
               </div>
             </div>
-            <div>
-              <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                API 地址
-                <HelpIcon text={HELP.baseUrl} onShow={showHelp} onHide={() => setHelpTip(null)} />
-              </label>
-              <input
-                value={values.baseUrl}
-                onChange={(e) => persist({ ...values, baseUrl: e.target.value })}
-                placeholder="https://api.anthropic.com"
-                className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
-              />
-            </div>
+            {!isLocal && (
+              <div>
+                <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
+                  API 地址
+                  <HelpIcon text={HELP.baseUrl} onShow={showHelp} onHide={() => setHelpTip(null)} />
+                </label>
+                <input
+                  value={values.baseUrl}
+                  onChange={(e) => persist({ ...values, baseUrl: e.target.value })}
+                  placeholder="https://api.anthropic.com"
+                  className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
+                />
+              </div>
+            )}
             <div>
               <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">官网地址</label>
               <input

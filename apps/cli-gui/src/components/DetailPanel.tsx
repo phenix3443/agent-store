@@ -5,7 +5,6 @@ import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useSelectedDetail } from '../lib/useSelectedDetail'
-import { LocalProviderDetail, isLocalProviderSlug } from './LocalProviderDetail'
 import { ProviderConfigPanel } from './ProviderConfigPanel'
 import { InfoSidebar } from './InfoSidebar'
 import { CategoryIcon } from './CategoryIcon'
@@ -26,7 +25,7 @@ import {
 type Tab = 'overview' | 'reviews' | 'versions'
 
 export function DetailPanel() {
-  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, selectedSlug, editingConfigSlug, setEditingConfigSlug } =
+  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, editingConfigSlug, setEditingConfigSlug } =
     useAppState()
   const { appendLine } = useTerminalLog()
   const detail = useSelectedDetail()
@@ -45,10 +44,6 @@ export function DetailPanel() {
 
   if (editingConfigSlug) {
     return <ProviderConfigPanel slug={editingConfigSlug} onClose={() => setEditingConfigSlug(null)} />
-  }
-
-  if (selectedSlug && isLocalProviderSlug(selectedSlug)) {
-    return <LocalProviderDetail selectedSlug={selectedSlug} />
   }
 
   if (!detail) {

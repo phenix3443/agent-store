@@ -138,6 +138,8 @@ export interface ItemDetail {
   updatedAt: string
   compatibleWith: ToolTarget[]
   enabledFor: Partial<Record<ToolTarget, boolean>>
+  /** Root provider slug this entry was duplicated from. Absent means this entry is a root (not a duplicate). */
+  parentSlug?: string
   // Store metadata
   name: string
   description: string

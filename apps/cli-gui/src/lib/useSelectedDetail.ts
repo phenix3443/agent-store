@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { Item, ItemDetail } from '@aas/types'
 import { callRpc } from './rpc'
 import { useAppState } from '../state/AppState'
-import { isLocalProviderSlug } from '../components/LocalProviderDetail'
 
 export type SelectedDetail = (ItemDetail & { installed: true }) | (Item & { installed: false })
 
@@ -11,7 +10,7 @@ export function useSelectedDetail(): SelectedDetail | null {
   const [detail, setDetail] = useState<SelectedDetail | null>(null)
 
   useEffect(() => {
-    if (!selectedSlug || isLocalProviderSlug(selectedSlug)) {
+    if (!selectedSlug) {
       setDetail(null)
       return
     }

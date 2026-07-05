@@ -4,7 +4,6 @@ import type { InstalledItem, LocalRelayConfig, RecentRequestRow, RelayStatus, Up
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { CategoryIcon } from './CategoryIcon'
-import { LOCAL_PROVIDER_SENTINEL } from './LocalProviderDetail'
 import { ProxyLogModal } from './ProxyLogModal'
 import { UsageTrendChart } from './UsageTrendChart'
 
@@ -160,7 +159,7 @@ export function Overview() {
             onClick={() => {
               setCategoryFilter('provider')
               setNavView('browse')
-              setSelectedSlug(LOCAL_PROVIDER_SENTINEL)
+              setSelectedSlug('local')
             }}
             className="flex flex-col gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
           >

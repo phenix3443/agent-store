@@ -117,7 +117,7 @@ function StateProbe() {
   return <div data-testid="state">{navView}:{categoryFilter}:{selectedSlug ?? 'none'}</div>
 }
 
-test('shows a local relay status card that navigates to the inline local provider detail on click', async () => {
+test('shows a local relay status card that navigates to the local provider on click', async () => {
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string) => {
     if (method === 'list') return []
     if (method === 'getUsageSummary') return []
@@ -134,7 +134,7 @@ test('shows a local relay status card that navigates to the inline local provide
   expect(await screen.findByText(/运行中/)).toBeInTheDocument()
   fireEvent.click(card)
 
-  expect(screen.getByTestId('state').textContent).toBe('browse:provider:__local__')
+  expect(screen.getByTestId('state').textContent).toBe('browse:provider:local')
 })
 
 test('shows the 5 most recent requests and opens the proxy log modal from 查看全部', async () => {

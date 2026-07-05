@@ -166,3 +166,54 @@ test('hovering a help icon shows the field help text', async () => {
   if (helpIcon) fireEvent.mouseEnter(helpIcon)
   expect(await screen.findByText(/上游供应商的真实地址/)).toBeInTheDocument()
 })
+
+function renderLocalPanel(handlers?: Record<string, (...args: unknown[]) => unknown>) {
+  mockRpc({
+    info: () => ({
+      slug: 'local', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude', 'codex'], enabledFor: { claude: true },
+      name: 'local', description: '内置本地代理', readmeUrl: '', icon: '',
+      publisher: { ...publisher, tier: 'official' as const }, tags: [], downloads: 0,
+    }),
+    setConfig: () => undefined,
+    enable: () => undefined,
+    disable: () => undefined,
+    ...handlers,
+  })
+  return render(<ProviderConfigPanel slug="local" onClose={() => {}} />)
+}
+
+test('local: shows an essential API 地址 field defaulting to 127.0.0.1:18100 and no API 密钥 field', async () => {
+  renderLocalPanel()
+  await waitFor(() => expect(screen.getByDisplayValue('http://127.0.0.1:18100')).toBeInTheDocument())
+  expect(screen.queryByText('API 密钥')).not.toBeInTheDocument()
+  // baseUrl is essential, so it is visible before expanding 更多设置
+  expect(screen.getByText('API 地址')).toBeInTheDocument()
+})
+
+test('local: default config name is 默认', async () => {
+  renderLocalPanel()
+  await waitFor(() => expect(screen.getByDisplayValue('默认')).toHaveAttribute('id', 'cli-config-name'))
+})
+
+test('local: does not show the missing-API-key amber warning', async () => {
+  renderLocalPanel()
+  await waitFor(() => screen.getByDisplayValue('http://127.0.0.1:18100'))
+  expect(screen.queryByText('尚未填写 API 密钥，此配置已保存但暂时无法使用')).not.toBeInTheDocument()
+})
+
+test('local: still warns when no targets are selected', async () => {
+  const disable = mock(() => undefined)
+  renderLocalPanel({ disable })
+  await waitFor(() => screen.getByLabelText('Claude Code'))
+  fireEvent.click(screen.getByLabelText('Claude Code'))
+  expect(await screen.findByText('尚未选择适用客户端，此配置已保存但不会对任何 CLI 生效')).toBeInTheDocument()
+})
+
+test('local: does not duplicate the baseUrl field inside 更多设置', async () => {
+  renderLocalPanel()
+  await waitFor(() => screen.getByDisplayValue('http://127.0.0.1:18100'))
+  fireEvent.click(screen.getByText('更多设置'))
+  // Only the essential API 地址 field remains; the optional one is suppressed for local.
+  expect(screen.getAllByText('API 地址')).toHaveLength(1)
+})

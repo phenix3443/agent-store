@@ -85,10 +85,6 @@ function defaultHandlers(overrides?: Record<string, (...args: unknown[]) => unkn
     info: (slug: unknown) => infoBySlug[slug as string],
     search: () => [catalogItem],
     checkUpdates: () => [],
-    listLocalConfigs: () => [],
-    getRelayStatus: () => ({ running: false }),
-    addLocalConfig: () => ({ id: 'new', name: '新配置', port: 18880, enabled: true }),
-    removeLocalConfig: () => undefined,
     ...overrides,
   }
 }
@@ -132,7 +128,7 @@ test('renders installed and recommended groups', async () => {
   await waitFor(() => expect(screen.getByText('filesystem')).toBeInTheDocument())
   expect(screen.getByText('yls')).toBeInTheDocument()
   expect(screen.getByText('context7')).toBeInTheDocument()
-  expect(screen.getByText('已添加')).toBeInTheDocument()
+  expect(screen.getByText('已配置')).toBeInTheDocument()
   expect(screen.getByText('推荐')).toBeInTheDocument()
 })
 
@@ -266,30 +262,31 @@ async function renderListWithCategory(category: 'provider' | 'skill', handlers?:
   )
 }
 
-test('shows an inline local entry with 内置 badge and expandable port rows under the provider category', async () => {
+const localCatalogItem = { ...providerCatalogItem, id: 'l', slug: 'local', name: 'local' }
+
+test('renders local as an ordinary provider row (no 内置 badge, no pinned port rows)', async () => {
   await renderListWithCategory('provider', {
-    listLocalConfigs: () => [{ id: 'default', name: '默认', port: 18780, enabled: true }],
+    search: () => [localCatalogItem],
   })
   expect(await screen.findByText('local')).toBeInTheDocument()
-  expect(await screen.findByText('内置')).toBeInTheDocument()
-  expect(await screen.findByText('默认')).toBeInTheDocument()
+  expect(screen.queryByText('内置')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('新增本地监听配置')).not.toBeInTheDocument()
 })
 
-test('clicking the local row sets selectedSlug to the sentinel', async () => {
+test('clicking the local provider row selects it as a normal provider', async () => {
   await renderListWithCategory('provider', {
-    listLocalConfigs: () => [{ id: 'default', name: '默认', port: 18780, enabled: true }],
+    search: () => [localCatalogItem],
   })
   const localRow = (await screen.findByText('local')).closest('[class*="border-store"]')! as HTMLElement
   fireEvent.click(localRow)
   await waitFor(() => expect(localRow.className).toContain('border-store-accent'))
 })
 
-test('does not show the local entry outside the provider category', async () => {
+test('does not show the local provider row outside the provider category', async () => {
   await renderListWithCategory('skill', {
-    listLocalConfigs: () => [{ id: 'default', name: '默认', port: 18780, enabled: true }],
+    search: () => [localCatalogItem],
   })
   await screen.findByPlaceholderText('搜索，或用 @ 过滤…')
-  expect(screen.queryByText('内置')).not.toBeInTheDocument()
   expect(screen.queryByText('local')).not.toBeInTheDocument()
 })
 

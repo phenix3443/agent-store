@@ -30,14 +30,20 @@ function renderPanel(slug = 'filesystem') {
   )
 }
 
-test('renders LocalProviderDetail when selectedSlug is the local-provider sentinel', async () => {
+test('renders local as a normal provider detail from the info RPC', async () => {
   mockRpc({
-    listLocalConfigs: () => [{ id: 'default', name: '默认', port: 18780, enabled: true }],
-    getRelayStatus: () => ({ running: true, pid: 1 }),
+    info: () => ({
+      slug: 'local', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude', 'codex'], enabledFor: {},
+      name: 'local', description: '内置本地代理', readmeUrl: '', icon: '',
+      publisher, tags: ['relay', 'built-in'], downloads: 156000,
+    }),
+    list: () => [],
   })
-  renderPanel('__local__')
+  renderPanel('local')
   fireEvent.click(screen.getByText('select'))
-  expect(await screen.findByText('内置 Provider')).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('heading', { name: 'local' })).toBeInTheDocument())
+  expect(screen.queryByText('内置 Provider')).not.toBeInTheDocument()
 })
 
 test('shows the empty state with no selection', () => {
