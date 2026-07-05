@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, RadioTower } from 'lucide-react'
 import type { InstalledItem, LocalRelayConfig, RecentRequestRow, RelayStatus, UpdateAvailable, UsageSummaryRow } from '@aas/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
@@ -157,22 +157,85 @@ export function Overview() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          setCategoryFilter('provider')
-          setNavView('browse')
-          setSelectedSlug(LOCAL_PROVIDER_SENTINEL)
-        }}
-        className="flex flex-col items-start gap-1 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
-      >
-        <p className="text-sm font-medium text-store-text">本地代理</p>
-        <p className="text-xs text-store-text-2">
-          {relayStatus.running
-            ? `运行中 · ${localConfigs.length} 个监听配置 · 今日 ${summarize(today).requestCount} 请求 · 成功率 ${successRateLabel(summarize(today))}`
-            : '未运行'}
-        </p>
-      </button>
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={() => {
+            setCategoryFilter('provider')
+            setNavView('browse')
+            setSelectedSlug(LOCAL_PROVIDER_SENTINEL)
+          }}
+          className="flex flex-[1.4] flex-col gap-3 rounded-xl border border-store-border bg-store-panel p-4 text-left hover:border-store-border-strong"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-store-accent-soft text-store-accent">
+                <RadioTower size={16} />
+              </div>
+              <p className="text-sm font-medium text-store-text">local</p>
+            </div>
+            <span className={`flex items-center gap-1.5 text-xs ${relayStatus.running ? 'text-store-green' : 'text-store-text-2'}`}>
+              {relayStatus.running && <span className="h-1.5 w-1.5 rounded-full bg-store-green" />}
+              {relayStatus.running ? '运行中' : '未运行'}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-xs text-store-text-2">
+            <div>
+              <p>监听地址</p>
+              <p className="mt-1 font-mono text-sm text-store-text">
+                127.0.0.1{localConfigs[0] ? `:${localConfigs[0].port}` : ''}
+              </p>
+            </div>
+            <div>
+              <p>今日请求</p>
+              <p className="mt-1 text-sm font-semibold text-store-text">{summarize(today).requestCount}</p>
+            </div>
+            <div>
+              <p>成功率</p>
+              <p className="mt-1 text-sm font-semibold text-store-green">{successRateLabel(summarize(today))}</p>
+            </div>
+          </div>
+        </button>
+
+        {updates.length > 0 && (
+          <div className="flex-1 rounded-xl border border-store-border bg-store-panel p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-store-text">可更新</p>
+                <span className="rounded-full bg-store-amber-soft px-1.5 py-0.5 text-[10px] font-medium text-store-amber">
+                  {updates.length}
+                </span>
+              </div>
+              <span className="text-xs text-store-accent">全部</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {updates.slice(0, 4).map((item) => {
+                const category = installed.find((i) => i.slug === item.slug)?.category ?? 'mcp'
+                return (
+                  <div key={item.slug} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon category={category} size="sm" />
+                      <div className="flex flex-col">
+                        <span className="text-store-text">{item.slug}</span>
+                        <span className="text-store-text-3">
+                          v{item.currentVersion} → v{item.latestVersion}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateOne(item.slug)}
+                      className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90"
+                    >
+                      更新
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="rounded-xl border border-store-border bg-store-panel p-4">
         <div className="mb-2 flex items-center justify-between">
@@ -202,28 +265,6 @@ export function Overview() {
       </div>
 
       <ProxyLogModal open={logModalOpen} onOpenChange={setLogModalOpen} />
-
-      {updates.length > 0 && (
-        <div className="rounded-xl border border-store-border bg-store-panel p-4">
-          <p className="mb-2 text-sm font-medium text-store-text">可更新</p>
-          <div className="flex flex-col gap-1">
-            {updates.slice(0, 4).map((item) => (
-              <div key={item.slug} className="flex items-center justify-between text-xs">
-                <span className="text-store-text">
-                  {item.slug} v{item.currentVersion} → v{item.latestVersion}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => updateOne(item.slug)}
-                  className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90"
-                >
-                  更新
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

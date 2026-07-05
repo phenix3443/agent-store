@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, ItemDetail, LocalRelayConfig, RelayStatus, UpdateAvailable } from '@aas/types'
+import type { Item, InstalledItem, ItemDetail, LocalRelayConfig, UpdateAvailable } from '@aas/types'
 import { Search } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type ListFilter } from '../state/AppState'
@@ -39,7 +39,6 @@ export function ResourceList() {
 
   async function refreshLocal() {
     setLocalConfigs(await callRpc<LocalRelayConfig[]>('listLocalConfigs'))
-    await callRpc<RelayStatus>('getRelayStatus')
   }
 
   async function addLocalPort() {

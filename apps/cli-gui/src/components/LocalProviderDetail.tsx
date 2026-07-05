@@ -11,7 +11,7 @@ export function localConfigIdFromSlug(slug: string): string | null {
 
 import { useEffect, useState } from 'react'
 import { ArrowLeft, RadioTower } from 'lucide-react'
-import type { LocalRelayConfig, RelayStatus } from '@aas/types'
+import type { LocalRelayConfig } from '@aas/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { ProxyLogModal } from './ProxyLogModal'
@@ -19,12 +19,10 @@ import { ProxyLogModal } from './ProxyLogModal'
 export function LocalProviderDetail({ selectedSlug }: { selectedSlug: string }) {
   const { setSelectedSlug } = useAppState()
   const [configs, setConfigs] = useState<LocalRelayConfig[]>([])
-  const [status, setStatus] = useState<RelayStatus>({ running: false })
   const [logModalOpen, setLogModalOpen] = useState(false)
 
   async function refresh() {
     setConfigs(await callRpc<LocalRelayConfig[]>('listLocalConfigs'))
-    setStatus(await callRpc<RelayStatus>('getRelayStatus'))
   }
 
   useEffect(() => {

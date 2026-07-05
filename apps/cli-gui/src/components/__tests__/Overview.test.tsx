@@ -1,5 +1,5 @@
 import { test, expect, afterEach, spyOn, mock } from 'bun:test'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 import { AppStateProvider, useAppState } from '../../state/AppState'
 import { Overview } from '../Overview'
@@ -55,8 +55,8 @@ test('shows a consumption trend card with today/7-day/30-day totals', async () =
   render(<AppStateProvider><Overview /></AppStateProvider>)
 
   expect(await screen.findByText('消耗趋势')).toBeInTheDocument()
-  expect(await screen.findByText('总请求数')).toBeInTheDocument()
-  expect(await screen.findByText('3')).toBeInTheDocument()
+  const label = await screen.findByText('总请求数')
+  expect(label.nextElementSibling?.textContent).toBe('3')
 })
 
 test('trend card shows a tab selector and switches stats between periods', async () => {
@@ -77,14 +77,12 @@ test('trend card shows a tab selector and switches stats between periods', async
 
   render(<AppStateProvider><Overview /></AppStateProvider>)
 
-  expect(await screen.findByText('总请求数')).toBeInTheDocument()
-  expect(await screen.findByText('3')).toBeInTheDocument()
-  expect(screen.queryByText('20')).not.toBeInTheDocument()
+  const label = await screen.findByText('总请求数')
+  expect(label.nextElementSibling?.textContent).toBe('3')
 
   fireEvent.click(screen.getByText('近 7 天'))
 
-  expect(await screen.findByText('20')).toBeInTheDocument()
-  expect(screen.queryByText('3')).not.toBeInTheDocument()
+  await waitFor(() => expect(label.nextElementSibling?.textContent).toBe('20'))
 })
 
 test('trend card shows a distinct-model count as 模型分布', async () => {
@@ -132,7 +130,7 @@ test('shows a local relay status card that navigates to the inline local provide
 
   render(<AppStateProvider><Overview /><StateProbe /></AppStateProvider>)
 
-  const card = await screen.findByText('本地代理')
+  const card = await screen.findByText('local')
   expect(await screen.findByText(/运行中/)).toBeInTheDocument()
   fireEvent.click(card)
 
@@ -194,6 +192,7 @@ test('shows up to 4 updatable packages with a real 更新 button', async () => {
   render(<AppStateProvider><Overview /></AppStateProvider>)
 
   expect(await screen.findByText('可更新')).toBeInTheDocument()
-  expect(await screen.findByText(/a.*1\.0\.0.*1\.1\.0/)).toBeInTheDocument()
+  expect(await screen.findByText('a')).toBeInTheDocument()
+  expect(await screen.findByText(/1\.0\.0.*1\.1\.0/)).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '更新' }))
 })
