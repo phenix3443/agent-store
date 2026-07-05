@@ -1,53 +1,54 @@
 import { test, expect, afterEach } from 'bun:test'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
-import { AppStateProvider, useAppState } from '../../state/AppState'
+import { AppStateProvider } from '../../state/AppState'
 import { IconRail } from '../IconRail'
 
 afterEach(() => { cleanup() })
-
-function Probe() {
-  const { navView, categoryFilter } = useAppState()
-  return <span data-testid="probe">{navView}:{categoryFilter}</span>
-}
 
 function renderIconRail() {
   return render(
     <AppStateProvider>
       <IconRail />
-      <Probe />
     </AppStateProvider>
   )
 }
 
-test('defaults to overview nav and all category', () => {
+test('shows exactly four nav/category buttons: 概览, 供应商, 技能, MCP', () => {
   renderIconRail()
-  expect(screen.getByTestId('probe').textContent).toBe('overview:all')
+  expect(screen.getByLabelText('概览')).toBeInTheDocument()
+  expect(screen.getByLabelText('供应商')).toBeInTheDocument()
+  expect(screen.getByLabelText('技能')).toBeInTheDocument()
+  expect(screen.getByLabelText('MCP')).toBeInTheDocument()
+  expect(screen.queryByLabelText('浏览商店')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('全部')).not.toBeInTheDocument()
 })
 
-test('clicking 浏览商店 switches nav view to browse', () => {
+test('defaults to 概览 active', () => {
   renderIconRail()
-  fireEvent.click(screen.getByLabelText('浏览商店'))
-  expect(screen.getByTestId('probe').textContent).toBe('browse:all')
+  expect(screen.getByLabelText('概览')).toHaveClass('bg-store-accent-soft')
 })
 
-test('clicking 概览 switches nav view back to overview', () => {
-  renderIconRail()
-  fireEvent.click(screen.getByLabelText('浏览商店'))
-  expect(screen.getByTestId('probe').textContent).toBe('browse:all')
-  fireEvent.click(screen.getByLabelText('概览'))
-  expect(screen.getByTestId('probe').textContent).toBe('overview:all')
-})
-
-test('clicking a category icon sets categoryFilter', () => {
+test('clicking 供应商 sets categoryFilter to provider and navView to browse', () => {
   renderIconRail()
   fireEvent.click(screen.getByLabelText('供应商'))
-  expect(screen.getByTestId('probe').textContent).toBe('overview:provider')
-  fireEvent.click(screen.getByLabelText('全部'))
-  expect(screen.getByTestId('probe').textContent).toBe('overview:all')
+  expect(screen.getByLabelText('供应商')).toHaveClass('bg-store-accent-soft')
 })
 
-test('clicking 设置 opens the settings modal', () => {
+test('clicking 技能 sets categoryFilter to skill and navView to browse', () => {
   renderIconRail()
-  fireEvent.click(screen.getByLabelText('设置'))
-  expect(screen.getByText('设置')).toBeInTheDocument()
+  fireEvent.click(screen.getByLabelText('技能'))
+  expect(screen.getByLabelText('技能')).toHaveClass('bg-store-accent-soft')
+})
+
+test('clicking 概览 after switching to a category returns to the overview state', () => {
+  renderIconRail()
+  fireEvent.click(screen.getByLabelText('供应商'))
+  fireEvent.click(screen.getByLabelText('概览'))
+  expect(screen.getByLabelText('概览')).toHaveClass('bg-store-accent-soft')
+  expect(screen.getByLabelText('供应商')).not.toHaveClass('bg-store-accent-soft')
+})
+
+test('shows a settings button at the bottom of the rail', () => {
+  renderIconRail()
+  expect(screen.getByLabelText('设置')).toBeInTheDocument()
 })

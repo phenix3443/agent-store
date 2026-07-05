@@ -24,19 +24,19 @@ test('renders the icon rail and the Overview dashboard by default', async () => 
   render(<App />)
 
   expect(screen.getByLabelText('概览')).toBeInTheDocument()
-  expect(screen.getByLabelText('浏览商店')).toBeInTheDocument()
+  expect(screen.getByLabelText('供应商')).toBeInTheDocument()
   expect(await screen.findByText('概览')).toBeInTheDocument()
   expect(await screen.findByText('供应商')).toBeInTheDocument()
   expect(screen.getByLabelText('展开终端')).toBeInTheDocument()
 })
 
-test('clicking 浏览商店 switches to the browse three-pane layout', async () => {
+test('clicking 供应商 switches to the browse three-pane layout', async () => {
   mockAllRpcs()
 
   render(<App />)
 
   await screen.findByText('供应商')
-  screen.getByLabelText('浏览商店').click()
+  screen.getByLabelText('供应商').click()
 
   expect(await screen.findByPlaceholderText('搜索，或用 @ 过滤…')).toBeInTheDocument()
   expect(screen.getByText('从左侧选择一个资源查看详情')).toBeInTheDocument()
