@@ -100,7 +100,6 @@
         </div>
         <div style="flex: 1;"></div>
         <div style="display: flex; align-items: center; gap: 20px;">
-          <span style="font-size: 13px; font-weight: 600; color: var(--text);">探索</span>
           <span style="font-size: 13px; font-weight: 500; color: var(--text-2);">文档</span>
         </div>
         <div onClick="{{ web.onPublish }}" style="display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 10px; background: var(--accent); cursor: pointer; box-shadow: 0 4px 14px var(--accent-soft);" style-hover="filter: brightness(1.08)">
@@ -589,40 +588,9 @@
           <sc-if value="{{ cli.showInstalledSection }}" hint-placeholder-val="{{ true }}">
           <div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 6px;">
             <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M2.5 3.5L5 6.5L7.5 3.5" stroke="var(--text-2)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-            <span style="flex: 1; font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px;">已添加</span>
+            <span style="flex: 1; font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.6px;">已配置</span>
             <span style="font-size: 10px; font-weight: 700; color: #fff; background: var(--text-3); padding: 1px 7px; border-radius: 20px; font-family: var(--mono);">{{ cli.installedCount }}</span>
           </div>
-          <!-- pinned: local proxy as built-in provider -->
-          <sc-if value="{{ cli.showProxyRow }}" hint-placeholder-val="{{ false }}">
-            <div onClick="{{ proxy.onSelect }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; background: {{ proxy.rowSelBg }}; border-left: 2px solid {{ proxy.rowSelBar }};" style-hover="background: var(--panel)">
-              <div style="width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent);">
-                <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2.5c-2 2.2-3 4.7-3 7.5s1 5.3 3 7.5c2-2.2 3-4.7 3-7.5s-1-5.3-3-7.5z" stroke="currentColor" stroke-width="1.3"></path><path d="M2.7 7h14.6M2.7 13h14.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg>
-              </div>
-              <div style="flex: 1; min-width: 0;">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                  <span style="font-size: 12.5px; font-weight: 700; color: var(--text); font-family: var(--mono);">local</span>
-                  <span style="font-size: 9px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 20px;">内置</span>
-                </div>
-                <div style="font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ proxy.summary }}</div>
-              </div>
-              <div onClick="{{ proxy.onAddConfig }}" title="新建 local 配置" style="width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3);" style-hover="background: var(--panel-2); color: var(--text)">
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
-              </div>
-            </div>
-            <sc-for list="{{ proxy.configs }}" as="c" hint-placeholder-count="2">
-              <div onClick="{{ c.onOpen }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 10px 7px 30px; border-radius: 8px; cursor: pointer; position: relative; background: {{ c.rowSelBg }}; border-left: 2px solid {{ c.rowSelBar }};" style-hover="background: var(--panel)">
-                <span style="position: absolute; left: 16px; top: 0; bottom: 50%; width: 8px; border-left: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); border-radius: 0 0 0 5px;"></span>
-                <span style="width: 6px; height: 6px; border-radius: 50%; background: {{ c.dot }}; flex-shrink: 0;"></span>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="font-size: 12px; font-weight: 650; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.name }}</div>
-                  <div style="font-size: 10px; color: var(--text-3); font-family: var(--mono);">:{{ c.port }}</div>
-                </div>
-                <div onClick="{{ c.onRemove }}" title="删除配置" style="width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-3);" style-hover="background: var(--panel-2); color: var(--red)">
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
-                </div>
-              </div>
-            </sc-for>
-          </sc-if>
           <sc-for list="{{ cli.installedList }}" as="p" hint-placeholder-count="4">
             <div onClick="{{ p.onOpen }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; background: {{ p.rowSelBg }}; border-left: 2px solid {{ p.rowSelBar }};" style-hover="background: var(--panel)">
               <div style="width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
@@ -686,60 +654,6 @@
           <div style="position: absolute; top: 14px; right: 22px; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; background: var(--green); box-shadow: 0 8px 26px rgba(0,0,0,0.4); animation: omPop .2s ease both;">
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 8.5L6 12l7.5-8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             <span style="font-size: 12.5px; font-weight: 650; color: #fff;">配置已保存</span>
-          </div>
-        </sc-if>
-        <sc-if value="{{ cli.showProxy }}" hint-placeholder-val="{{ false }}">
-          <div style="padding: 24px 28px 32px; max-width: 860px;">
-            <!-- ===== PARENT: local provider overview ===== -->
-            <sc-if value="{{ proxy.isParent }}" hint-placeholder-val="{{ true }}">
-              <div style="display: flex; align-items: flex-start; gap: 18px; padding-bottom: 22px; margin-bottom: 24px; border-bottom: 1px solid var(--border);">
-                <div style="width: 72px; height: 72px; border-radius: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent);">
-                  <svg width="34" height="34" viewBox="0 0 20 20" fill="none"><path d="M10 2.5c-2 2.2-3 4.7-3 7.5s1 5.3 3 7.5c2-2.2 3-4.7 3-7.5s-1-5.3-3-7.5z" stroke="currentColor" stroke-width="1.3"></path><path d="M2.7 7h14.6M2.7 13h14.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"></path></svg>
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 24px; font-weight: 780; color: var(--text); font-family: var(--mono); letter-spacing: -0.3px;">local</span>
-                    <span style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: var(--accent); background: var(--accent-soft);">内置 Provider</span>
-                  </div>
-                  <div style="font-size: 12.5px; color: var(--text-3); margin-top: 5px;">by Agent Store</div>
-                  <div style="font-size: 13.5px; color: var(--text-2); line-height: 1.6; margin-top: 12px; max-width: 620px;">Claude / Codex 指向 local 的某个监听端口，请求经该配置按 Level 顺序转发到上游供应商，失败自动降级。</div>
-                </div>
-              </div>
-            </sc-if>
-            <!-- ===== CHILD: single config detail ===== -->
-            <sc-if value="{{ proxy.isChild }}" hint-placeholder-val="{{ false }}">
-              <div style="display: flex; align-items: center; gap: 14px; padding-bottom: 18px; margin-bottom: 20px; border-bottom: 1px solid var(--border);">
-                <div onClick="{{ proxy.onBack }}" title="返回 local" style="width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border-strong); color: var(--text-2);" style-hover="border-color: var(--accent); color: var(--accent)">
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 3l-5 5 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-                </div>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">local /</span>
-                    <input value="{{ proxy.cfg.name }}" onInput="{{ proxy.cfg.onName }}" style="font-size: 18px; font-weight: 750; color: var(--text); background: transparent; border: none; border-bottom: 1.5px solid transparent; outline: none; padding: 0 0 2px; font-family: var(--sans);" style-focus="border-bottom-color: var(--border-strong)" />
-                  </div>
-                  <div style="font-size: 12px; color: var(--text-3); margin-top: 3px;">启用后自动将所选客户端的请求转发到此端口，无需手动配置。</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 9px; flex-shrink: 0;">
-                  <span style="font-size: 12px; font-weight: 600; color: {{ proxy.cfg.statusFg }};">{{ proxy.cfg.statusLabel }}</span>
-                  <div onClick="{{ proxy.cfg.onToggle }}" style="width: 42px; height: 24px; border-radius: 12px; padding: 2px; display: flex; cursor: pointer; justify-content: {{ proxy.cfg.knobJustify }}; background: {{ proxy.cfg.trackBg }};">
-                    <div style="width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.35);"></div>
-                  </div>
-                </div>
-              </div>
-              <div style="max-width: 520px;">
-                <div style="font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 9px;">适用客户端</div>
-                <div style="display: flex; gap: 10px; margin-bottom: 22px;">
-                  <sc-for list="{{ proxy.cfg.appOpts }}" as="op" hint-placeholder-count="2">
-                    <div onClick="{{ op.onClick }}" title="{{ op.label }}" style="width: 54px; height: 46px; display: flex; align-items: center; justify-content: center; border-radius: 10px; border: 1.5px solid {{ op.border }}; background: {{ op.bg }}; cursor: pointer; transition: all .15s;">{{ op.icon }}</div>
-                  </sc-for>
-                </div>
-                <div style="font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 9px;">监听端口</div>
-                <div style="display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-radius: 11px; border: 1px solid var(--border); background: var(--panel);">
-                  <span style="font-size: 15px; font-weight: 700; color: var(--text-3); font-family: var(--mono);">127.0.0.1 :</span>
-                  <input value="{{ proxy.cfg.port }}" onInput="{{ proxy.cfg.onPort }}" style="width: 84px; font-size: 15px; font-weight: 700; color: var(--accent); font-family: var(--mono); background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; outline: none; padding: 6px 9px;" style-focus="border-color: var(--accent)" />
-                </div>
-              </div>
-            </sc-if>
           </div>
         </sc-if>
         <div style="height: 56px; flex-shrink: 0; border-bottom: 1px solid var(--border); display: none; align-items: center; gap: 14px; padding: 0 22px;">
@@ -1414,10 +1328,10 @@ class Component extends DCLogic {
     { id: 'github', type: 'mcp', author: 'anthropic', verified: true, dl: '296k', rating: '4.6', reviews: '5.1k', ver: '0.6.2', meta: '26', tags: ['git', 'api'], desc: 'Issues、PR、仓库与代码搜索的完整 GitHub API 封装。' },
     { id: 'postgres', type: 'mcp', author: 'community', verified: false, dl: '71k', rating: '4.3', reviews: '1.8k', ver: '0.4.0', meta: '6', tags: ['db', 'sql'], desc: '只读查询任意 PostgreSQL，自动 schema 反射与结果分页。' },
     { id: 'context7', type: 'mcp', author: 'upstash', verified: true, dl: '118k', rating: '4.7', reviews: '3.3k', ver: '1.0.0', meta: '2', tags: ['docs', 'rag'], desc: '为任意库拉取版本精确的最新文档上下文，减少幻觉。' },
+    { id: 'local', type: 'provider', author: 'agent-store', verified: true, dl: '156k', rating: '4.9', reviews: '—', ver: '1.0.0', meta: 'built-in', tags: ['relay', 'built-in'], desc: '内置本地代理：Claude Code / Codex 指向 local 的监听端口，请求按 Level 顺序转发到上游供应商，失败自动降级，并支持模型映射与用量计量。' },
     { id: 'yls', type: 'provider', author: 'ylsagi', verified: false, dl: '32k', rating: '4.7', reviews: '210', ver: '2.0.0', meta: '96ms', tags: ['relay', 'codex'], desc: 'YLS AGI 中转端点，兼容 Claude 与 Codex，支持模型映射与多协议自动转换。' },
     { id: 'openrouter', type: 'provider', author: 'openrouter', verified: false, dl: '98k', rating: '4.6', reviews: '870', ver: '1.3.0', meta: '120ms', tags: ['relay', 'multi-model'], desc: '聚合 300+ 模型的中转端点，自动路由与失败回退。' },
     { id: 'aws-bedrock', type: 'provider', author: 'aws', verified: true, dl: '64k', rating: '4.5', reviews: '540', ver: '1.1.2', meta: '208ms', tags: ['enterprise', 'bedrock'], desc: '企业级托管的 Claude 端点，IAM 鉴权与私有网络接入。' },
-    { id: 'ollama-local', type: 'provider', author: 'community', verified: false, dl: '112k', rating: '4.7', reviews: '1.4k', ver: '0.9.0', meta: '11ms', tags: ['local', 'offline'], desc: '本地 Ollama 端点预设，零延迟离线运行开源模型。' },
   ];
 
   // Category-specific metadata (mirrors items.metadata JSONB in supabase)
@@ -1425,7 +1339,6 @@ class Component extends DCLogic {
     yls: ['claude-sonnet-4', 'claude-opus-4', 'gpt-4o', 'gpt-4o-mini'],
     openrouter: ['claude-sonnet-4', 'gpt-4o', 'gemini-2.0-flash', 'llama-3.3-70b'],
     'aws-bedrock': ['claude-sonnet-4', 'claude-haiku-4'],
-    'ollama-local': ['llama3.2', 'qwen2.5-coder', 'deepseek-r1'],
   };
   supportedModelsOf = (id) => this.PROVIDER_MODELS[id] || ['claude-sonnet-4', 'gpt-4o'];
   // MCP transport shapes (stdio → serverCommand, remote → url + headers)
@@ -1439,7 +1352,6 @@ class Component extends DCLogic {
   contentUrlOf = (id) => 'https://store.supabase.co/skills/' + id + '.zip';
 
   CATS = [
-    { key: 'all', label: '探索' },
     { key: 'provider', label: '供应商' },
     { key: 'skill', label: '技能' },
     { key: 'mcp', label: 'MCP' },
@@ -1501,7 +1413,7 @@ class Component extends DCLogic {
   state = {
     surface: 'web',
     theme: 'dark',
-    web: { cat: 'all', q: '', sel: null, detailTab: 'readme', profile: null, verified: false, sort: 'all' },
+    web: { cat: 'provider', q: '', sel: null, detailTab: 'readme', profile: null, verified: false, sort: 'all' },
     publishOpen: false,
     settingsOpen: false, settingsTab: 'account', loggedIn: true, uiLang: 'zh', langMenuOpen: false,
     pform: { type: 'skill', vals: { desc: '', category: 'General', installMethod: '默认（复制到 skills 目录）' } },
@@ -1598,17 +1510,37 @@ class Component extends DCLogic {
   // ── local provider (multi-config) ──
   openLocal = () => this.setState(st => ({ proxySelected: true, localSel: null, cliInfoId: null, cliEditId: null, web: { ...st.web, sel: '__proxy__' } }));
   openLocalConfig = (id) => this.setState(st => ({ proxySelected: true, localSel: id, cliInfoId: null, cliEditId: null, web: { ...st.web, sel: '__proxy__' } }));
+  configureLocal = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this.setState(st => {
+      if (st.localConfigs.length > 0) {
+        return { proxySelected: true, localSel: st.localConfigs[0].id, cliInfoId: null, cliEditId: null, web: { ...st.web, sel: '__proxy__' } };
+      }
+      const used = st.localConfigs.map(c => c.port);
+      let port = 18100; while (used.includes(port)) port += 100;
+      const id = 'local-' + Date.now();
+      this.pushTerm([{ text: '$ agent-store local add --port ' + port, color: '#c7c7d0' }, { text: '✓ 新建 local 配置 · 监听 127.0.0.1:' + port, color: '#3ad29f' }]);
+      return { localConfigs: [...st.localConfigs, { id, name: '新配置', port, running: false, reqs: '0', success: '—', targets: ['claude', 'codex'] }], localSel: id, proxySelected: true, web: { ...st.web, sel: '__proxy__' } };
+    });
+  };
   toggleLocalConfig = (id) => this.setState(st => ({ localConfigs: st.localConfigs.map(c => c.id === id ? { ...c, running: !c.running } : c) }));
-  addLocalConfig = () => this.setState(st => {
+  addLocalConfig = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    this.setState(st => {
     const used = st.localConfigs.map(c => c.port);
     let port = 18100; while (used.includes(port)) port += 100;
     const id = 'local-' + Date.now();
     this.pushTerm([{ text: '$ agent-store local add --port ' + port, color: '#c7c7d0' }, { text: '✓ 新建 local 配置 · 监听 127.0.0.1:' + port, color: '#3ad29f' }]);
     return { localConfigs: [...st.localConfigs, { id, name: '新配置', port, running: false, reqs: '0', success: '—', targets: ['claude', 'codex'] }], localSel: id, proxySelected: true, web: { ...st.web, sel: '__proxy__' } };
-  });
+    });
+  };
   removeLocalConfig = (id) => this.setState(st => {
-    if (st.localConfigs.length <= 1) return {};
+    const target = st.localConfigs.find(c => c.id === id);
     const rest = st.localConfigs.filter(c => c.id !== id);
+    this.pushTerm([
+      { text: '$ agent-store local remove ' + (target ? target.name : id), color: '#c7c7d0' },
+      { text: '✓ 已删除 local 配置' + (target ? ' · ' + target.name + '（:' + target.port + '）' : ''), color: '#3ad29f' },
+    ]);
     return { localConfigs: rest, localSel: st.localSel === id ? null : st.localSel };
   });
   setLocalField = (id, key, val) => this.setState(st => ({ localConfigs: st.localConfigs.map(c => c.id === id ? { ...c, [key]: val } : c) }));
@@ -1647,7 +1579,7 @@ class Component extends DCLogic {
     if (f.type === 'provider' && v.supportedModels) p.supportedModels = v.supportedModels.split(',').map(s => s.trim()).filter(Boolean);
     if (f.type === 'skill' && v.contentUrl) p.contentUrl = v.contentUrl;
     if (f.type === 'mcp') { p.transport = v.transport || 'stdio'; if (v.command) p.serverCommand = v.command; if (v.url) p.url = v.url; }
-    this.setState(st => ({ userPkgs: [p, ...st.userPkgs.filter(x => x.id !== id)], publishOpen: false, web: { ...st.web, cat: 'all', sort: 'recent', sel: id, detailTab: 'readme' } }));
+    this.setState(st => ({ userPkgs: [p, ...st.userPkgs.filter(x => x.id !== id)], publishOpen: false, web: { ...st.web, cat: p.type, sort: 'recent', sel: id, detailTab: 'readme' } }));
   };
 
   setCliApp = (k) => this.setState(st => ({ cli: { ...st.cli, app: k, appMenuOpen: false } }));
@@ -1680,7 +1612,11 @@ class Component extends DCLogic {
     { key: 'icon', label: '图标', kind: 'select', tier: 'optional', options: ['默认', 'anthropic', 'openai', 'google', 'adobe'] },
     { key: 'level', label: '优先级分组', kind: 'select', tier: 'optional', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], help: '数字越小优先级越高，Level 1 会被优先尝试，失败后依次尝试 Level 2、Level 3 等' },
   ];
-  defaultProviderConfig = (id) => ({ provider: id, name: id, targets: ['claude', 'codex'], baseUrl: 'https://api.example.com', homepage: '', apiKey: '', endpoint: '', upstreamProtocol: '自动检测', authType: 'Bearer', customHeader: '', icon: '默认', level: '1', whitelist: [], mapping: [], enabled: true, healthCheck: false });
+  defaultProviderConfig = (id) => {
+    const base = { provider: id, name: id, targets: ['claude', 'codex'], baseUrl: 'https://api.example.com', homepage: '', apiKey: '', endpoint: '', upstreamProtocol: '自动检测', authType: 'Bearer', customHeader: '', icon: '默认', level: '1', whitelist: [], mapping: [], enabled: true, healthCheck: false };
+    if (id === 'local') return { ...base, name: '默认', baseUrl: 'http://127.0.0.1:18100', apiKey: 'built-in' };
+    return base;
+  };
   appIcon = (id, on) => {
     const h = React.createElement;
     const dim = { filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.4, transition: 'all .15s' };
@@ -1729,11 +1665,12 @@ class Component extends DCLogic {
       onNewConfig: () => this.duplicateProvider(id),
     };
   };
+  rootProvider = (id) => (id ? (this.state.providerParents[id] || id) : null);
   closeCliEdit = () => this.setState({ cliEditId: null });
   setCliEditVal = (key, value) => this.setState(st => ({ cliEditVals: { ...st.cliEditVals, [key]: value }, errorField: st.errorField === key ? null : st.errorField, configError: st.errorField === key ? '' : st.configError }), this._autosave);
   _autosave = () => {
     if (this._saveTimer) clearTimeout(this._saveTimer);
-    this.setState({ cliSaving: true, cliSaved: false });
+    if (!this.state.cliSaving) this.setState({ cliSaving: true, cliSaved: false });
     this._saveTimer = setTimeout(() => {
       const id = this.state.cliEditId; if (!id) return;
       const v = this.state.cliEditVals;
@@ -1749,7 +1686,7 @@ class Component extends DCLogic {
   saveCliEdit = () => {
     const id = this.state.cliEditId; const v = this.state.cliEditVals;
     if (!(v.name || '').trim()) { this._flashError('请先填写配置名称', 'name'); const el = document.getElementById('cli-config-name'); if (el) el.focus(); return; }
-    const missing = this.PROVIDER_FORM.find(fd => fd.required && (fd.kind === 'apps' ? !((v[fd.key] || []).length) : !(v[fd.key] || '').trim()));
+    const missing = this.PROVIDER_FORM.find(fd => fd.required && !(fd.key === 'apiKey' && this.rootProvider(id) === 'local') && (fd.kind === 'apps' ? !((v[fd.key] || []).length) : !(v[fd.key] || '').trim()));
     if (missing) { this._flashError(missing.kind === 'apps' ? '请至少选择一个适用客户端' : missing.label + ' 为必填项，填写后才能生效', missing.key); return; }
     const { wlDraft, mapFromDraft, mapToDraft, cliConfigOpen, ...clean } = v;
     this.setState(st => ({ installed: { ...st.installed, [id]: { ...st.installed[id], config: { ...clean } } }, configSaved: true, configError: '', errorField: null }));
@@ -1848,7 +1785,7 @@ class Component extends DCLogic {
   }
 
   I18N = {
-    '本地代理':'Local Proxy','运行中':'Running','已停止':'Stopped','请求日志':'Request Log','已添加':'Added','配置':'Configure',
+    '本地代理':'Local Proxy','运行中':'Running','已停止':'Stopped','请求日志':'Request Log','已添加':'Added','已配置':'Configured','配置':'Configure',
     '本地代理 · 请求日志':'Local Proxy · Request Log',
     '按 Level 顺序转发，失败自动降级':'Forwards by Level order, auto-fallback on failure',
     '降级':'fallback',
@@ -1948,16 +1885,38 @@ class Component extends DCLogic {
         const f = e.target && e.target.closest && e.target.closest('[data-cfield]');
         if (f) { this._activeField = f.getAttribute('data-cfield'); this._caret = e.target.selectionStart; this._lastType = Date.now(); }
       }, true);
+      // IME guard: never re-focus / disturb an input mid-composition (breaks Pinyin & other IMEs)
+      root.addEventListener('compositionstart', () => { this._composing = true; }, true);
+      root.addEventListener('compositionend', (e) => {
+        this._composing = false;
+        const f = e.target && e.target.closest && e.target.closest('[data-cfield]');
+        if (f) { this._activeField = f.getAttribute('data-cfield'); this._caret = e.target.selectionStart; this._lastType = Date.now(); }
+      }, true);
     }
   }
   componentWillUnmount() { if (this._featTimer) clearInterval(this._featTimer); }
   componentDidUpdate() {
     this._i18nWalk();
-    if (this.state.cliEditId && this._lastEditId !== this.state.cliEditId) { this._lastEditId = this.state.cliEditId; const el = document.getElementById('cli-config-name'); if (el) { el.focus(); } }
-    else if (this.state.cliEditId && this._activeField && (Date.now() - (this._lastType || 0) < 1500) && (!document.activeElement || document.activeElement === document.body)) {
+    // Never fight a live composition (IME) or a field the user is actively typing in.
+    if (this._composing) { if (!this.state.cliEditId) this._lastEditId = null; return; }
+    if (this.state.cliEditId && this._lastEditId !== this.state.cliEditId) {
+      // Panel just opened: focus the name field once, only if focus isn't already inside the panel.
+      this._lastEditId = this.state.cliEditId;
+      const ae = document.activeElement;
+      const alreadyInPanel = ae && ae.closest && ae.closest('[data-cfield]');
+      if (!alreadyInPanel) { const el = document.getElementById('cli-config-name'); if (el) el.focus(); }
+    } else if (this.state.cliEditId && this._activeField && (Date.now() - (this._lastType || 0) < 3000)) {
+      // Autosave / re-render can drop focus (to <body>) or bounce it to the name field.
+      // Restore it to the field the user is actually typing in, keeping the caret.
       const root = document.getElementById('dc-root') || document.body;
       const el = root && root.querySelector('[data-cfield="' + this._activeField + '"]');
-      if (el) { el.focus(); if (this._caret != null && el.setSelectionRange) { try { el.setSelectionRange(this._caret, this._caret); } catch (_) {} } }
+      const ae = document.activeElement;
+      const focusLost = !ae || ae === document.body;
+      const focusBounced = ae && ae !== el && ae.getAttribute && ae.getAttribute('data-cfield') !== this._activeField;
+      if (el && ae !== el && (focusLost || focusBounced)) {
+        el.focus();
+        if (this._caret != null && el.setSelectionRange) { try { el.setSelectionRange(this._caret, this._caret); } catch (_) {} }
+      }
     }
     if (!this.state.cliEditId) this._lastEditId = null;
   }
@@ -2147,7 +2106,7 @@ class Component extends DCLogic {
       trend,
     };
 
-    const catName = w.cat === 'fav' ? '我的收藏' : this.CATS.find(c => c.key === w.cat).label;
+    const catName = w.cat === 'fav' ? '我的收藏' : (this.CATS.find(c => c.key === w.cat) || { label: '全部' }).label;
 
     return {
       theme: st.theme, themeIcon: st.theme === 'dark' ? '🌙' : '☀️', themeLabel: st.theme === 'dark' ? '暗色' : '亮色', onToggleTheme: this.toggleTheme,
@@ -2162,7 +2121,7 @@ class Component extends DCLogic {
         statusFg: st.proxyRunning ? 'var(--green)' : 'var(--text-3)',
         addr: 'http://127.0.0.1:18100', addrShort: '127.0.0.1:18100',
         reqCount: '1,284', successRate: '99.2%',
-        onSelect: this.openLocal, onAddConfig: this.addLocalConfig,
+        onSelect: this.openLocal, onAddConfig: this.addLocalConfig, onConfigure: this.configureLocal,
         summary: st.localConfigs.length + ' 个配置 · ' + st.localConfigs.filter(c => c.running).length + ' 个运行中',
         isParent: st.proxySelected && !st.localSel,
         configCountLabel: st.localConfigs.length + ' 个配置',
@@ -2252,12 +2211,15 @@ class Component extends DCLogic {
           nameValue: st.cliEditVals.name || '', onNameInput: (e) => this.setCliEditVal('name', e.target.value),
           nameHasError: st.errorField === 'name', nameBorder: st.errorField === 'name' ? 'var(--red)' : 'transparent',
           saving: !!st.cliSaving, saved: !st.cliSaving && !!st.cliSaved,
-          showWarn: !((st.cliEditVals.apiKey || '').trim()) || !((st.cliEditVals.targets || []).length),
+          showWarn: (this.rootProvider(st.cliEditId) !== 'local' && !((st.cliEditVals.apiKey || '').trim())) || !((st.cliEditVals.targets || []).length),
           warnText: !((st.cliEditVals.targets || []).length) ? '尚未选择适用客户端，此配置已保存但不会对任何 CLI 生效' : '尚未填写 API 密钥，此配置已保存但暂时无法使用',
           advancedOpen: !!st.cliAdvancedOpen, onToggleAdvanced: () => this.setState(s => ({ cliAdvancedOpen: !s.cliAdvancedOpen })), advChevron: st.cliAdvancedOpen ? '▾' : '▸',
           onClose: this.closeCliEdit, onSave: this.saveCliEdit, onDuplicateFromPanel: () => this.duplicateProvider(st.cliEditId),
-          fields: this.PROVIDER_FORM.filter(fd => fd.tier === 'essential').map(fd => this._mapEditField(fd, st)),
-          optionalFields: this.PROVIDER_FORM.filter(fd => fd.tier === 'optional').map(fd => this._mapEditField(fd, st)),
+          fields: (this.rootProvider(st.cliEditId) === 'local'
+            ? this.PROVIDER_FORM.filter(fd => fd.tier === 'essential' && fd.key !== 'apiKey').concat([{ key: 'baseUrl', label: 'API 地址', ph: 'http://127.0.0.1:18100', mono: true, wide: true, tier: 'essential', help: '本地代理的监听地址。把 Claude Code / Codex 的 API 地址指向这里即可。' }])
+            : this.PROVIDER_FORM.filter(fd => fd.tier === 'essential')
+          ).map(fd => this._mapEditField(fd, st)),
+          optionalFields: this.PROVIDER_FORM.filter(fd => fd.tier === 'optional' && !(this.rootProvider(st.cliEditId) === 'local' && fd.key === 'baseUrl')).map(fd => this._mapEditField(fd, st)),
           moreOpen: !!st.cliMoreOpen, onToggleMore: () => this.setState(s => ({ cliMoreOpen: !s.cliMoreOpen })), moreChevron: st.cliMoreOpen ? '▾' : '▸',
           whitelist: (st.cliEditVals.whitelist || []).map((w, i) => ({ label: w, onRemove: () => this.removeWhitelist(i) })),
           wlDraft: st.cliEditVals.wlDraft || '', onWlDraft: (e) => this.setCliEditVal('wlDraft', e.target.value), onWlAdd: this.addWhitelist,
