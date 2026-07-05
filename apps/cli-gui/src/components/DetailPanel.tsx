@@ -6,6 +6,7 @@ import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useSelectedDetail } from '../lib/useSelectedDetail'
 import { LocalProviderDetail, isLocalProviderSlug } from './LocalProviderDetail'
+import { ProviderConfigPanel } from './ProviderConfigPanel'
 import { InfoSidebar } from './InfoSidebar'
 import { CategoryIcon } from './CategoryIcon'
 import {
@@ -25,7 +26,8 @@ import {
 type Tab = 'overview' | 'reviews' | 'versions'
 
 export function DetailPanel() {
-  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, selectedSlug } = useAppState()
+  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, selectedSlug, editingConfigSlug, setEditingConfigSlug } =
+    useAppState()
   const { appendLine } = useTerminalLog()
   const detail = useSelectedDetail()
   const [tab, setTab] = useState<Tab>('overview')
@@ -40,6 +42,10 @@ export function DetailPanel() {
       setChildCount(items.filter((i) => i.parentSlug === detail.slug).length)
     })
   }, [detail])
+
+  if (editingConfigSlug) {
+    return <ProviderConfigPanel slug={editingConfigSlug} onClose={() => setEditingConfigSlug(null)} />
+  }
 
   if (selectedSlug && isLocalProviderSlug(selectedSlug)) {
     return <LocalProviderDetail selectedSlug={selectedSlug} />

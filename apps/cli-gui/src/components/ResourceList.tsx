@@ -4,7 +4,6 @@ import { Search, Filter, Check, RadioTower } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
-import { ProviderEditModal } from './ProviderEditModal'
 import { LOCAL_PROVIDER_SENTINEL } from './LocalProviderDetail'
 import { CategoryIcon } from './CategoryIcon'
 import {
@@ -31,6 +30,7 @@ export function ResourceList() {
     agentApp, setAgentApp, categoryFilter, listFilter, setListFilter,
     selectedSlug, setSelectedSlug, navView,
     installedVersion, bumpInstalledVersion,
+    editingConfigSlug, setEditingConfigSlug,
   } = useAppState()
   const { appendLine } = useTerminalLog()
   const [installed, setInstalled] = useState<EnrichedInstalledItem[]>([])
@@ -38,8 +38,17 @@ export function ResourceList() {
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
   const [textQuery, setTextQuery] = useState('')
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false)
-  const [editingSlug, setEditingSlug] = useState<string | null>(null)
   const [localConfigs, setLocalConfigs] = useState<LocalRelayConfig[]>([])
+
+  function openConfigEditor(slug: string) {
+    setEditingConfigSlug(slug)
+    setSelectedSlug(slug)
+  }
+
+  function selectResource(slug: string) {
+    setEditingConfigSlug(null)
+    setSelectedSlug(slug)
+  }
 
   async function refreshLocal() {
     setLocalConfigs(await callRpc<LocalRelayConfig[]>('listLocalConfigs'))
@@ -157,6 +166,7 @@ export function ResourceList() {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
     if (selectedSlug === item.slug) setSelectedSlug(null)
+    if (editingConfigSlug === item.slug) setEditingConfigSlug(null)
     bumpInstalledVersion()
   }
 
@@ -176,7 +186,7 @@ export function ResourceList() {
     try {
       const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
       appendLine(`✓ 已新增子配置 ${result.newSlug}`, 'green')
-      setEditingSlug(result.newSlug)
+      openConfigEditor(result.newSlug)
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
@@ -189,11 +199,11 @@ export function ResourceList() {
       if (installedSlugs.has(item.slug)) {
         const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
         appendLine(`✓ 已新增子配置 ${result.newSlug}`, 'green')
-        setEditingSlug(result.newSlug)
+        openConfigEditor(result.newSlug)
       } else {
         await callRpc('install', [item.slug])
         appendLine(`✓ 已安装 ${item.slug}`, 'green')
-        setEditingSlug(item.slug)
+        openConfigEditor(item.slug)
       }
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
@@ -300,7 +310,7 @@ export function ResourceList() {
       {navView === 'browse' && categoryFilter === 'provider' && showInstalledSection(listFilter) && (
         <div>
           <div
-            onClick={() => setSelectedSlug(LOCAL_PROVIDER_SENTINEL)}
+            onClick={() => selectResource(LOCAL_PROVIDER_SENTINEL)}
             className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
               selectedSlug === LOCAL_PROVIDER_SENTINEL ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
             }`}
@@ -327,7 +337,7 @@ export function ResourceList() {
             {localConfigs.map((config) => (
               <div
                 key={config.id}
-                onClick={() => setSelectedSlug(`${LOCAL_PROVIDER_SENTINEL}:${config.id}`)}
+                onClick={() => selectResource(`${LOCAL_PROVIDER_SENTINEL}:${config.id}`)}
                 className={`relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pl-[30px] pr-2 text-xs ${
                   selectedSlug === `${LOCAL_PROVIDER_SENTINEL}:${config.id}` ? 'bg-store-accent-soft text-store-accent' : 'text-store-text-2 hover:bg-store-panel'
                 }`}
@@ -361,7 +371,7 @@ export function ResourceList() {
               return (
                 <div key={item.slug}>
                   <div
-                    onClick={() => setSelectedSlug(item.slug)}
+                    onClick={() => selectResource(item.slug)}
                     className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 ${
                       selectedSlug === item.slug ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
                     }`}
@@ -402,7 +412,7 @@ export function ResourceList() {
                       {childrenByParent.get(item.slug)!.map((child) => (
                         <div
                           key={child.slug}
-                          onClick={() => setSelectedSlug(child.slug)}
+                          onClick={() => openConfigEditor(child.slug)}
                           className={`relative flex cursor-pointer items-center gap-2 rounded-md py-1.5 pl-[30px] pr-2 text-xs ${
                             selectedSlug === child.slug ? 'bg-store-accent-soft text-store-accent' : 'text-store-text-2 hover:bg-store-panel'
                           }`}
@@ -437,7 +447,7 @@ export function ResourceList() {
             {visibleRecommended.map((item) => (
               <div
                 key={item.slug}
-                onClick={() => setSelectedSlug(item.slug)}
+                onClick={() => selectResource(item.slug)}
                 className={`cursor-pointer rounded-lg border px-3 py-2 ${
                   selectedSlug === item.slug ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
                 }`}
@@ -465,10 +475,6 @@ export function ResourceList() {
             ))}
           </div>
         </div>
-      )}
-
-      {editingSlug && (
-        <ProviderEditModal slug={editingSlug} open onOpenChange={(open) => { if (!open) setEditingSlug(null) }} />
       )}
     </div>
   )

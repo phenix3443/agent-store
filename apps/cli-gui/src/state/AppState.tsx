@@ -17,6 +17,8 @@ interface AppStateValue {
   setListFilter: (f: ListFilter) => void
   selectedSlug: string | null
   setSelectedSlug: (slug: string | null) => void
+  editingConfigSlug: string | null
+  setEditingConfigSlug: (slug: string | null) => void
   favoriteSlugs: Set<string>
   toggleFavorite: (slug: string) => void
   terminalExpanded: boolean
@@ -33,6 +35,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [listFilter, setListFilter] = useState<ListFilter>('all')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
+  const [editingConfigSlug, setEditingConfigSlug] = useState<string | null>(null)
   const [favoriteSlugs, setFavoriteSlugs] = useState<Set<string>>(new Set())
   const [terminalExpanded, setTerminalExpanded] = useState(false)
   const [installedVersion, setInstalledVersion] = useState(0)
@@ -56,6 +59,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         agentApp, setAgentApp,
         navView, setNavView, categoryFilter, setCategoryFilter,
         listFilter, setListFilter, selectedSlug, setSelectedSlug,
+        editingConfigSlug, setEditingConfigSlug,
         favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
         installedVersion, bumpInstalledVersion,
       }}

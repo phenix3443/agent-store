@@ -98,6 +98,11 @@ function TerminalProbe() {
   return <div data-testid="log-count">{lines.length}</div>
 }
 
+function EditingProbe() {
+  const { editingConfigSlug } = useAppState()
+  return <div data-testid="editing-config-slug">{editingConfigSlug ?? ''}</div>
+}
+
 // ResourceList only renders its sections when navView is 'browse'; force it
 // since these tests exercise ResourceList in isolation, outside of App/MainArea.
 function ForceBrowseNav({ children }: { children: React.ReactNode }) {
@@ -254,6 +259,7 @@ async function renderListWithCategory(category: 'provider' | 'skill', handlers?:
           <SetCategoryFilter category={category} />
           <ResourceList />
           <TerminalProbe />
+          <EditingProbe />
         </ForceBrowseNav>
       </TerminalLogProvider>
     </AppStateProvider>
@@ -321,7 +327,7 @@ test('clicking + on a provider row calls duplicateProvider and opens the new chi
   })
   fireEvent.click(await screen.findByLabelText('新增子配置 test-provider'))
   await waitFor(() => expect(duplicatedSlug).toBe('test-provider'))
-  expect(await screen.findByText('编辑 test-provider-copy')).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByTestId('editing-config-slug').textContent).toBe('test-provider-copy'))
 })
 
 test('removing a child row calls uninstall with the child slug, not the parent', async () => {
