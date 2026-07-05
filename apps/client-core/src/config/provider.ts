@@ -125,11 +125,12 @@ export async function duplicateProviderConnection(
   }
   await writeFile(join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
-  let config = '{}'
+  let config: Record<string, unknown> = {}
   try {
-    config = await readFile(join(sourceDir, 'config.json'), 'utf-8')
+    config = JSON.parse(await readFile(join(sourceDir, 'config.json'), 'utf-8')) as Record<string, unknown>
   } catch {
     // source has no config.json — fall back to an empty object
   }
-  await writeFile(join(targetDir, 'config.json'), config)
+  if ('apiKey' in config) config['apiKey'] = ''
+  await writeFile(join(targetDir, 'config.json'), JSON.stringify(config, null, 2))
 }

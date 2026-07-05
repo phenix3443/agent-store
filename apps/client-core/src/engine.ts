@@ -255,6 +255,8 @@ export class AASEngineImpl implements AASEngine {
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     if (entry.category !== 'provider') throw new Error(`Only providers can be duplicated: ${slug}`)
 
+    const rootSlug = entry.parentSlug ?? slug
+
     let newSlug = `${slug}-copy`
     let suffix = 2
     while (findEntry(registry, newSlug)) {
@@ -275,6 +277,7 @@ export class AASEngineImpl implements AASEngine {
       updatedAt: now,
       compatibleWith: entry.compatibleWith,
       enabledFor: {},
+      parentSlug: rootSlug,
     }
     await writeRegistry(this.paths.aasHome, upsertEntry(registry, newEntry))
     return { newSlug }

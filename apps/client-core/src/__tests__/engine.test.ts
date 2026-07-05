@@ -459,7 +459,7 @@ test('duplicateProvider: copies config into a new slug and registers it disabled
   const config = JSON.parse(
     await readFile(join(aasHome, 'providers', 'test-provider-copy', 'config.json'), 'utf-8')
   )
-  expect(config).toEqual({ apiKey: 'k', baseUrl: 'https://x.com' })
+  expect(config).toEqual({ apiKey: '', baseUrl: 'https://x.com' })
 
   const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
   const newEntry = reg.installed.find((e: { slug: string }) => e.slug === 'test-provider-copy')
@@ -483,6 +483,31 @@ test('duplicateProvider: throws for a non-provider item', async () => {
 
 test('duplicateProvider: throws when the slug is not installed', async () => {
   await expect(engine.duplicateProvider('missing')).rejects.toThrow('Item not installed')
+})
+
+test('duplicateProvider: the first duplicate is registered with parentSlug set to the root', async () => {
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await engine.install('test-provider')
+
+  const result = await engine.duplicateProvider('test-provider')
+
+  const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
+  const rootEntry = reg.installed.find((e: { slug: string }) => e.slug === 'test-provider')
+  const childEntry = reg.installed.find((e: { slug: string }) => e.slug === result.newSlug)
+  expect(rootEntry.parentSlug).toBeUndefined()
+  expect(childEntry.parentSlug).toBe('test-provider')
+})
+
+test('duplicateProvider: duplicating an existing child attaches the new sibling to the same root, not to the child', async () => {
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await engine.install('test-provider')
+  const first = await engine.duplicateProvider('test-provider')
+
+  const second = await engine.duplicateProvider(first.newSlug)
+
+  const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
+  const secondEntry = reg.installed.find((e: { slug: string }) => e.slug === second.newSlug)
+  expect(secondEntry.parentSlug).toBe('test-provider')
 })
 
 test('getUsageSummary: returns rows recorded via the usage logger for this aasHome', async () => {

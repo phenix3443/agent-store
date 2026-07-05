@@ -63,7 +63,7 @@ test('duplicateProviderConnection copies manifest with new slug/id and appends a
   expect(manifest.name).toBe('yls 副本')
 
   const config = JSON.parse(await readFile(join(targetDir, 'config.json'), 'utf-8'))
-  expect(config).toEqual({ apiKey: 'k', baseUrl: 'https://x.com' })
+  expect(config).toEqual({ apiKey: '', baseUrl: 'https://x.com' })
 })
 
 test('duplicateProviderConnection writes an empty config.json when the source has none', async () => {

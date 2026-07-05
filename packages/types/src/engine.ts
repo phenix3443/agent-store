@@ -119,6 +119,8 @@ export interface InstalledItem {
   compatibleWith: ToolTarget[]
   /** Partial: only contains entries for tools in compatibleWith */
   enabledFor: Partial<Record<ToolTarget, boolean>>
+  /** Root provider slug this entry was duplicated from. Absent means this entry is a root (not a duplicate). */
+  parentSlug?: string
 }
 
 /**
