@@ -1,12 +1,15 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
 export type AgentApp = 'claude' | 'codex'
+export type Theme = 'dark' | 'light'
 export type NavView = 'browse' | 'overview'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
 export type ListFilter =
   | 'all' | 'featured' | 'popular' | 'recent' | 'recommended' | 'installed' | 'enabled' | 'disabled' | 'updates'
 
 interface AppStateValue {
+  theme: Theme
+  toggleTheme: () => void
   agentApp: AgentApp
   setAgentApp: (a: AgentApp) => void
   navView: NavView
@@ -30,6 +33,7 @@ interface AppStateValue {
 const AppStateContext = createContext<AppStateValue | null>(null)
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>('dark')
   const [agentApp, setAgentApp] = useState<AgentApp>('claude')
   const [navView, setNavView] = useState<NavView>('overview')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
@@ -44,6 +48,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setInstalledVersion((prev) => prev + 1)
   }
 
+  function toggleTheme() {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }
+
   function toggleFavorite(slug: string) {
     setFavoriteSlugs((prev) => {
       const next = new Set(prev)
@@ -56,6 +64,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   return (
     <AppStateContext.Provider
       value={{
+        theme, toggleTheme,
         agentApp, setAgentApp,
         navView, setNavView, categoryFilter, setCategoryFilter,
         listFilter, setListFilter, selectedSlug, setSelectedSlug,

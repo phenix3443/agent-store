@@ -1,6 +1,6 @@
 import { ExternalLink } from 'lucide-react'
 import type { SelectedDetail } from '../lib/useSelectedDetail'
-import { TYPE_META } from '../lib/detailContent'
+import { TYPE_META, metaValueOf } from '../lib/detailContent'
 
 function Row({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
@@ -50,7 +50,7 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
           <Row label="标识" value={detail.slug} />
           <Row label="版本" value={`v${detail.version}`} />
           <Row label="更新时间" value={formatDate(detail.updatedAt)} />
-          <Row label={TYPE_META[detail.category].metaLabel} value="—" accent />
+          <Row label={TYPE_META[detail.category].metaLabel} value={metaValueOf(detail)} accent />
         </dl>
       </div>
 

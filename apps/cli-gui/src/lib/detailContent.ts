@@ -45,6 +45,23 @@ export function reviewCountOf(detail: SelectedDetail): number {
   return 80 + (seedOf(detail.slug) % 4000)
 }
 
+/** No backend field for latency/size/tool-count exists yet — derive a stable per-item
+ * placeholder in the same spirit as the mockup's static per-item `meta` value (e.g. "96ms",
+ * "3.2MB", "8"), keyed by category so the shape matches what that metaLabel implies. */
+export function metaValueOf(detail: SelectedDetail): string {
+  const seed = seedOf(detail.slug)
+  switch (detail.category) {
+    case 'provider':
+      return `${40 + (seed % 200)}ms`
+    case 'skill': {
+      const kb = 200 + (seed % 3000)
+      return kb >= 1000 ? `${(kb / 1000).toFixed(1)}MB` : `${kb}KB`
+    }
+    case 'mcp':
+      return `${1 + (seed % 30)}`
+  }
+}
+
 export function starGlyphs(rating: number): string {
   const n = Math.round(rating)
   return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n)

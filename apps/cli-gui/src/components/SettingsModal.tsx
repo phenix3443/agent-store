@@ -30,13 +30,11 @@ const LANGUAGES = [
 ]
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { agentApp } = useAppState()
+  const { agentApp, theme, toggleTheme } = useAppState()
   const [tab, setTab] = useState<Tab>('account')
-  // No auth backend exists yet (checked src/lib/rpc.ts) — login state is local-only UI stub.
+  // No auth backend exists yet (checked src/lib/rpc.ts) — login state is local-only UI stub,
+  // matching the mockup's own toggleLogin (a local state flip with no backend either).
   const [loggedIn, setLoggedIn] = useState(false)
-  // No theme mechanism exists in the codebase (globals.css only defines dark values) — this
-  // toggle is inert UI matching the mockup's visual form; it does not change the app's rendering.
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [langCode, setLangCode] = useState('zh')
   const [langMenuOpen, setLangMenuOpen] = useState(false)
 
@@ -127,7 +125,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 <div className="flex flex-col gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+                    onClick={toggleTheme}
                     className="flex items-center gap-3 rounded-xl border border-store-border bg-store-panel px-[18px] py-3.5 text-left hover:border-store-border-strong"
                   >
                     <span className="text-base">{theme === 'dark' ? '🌙' : '☀️'}</span>
