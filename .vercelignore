@@ -1,0 +1,10 @@
+# Build artifacts and deps — Vercel installs deps and rebuilds via turbo.
+# Notably excludes the multi-GB Tauri Rust target/ so uploads stay small.
+**/node_modules
+**/target
+**/.next
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+.git
+.vercel
