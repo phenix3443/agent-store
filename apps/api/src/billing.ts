@@ -24,6 +24,9 @@ export interface SubscriptionRecord {
  */
 export function statusForEventType(eventType: string): SubscriptionStatus | null {
   switch (eventType) {
+    // order.completed is a one-time purchase (Pro Lifetime) — grant Pro permanently.
+    // (Lifetime is currently the only one-time product; revisit if others are added.)
+    case 'order.completed':
     case 'subscription.activated':
     case 'subscription.payment_succeeded':
     case 'subscription.uncanceled':

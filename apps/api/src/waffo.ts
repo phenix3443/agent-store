@@ -7,8 +7,11 @@ export type WaffoEnv = {
   WAFFO_PRIVATE_KEY_BASE64?: string
   WAFFO_PRODUCT_ID_PRO_MONTHLY?: string
   WAFFO_PRODUCT_ID_PRO_YEARLY?: string
+  WAFFO_PRODUCT_ID_LIFETIME?: string
   WAFFO_CHECKOUT_SUCCESS_URL?: string
 }
+
+export type BillingPlan = 'monthly' | 'yearly' | 'lifetime'
 
 function pickEnv(env: WaffoEnv | undefined, k: keyof WaffoEnv): string | undefined {
   return env?.[k] ?? (typeof process !== 'undefined' ? process.env?.[k] : undefined)
@@ -31,11 +34,11 @@ export function getWaffoClient(env?: WaffoEnv): WaffoPancake {
   return new WaffoPancake({ merchantId, privateKey })
 }
 
-/** The dashboard product id for a Pro billing period, or undefined if unset. */
-export function proProductId(env: WaffoEnv | undefined, period: 'monthly' | 'yearly'): string | undefined {
-  return period === 'yearly'
-    ? pickEnv(env, 'WAFFO_PRODUCT_ID_PRO_YEARLY')
-    : pickEnv(env, 'WAFFO_PRODUCT_ID_PRO_MONTHLY')
+/** The dashboard product id for a Pro plan, or undefined if unset. */
+export function proProductId(env: WaffoEnv | undefined, plan: BillingPlan): string | undefined {
+  if (plan === 'lifetime') return pickEnv(env, 'WAFFO_PRODUCT_ID_LIFETIME')
+  if (plan === 'yearly') return pickEnv(env, 'WAFFO_PRODUCT_ID_PRO_YEARLY')
+  return pickEnv(env, 'WAFFO_PRODUCT_ID_PRO_MONTHLY')
 }
 
 /** Optional post-payment redirect URL (falls back to the store's checkout setting when unset). */

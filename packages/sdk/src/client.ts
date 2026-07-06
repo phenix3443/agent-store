@@ -151,7 +151,7 @@ export class StoreClient {
 
   /** Creates a Pro checkout session; pass the session token to bind the subscription to the user. */
   async createCheckout(
-    body: { period: 'monthly' | 'yearly'; email?: string },
+    body: { period: 'monthly' | 'yearly' | 'lifetime'; email?: string },
     options: { token?: string } = {}
   ): Promise<Result<{ checkoutUrl: string }>> {
     try {

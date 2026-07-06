@@ -3,7 +3,7 @@ import { cors } from 'hono/cors'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
 import type { SupabaseEnv } from './supabase'
-import { getWaffoClient, proProductId, checkoutSuccessUrl, type WaffoEnv } from './waffo'
+import { getWaffoClient, proProductId, checkoutSuccessUrl, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { getMyItems, createItem, validateCreateItem, type CreateItemInput } from './publisher-items'
@@ -99,11 +99,12 @@ app.post('/api/items', async (c) => {
 // Body: { period?: 'monthly' | 'yearly', email?: string, successUrl?: string }
 app.post('/api/billing/checkout', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
-    period?: 'monthly' | 'yearly'
+    period?: BillingPlan
     email?: string
     successUrl?: string
   }
-  const period = body.period === 'yearly' ? 'yearly' : 'monthly'
+  const period: BillingPlan =
+    body.period === 'yearly' ? 'yearly' : body.period === 'lifetime' ? 'lifetime' : 'monthly'
   const productId = proProductId(c.env, period)
   if (!productId) return c.json({ error: 'Billing not configured' }, 501)
 

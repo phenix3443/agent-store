@@ -354,7 +354,7 @@ export class EngineImpl implements Engine {
     return entitlementsForPlan(result.data.plan)
   }
 
-  async createCheckout(period: 'monthly' | 'yearly', token?: string): Promise<{ checkoutUrl: string }> {
+  async createCheckout(period: 'monthly' | 'yearly' | 'lifetime', token?: string): Promise<{ checkoutUrl: string }> {
     const result = await this.client.createCheckout({ period }, { token })
     if (result.error || !result.data) throw new Error(result.error ?? 'Failed to create checkout session')
     return result.data

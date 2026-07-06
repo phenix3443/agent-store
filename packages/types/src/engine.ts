@@ -240,7 +240,7 @@ export interface Engine {
   /** Fetches the authenticated user's plan from the store, caches it locally, and returns the resolved entitlements. */
   syncEntitlement(token: string): Promise<Entitlements>
   /** Creates a Pro checkout session and returns its URL. Pass the session token to bind the subscription to the user. */
-  createCheckout(period: 'monthly' | 'yearly', token?: string): Promise<{ checkoutUrl: string }>
+  createCheckout(period: 'monthly' | 'yearly' | 'lifetime', token?: string): Promise<{ checkoutUrl: string }>
   /** Clears the locally cached plan back to free (e.g. on sign-out). */
   clearEntitlement(): Promise<Entitlements>
   /** Exports usage rollups to a CSV/JSON file under the AAS home and returns the file path. */

@@ -37,8 +37,11 @@ test('statusForEventType maps subscription events to statuses', () => {
   expect(statusForEventType('subscription.past_due')).toBe('past_due')
 })
 
-test('statusForEventType returns null for non-subscription events', () => {
-  expect(statusForEventType('order.completed')).toBeNull()
+test('order.completed (one-time / lifetime purchase) grants active', () => {
+  expect(statusForEventType('order.completed')).toBe('active')
+})
+
+test('statusForEventType returns null for refunds and unknown events', () => {
   expect(statusForEventType('refund.succeeded')).toBeNull()
   expect(statusForEventType('something.unknown')).toBeNull()
 })
@@ -78,8 +81,13 @@ test('subscriptionRecordFromEvent binds the app userId from orderMetadata over b
   expect(record?.buyerIdentity).toBe('user-99')
 })
 
-test('subscriptionRecordFromEvent returns null for events that do not change subscription state', () => {
-  expect(subscriptionRecordFromEvent(makeEvent('order.completed'))).toBeNull()
+test('subscriptionRecordFromEvent builds an active record for a one-time (lifetime) order', () => {
+  const record = subscriptionRecordFromEvent(makeEvent('order.completed'))
+  expect(record?.status).toBe('active')
+  expect(record?.plan).toBe('pro')
+})
+
+test('subscriptionRecordFromEvent returns null for refunds', () => {
   expect(subscriptionRecordFromEvent(makeEvent('refund.succeeded'))).toBeNull()
 })
 
