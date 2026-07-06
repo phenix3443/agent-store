@@ -3,6 +3,10 @@ import { getFeaturedItems } from '@/lib/catalog'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 const RELEASES_URL = 'https://github.com/phenix3443/agent-store/releases'
+// Desktop installers are served from Cloudflare R2 (a private repo can't serve public
+// GitHub Release downloads). Set these on Vercel once the R2 bucket/domain exists.
+const DOWNLOAD_MAC_URL = process.env.NEXT_PUBLIC_DOWNLOAD_MAC_URL ?? '#'
+const DOWNLOAD_WIN_URL = process.env.NEXT_PUBLIC_DOWNLOAD_WIN_URL ?? '#'
 
 function Feature({
   color,
@@ -62,7 +66,7 @@ export default async function LandingPage() {
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <a
-            href={RELEASES_URL}
+            href={DOWNLOAD_MAC_URL}
             className="flex h-[50px] items-center gap-2.5 rounded-[13px] bg-white px-6 shadow-[0_8px_30px_rgba(255,255,255,0.12)] hover:brightness-95"
           >
             <svg width="18" height="18" viewBox="0 0 16 16" fill="#111" aria-hidden>
@@ -71,7 +75,7 @@ export default async function LandingPage() {
             <span className="text-[15px] font-semibold text-[#111]">下载 for Mac</span>
           </a>
           <a
-            href={RELEASES_URL}
+            href={DOWNLOAD_WIN_URL}
             className="flex h-[50px] items-center gap-2.5 rounded-[13px] border border-white/[0.16] bg-white/[0.05] px-6 hover:border-white/40 hover:bg-white/[0.09]"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="#e7e7ee" aria-hidden>

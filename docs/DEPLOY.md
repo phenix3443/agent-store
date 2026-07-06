@@ -88,5 +88,12 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env test
 
 ---
 
+## 桌面安装包分发（Cloudflare R2）
+
+落地页的「下载 for Mac / Windows」按钮读环境变量，**不走 GitHub Release**（仓库转私有后 Release 无法对公众提供下载）：
+- `NEXT_PUBLIC_DOWNLOAD_MAC_URL` / `NEXT_PUBLIC_DOWNLOAD_WIN_URL`（未设置时按钮指向 `#`）
+
+流程：CI（`tauri-action`）构建安装包 → 上传到 **Cloudflare R2**（公开桶或自定义域，零出口流量）→ 把上面两个 env 设到 Vercel（Production/Preview scope）指向 R2 的安装包 URL。Tauri 自动更新的 manifest + 二进制也放 R2。
+
 ## C. 线上生产环境（后续完善）
 独立 `agent-store-prod` Supabase 项目（无 seed、真实数据、谨慎迁移）；`wrangler deploy --env production`；Vercel Production；自定义域 + Cloudflare 代理；CI/CD（GitHub Actions）；桌面端分发（Releases + R2 镜像 + Tauri updater + 签名）。
