@@ -7,7 +7,8 @@
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "test": "turbo test",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "crawl:catalog": "bun scripts/crawl-catalog.ts"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
