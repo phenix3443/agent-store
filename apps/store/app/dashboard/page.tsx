@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   const githubUsername = user?.user_metadata['user_name'] as string | undefined
   if (!githubUsername) {
     return (
-      <main className="py-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <h1 className="text-2xl font-semibold text-store-text mb-4">Dashboard</h1>
         <div className="flex h-32 items-center justify-center rounded-xl border border-store-border bg-store-panel">
           <p className="text-store-text-3">
@@ -65,7 +65,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="py-8">
+    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-store-text">Dashboard</h1>
         <a

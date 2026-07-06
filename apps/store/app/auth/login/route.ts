@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   const supabase = createClient()
-  const origin = new URL(request.url).origin
+  const url = new URL(request.url)
+  const origin = url.origin
+  const provider = url.searchParams.get('provider') === 'google' ? 'google' : 'github'
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'github',
+    provider,
     options: {
       redirectTo: `${origin}/auth/callback`,
     },

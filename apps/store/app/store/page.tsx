@@ -1,5 +1,4 @@
 import { getItems, getFeaturedItems } from '@/lib/catalog'
-import { Header } from '@/components/Header'
 import { FeaturedCarousel } from '@/components/FeaturedCarousel'
 import { CategoryTabs } from '@/components/CategoryTabs'
 import { SortSelect } from '@/components/SortSelect'
@@ -38,23 +37,20 @@ export default async function StorePage({ searchParams }: StorePageProps) {
   const featured = await getFeaturedItems()
 
   return (
-    <>
-      <Header />
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <PublishModalTrigger />
-      <main className="flex flex-col gap-6 py-8">
-        <FeaturedCarousel items={featured} />
+      <FeaturedCarousel items={featured} />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SortSelect active={sort} />
-          <div className="flex flex-wrap items-center gap-2.5">
-            <CategoryTabs active={category ?? 'all'} />
-            <VerifiedToggle active={verifiedOnly} />
-            <SearchInput defaultValue={searchParams.q} />
-          </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SortSelect active={sort} />
+        <div className="flex flex-wrap items-center gap-2.5">
+          <CategoryTabs active={category ?? 'all'} />
+          <VerifiedToggle active={verifiedOnly} />
+          <SearchInput defaultValue={searchParams.q} />
         </div>
+      </div>
 
-        <ItemGrid items={items} />
-      </main>
-    </>
+      <ItemGrid items={items} />
+    </div>
   )
 }

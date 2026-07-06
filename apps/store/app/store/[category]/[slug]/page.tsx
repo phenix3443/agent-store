@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getItemBySlug } from '@/lib/catalog'
 import { Badge } from '@/components/Badge'
-import { Header } from '@/components/Header'
 
 interface ItemDetailPageProps {
   params: { category: string; slug: string }
@@ -13,8 +12,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
   if (!item || item.category !== params.category) notFound()
 
   return (
-    <>
-      <Header />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <main className="py-8">
         <div className="mb-8 flex items-start gap-4">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-store-border bg-store-panel">
@@ -41,10 +39,10 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
         <div className="rounded-xl border border-store-border bg-store-panel p-4">
           <p className="mb-2 text-sm font-medium text-store-text">Install</p>
           <code className="block rounded-lg border border-store-border bg-store-content px-3 py-2 font-mono text-xs text-store-text">
-            as install {item.slug}
+            agent-store add {item.slug}
           </code>
         </div>
       </main>
-    </>
+    </div>
   )
 }

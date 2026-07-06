@@ -87,28 +87,236 @@
         <div style="width: 44px;"></div>
       </div>
 
-      <!-- app header -->
-      <div style="height: 64px; flex-shrink: 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 20px; padding: 0 22px;">
-        <div style="display: flex; align-items: center; gap: 11px;">
-          <div style="width: 32px; height: 32px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center;">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path><path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path></svg>
+      <!-- persistent top nav (shared across all sub-pages) -->
+      <div style="flex-shrink: 0; height: 60px; display: flex; align-items: center; gap: 18px; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--win);">
+        <div onClick="{{ web.onGoLanding }}" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+          <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center;">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path><path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path></svg>
           </div>
-          <div>
-            <div style="font-size: 15px; font-weight: 750; color: var(--text); letter-spacing: -0.3px;">Agent Store</div>
-            <div style="font-size: 9.5px; color: var(--text-3); font-family: var(--mono); letter-spacing: 0.3px;">registry for AI agents</div>
+          <span style="font-size: 15px; font-weight: 750; color: var(--text); letter-spacing: -0.3px;">Agent Store</span>
+        </div>
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 26px;">
+          <span onClick="{{ web.onGoStore }}" style="font-size: 13.5px; font-weight: {{ web.navStoreWeight }}; color: {{ web.navStoreFg }}; cursor: pointer;" style-hover="color: var(--text)">商店</span>
+          <span onClick="{{ web.onOpenDocs }}" style="font-size: 13.5px; font-weight: {{ web.navDocsWeight }}; color: {{ web.navDocsFg }}; cursor: pointer;" style-hover="color: var(--text)">文档</span>
+          <span style="font-size: 13.5px; font-weight: 500; color: var(--text-2); cursor: pointer;" style-hover="color: var(--text)">定价</span>
+        </div>
+        <sc-if value="{{ web.isStore }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ web.onPublish }}" style="display: flex; align-items: center; height: 36px; padding: 0 15px; border-radius: 10px; background: var(--accent); cursor: pointer; box-shadow: 0 4px 14px var(--accent-soft);" style-hover="filter: brightness(1.08)">
+            <span style="font-size: 12.5px; font-weight: 650; color: #fff;">发布</span>
           </div>
-        </div>
-        <div style="flex: 1;"></div>
-        <div style="display: flex; align-items: center; gap: 20px;">
-          <span style="font-size: 13px; font-weight: 500; color: var(--text-2);">文档</span>
-        </div>
-        <div onClick="{{ web.onPublish }}" style="display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 10px; background: var(--accent); cursor: pointer; box-shadow: 0 4px 14px var(--accent-soft);" style-hover="filter: brightness(1.08)">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 2.5v8M2.5 6.5h8" stroke="#fff" stroke-width="1.7" stroke-linecap="round"></path></svg>
-          <span style="font-size: 12.5px; font-weight: 650; color: #fff;">发布</span>
-        </div>
-        <div onClick="{{ web.onOpenMe }}" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #7c82ff, #b06ad9); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;">Y</div>
+        </sc-if>
+        <sc-if value="{{ web.loggedIn }}" hint-placeholder-val="{{ false }}">
+          <div style="position: relative;">
+            <div onClick="{{ web.onToggleAvatarMenu }}" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #7c82ff, #b06ad9); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;">{{ web.meInitial }}</div>
+            <sc-if value="{{ web.avatarMenuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; top: 42px; right: 0; z-index: 60; width: 190px; background: var(--win); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.45); overflow: hidden; animation: omPop .15s ease both;">
+                <div style="padding: 12px 14px; border-bottom: 1px solid var(--border);">
+                  <div style="font-size: 12.5px; font-weight: 700; color: var(--text); font-family: var(--mono);">you</div>
+                  <div style="font-size: 11px; color: var(--text-3); margin-top: 2px;">you@dev</div>
+                </div>
+                <div onClick="{{ web.onOpenMe }}" style="display: flex; align-items: center; gap: 9px; padding: 10px 14px; cursor: pointer; font-size: 12.5px; color: var(--text-2);" style-hover="background: var(--panel-2); color: var(--text)">我的主页</div>
+                <div onClick="{{ settings.onOpen }}" style="display: flex; align-items: center; gap: 9px; padding: 10px 14px; cursor: pointer; font-size: 12.5px; color: var(--text-2);" style-hover="background: var(--panel-2); color: var(--text)">设置</div>
+                <div onClick="{{ web.onLogout }}" style="display: flex; align-items: center; gap: 9px; padding: 10px 14px; cursor: pointer; font-size: 12.5px; color: var(--red); border-top: 1px solid var(--border);" style-hover="background: var(--panel-2)">退出登录</div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ web.loggedOut }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ web.onLogin }}" style="display: flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--panel); cursor: pointer;" style-hover="border-color: var(--accent)">
+            <span style="font-size: 12.5px; font-weight: 650; color: var(--text);">登录</span>
+          </div>
+        </sc-if>
       </div>
 
+      <!-- ========== LANDING PAGE ========== -->
+      <sc-if value="{{ web.isLanding }}" hint-placeholder-val="{{ true }}">
+        <div style="flex: 1; min-height: 0; overflow-y: auto; position: relative; background: radial-gradient(150% 100% at 50% -12%, #191430 0%, #0c0b13 48%, #08070c 100%);">
+          <!-- ambient light -->
+          <div style="position: absolute; top: -120px; left: 50%; transform: translateX(-50%); width: 1000px; height: 560px; pointer-events: none; background: radial-gradient(closest-side, rgba(124,130,255,0.32), transparent 72%); filter: blur(24px);"></div>
+          <div style="position: absolute; top: 10px; left: 57%; transform: translateX(-50%) rotate(22deg); width: 200px; height: 640px; pointer-events: none; background: linear-gradient(180deg, rgba(176,106,217,0.24), transparent 78%); filter: blur(34px);"></div>
+          <div style="position: absolute; top: -10px; left: 41%; transform: translateX(-50%) rotate(-19deg); width: 150px; height: 600px; pointer-events: none; background: linear-gradient(180deg, rgba(124,130,255,0.20), transparent 76%); filter: blur(30px);"></div>
+
+          <!-- hero -->
+          <div style="position: relative; max-width: 840px; margin: 0 auto; padding: 104px 32px 40px; display: flex; flex-direction: column; align-items: center; text-align: center;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(124,130,255,0.10); border: 1px solid rgba(124,130,255,0.35); margin-bottom: 32px;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent);"></span>
+              <span style="font-size: 12px; font-weight: 600; color: #c9ccff;">面向 Claude Code、Codex 等 AI Agent 的资源中心</span>
+            </div>
+            <div style="font-size: 74px; font-weight: 820; color: #fff; line-height: 1.02; letter-spacing: -2.6px;">一个入口，<br />装齐所有 Agent 能力</div>
+            <div style="font-size: 18px; color: #a9a9bd; line-height: 1.6; margin-top: 24px; max-width: 540px;">发现并一键安装技能、MCP 与模型供应商。本地代理统一转发、自动降级，全部收进一个可扩展的客户端。</div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 40px;">
+              <div onClick="{{ web.onDownloadMac }}" style="display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 24px; border-radius: 13px; background: #fff; cursor: pointer; box-shadow: 0 8px 30px rgba(255,255,255,0.12);" style-hover="filter: brightness(0.94)">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="#111"><path d="M11 1.5c.1.9-.25 1.75-.8 2.35-.55.6-1.4 1.05-2.2.99-.11-.86.3-1.75.82-2.3.57-.63 1.5-1.06 2.18-1.04zM13.4 11.6c-.35.82-.52 1.18-.97 1.9-.63 1-1.52 2.25-2.62 2.26-.98 0-1.23-.64-2.56-.63-1.33 0-1.6.64-2.58.64-1.1 0-1.94-1.12-2.57-2.13C.34 11.2.16 8 1.24 6.36c.76-1.17 1.96-1.85 3.09-1.85 1.15 0 1.87.63 2.82.63.92 0 1.48-.63 2.81-.63 1 0 2.07.55 2.83 1.5-2.49 1.36-2.08 4.92.61 5.19z"></path></svg>
+                <span style="font-size: 15px; font-weight: 650; color: #111;">下载 for Mac</span>
+              </div>
+              <div onClick="{{ web.onDownloadWin }}" style="display: flex; align-items: center; gap: 9px; height: 50px; padding: 0 24px; border-radius: 13px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.16); cursor: pointer;" style-hover="border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.09)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="#e7e7ee"><path d="M1 3.2l6-.85V7.5H1V3.2zM7 2.25L15 1.1V7.5H7V2.25zM1 8.5h6v4.15l-6-.85V8.5zM7 8.5h8v6.4L7 13.75V8.5z"></path></svg>
+                <span style="font-size: 15px; font-weight: 650; color: #e7e7ee;">下载 for Windows</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- product visual: command palette mock -->
+          <div style="position: relative; max-width: 680px; margin: 0 auto; padding: 8px 32px 96px;">
+            <div style="border-radius: 18px; border: 1px solid rgba(255,255,255,0.12); background: rgba(16,16,21,0.86); box-shadow: 0 50px 130px rgba(96,70,200,0.30), 0 12px 40px rgba(0,0,0,0.55); overflow: hidden; backdrop-filter: blur(12px);">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+                <svg width="18" height="18" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.3" stroke="#6b6b78" stroke-width="1.4"></circle><path d="M9.2 9.2l3 3" stroke="#6b6b78" stroke-width="1.4" stroke-linecap="round"></path></svg>
+                <span style="flex: 1; text-align: left; font-size: 15px; color: #8a8a98;">搜索 技能、MCP、供应商…</span>
+                <span style="font-size: 11px; color: #6b6b78; font-family: var(--mono); padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.06);">⌘K</span>
+              </div>
+              <div style="padding: 8px;">
+                <div style="font-size: 10.5px; font-weight: 700; color: #5f5f6c; text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 12px 6px;">推荐</div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(124,130,255,0.14);">
+                  <div style="width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(88,166,240,0.18); color: #58a6f0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h13l-3.2-3.2"></path><path d="M20 15.5H7l3.2 3.2"></path></svg></div>
+                  <div style="flex: 1; text-align: left;"><div style="font-size: 13.5px; font-weight: 700; color: #f0f0f4; font-family: var(--mono);">local</div><div style="font-size: 11px; color: #8a8a98;">内置本地代理 · 按 Level 转发</div></div>
+                  <span style="font-size: 9.5px; font-weight: 700; color: #58a6f0; padding: 3px 8px; border-radius: 6px; background: rgba(88,166,240,0.16);">供应商</span>
+                  <span style="font-size: 11px; color: #6b6b78; font-family: var(--mono);">↵ 安装</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;">
+                  <div style="width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(58,210,159,0.16); color: #3ad29f;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6c.55 4.9 2.9 7.25 7.8 7.8-4.9.55-7.25 2.9-7.8 7.8-.55-4.9-2.9-7.25-7.8-7.8 4.9-.55 7.25-2.9 7.8-7.8Z"></path></svg></div>
+                  <div style="flex: 1; text-align: left;"><div style="font-size: 13.5px; font-weight: 700; color: #f0f0f4; font-family: var(--mono);">superpowers</div><div style="font-size: 11px; color: #8a8a98;">一组高频编码技能合集</div></div>
+                  <span style="font-size: 9.5px; font-weight: 700; color: #3ad29f; padding: 3px 8px; border-radius: 6px; background: rgba(58,210,159,0.16);">技能</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;">
+                  <div style="width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(240,179,74,0.16); color: #f0b34a;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="6.4" rx="2"></rect><rect x="3" y="13.1" width="18" height="6.4" rx="2"></rect></svg></div>
+                  <div style="flex: 1; text-align: left;"><div style="font-size: 13.5px; font-weight: 700; color: #f0f0f4; font-family: var(--mono);">filesystem</div><div style="font-size: 11px; color: #8a8a98;">读写本地文件系统的 MCP 服务器</div></div>
+                  <span style="font-size: 9.5px; font-weight: 700; color: #f0b34a; padding: 3px 8px; border-radius: 6px; background: rgba(240,179,74,0.16);">MCP</span>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-top: 1px solid rgba(255,255,255,0.07); font-family: var(--mono); font-size: 11px; color: #6b6b78;">
+                <span>↑↓ 选择</span><span>↵ 安装</span><span style="margin-left: auto;">agent-store</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- FEATURES -->
+          <div style="position: relative; max-width: 1000px; margin: 0 auto; padding: 40px 32px 20px;">
+            <div style="text-align: center; margin-bottom: 40px;">
+              <div style="font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px;">为什么选择 Agent Store</div>
+              <div style="font-size: 34px; font-weight: 780; color: #fff; letter-spacing: -1px; margin-top: 12px;">把碎片化的配置，收进一个客户端</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+              <div style="padding: 24px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+                <div style="width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: rgba(88,166,240,0.16); color: #58a6f0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h13l-3.2-3.2"></path><path d="M20 15.5H7l3.2 3.2"></path></svg></div>
+                <div style="font-size: 17px; font-weight: 720; color: #fff; margin-top: 16px;">统一转发，自动降级</div>
+                <div style="font-size: 13.5px; color: #a9a9bd; line-height: 1.6; margin-top: 8px;">内置本地代理把 Claude Code / Codex 的请求按 Level 顺序转发到上游供应商，遇错自动切换下一家，无需手动改配置。</div>
+              </div>
+              <div style="padding: 24px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+                <div style="width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: rgba(58,210,159,0.16); color: #3ad29f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6c.55 4.9 2.9 7.25 7.8 7.8-4.9.55-7.25 2.9-7.8 7.8-.55-4.9-2.9-7.25-7.8-7.8 4.9-.55 7.25-2.9 7.8-7.8Z"></path></svg></div>
+                <div style="font-size: 17px; font-weight: 720; color: #fff; margin-top: 16px;">一键安装，跨端同步</div>
+                <div style="font-size: 13.5px; color: #a9a9bd; line-height: 1.6; margin-top: 8px;">技能、MCP、供应商在商店里点一下即装，登录后跨设备同步已安装的资源，随时可更新。</div>
+              </div>
+              <div style="padding: 24px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+                <div style="width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: rgba(240,179,74,0.16); color: #f0b34a;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"></path></svg></div>
+                <div style="font-size: 17px; font-weight: 720; color: #fff; margin-top: 16px;">用量与成本尽在掌握</div>
+                <div style="font-size: 13.5px; color: #a9a9bd; line-height: 1.6; margin-top: 8px;">每次请求记录 token、费用、状态码与是否降级，汇总成消耗趋势与统计，成本一目了然。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STORE TEASER -->
+          <div style="position: relative; max-width: 1000px; margin: 0 auto; padding: 60px 32px 20px;">
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px;">
+              <div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1px;">商店</div>
+                <div style="font-size: 30px; font-weight: 780; color: #fff; letter-spacing: -0.8px; margin-top: 10px;">热门资源，即刻上手</div>
+              </div>
+              <div onClick="{{ web.onGoStore }}" style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--accent); flex-shrink: 0; padding-bottom: 6px;" style-hover="gap: 10px">
+                <span style="font-size: 14px; font-weight: 650;">浏览全部</span>
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+              <sc-for list="{{ web.homeCards }}" as="p" hint-placeholder-count="3">
+                <div onClick="{{ p.onOpen }}" style="padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); cursor: pointer; transition: border-color .16s ease, transform .16s ease;" style-hover="border-color: rgba(255,255,255,0.22); transform: translateY(-3px)">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 19px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-size: 14px; font-weight: 750; color: #fff; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ p.name }}</div>
+                      <div style="font-size: 11px; color: #8a8a98;">{{ p.author }}</div>
+                    </div>
+                    <span style="font-size: 9.5px; font-weight: 700; color: {{ p.color }}; padding: 3px 8px; border-radius: 6px; background: {{ p.softBg }};">{{ p.typeLabel }}</span>
+                  </div>
+                  <div style="font-size: 12.5px; color: #a9a9bd; line-height: 1.55; margin-top: 12px; height: 39px; overflow: hidden;">{{ p.desc }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- FOOTER -->
+          <div style="position: relative; border-top: 1px solid rgba(255,255,255,0.07);">
+            <div style="max-width: 1000px; margin: 0 auto; padding: 44px 32px; display: flex; gap: 40px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="width: 26px; height: 26px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center;"><svg width="15" height="15" viewBox="0 0 18 18" fill="none"><path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path><path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"></path></svg></div>
+                  <span style="font-size: 14px; font-weight: 750; color: #fff;">Agent Store</span>
+                </div>
+                <div style="font-size: 12px; color: #6b6b78; margin-top: 12px; line-height: 1.6;">AI Agent 的资源中心。<br />© 2026 Agent Store</div>
+              </div>
+              <div style="display: flex; gap: 56px; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <div style="font-size: 12px; font-weight: 700; color: #8a8a98;">产品</div>
+                  <span onClick="{{ web.onGoStore }}" style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">商店</span>
+                  <span onClick="{{ web.onOpenDocs }}" style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">文档</span>
+                  <span style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">定价</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <div style="font-size: 12px; font-weight: 700; color: #8a8a98;">资源</div>
+                  <span onClick="{{ web.onOpenDocs }}" style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">开始使用</span>
+                  <span style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">GitHub</span>
+                  <span style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">更新日志</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <div style="font-size: 12px; font-weight: 700; color: #8a8a98;">公司</div>
+                  <span style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">关于</span>
+                  <span style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">博客</span>
+                  <span style="font-size: 13px; color: #a9a9bd; cursor: pointer;" style-hover="color: #fff">联系</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== DOCS FULL PAGE ===== -->
+      <sc-if value="{{ web.isDocs }}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; min-height: 0; background: var(--content); display: flex;">
+          <!-- docs left nav -->
+          <div style="width: 236px; flex-shrink: 0; border-right: 1px solid var(--border); overflow-y: auto; padding: 28px 14px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; padding: 0 10px 12px;">指南</div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <sc-for list="{{ docs.sections }}" as="s" hint-placeholder-count="4">
+                <div onClick="{{ s.onNav }}" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer;" style-hover="background: var(--panel-2)">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--accent); font-family: var(--mono); flex-shrink: 0;">{{ s.num }}</span>
+                  <span style="font-size: 13px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.title }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <!-- docs content -->
+          <div id="docs-scroll" style="flex: 1; min-height: 0; overflow-y: auto;">
+            <div style="max-width: 720px; margin: 0 auto; padding: 40px 40px 64px;">
+              <div style="font-size: 30px; font-weight: 800; color: var(--text); letter-spacing: -0.6px;">开始使用 Agent Store</div>
+              <div style="font-size: 14px; color: var(--text-2); line-height: 1.6; margin-top: 10px;">发现、安装并管理面向 Claude Code / Codex 的技能、MCP 与模型供应商。</div>
+              <sc-for list="{{ docs.sections }}" as="s" hint-placeholder-count="4">
+                <div id="docsec-{{ s.num }}" style="margin-top: 34px; padding-top: 28px; border-top: 1px solid var(--border);">
+                  <div style="display: flex; align-items: center; gap: 11px; margin-bottom: 12px;">
+                    <span style="font-size: 12px; font-weight: 800; color: var(--accent); font-family: var(--mono);">{{ s.num }}</span>
+                    <span style="font-size: 19px; font-weight: 750; color: var(--text); letter-spacing: -0.2px;">{{ s.title }}</span>
+                  </div>
+                  <div style="font-size: 14px; color: var(--text-2); line-height: 1.75;">{{ s.body }}</div>
+                  <sc-if value="{{ s.hasCode }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top: 14px; padding: 14px 16px; border-radius: 11px; background: var(--term-bg); border: 1px solid var(--border); font-family: var(--mono); font-size: 12.5px; color: #c7c7d0; white-space: pre-wrap; line-height: 1.8;">{{ s.code }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ========== STORE SUB-PAGE ========== -->
+      <sc-if value="{{ web.isStore }}" hint-placeholder-val="{{ false }}">
       <!-- body -->
       <div style="flex: 1; min-height: 0; display: flex;">
         <!-- main scroll -->
@@ -147,7 +355,6 @@
           </sc-if>
 
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 13px;">
-
             <div style="display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 10px; background: var(--panel); border: 1px solid var(--border);">
               <sc-for list="{{ web.sortTabs }}" as="t" hint-placeholder-count="4">
                 <div onClick="{{ t.onClick }}" style="padding: 5px 13px; border-radius: 7px; cursor: pointer; font-size: 11.5px; font-weight: 600; color: {{ t.fg }}; background: {{ t.bg }};" style-hover="color: var(--text)">{{ t.label }}</div>
@@ -174,28 +381,28 @@
           </div>
 
           <!-- grid -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;">
             <sc-for list="{{ gridPkgs }}" as="p" hint-placeholder-count="9">
-              <div onClick="{{ p.onOpen }}" style="display: flex; flex-direction: column; gap: 11px; padding: 15px 15px 14px; border-radius: 13px; border: 1px solid var(--border); background: var(--panel); cursor: pointer;" style-hover="border-color: var(--border-strong)">
-                <div style="display: flex; align-items: flex-start; gap: 11px;">
-                  <div style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; background: {{ p.softBg }}; color: {{ p.color }};">{{ p.glyph }}</div>
-                  <div style="flex: 1; min-width: 0;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                      <span style="font-size: 13.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono);">{{ p.name }}</span>
+              <div onClick="{{ p.onOpen }}" style="display: flex; flex-direction: column; padding: 18px; border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,0.028), transparent 42%), var(--panel); cursor: pointer; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;" style-hover="border-color: var(--border-strong); transform: translateY(-3px); box-shadow: 0 14px 34px rgba(0,0,0,0.34)">
+                <div style="display: flex; align-items: flex-start; gap: 13px;">
+                  <div style="width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; background: {{ p.softBg }}; color: {{ p.color }}; box-shadow: 0 6px 18px {{ p.softBg }};">{{ p.glyph }}</div>
+                  <div style="flex: 1; min-width: 0; padding-top: 2px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 15px; font-weight: 750; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); letter-spacing: -0.2px;">{{ p.name }}</span>
                       <sc-if value="{{ p.showTierBadge }}" hint-placeholder-val="{{ false }}">
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="flex-shrink: 0;"><circle cx="8" cy="8" r="6.4" stroke="{{ p.tierBadgeColor }}" stroke-width="1.3"></circle><path d="M6 8l1.5 1.5L11 6" stroke="{{ p.tierBadgeColor }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="flex-shrink: 0;"><circle cx="8" cy="8" r="6.4" stroke="{{ p.tierBadgeColor }}" stroke-width="1.3"></circle><path d="M6 8l1.5 1.5L11 6" stroke="{{ p.tierBadgeColor }}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                       </sc-if>
                     </div>
-                    <div onClick="{{ p.onAuthor }}" style="font-size: 11px; color: var(--text-3); margin-top: 2px; width: fit-content;" style-hover="color: var(--accent)">{{ p.author }}</div>
+                    <div onClick="{{ p.onAuthor }}" style="font-size: 11.5px; color: var(--text-3); margin-top: 3px; width: fit-content;" style-hover="color: var(--accent)">{{ p.author }}</div>
                   </div>
-                  <span style="font-size: 9.5px; font-weight: 600; color: {{ p.color }}; padding: 3px 7px; border-radius: 5px; background: {{ p.softBg }}; flex-shrink: 0;">{{ p.typeLabel }}</span>
+                  <span style="font-size: 9.5px; font-weight: 700; color: {{ p.color }}; padding: 3px 8px; border-radius: 6px; background: {{ p.softBg }}; flex-shrink: 0;">{{ p.typeLabel }}</span>
                 </div>
-                <div style="font-size: 12px; color: var(--text-2); line-height: 1.5; height: 36px; overflow: hidden;">{{ p.desc }}</div>
-                <div style="display: flex; align-items: center; gap: 13px; margin-top: 1px;">
-                  <span style="font-size: 11px; color: var(--text-3); font-family: var(--mono);">↓ {{ p.dl }}</span>
-                  <span style="font-size: 11px; color: var(--star); font-family: var(--mono);">★ {{ p.rating }}</span>
+                <div style="font-size: 12.5px; color: var(--text-2); line-height: 1.55; height: 39px; overflow: hidden; margin-top: 14px;">{{ p.desc }}</div>
+                <div style="display: flex; align-items: center; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);">
+                  <span style="font-size: 11.5px; color: var(--text-3); font-family: var(--mono);">↓ {{ p.dl }}</span>
+                  <span style="font-size: 11.5px; color: var(--star); font-family: var(--mono);">★ {{ p.rating }}</span>
                   <div style="flex: 1;"></div>
-                  <div onClick="{{ p.onFav }}" style="width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: var(--code-bg)">
+                  <div onClick="{{ p.onFav }}" style="width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: var(--code-bg)">
                     <svg width="15" height="15" viewBox="0 0 16 16" fill="{{ p.heartFill }}"><path d="M8 13.5S2.5 10 2.5 6.2A2.7 2.7 0 018 4.4a2.7 2.7 0 015.5 1.8C13.5 10 8 13.5 8 13.5z" stroke="{{ p.heartStroke }}" stroke-width="1.4" stroke-linejoin="round"></path></svg>
                   </div>
                   <sc-if value="{{ p.installed }}" hint-placeholder-val="{{ false }}">
@@ -204,7 +411,7 @@
                     </span>
                   </sc-if>
                   <sc-if value="{{ p.notInstalled }}" hint-placeholder-val="{{ true }}">
-                    <div onClick="{{ p.onInstall }}" style="padding: 5px 12px; border-radius: 7px; background: var(--panel-2); border: 1px solid var(--border-strong); font-size: 11.5px; font-weight: 650; color: var(--text); cursor: pointer;" style-hover="border-color: var(--accent); color: var(--accent)">安装</div>
+                    <div onClick="{{ p.onInstall }}" style="padding: 6px 14px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--border-strong); font-size: 11.5px; font-weight: 650; color: var(--text); cursor: pointer; transition: all .14s ease;" style-hover="background: var(--accent); border-color: var(--accent); color: #fff">安装</div>
                   </sc-if>
                 </div>
               </div>
@@ -219,6 +426,8 @@
           </sc-if>
         </div>
       </div>
+      </div>
+      </sc-if>
 
       <!-- ===== DETAIL DRAWER ===== -->
       <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
@@ -280,6 +489,11 @@
                   <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2v8M4 6.5l3.5 3.5L11 6.5M3 12.5h9" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>安装到 CLI 客户端
                 </div>
               </sc-if>
+
+              <div onClick="{{ detail.onOpenActions }}" style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; border-radius: 11px; border: 1px solid var(--border-strong); cursor: pointer; margin-bottom: 22px; color: var(--text-2);" style-hover="background: var(--panel); color: var(--text)">
+                <span style="font-size: 13px; font-weight: 650;">操作</span>
+                <span style="font-size: 11px; font-family: var(--mono); color: var(--text-3); padding: 1px 6px; border-radius: 5px; background: var(--panel-2);">⌘K</span>
+              </div>
 
               <!-- tabs -->
               <div style="display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--panel); margin-bottom: 16px;">
@@ -411,6 +625,80 @@
                   </div>
                 </sc-for>
               </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+
+      <!-- ===== ACTION PANEL (⌘K) ===== -->
+      <sc-if value="{{ actionPanelOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ onCloseActions }}" style="position: absolute; inset: 0; z-index: 58; background: rgba(0,0,0,0.35); display: flex; align-items: flex-end; justify-content: flex-end; padding: 24px; animation: omFade .12s ease both;">
+          <div onClick="{{ stop }}" style="width: 300px; background: var(--win); border: 1px solid var(--border-strong); border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,0.55); overflow: hidden; animation: omPop .16s ease both;">
+            <div style="padding: 11px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+              <div style="width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; background: {{ detail.softBg }}; color: {{ detail.color }};">{{ detail.glyph }}</div>
+              <div style="flex: 1; min-width: 0;"><div style="font-size: 12.5px; font-weight: 700; color: var(--text); font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detail.name }}</div></div>
+              <span style="font-size: 10px; color: var(--text-3);">操作</span>
+            </div>
+            <div style="padding: 6px;">
+              <sc-if value="{{ detail.notInstalled }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ detail.onInstall }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer;" style-hover="background: var(--accent-soft)">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v8M4.5 7L8 10.5 11.5 7M3 13h10"></path></svg>
+                  <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text);">安装</span>
+                  <span style="font-size: 10.5px; font-family: var(--mono); color: var(--text-3);">↵</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ detail.installed }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; opacity: 0.55;">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L6.5 12 13 4"></path></svg>
+                  <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text-2);">已安装</span>
+                </div>
+              </sc-if>
+              <div onClick="{{ detail.onFav }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer;" style-hover="background: var(--panel-2)">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--text-2)" stroke-width="1.4" stroke-linejoin="round"><path d="M8 13.5S2.5 10 2.5 6.2A2.7 2.7 0 018 4.4a2.7 2.7 0 015.5 1.8C13.5 10 8 13.5 8 13.5z"></path></svg>
+                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text);">{{ detail.favActionLabel }}</span>
+                <span style="font-size: 10.5px; font-family: var(--mono); color: var(--text-3);">⌘F</span>
+              </div>
+              <div onClick="{{ detail.onCopyCmd }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer;" style-hover="background: var(--panel-2)">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.6" stroke="var(--text-2)" stroke-width="1.3"></rect><path d="M3 10.5V4a1.5 1.5 0 011.5-1.5H11" stroke="var(--text-2)" stroke-width="1.3"></path></svg>
+                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text);">复制安装命令</span>
+                <span style="font-size: 10.5px; font-family: var(--mono); color: var(--text-3);">⌘C</span>
+              </div>
+              <div onClick="{{ detail.onAuthor }}" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer;" style-hover="background: var(--panel-2)">
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="var(--text-2)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.5" r="2.6"></circle><path d="M3.5 13c0-2.2 2-3.6 4.5-3.6s4.5 1.4 4.5 3.6"></path></svg>
+                <span style="flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text);">查看作者主页</span>
+              </div>
+            </div>
+            <div style="padding: 9px 14px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; font-family: var(--mono); font-size: 10.5px; color: var(--text-3);">
+              <span>↑↓ 选择</span><span>↵ 执行</span><span style="margin-left: auto;">esc 关闭</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== LOGIN MODAL ===== -->
+      <sc-if value="{{ login.open }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ login.onClose }}" style="position: absolute; inset: 0; z-index: 55; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; animation: omFade .15s ease both;">
+          <div onClick="{{ stop }}" style="width: 400px; background: var(--win); border: 1px solid var(--border-strong); border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); animation: omPop .18s ease both; overflow: hidden;">
+            <div style="padding: 32px 32px 24px; text-align: center;">
+              <div style="width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent);">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.2-2.9 7.4-7 8.5C7.9 18.4 5 15.2 5 11V6l7-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><path d="M9 11.5l2 2 4-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="font-size: 19px; font-weight: 750; color: var(--text); letter-spacing: -0.2px;">登录 Agent Store</div>
+              <div style="font-size: 12.5px; color: var(--text-3); margin-top: 7px; line-height: 1.55;">登录后可发布资源、跨设备同步已安装的技能 / MCP / 供应商。</div>
+            </div>
+            <div style="padding: 0 32px 20px; display: flex; flex-direction: column; gap: 10px;">
+              <div onClick="{{ login.onGithub }}" style="display: flex; align-items: center; justify-content: center; gap: 11px; height: 46px; border-radius: 11px; background: #1f2328; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" style-hover="filter: brightness(1.18)">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02.8-.22 1.65-.33 2.5-.34.85.01 1.7.12 2.5.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"></path></svg>
+                <span style="font-size: 14px; font-weight: 650; color: #fff;">使用 GitHub 登录</span>
+              </div>
+              <div onClick="{{ login.onGoogle }}" style="display: flex; align-items: center; justify-content: center; gap: 11px; height: 46px; border-radius: 11px; background: #fff; cursor: pointer; border: 1px solid rgba(0,0,0,0.12);" style-hover="filter: brightness(0.97)">
+                <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"></path><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0012 23z"></path><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 010-4.2V7.06H2.18a11 11 0 000 9.88l3.66-2.84z"></path><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 00-9.82 6.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"></path></svg>
+                <span style="font-size: 14px; font-weight: 650; color: #1f1f1f;">使用 Google 登录</span>
+              </div>
+            </div>
+            <div style="padding: 14px 32px; border-top: 1px solid var(--border); text-align: center;">
+              <span style="font-size: 11px; color: var(--text-3); line-height: 1.5;">继续即表示同意 <span style="color: var(--text-2);">服务条款</span> 与 <span style="color: var(--text-2);">隐私政策</span></span>
             </div>
           </div>
         </div>
@@ -931,6 +1219,7 @@
                       <div onClick="{{ detail.onInstall }}" style="display: flex; align-items: center; height: 32px; padding: 0 18px; border-radius: 7px; background: var(--accent); font-size: 12px; font-weight: 650; color: #fff; cursor: pointer;" style-hover="filter: brightness(1.08)">安装</div>
                     </sc-if>
                     <div onClick="{{ detail.onFav }}" style="width: 32px; height: 32px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid var(--border-strong);" style-hover="background: var(--panel)"><svg width="16" height="16" viewBox="0 0 16 16" fill="{{ detail.heartFill }}"><path d="M8 13.5S2.5 10 2.5 6.2A2.7 2.7 0 018 4.4a2.7 2.7 0 015.5 1.8C13.5 10 8 13.5 8 13.5z" stroke="{{ detail.heartStroke }}" stroke-width="1.4" stroke-linejoin="round"></path></svg></div>
+                    <div onClick="{{ detail.onOpenActions }}" style="display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 7px; cursor: pointer; border: 1px solid var(--border-strong); color: var(--text-2);" style-hover="background: var(--panel); color: var(--text)"><span style="font-size: 12px; font-weight: 600;">操作</span><span style="font-size: 10.5px; font-family: var(--mono); color: var(--text-3); padding: 1px 5px; border-radius: 4px; background: var(--panel-2);">⌘K</span></div>
                   </div>
                 </div>
               </div>
@@ -1413,9 +1702,9 @@ class Component extends DCLogic {
   state = {
     surface: 'web',
     theme: 'dark',
-    web: { cat: 'provider', q: '', sel: null, detailTab: 'readme', profile: null, verified: false, sort: 'all' },
+    web: { view: 'landing', cat: 'provider', q: '', sel: null, detailTab: 'readme', profile: null, verified: false, sort: 'all' },
     publishOpen: false,
-    settingsOpen: false, settingsTab: 'account', loggedIn: true, uiLang: 'zh', langMenuOpen: false,
+    settingsOpen: false, settingsTab: 'account', loggedIn: false, loginOpen: false, avatarMenuOpen: false, docsOpen: false, actionPanelOpen: false, uiLang: 'zh', langMenuOpen: false,
     pform: { type: 'skill', vals: { desc: '', category: 'General', installMethod: '默认（复制到 skills 目录）' } },
     favorites: { superpowers: true, filesystem: true },
     userPkgs: [], dupPkgs: [],
@@ -1437,8 +1726,8 @@ class Component extends DCLogic {
       { id: 'local-staging', name: '测试环境', port: 18200, running: false, reqs: '46', success: '97.8%', targets: ['claude'] },
     ],
     term: [
-      { text: '$ agent-store login', color: '#c7c7d0' },
-      { text: '✓ 已登录 as you@dev · 5 个包已同步', color: '#3ad29f' },
+      { text: '$ agent-store status', color: '#c7c7d0' },
+      { text: '未登录 · 仅本地资源可用，登录后可跨设备同步', color: '#8a8a94' },
     ],
   };
 
@@ -1549,6 +1838,9 @@ class Component extends DCLogic {
   toggleTheme = () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' }));
 
   setWeb = (patch) => this.setState(st => ({ web: { ...st.web, ...patch } }));
+  goStore = () => this.setWeb({ view: 'store' });
+  goLanding = () => this.setWeb({ view: 'landing', sel: null, profile: null });
+  webDownload = (os) => { this.pushTerm([{ text: '$ agent-store download --' + os, color: '#c7c7d0' }, { text: '↓ 正在下载 Agent Store for ' + (os === 'mac' ? 'macOS' : 'Windows') + '…', color: '#3ad29f' }]); };
   setCat = (c) => this.setWeb({ cat: c });
   setSearch = (e) => { const v = e.target.value; this.setWeb({ q: v }); };
   toggleVerified = () => this.setState(st => ({ web: { ...st.web, verified: !st.web.verified } }));
@@ -1592,12 +1884,41 @@ class Component extends DCLogic {
   setListFilter = (f) => this.setState(st => ({ cli: { ...st.cli, listFilter: f, filterMenuOpen: false } }));
   setCliView = (v) => this.setState(st => ({ cli: { ...st.cli, view: v } }));
   gotoList = (filter, listFilter) => this.setState(st => ({ cli: { ...st.cli, view: 'list', filter: filter != null ? filter : st.cli.filter, listFilter: listFilter != null ? listFilter : st.cli.listFilter }, proxySelected: false, cliEditId: null, cliInfoId: null }));
-  openSettings = () => this.setState({ settingsOpen: true, settingsTab: 'account' });
+  openSettings = () => this.setState({ settingsOpen: true, settingsTab: 'account', avatarMenuOpen: false });
   closeSettings = () => this.setState({ settingsOpen: false, langMenuOpen: false });
   toggleLangMenu = () => this.setState(st => ({ langMenuOpen: !st.langMenuOpen }));
   setUiLang = (code) => this.setState({ uiLang: code, langMenuOpen: false });
   setSettingsTab = (t) => this.setState({ settingsTab: t });
-  toggleLogin = () => this.setState(st => ({ loggedIn: !st.loggedIn }));
+  toggleLogin = () => this.setState(st => {
+    if (!st.loggedIn) return { loginOpen: true };
+    this.pushTerm([{ text: '$ agent-store logout', color: '#c7c7d0' }, { text: '✓ 已退出登录', color: '#8a8a94' }]);
+    return { loggedIn: false };
+  });
+  openLogin = () => this.setState({ loginOpen: true });
+  closeLogin = () => this.setState({ loginOpen: false });
+  openDocs = () => this.setState(st => ({ actionPanelOpen: false, web: { ...st.web, view: 'docs', sel: null, profile: null } }));
+  closeDocs = () => this.goStore();
+  scrollDoc = (num) => { const c = document.getElementById('docs-scroll'); const el = document.getElementById('docsec-' + num); if (c && el) c.scrollTop += el.getBoundingClientRect().top - c.getBoundingClientRect().top - 16; };
+  openActions = () => this.setState({ actionPanelOpen: true });
+  closeActions = () => this.setState({ actionPanelOpen: false });
+  copyInstallCmd = (id) => { this.setState({ actionPanelOpen: false }); this.pushTerm([{ text: '✓ 已复制安装命令 agent-store add ' + id, color: '#3ad29f' }]); };
+  DOCS = [
+    { num: '01', title: '什么是 Agent Store', body: 'Agent Store 是面向 Claude Code / Codex 等 AI 编码工具的注册中心与本地客户端。你可以在这里发现并一键安装三类资源：技能(Skill)、MCP 服务器、以及模型供应商(Provider)。安装的资源会同步到本机的 CLI 客户端统一管理。' },
+    { num: '02', title: '安装 CLI', body: '通过 npm 安装命令行客户端，随后 login 即可跨设备同步已安装的资源。', hasCode: true, code: '$ npm i -g agent-store\n$ agent-store login' },
+    { num: '03', title: '添加资源', body: '在商店里点「安装」，或用命令直接添加。技能会复制到 skills 目录，MCP 会写入客户端的 MCP 配置，Provider 则登记为一份可编辑的接入配置。', hasCode: true, code: '$ agent-store add <id>\n$ agent-store list' },
+    { num: '04', title: 'local 本地代理', body: 'local 是内置的 Provider：把 Claude Code / Codex 的 API 地址指向 local 的监听端口(默认 http://127.0.0.1:18100)，请求会按各上游 Provider 的 Level 顺序转发，失败自动降级，并支持模型映射与用量计量。' },
+    { num: '05', title: '优先级(Level)与降级', body: '每个 Provider 配置有一个 Level(1–10，数字越小越优先)。同一次请求先尝试 Level 最小的候选，遇网络错误或 5xx 自动切到下一个，从而在多家上游之间实现无感容灾。' },
+    { num: '06', title: '发布你的资源', body: '登录后点顶部「发布」，选择类型(技能 / MCP / 供应商)并填写元信息即可提交审核。审核期间资源以「审核中」状态显示在你的主页，通过后对所有用户可见。' },
+  ];
+  toggleAvatarMenu = () => this.setState(st => ({ avatarMenuOpen: !st.avatarMenuOpen }));
+  logout = () => this.setState(() => {
+    this.pushTerm([{ text: '$ agent-store logout', color: '#c7c7d0' }, { text: '✓ 已退出登录', color: '#8a8a94' }]);
+    return { loggedIn: false, avatarMenuOpen: false };
+  });
+  loginWith = (provider) => this.setState(() => {
+    this.pushTerm([{ text: '$ agent-store login --' + provider.toLowerCase(), color: '#c7c7d0' }, { text: '✓ 已通过 ' + provider + ' 登录 as you@dev · 5 个包已同步', color: '#3ad29f' }]);
+    return { loggedIn: true, loginOpen: false };
+  });
 
   PROVIDER_FORM = [
     { key: 'provider', label: '供应商名称', kind: 'readonly', tier: 'optional' },
@@ -1865,7 +2186,7 @@ class Component extends DCLogic {
       if (val !== want) el.setAttribute('title', want);
     });
   }
-  _anyOverlay = () => { const st = this.state; return !!st.web.sel || st.publishOpen || st.settingsOpen || !!st.web.profile; };
+  _anyOverlay = () => { const st = this.state; return !!st.web.sel || st.publishOpen || st.settingsOpen || st.loginOpen || !!st.web.profile; };
   _restartFeatTimer = () => {
     if (this._featTimer) clearInterval(this._featTimer);
     this._featTimer = setInterval(() => {
@@ -1892,6 +2213,17 @@ class Component extends DCLogic {
         const f = e.target && e.target.closest && e.target.closest('[data-cfield]');
         if (f) { this._activeField = f.getAttribute('data-cfield'); this._caret = e.target.selectionStart; this._lastType = Date.now(); }
       }, true);
+    }
+    if (!this._keysBound) {
+      this._keysBound = true;
+      window.addEventListener('keydown', (e) => {
+        const k = (e.key || '').toLowerCase();
+        if ((e.metaKey || e.ctrlKey) && k === 'k' && this.state.surface === 'web' && this.state.web.sel) {
+          e.preventDefault(); this.setState(st => ({ actionPanelOpen: !st.actionPanelOpen }));
+        } else if (k === 'escape' && this.state.actionPanelOpen) {
+          this.setState({ actionPanelOpen: false });
+        }
+      });
     }
   }
   componentWillUnmount() { if (this._featTimer) clearInterval(this._featTimer); }
@@ -1972,7 +2304,8 @@ class Component extends DCLogic {
           updatedAgo: this.agoOf(raw.id, 0), publishedAgo: this.agoOf(raw.id, 1), releasedAgo: this.agoOf(raw.id, 2),
           categories: [this.TYPE[raw.type].label].concat((raw.tags || []).slice(0, 3)),
           resources: raw.type === 'provider' ? [{ label: '官网 / 文档' }, { label: 'Marketplace 页面' }] : [{ label: '官网 / 文档' }, { label: '源码仓库 (GitHub)' }, { label: 'Marketplace 页面' }],
-          onInstall: () => this.install(p.id), onFav: () => this.toggleFav(p.id), onAuthor: () => this.openProfile(p.author) };
+          onInstall: () => this.install(p.id), onFav: () => this.toggleFav(p.id), onAuthor: () => this.openProfile(p.author),
+          onOpenActions: this.openActions, onCopyCmd: () => this.copyInstallCmd(p.id), favActionLabel: st.favorites[p.id] ? '取消收藏' : '加入收藏' };
       }
     }
 
@@ -2155,24 +2488,40 @@ class Component extends DCLogic {
       },
 
       web: {
-        q: w.q, onSearch: this.setSearch, urlPath: w.profile ? ('/@' + w.profile) : (w.sel ? ('/p/' + w.sel) : '/explore'),
+        q: w.q, onSearch: this.setSearch, urlPath: w.view === 'docs' ? '/docs' : (w.view === 'landing' ? '/' : (w.profile ? ('/@' + w.profile) : (w.sel ? ('/p/' + w.sel) : '/store'))),
+        isLanding: w.view === 'landing', isStore: w.view === 'store', isDocs: w.view === 'docs',
+        navDocsFg: w.view === 'docs' ? 'var(--accent)' : 'var(--text-2)', navDocsWeight: w.view === 'docs' ? 700 : 500, onGoStore: this.goStore, onGoLanding: this.goLanding, onDownloadMac: () => this.webDownload('mac'), onDownloadWin: () => this.webDownload('windows'),
+        navStoreFg: w.view === 'store' ? 'var(--accent)' : 'var(--text-2)', navStoreWeight: w.view === 'store' ? 700 : 500,
+        homeCards: ['superpowers', 'filesystem', 'context7'].map(id => this.pkg(id) ? { ...this.decorate(this.pkg(id)), onOpen: () => { this.goStore(); this.openDetail(id); } } : null).filter(Boolean),
         onToggleVerified: this.toggleVerified, vJustify: w.verified ? 'flex-end' : 'flex-start', vTrack: w.verified ? 'var(--accent)' : 'var(--border-strong)',
         vChipBg: w.verified ? 'var(--accent-soft)' : 'var(--panel)', vChipBorder: w.verified ? 'var(--accent)' : 'var(--border)', vChipFg: w.verified ? 'var(--accent)' : 'var(--text-2)',
         onFavCat: () => this.setCat('fav'), favCount, favCatBg: w.cat === 'fav' ? 'var(--accent-soft)' : 'transparent', favCatFg: w.cat === 'fav' ? 'var(--accent)' : 'var(--text-2)',
         showFeatured: w.cat === 'all' && !w.q.trim() && !w.verified,
         resultLabel: catName + ' · ' + gridPkgs.length + ' 个结果', empty: gridPkgs.length === 0,
+        headTitle: catName, headCount: gridPkgs.length + ' 个结果',
+        navCats: [
+          { key: 'all', label: '全部', glyph: this.icon('all'), count: base.length },
+          ...this.CATS.map(c => ({ key: c.key, label: c.label, glyph: this.icon(c.key), count: base.filter(p => p.type === c.key).length })),
+          { key: 'fav', label: '收藏', glyph: this.icon('fav'), count: favCount },
+        ].map(c => { const active = w.cat === c.key; return { ...c, onClick: () => this.setCat(c.key), bg: active ? 'var(--accent-soft)' : 'transparent', fg: active ? 'var(--accent)' : 'var(--text-2)' }; }),
+        navSorts: this.SORTS.map(s => { const active = w.sort === s.key; return { label: s.label, onClick: () => this.setSort(s.key), active, bg: active ? 'var(--accent-soft)' : 'transparent', fg: active ? 'var(--accent)' : 'var(--text-2)' }; }),
         sortLabel: this.SORTS.find(s => s.key === w.sort).label, onSort: this.cycleSort,
-        sortTabs: this.SORTS.map(s => ({ label: s.label, onClick: () => this.setSort(s.key), bg: w.sort === s.key ? 'var(--win)' : 'transparent', fg: w.sort === s.key ? 'var(--text)' : 'var(--text-3)' })),
+        sortTabs: this.SORTS.map(s => ({ label: s.label, onClick: () => this.setSort(s.key), bg: w.sort === s.key ? 'var(--accent)' : 'transparent', fg: w.sort === s.key ? '#fff' : 'var(--text-3)' })),
         typeChips: [
-          ...this.CATS.map(c => { const active = w.cat === c.key; return { label: c.label, glyph: this.icon(c.key), onClick: () => this.setCat(c.key), bg: active ? 'var(--win)' : 'transparent', fg: active ? 'var(--text)' : 'var(--text-3)' }; }),
-          { label: '收藏', glyph: '★', onClick: () => this.setCat('fav'), bg: w.cat === 'fav' ? 'var(--win)' : 'transparent', fg: w.cat === 'fav' ? 'var(--star)' : 'var(--text-3)' },
+          ...this.CATS.map(c => { const active = w.cat === c.key; return { label: c.label, glyph: this.icon(c.key), onClick: () => this.setCat(c.key), bg: active ? 'var(--accent)' : 'transparent', fg: active ? 'var(--text)' : 'var(--text-3)' }; }),
+          { label: '收藏', glyph: '★', onClick: () => this.setCat('fav'), bg: w.cat === 'fav' ? 'var(--accent)' : 'transparent', fg: w.cat === 'fav' ? '#fff' : 'var(--text-3)' },
         ],
         onCloseDetail: this.closeDetail, onCloseProfile: this.closeProfile,
-        onPublish: this.openPublish, onClosePublish: this.closePublish, onOpenMe: () => this.openProfile('you'),
+        onPublish: this.openPublish, onClosePublish: this.closePublish, onOpenMe: () => this.setState(st => ({ avatarMenuOpen: false, web: { ...st.web, profile: 'you', sel: null } })),
+        loggedIn: st.loggedIn, loggedOut: !st.loggedIn, onLogin: this.toggleLogin, meInitial: 'Y',
+        avatarMenuOpen: st.avatarMenuOpen, onToggleAvatarMenu: this.toggleAvatarMenu, onLogout: this.logout, onOpenDocs: this.openDocs,
       },
       cats, gridPkgs, featured,
       detailOpen: !!detail && !(st.surface === 'cli' && (st.cliEditId || st.cliInfoId || st.proxySelected)), detail,
+      actionPanelOpen: st.actionPanelOpen && !!detail, onCloseActions: this.closeActions,
       profileOpen: !!profile, profile,
+      login: { open: st.loginOpen, onClose: this.closeLogin, onGithub: () => this.loginWith('GitHub'), onGoogle: () => this.loginWith('Google') },
+      docs: { onClose: this.closeDocs, sections: this.DOCS.map(s => ({ ...s, onNav: () => this.scrollDoc(s.num) })) },
       publishOpen: st.publishOpen, publish,
 
       settings: {

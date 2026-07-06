@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { getPublisherWithItems } from '@/lib/catalog'
 import { ItemCard } from '@/components/ItemCard'
 import { Badge } from '@/components/Badge'
-import { Header } from '@/components/Header'
 
 interface PublisherPageProps {
   params: { name: string }
@@ -15,8 +14,7 @@ export default async function PublisherPage({ params }: PublisherPageProps) {
   const { publisher, items } = result
 
   return (
-    <>
-      <Header />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <main className="py-8">
         <div className="mb-8 flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-store-border bg-store-panel">
@@ -48,6 +46,6 @@ export default async function PublisherPage({ params }: PublisherPageProps) {
           </div>
         )}
       </main>
-    </>
+    </div>
   )
 }

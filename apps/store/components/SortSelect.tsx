@@ -38,7 +38,7 @@ export function SortSelect({ active }: SortSelectProps) {
           aria-pressed={active === opt.value}
           className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
             active === opt.value
-              ? 'bg-store-accent-soft text-store-accent'
+              ? 'bg-store-accent text-white'
               : 'text-store-text-2 hover:text-store-text'
           }`}
         >

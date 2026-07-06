@@ -1,7 +1,18 @@
 {
   "store": {
-    "nav": { "explore": "Explore", "docs": "Docs", "publish": "Publish" },
-    "categories": { "all": "Explore", "provider": "Providers", "skill": "Skills", "mcp": "MCP" },
+    "nav": {
+      "store": "Store",
+      "docs": "Docs",
+      "pricing": "Pricing",
+      "publish": "Publish",
+      "login": "Log in",
+      "myHome": "My profile",
+      "settings": "Settings",
+      "theme": "Theme",
+      "language": "Language",
+      "logout": "Log out"
+    },
+    "categories": { "all": "All", "provider": "Providers", "skill": "Skills", "mcp": "MCP" },
     "sort": { "all": "All", "new": "Newest", "popular": "Popular", "rating": "Top rated" },
     "search": { "placeholder": "Search items, tags, or descriptions…" },
     "filters": { "verifiedOnly": "Verified only" },

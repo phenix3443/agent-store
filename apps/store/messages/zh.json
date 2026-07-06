@@ -1,7 +1,18 @@
 {
   "store": {
-    "nav": { "explore": "探索", "docs": "文档", "publish": "发布" },
-    "categories": { "all": "探索", "provider": "供应商", "skill": "技能", "mcp": "MCP" },
+    "nav": {
+      "store": "商店",
+      "docs": "文档",
+      "pricing": "定价",
+      "publish": "发布",
+      "login": "登录",
+      "myHome": "我的主页",
+      "settings": "设置",
+      "theme": "主题",
+      "language": "界面语言",
+      "logout": "退出登录"
+    },
+    "categories": { "all": "全部", "provider": "供应商", "skill": "技能", "mcp": "MCP" },
     "sort": { "all": "全部", "new": "最近新增", "popular": "最流行", "rating": "评分最高" },
     "search": { "placeholder": "搜索资源、标签或描述…" },
     "filters": { "verifiedOnly": "仅已验证" },

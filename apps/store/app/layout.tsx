@@ -3,6 +3,8 @@ import { Inter, JetBrains_Mono } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { ClientStateProvider } from '@/components/ClientStateProvider'
+import { Header } from '@/components/Header'
+import { getCurrentUser } from '@/lib/auth'
 import './globals.css'
 
 const inter = Inter({
@@ -31,14 +33,16 @@ export default async function RootLayout({
 }) {
   const locale = await getLocale()
   const messages = await getMessages()
+  const user = await getCurrentUser()
 
   return (
     <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="dark">
       <body className="min-h-screen bg-store-content text-store-text antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ClientStateProvider>
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              {children}
+            <div className="flex min-h-screen flex-col">
+              <Header user={user} />
+              <div className="flex-1">{children}</div>
             </div>
             {drawer}
           </ClientStateProvider>
