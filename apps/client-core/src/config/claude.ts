@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, copyFile, unlink } from 'fs/promises'
 import { join } from 'path'
-import type { MCPItem } from '@aas/types'
+import type { MCPItem } from '@as/types'
 import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'

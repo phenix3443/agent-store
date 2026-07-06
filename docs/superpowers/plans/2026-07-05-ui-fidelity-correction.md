@@ -859,7 +859,7 @@ Append to `apps/cli-gui/src/components/LocalProviderDetail.tsx` (below the Step 
 ```tsx
 import { useEffect, useState } from 'react'
 import { ArrowLeft, RadioTower } from 'lucide-react'
-import type { LocalRelayConfig, RelayStatus } from '@aas/types'
+import type { LocalRelayConfig, RelayStatus } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 
@@ -1016,7 +1016,7 @@ test('renders LocalProviderDetail when selectedSlug is the local-provider sentin
 In `apps/cli-gui/src/components/ResourceList.tsx`, add imports:
 
 ```ts
-import type { LocalRelayConfig, RelayStatus } from '@aas/types'
+import type { LocalRelayConfig, RelayStatus } from '@as/types'
 import { LOCAL_PROVIDER_SENTINEL } from './LocalProviderDetail'
 ```
 
@@ -1264,12 +1264,12 @@ component."
 
 - [ ] **Step 1: Run the full monorepo test and type-check suite**
 
-Run: `cd /Users/liushangliang/github/phenix3443/ai-agent-store && bunx turbo run test type-check --force`
+Run: `cd /Users/liushangliang/github/phenix3443/agent-store && bunx turbo run test type-check --force`
 Expected: all tasks pass, 0 failures, 0 type errors.
 
 - [ ] **Step 2: Open the real mockup and the real running app side by side**
 
-Open `docs/ui/Agent Store.dc.html` in a browser (or via the chrome-devtools MCP tool if available), click the "CLI 客户端" tab, and separately launch `make dev-gui` with an isolated `AAS_HOME` populated with realistic data (reuse real yls-me/skyapi credentials from `~/.code-switch/codex.json`/`~/.code-switch/claude-code.json` transiently, real usage history, a running relay daemon with 2 local configs — matching the previous QA session's setup).
+Open `docs/ui/Agent Store.dc.html` in a browser (or via the chrome-devtools MCP tool if available), click the "CLI 客户端" tab, and separately launch `make dev-gui` with an isolated `AS_HOME` populated with realistic data (reuse real yls-me/skyapi credentials from `~/.code-switch/codex.json`/`~/.code-switch/claude-code.json` transiently, real usage history, a running relay daemon with 2 local configs — matching the previous QA session's setup).
 
 - [ ] **Step 3: Screen-by-screen comparison checklist**
 
@@ -1289,4 +1289,4 @@ If Step 3 finds mismatches, fix them directly (small, targeted commits) before c
 
 - [ ] **Step 5: Tear down and final commit**
 
-Stop the relay daemon, remove the isolated `AAS_HOME`, and commit any Step 4 fixes. No dedicated commit for this task itself if Step 4 found nothing to fix.
+Stop the relay daemon, remove the isolated `AS_HOME`, and commit any Step 4 fixes. No dedicated commit for this task itself if Step 4 found nothing to fix.

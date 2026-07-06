@@ -6,7 +6,7 @@
 
 **Architecture:** `ProviderConnection` (the provider's local `config.json` shape) gains six new optional fields. Two of them (`endpoint`, `whitelist`) change relay request-handling behavior; the rest (`homepage`, `upstreamProtocol`, `level`, `healthCheck`) are stored for the UI and future features (see Global Constraints for what's deliberately deferred). The GUI form is rewritten from a dynamic schema-renderer to a fixed field set matching the design mockup exactly, since providers in this app always use the same field set (the per-item `configSchema` mechanism remains for skill/MCP items, unaffected by this plan).
 
-**Tech Stack:** TypeScript, Bun, React, existing `@aas/client-core`/`@aas/cli-gui` packages.
+**Tech Stack:** TypeScript, Bun, React, existing `@as/client-core`/`@as/cli-gui` packages.
 
 ## Global Constraints
 
@@ -495,7 +495,7 @@ Replace the full contents of `apps/cli-gui/src/components/ProviderEditModal.tsx`
 ```tsx
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
-import type { ItemDetail, ModelPricing, ToolTarget } from '@aas/types'
+import type { ItemDetail, ModelPricing, ToolTarget } from '@as/types'
 import { X } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 
@@ -936,10 +936,10 @@ Expected: all tasks pass.
 - [ ] **Step 2: Real-environment smoke test — whitelist gate and endpoint override**
 
 ```bash
-mkdir -p /tmp/aas-form-smoke
-export AAS_HOME=/tmp/aas-form-smoke
-export CLAUDE_CONFIG_DIR=/tmp/aas-form-smoke/claude
-export CODEX_CONFIG_DIR=/tmp/aas-form-smoke/codex
+mkdir -p /tmp/as-form-smoke
+export AS_HOME=/tmp/as-form-smoke
+export CLAUDE_CONFIG_DIR=/tmp/as-form-smoke/claude
+export CODEX_CONFIG_DIR=/tmp/as-form-smoke/codex
 ```
 
 Install a provider, enable it for `codex`, then edit its `config.json` directly to set `whitelist: ["claude-*"]` and start the relay. Send a request with `"model": "gpt-4o"` to the relay's codex route and confirm you get a `403` with a whitelist-rejection message, and that no upstream request was made (check your mock/real upstream's logs, or just observe the response came back immediately without network latency to a real endpoint). Then remove the whitelist restriction (or add a matching entry), send the same request again, and confirm it forwards normally.
@@ -953,7 +953,7 @@ Run `make dev-gui`, open a provider's "编辑" modal, confirm: the required fiel
 - [ ] **Step 4: Clean up and report**
 
 ```bash
-rm -rf /tmp/aas-form-smoke
+rm -rf /tmp/as-form-smoke
 ```
 
 No commit for this task — record the smoke-test results in the task report for the final whole-branch review to reference.

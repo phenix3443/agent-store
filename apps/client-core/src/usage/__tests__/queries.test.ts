@@ -7,7 +7,7 @@ import { getDailySummary, getRecentRequests } from '../queries'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-usage-queries-test-')
+  dir = await mkdtemp('/tmp/as-usage-queries-test-')
 })
 
 afterEach(async () => {

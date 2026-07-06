@@ -1,4 +1,4 @@
-import type { LocalRelayConfig } from '@aas/types'
+import type { LocalRelayConfig } from '@as/types'
 import { listLocalConfigs } from './local-configs'
 import { startRelayServer } from './server'
 

@@ -1,6 +1,6 @@
 'use client'
 
-import type { Publisher, Item } from '@aas/types'
+import type { Publisher, Item } from '@as/types'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import Link from 'next/link'

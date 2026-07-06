@@ -6,7 +6,7 @@
 
 **Architecture:** A new `apps/client-core/src/usage/` module owns a `bun:sqlite` database (`{aasHome}/usage.db`) with a detail table (30-day retention) and a permanent daily-rollup table. The relay (`apps/client-core/src/relay/server.ts`) tees the upstream response so token-usage parsing never blocks the client-facing response. Cost is computed from a per-provider `pricing` map stored alongside the existing `modelMapping` in each provider's local `config.json` — there is no built-in default pricing table.
 
-**Tech Stack:** `bun:sqlite` (built into Bun, no new dependency), TypeScript, existing `@aas/client-core`/`@aas/cli` packages.
+**Tech Stack:** `bun:sqlite` (built into Bun, no new dependency), TypeScript, existing `@as/client-core`/`@as/cli` packages.
 
 ## Global Constraints
 
@@ -41,7 +41,7 @@ import { openUsageDb } from '../db'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-usage-db-test-')
+  dir = await mkdtemp('/tmp/as-usage-db-test-')
 })
 
 afterEach(async () => {
@@ -524,7 +524,7 @@ import type { ModelPricing } from '../../config/provider'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-usage-logger-test-')
+  dir = await mkdtemp('/tmp/as-usage-logger-test-')
 })
 
 afterEach(async () => {
@@ -756,7 +756,7 @@ import { recordUsageAsync } from '../record-usage'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-record-usage-test-')
+  dir = await mkdtemp('/tmp/as-record-usage-test-')
 })
 
 afterEach(async () => {
@@ -964,7 +964,7 @@ import { getDailySummary } from '../queries'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-usage-queries-test-')
+  dir = await mkdtemp('/tmp/as-usage-queries-test-')
 })
 
 afterEach(async () => {
@@ -1218,10 +1218,10 @@ Add to the `AASEngine` interface, after `duplicateProvider`:
 Now in `apps/client-core/src/config/provider.ts`, make its existing `ModelPricing` interface (from Task 2) re-export the shared one instead of redefining it — modify the top of the file:
 
 ```ts
-export type { ModelPricing } from '@aas/types'
+export type { ModelPricing } from '@as/types'
 ```
 
-Remove the local `export interface ModelPricing { ... }` block from `provider.ts` (added in Task 2) since it's now imported from `@aas/types` instead — this avoids two structurally-identical-but-separate types.
+Remove the local `export interface ModelPricing { ... }` block from `provider.ts` (added in Task 2) since it's now imported from `@as/types` instead — this avoids two structurally-identical-but-separate types.
 
 - [ ] **Step 2: Write the failing test**
 
@@ -1294,7 +1294,7 @@ Add to `AASEngineImpl`, after `duplicateProvider`:
   }
 ```
 
-Add `UsageSummaryRow`, `UsageSummaryOptions`, `ModelPricing` to the existing `import type { ... } from '@aas/types'` line at the top of `engine.ts`.
+Add `UsageSummaryRow`, `UsageSummaryOptions`, `ModelPricing` to the existing `import type { ... } from '@as/types'` line at the top of `engine.ts`.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -1303,7 +1303,7 @@ Expected: PASS (full file).
 
 - [ ] **Step 6: Export from the package index**
 
-In `apps/client-core/src/index.ts`, confirm `AASEngineImpl` is already exported (it is, per existing code) — no change needed there since `UsageSummaryRow`/`ModelPricing` are consumed via `@aas/types`, already exported from that package's `index.ts` (add them to `packages/types/src/index.ts`'s existing `export type { ... } from './engine'` list: add `ModelPricing, UsageSummaryRow, UsageSummaryOptions`).
+In `apps/client-core/src/index.ts`, confirm `AASEngineImpl` is already exported (it is, per existing code) — no change needed there since `UsageSummaryRow`/`ModelPricing` are consumed via `@as/types`, already exported from that package's `index.ts` (add them to `packages/types/src/index.ts`'s existing `export type { ... } from './engine'` list: add `ModelPricing, UsageSummaryRow, UsageSummaryOptions`).
 
 - [ ] **Step 7: Add the RPC methods**
 
@@ -1314,7 +1314,7 @@ In `apps/cli/src/commands/rpc.ts`, add to `RPC_METHODS`, after `duplicateProvide
   parsePricingFromUrl: (e, a) => e.parsePricingFromUrl(a[0] as string),
 ```
 
-Add `UsageSummaryOptions` to the `import type { ... } from '@aas/types'` line at the top of `rpc.ts`.
+Add `UsageSummaryOptions` to the `import type { ... } from '@as/types'` line at the top of `rpc.ts`.
 
 In `apps/cli/src/commands/__tests__/rpc.test.ts`'s `makeEngine` factory, add after `duplicateProvider`:
 
@@ -1376,7 +1376,7 @@ Create `apps/cli/src/commands/__tests__/usage.test.ts`:
 ```ts
 import { test, expect } from 'bun:test'
 import { runUsage } from '../usage'
-import type { AASEngine, UsageSummaryRow } from '@aas/types'
+import type { AASEngine, UsageSummaryRow } from '@as/types'
 
 function makeEngine(rows: UsageSummaryRow[]): AASEngine {
   return {
@@ -1438,7 +1438,7 @@ Expected: FAIL — cannot find module `../usage`.
 Create `apps/cli/src/commands/usage.ts`:
 
 ```ts
-import type { AASEngine, ToolTarget } from '@aas/types'
+import type { AASEngine, ToolTarget } from '@as/types'
 import { formatTable } from '../utils/format'
 
 function getFlag(args: string[], flag: string): string | undefined {
@@ -1535,25 +1535,25 @@ Expected: all tasks pass.
 - [ ] **Step 2: Real-environment smoke test**
 
 ```bash
-mkdir -p /tmp/aas-usage-smoke
-export AAS_HOME=/tmp/aas-usage-smoke
-export CLAUDE_CONFIG_DIR=/tmp/aas-usage-smoke/claude
-export CODEX_CONFIG_DIR=/tmp/aas-usage-smoke/codex
+mkdir -p /tmp/as-usage-smoke
+export AS_HOME=/tmp/as-usage-smoke
+export CLAUDE_CONFIG_DIR=/tmp/as-usage-smoke/claude
+export CODEX_CONFIG_DIR=/tmp/as-usage-smoke/codex
 ```
 
-Install a provider (use the mock market server started via `pnpm --filter=@aas/store dev` per the pattern established earlier in this repo, or install any provider slug returned by `aas search ""`), enable it for `claude`, then manually set its local `config.json`'s `pricing` field to a real entry for whatever model you'll test with (e.g. `{"claude-sonnet-4-5": {"input": 3, "output": 15}}`) and its `baseUrl`/`apiKey` to a real endpoint. Start the relay (`bun apps/cli/src/index.ts relay start`), send one real request to `http://127.0.0.1:18780/v1/messages` (or whichever port `relay status` reports) with a small `claude-sonnet-4-5` prompt, then run:
+Install a provider (use the mock market server started via `pnpm --filter=@as/store dev` per the pattern established earlier in this repo, or install any provider slug returned by `aas search ""`), enable it for `claude`, then manually set its local `config.json`'s `pricing` field to a real entry for whatever model you'll test with (e.g. `{"claude-sonnet-4-5": {"input": 3, "output": 15}}`) and its `baseUrl`/`apiKey` to a real endpoint. Start the relay (`bun apps/cli/src/index.ts relay start`), send one real request to `http://127.0.0.1:18780/v1/messages` (or whichever port `relay status` reports) with a small `claude-sonnet-4-5` prompt, then run:
 
 ```bash
 bun apps/cli/src/index.ts usage
 ```
 
-Expected: one row showing the request you just made, non-zero tokens, and a non-`—` cost (since you configured pricing for that model). Confirm `sqlite3 $AAS_HOME/usage.db "select * from request_logs;"` shows the same row directly in the database.
+Expected: one row showing the request you just made, non-zero tokens, and a non-`—` cost (since you configured pricing for that model). Confirm `sqlite3 $AS_HOME/usage.db "select * from request_logs;"` shows the same row directly in the database.
 
 - [ ] **Step 3: Clean up the smoke-test environment**
 
 ```bash
 bun apps/cli/src/index.ts relay stop
-rm -rf /tmp/aas-usage-smoke
+rm -rf /tmp/as-usage-smoke
 ```
 
 - [ ] **Step 4: Report**

@@ -1,5 +1,5 @@
 {
-  "name": "@aas/cli-gui",
+  "name": "@as/cli-gui",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@aas/types": "workspace:*",
+    "@as/types": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.1",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-fs": "^2.0.1",

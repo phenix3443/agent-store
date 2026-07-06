@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { TrendingUp, RadioTower } from 'lucide-react'
-import type { InstalledItem, LocalRelayConfig, RecentRequestRow, RelayStatus, UpdateAvailable, UsageSummaryRow } from '@aas/types'
+import type { InstalledItem, LocalRelayConfig, RecentRequestRow, RelayStatus, UpdateAvailable, UsageSummaryRow } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { CategoryIcon } from './CategoryIcon'

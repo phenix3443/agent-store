@@ -2,13 +2,13 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { runHook, writeManifest } from '../hook-runner'
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 
 let tmpDir: string
 const origFetch = globalThis.fetch
 
 beforeEach(async () => {
-  tmpDir = await mkdtemp('/tmp/aas-test-')
+  tmpDir = await mkdtemp('/tmp/as-test-')
 })
 
 afterEach(async () => {

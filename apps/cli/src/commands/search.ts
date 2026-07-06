@@ -1,4 +1,4 @@
-import type { AASEngine } from '@aas/types'
+import type { AASEngine } from '@as/types'
 import { formatDownloads } from '../utils/format'
 
 export async function runSearch(

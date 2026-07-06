@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runUsage } from '../usage'
-import type { AASEngine, UsageSummaryRow } from '@aas/types'
+import type { AASEngine, UsageSummaryRow } from '@as/types'
 
 function makeEngine(rows: UsageSummaryRow[]): AASEngine {
   return {

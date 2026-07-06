@@ -1,5 +1,5 @@
 {
-  "name": "ai-agent-store",
+  "name": "agent-store",
   "private": true,
   "scripts": {
     "build": "turbo build",

@@ -6,7 +6,7 @@ import { getRelayDaemonStatus } from '../daemon-status'
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-daemon-status-test-')
+  aasHome = await mkdtemp('/tmp/as-daemon-status-test-')
 })
 
 afterEach(async () => {

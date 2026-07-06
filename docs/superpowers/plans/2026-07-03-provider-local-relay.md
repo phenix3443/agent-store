@@ -52,7 +52,7 @@ import { readProviderConnection } from '../provider'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-provider-test-')
+  dir = await mkdtemp('/tmp/as-provider-test-')
 })
 
 afterEach(async () => {
@@ -473,13 +473,13 @@ import { join } from 'path'
 import { startRelayServer } from '../server'
 import { writeRegistry } from '../../registry/index'
 import { itemDir } from '../../paths'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 
 let aasHome: string
 let stop: () => void
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-relay-test-')
+  aasHome = await mkdtemp('/tmp/as-relay-test-')
 })
 
 afterEach(async () => {
@@ -582,7 +582,7 @@ Expected: FAIL — `Cannot find module '../server'`
 - [ ] **Step 3: Implement `server.ts`**
 
 ```ts
-import type { InstalledItem, RegistryJson, ToolTarget } from '@aas/types'
+import type { InstalledItem, RegistryJson, ToolTarget } from '@as/types'
 import { readRegistry } from '../registry/index'
 import { itemDir } from '../paths'
 import { readProviderConnection } from '../config/provider'
@@ -702,7 +702,7 @@ import { readRelayState, writeRelayState, clearRelayState } from '../relay-state
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-relay-state-test-')
+  aasHome = await mkdtemp('/tmp/as-relay-state-test-')
 })
 
 afterEach(async () => {
@@ -822,8 +822,8 @@ let aasHome: string
 let claudeDir: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-claude-relay-test-')
-  claudeDir = await mkdtemp('/tmp/aas-claude-relay-dir-')
+  aasHome = await mkdtemp('/tmp/as-claude-relay-test-')
+  claudeDir = await mkdtemp('/tmp/as-claude-relay-dir-')
 })
 
 afterEach(async () => {
@@ -1010,8 +1010,8 @@ let aasHome: string
 let codexDir: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-codex-relay-test-')
-  codexDir = await mkdtemp('/tmp/aas-codex-relay-dir-')
+  aasHome = await mkdtemp('/tmp/as-codex-relay-test-')
+  codexDir = await mkdtemp('/tmp/as-codex-relay-dir-')
 })
 
 afterEach(async () => {
@@ -1192,7 +1192,7 @@ git commit -m "feat(client-core): add idempotent relay enable/disable for Codex 
 - Test: `apps/cli/src/commands/__tests__/relay.test.ts`
 
 **Interfaces:**
-- Consumes: none from `@aas/client-core` directly in the command layer (the command spawns a separate process that itself imports `startRelayServer` — see Step 3) — but the test-facing function signature takes an injectable spawn/kill/exists layer so it never touches a real process or the real `~/.agents`.
+- Consumes: none from `@as/client-core` directly in the command layer (the command spawns a separate process that itself imports `startRelayServer` — see Step 3) — but the test-facing function signature takes an injectable spawn/kill/exists layer so it never touches a real process or the real `~/.agents`.
 - Produces:
   ```ts
   export interface RelayProcessOps {
@@ -1373,14 +1373,14 @@ Expected: all 8 tests PASS.
 Create `apps/cli/src/relay-daemon.ts` (the script `spawnDetached` launches as a subprocess — separate from the test-covered `relay.ts` command logic):
 
 ```ts
-import { startRelayServer } from '@aas/client-core'
-import { resolvePaths } from '@aas/client-core'
+import { startRelayServer } from '@as/client-core'
+import { resolvePaths } from '@as/client-core'
 
 const paths = resolvePaths()
 startRelayServer({ aasHome: paths.aasHome })
 ```
 
-This requires `startRelayServer` and `resolvePaths` to be exported from `@aas/client-core`'s public entry point — check `apps/client-core/src/index.ts` and add them if missing:
+This requires `startRelayServer` and `resolvePaths` to be exported from `@as/client-core`'s public entry point — check `apps/client-core/src/index.ts` and add them if missing:
 
 ```ts
 export { startRelayServer, RELAY_PORT } from './relay/server'
@@ -1402,7 +1402,7 @@ Add this helper function (before `main()`):
 
 ```ts
 function realRelayOps() {
-  const pidFile = join(process.env['AAS_HOME'] ?? join(homedir(), '.agents'), 'relay.pid')
+  const pidFile = join(process.env['AS_HOME'] ?? join(homedir(), '.agents'), 'relay.pid')
   return {
     spawnDetached: (scriptPath: string) => {
       const proc = Bun.spawn(['bun', scriptPath], { stdio: ['ignore', 'ignore', 'ignore'] })
@@ -1614,20 +1614,20 @@ Expected: all packages pass (this also confirms `apps/cli-gui`'s existing `Insta
 Run this from the repo root to verify the relay actually works against a fake upstream, without touching real `~/.claude`/`~/.codex`/`~/.agents`:
 
 ```bash
-export AAS_HOME="$(mktemp -d)"
+export AS_HOME="$(mktemp -d)"
 export CLAUDE_CONFIG_DIR="$(mktemp -d)"
 export CODEX_CONFIG_DIR="$(mktemp -d)"
 cd apps/cli && bun run build:bin && cd ../..
-./bin/aas relay start
+./bin/as relay start
 sleep 1
-./bin/aas relay status
+./bin/as relay status
 ```
 
 Expected: `relay started (pid ...)` then `relay running (pid ...)`. Then:
 
 ```bash
-./bin/aas relay stop
-./bin/aas relay status
+./bin/as relay stop
+./bin/as relay status
 ```
 
 Expected: `relay stopped (pid ...)` then `relay stopped`.

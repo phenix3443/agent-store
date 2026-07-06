@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runSearch } from '../search'
-import type { AASEngine, Item } from '@aas/types'
+import type { AASEngine, Item } from '@as/types'
 
 const publisher = { id: 'p1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' as const }
 const mockItem = {

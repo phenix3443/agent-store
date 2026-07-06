@@ -1,4 +1,4 @@
-import type { UsageSummaryRow } from '@aas/types'
+import type { UsageSummaryRow } from '@as/types'
 
 const WIDTH = 680
 const HEIGHT = 190

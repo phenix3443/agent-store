@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-OUTFILE="$ROOT_DIR/bin/aas"
+OUTFILE="$ROOT_DIR/bin/as"
 
 bun build "$ROOT_DIR/apps/cli/src/index.ts" --compile --outfile "$OUTFILE"
 
@@ -14,4 +14,4 @@ if [[ "$(uname)" == "Darwin" ]]; then
   codesign --force -s - "$OUTFILE"
 fi
 
-echo "Built: bin/aas"
+echo "Built: bin/as"

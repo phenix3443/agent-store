@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
 import { checkUpdates, applyUpdate } from '../index'
-import type { RegistryJson, Item, InstalledItem } from '@aas/types'
-import type { AASClient } from '@aas/sdk'
+import type { RegistryJson, Item, InstalledItem } from '@as/types'
+import type { AASClient } from '@as/sdk'
 
 const installedEntry: InstalledItem = {
   slug: 'openai-provider',

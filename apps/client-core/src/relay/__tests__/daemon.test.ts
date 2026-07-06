@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { reconcileRelayInstances, runRelayDaemon, type RunningRelayInstance } from '../daemon'
-import type { LocalRelayConfig } from '@aas/types'
+import type { LocalRelayConfig } from '@as/types'
 
 function config(id: string, port: number, enabled = true, name = id): LocalRelayConfig {
   return { id, name, port, enabled, enabledFor: { claude: true, codex: true } }
@@ -131,7 +131,7 @@ test('a config that failed to start is retried on the next reconcile call', () =
 test('runRelayDaemon starts a real server per enabled config and stops it on abort', async () => {
   const { mkdtemp, rm, writeFile } = await import('fs/promises')
   const { join } = await import('path')
-  const aasHome = await mkdtemp('/tmp/aas-daemon-test-')
+  const aasHome = await mkdtemp('/tmp/as-daemon-test-')
 
   try {
     await writeFile(

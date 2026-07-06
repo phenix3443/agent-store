@@ -1,6 +1,6 @@
 import { mkdir, writeFile, readFile } from 'fs/promises'
 import { join, dirname } from 'path'
-import type { InstallHook, Item } from '@aas/types'
+import type { InstallHook, Item } from '@as/types'
 
 export async function runHook(steps: InstallHook['steps'], itemDir: string): Promise<void> {
   await mkdir(itemDir, { recursive: true })

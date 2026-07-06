@@ -1,4 +1,4 @@
-import type { AASEngine, ToolTarget } from '@aas/types'
+import type { AASEngine, ToolTarget } from '@as/types'
 import { formatTable } from '../utils/format'
 
 function getFlag(args: string[], flag: string): string | undefined {

@@ -1,6 +1,6 @@
 import { test, expect, mock, afterEach, beforeEach } from 'bun:test'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 
 beforeEach(() => { localStorage.clear() })
 afterEach(() => { cleanup() })

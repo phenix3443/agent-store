@@ -8,7 +8,7 @@ import { postInstall as mcpPostInstall } from '../mcp'
 let tmpDir: string
 
 beforeEach(async () => {
-  tmpDir = await mkdtemp('/tmp/aas-test-')
+  tmpDir = await mkdtemp('/tmp/as-test-')
 })
 
 afterEach(async () => {

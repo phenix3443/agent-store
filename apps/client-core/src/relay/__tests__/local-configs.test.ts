@@ -9,7 +9,7 @@ import {
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-local-configs-test-')
+  aasHome = await mkdtemp('/tmp/as-local-configs-test-')
 })
 
 afterEach(async () => {

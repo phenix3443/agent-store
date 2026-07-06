@@ -2,7 +2,7 @@ import { test, expect, afterEach, spyOn, mock } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 import { ProxyLogModal } from '../ProxyLogModal'
-import type { LocalRelayConfig, RecentRequestRow } from '@aas/types'
+import type { LocalRelayConfig, RecentRequestRow } from '@as/types'
 
 afterEach(() => { cleanup(); mock.restore() })
 

@@ -1,4 +1,4 @@
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import { MOCK_PUBLISHERS, getPublisherBySlug as getPublisherBySlugImpl } from './publishers'
 
 export { getPublisherBySlugImpl as getPublisherBySlug }

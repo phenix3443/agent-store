@@ -7,7 +7,7 @@ import { duplicateProviderConnection } from '../provider'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-provider-test-')
+  dir = await mkdtemp('/tmp/as-provider-test-')
 })
 
 afterEach(async () => {

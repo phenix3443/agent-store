@@ -6,7 +6,7 @@
 
 **Architecture:** Remove `engine.enable()`'s mutual-exclusivity so `enabledFor[target]` can be `true` for more than one provider at once. The relay's request handler asks a new `findOrderedProvidersForTarget` for all enabled candidates sorted by `level` (ascending, ties keep registry order), then hands them to a new `forwardWithFailover` that tries each in turn — skipping providers whose model whitelist rejects the request, retrying on network failure or 5xx, returning immediately on any other status. The chosen provider's slug and whether it wasn't the first candidate (`isFallback`) flow into the existing `recordUsageAsync` (which already has an `isFallback` field, added but never populated by the usage-tracking plan).
 
-**Tech Stack:** TypeScript, Bun (`bun:test`, `Bun.serve`), existing `@aas/client-core`/`@aas/types` packages — no new dependencies.
+**Tech Stack:** TypeScript, Bun (`bun:test`, `Bun.serve`), existing `@as/client-core`/`@as/types` packages — no new dependencies.
 
 ## Global Constraints
 
@@ -278,7 +278,7 @@ relay owns the applied Claude/Codex credentials."
 - Test: `apps/client-core/src/relay/__tests__/provider-order.test.ts`
 
 **Interfaces:**
-- Consumes: `readProviderConnection(itemDir: string): Promise<ProviderConnection>` from `apps/client-core/src/config/provider.ts` (existing); `itemDir(aasHome, category, slug): string` from `apps/client-core/src/paths.ts` (existing); `RegistryJson`, `InstalledItem`, `ToolTarget` from `@aas/types` (existing).
+- Consumes: `readProviderConnection(itemDir: string): Promise<ProviderConnection>` from `apps/client-core/src/config/provider.ts` (existing); `itemDir(aasHome, category, slug): string` from `apps/client-core/src/paths.ts` (existing); `RegistryJson`, `InstalledItem`, `ToolTarget` from `@as/types` (existing).
 - Produces: `export interface OrderedProviderCandidate { item: InstalledItem; connection: ProviderConnection }` and `export async function findOrderedProvidersForTarget(aasHome: string, registry: RegistryJson, target: ToolTarget): Promise<OrderedProviderCandidate[]>` — Task 3 imports both from `./provider-order`.
 
 - [ ] **Step 1: Write the failing test**
@@ -291,12 +291,12 @@ import { mkdtemp, rm, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { findOrderedProvidersForTarget } from '../provider-order'
 import { itemDir } from '../../paths'
-import type { InstalledItem, RegistryJson } from '@aas/types'
+import type { InstalledItem, RegistryJson } from '@as/types'
 
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-provider-order-test-')
+  aasHome = await mkdtemp('/tmp/as-provider-order-test-')
 })
 
 afterEach(async () => {
@@ -390,7 +390,7 @@ Expected: FAIL with a module-not-found error for `../provider-order`.
 Create `apps/client-core/src/relay/provider-order.ts`:
 
 ```ts
-import type { InstalledItem, RegistryJson, ToolTarget } from '@aas/types'
+import type { InstalledItem, RegistryJson, ToolTarget } from '@as/types'
 import { itemDir } from '../paths'
 import { readProviderConnection, type ProviderConnection } from '../config/provider'
 
@@ -794,7 +794,7 @@ Expected: the 3 new tests FAIL (server still only tries one provider); existing 
 Replace the entire contents of `apps/client-core/src/relay/server.ts` with:
 
 ```ts
-import type { RegistryJson, ToolTarget } from '@aas/types'
+import type { RegistryJson, ToolTarget } from '@as/types'
 import { readRegistry } from '../registry/index'
 import { findOrderedProvidersForTarget } from './provider-order'
 import { forwardWithFailover } from './forward'
@@ -915,7 +915,7 @@ into the existing usage-recording call."
 
 - [ ] **Step 1: Run the full monorepo test and type-check suite**
 
-Run: `cd /Users/liushangliang/github/phenix3443/ai-agent-store && bunx turbo run test type-check`
+Run: `cd /Users/liushangliang/github/phenix3443/agent-store && bunx turbo run test type-check`
 Expected: all tasks pass, 0 failures, 0 type errors.
 
 - [ ] **Step 2: Real-environment smoke test setup**
@@ -925,21 +925,21 @@ Read `~/.code-switch/codex.json` and `~/.code-switch/claude-code.json` to find t
 Create an isolated test home:
 
 ```bash
-export AAS_HOME=$(mktemp -d /tmp/aas-failover-smoketest-XXXX)
+export AS_HOME=$(mktemp -d /tmp/as-failover-smoketest-XXXX)
 ```
 
 Using the CLI (`bun run apps/cli/src/index.ts` or the built `aas` binary — check `apps/cli/package.json` for the right invocation), install and configure two provider items pointing at the two real endpoints found above, with different `level` values (e.g. `level: 1` for the one you intend to be primary, `level: 2` for the backup), then `enable` both for `claude`.
 
 - [ ] **Step 3: Verify priority ordering with real traffic**
 
-Start the relay daemon against `AAS_HOME` (`aas relay start`), send a real request through it (e.g. `curl -X POST http://127.0.0.1:18780/v1/messages -H 'content-type: application/json' -d '{"model":"claude-3-5-sonnet-20241022","max_tokens":16,"messages":[{"role":"user","content":"ping"}]}'`), and confirm (via the primary provider's own request logs, or by temporarily using a proxy/mitm if available, or simply by confirming a real 200 response with real model output) that the level-1 provider was the one that actually handled it.
+Start the relay daemon against `AS_HOME` (`aas relay start`), send a real request through it (e.g. `curl -X POST http://127.0.0.1:18780/v1/messages -H 'content-type: application/json' -d '{"model":"claude-3-5-sonnet-20241022","max_tokens":16,"messages":[{"role":"user","content":"ping"}]}'`), and confirm (via the primary provider's own request logs, or by temporarily using a proxy/mitm if available, or simply by confirming a real 200 response with real model output) that the level-1 provider was the one that actually handled it.
 
 - [ ] **Step 4: Verify real failover**
 
-Edit the level-1 provider's `config.json` (in `$AAS_HOME/providers/<slug>/config.json`) to set `baseUrl` to an intentionally broken address (e.g. `https://127.0.0.1:1` or a nonexistent subdomain) to force a connection failure. Send another request through the relay. Confirm the response is a genuine successful reply (meaning it fell through to the level-2 real provider), and check `$AAS_HOME/usage.db`'s `request_logs` table for the new row:
+Edit the level-1 provider's `config.json` (in `$AS_HOME/providers/<slug>/config.json`) to set `baseUrl` to an intentionally broken address (e.g. `https://127.0.0.1:1` or a nonexistent subdomain) to force a connection failure. Send another request through the relay. Confirm the response is a genuine successful reply (meaning it fell through to the level-2 real provider), and check `$AS_HOME/usage.db`'s `request_logs` table for the new row:
 
 ```bash
-sqlite3 "$AAS_HOME/usage.db" "SELECT provider_slug, is_fallback, status_code FROM request_logs ORDER BY id DESC LIMIT 1"
+sqlite3 "$AS_HOME/usage.db" "SELECT provider_slug, is_fallback, status_code FROM request_logs ORDER BY id DESC LIMIT 1"
 ```
 
 Expected: `is_fallback` is `1` and `provider_slug` is the level-2 provider's slug.
@@ -948,7 +948,7 @@ Expected: `is_fallback` is `1` and `provider_slug` is the level-2 provider's slu
 
 ```bash
 aas relay stop
-rm -rf "$AAS_HOME"
+rm -rf "$AS_HOME"
 ```
 
 No commit for this task — it's verification only. If any step fails, treat it as `BLOCKED` and report the exact failure rather than silently proceeding.

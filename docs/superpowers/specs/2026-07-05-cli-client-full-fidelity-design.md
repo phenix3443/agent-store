@@ -81,6 +81,6 @@
 
 ## 真实环境自测
 
-- 用你机器上 code-switch-R 已配置的 `yls`/`yls-me`/`skyapi` 真实 API Key（从 `~/.code-switch/codex.json`、`~/.code-switch/claude-code.json` 读取，仅本地测试使用，不写入仓库）在隔离的 `AAS_HOME` 下安装两个 provider 条目，分别设不同 `level`，验证：两者同时启用时优先级高的先被尝试；把 level 高的 baseUrl 改错（制造 5xx/超时），验证自动降级到 level 低的确实生效，且 `request_logs` 记录 `is_fallback: true`。
+- 用你机器上 code-switch-R 已配置的 `yls`/`yls-me`/`skyapi` 真实 API Key（从 `~/.code-switch/codex.json`、`~/.code-switch/claude-code.json` 读取，仅本地测试使用，不写入仓库）在隔离的 `AS_HOME` 下安装两个 provider 条目，分别设不同 `level`，验证：两者同时启用时优先级高的先被尝试；把 level 高的 baseUrl 改错（制造 5xx/超时），验证自动降级到 level 低的确实生效，且 `request_logs` 记录 `is_fallback: true`。
 - `make dev-gui` 实际跑一遍仪表盘：确认消耗趋势/供应商计数/本地代理状态/最近请求都是真实数据而不是设计稿里的硬编码假数字。
 - 按 `AGENTS.md` 的 UI sign-off 规则做完整视觉走查，逐屏对照设计稿。

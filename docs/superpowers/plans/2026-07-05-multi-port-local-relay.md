@@ -6,7 +6,7 @@
 
 **Architecture:** A new pure CRUD module (`local-configs.ts`) owns reading/writing `relay-configs.json`, seeded with one `{ id: 'default', name: '默认', port: 18780, enabled: true }` entry. A new daemon module (`daemon.ts`) separates a pure reconciliation function (diff desired vs. running instances, called with injectable start/stop) from the actual poll loop, so the diff logic is unit-testable without real ports or timers. The CLI's `__relay-daemon` hidden subcommand switches from starting one hardcoded-port `startRelayServer` call to running this poll loop for as long as the process lives. `AASEngineImpl` gets five new methods delegating straight to `local-configs.ts`, exposed through the existing RPC dispatch table.
 
-**Tech Stack:** TypeScript, Bun (`bun:test`, `Bun.serve`, `crypto.randomUUID()`), existing `@aas/client-core`/`@aas/types` packages — no new dependencies.
+**Tech Stack:** TypeScript, Bun (`bun:test`, `Bun.serve`, `crypto.randomUUID()`), existing `@as/client-core`/`@as/types` packages — no new dependencies.
 
 ## Global Constraints
 
@@ -30,7 +30,7 @@
 
 **Interfaces:**
 - Consumes: `RELAY_PORT` (existing constant, `apps/client-core/src/relay/server.ts`).
-- Produces: `export interface LocalRelayConfig { id: string; name: string; port: number; enabled: boolean }` in `@aas/types`; and from `apps/client-core/src/relay/local-configs.ts`: `listLocalConfigs(aasHome)`, `addLocalConfig(aasHome, name)`, `removeLocalConfig(aasHome, id)`, `updateLocalConfig(aasHome, id, patch)`, `setLocalConfigEnabled(aasHome, id, enabled)`, `toggleLocalConfig(aasHome, id)` — all consumed by Task 2 (daemon) and Task 3 (engine/RPC wiring).
+- Produces: `export interface LocalRelayConfig { id: string; name: string; port: number; enabled: boolean }` in `@as/types`; and from `apps/client-core/src/relay/local-configs.ts`: `listLocalConfigs(aasHome)`, `addLocalConfig(aasHome, name)`, `removeLocalConfig(aasHome, id)`, `updateLocalConfig(aasHome, id, patch)`, `setLocalConfigEnabled(aasHome, id, enabled)`, `toggleLocalConfig(aasHome, id)` — all consumed by Task 2 (daemon) and Task 3 (engine/RPC wiring).
 
 - [ ] **Step 1: Add the `LocalRelayConfig` type**
 
@@ -83,7 +83,7 @@ import {
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-local-configs-test-')
+  aasHome = await mkdtemp('/tmp/as-local-configs-test-')
 })
 
 afterEach(async () => {
@@ -189,7 +189,7 @@ Create `apps/client-core/src/relay/local-configs.ts`:
 ```ts
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { LocalRelayConfig } from '@aas/types'
+import type { LocalRelayConfig } from '@as/types'
 import { RELAY_PORT } from './server'
 
 const CONFIG_FILE = 'relay-configs.json'
@@ -317,7 +317,7 @@ Create `apps/client-core/src/relay/__tests__/daemon.test.ts`:
 ```ts
 import { test, expect } from 'bun:test'
 import { reconcileRelayInstances, type RunningRelayInstance } from '../daemon'
-import type { LocalRelayConfig } from '@aas/types'
+import type { LocalRelayConfig } from '@as/types'
 
 function config(id: string, port: number, enabled = true, name = id): LocalRelayConfig {
   return { id, name, port, enabled }
@@ -422,7 +422,7 @@ Expected: FAIL with a module-not-found error for `../daemon`.
 Create `apps/client-core/src/relay/daemon.ts`:
 
 ```ts
-import type { LocalRelayConfig } from '@aas/types'
+import type { LocalRelayConfig } from '@as/types'
 import { listLocalConfigs } from './local-configs'
 import { startRelayServer } from './server'
 
@@ -488,7 +488,7 @@ Append to `apps/client-core/src/relay/__tests__/daemon.test.ts`:
 test('runRelayDaemon starts a real server per enabled config and stops it on abort', async () => {
   const { mkdtemp, rm, writeFile } = await import('fs/promises')
   const { join } = await import('path')
-  const aasHome = await mkdtemp('/tmp/aas-daemon-test-')
+  const aasHome = await mkdtemp('/tmp/as-daemon-test-')
 
   try {
     await writeFile(
@@ -558,7 +558,7 @@ git commit -m "feat(client-core): add relay daemon reconciliation loop for multi
 - Test: `apps/cli/src/commands/__tests__/rpc.test.ts` (check the exact existing test file name/path with `find apps/cli/src -iname "*rpc*test*"` first — use whatever already exists, or this path if none does)
 
 **Interfaces:**
-- Consumes: `listLocalConfigs`, `addLocalConfig`, `removeLocalConfig`, `updateLocalConfig`, `toggleLocalConfig` from `apps/client-core/src/relay/local-configs.ts` (Task 1); `runRelayDaemon` from `@aas/client-core` (Task 2).
+- Consumes: `listLocalConfigs`, `addLocalConfig`, `removeLocalConfig`, `updateLocalConfig`, `toggleLocalConfig` from `apps/client-core/src/relay/local-configs.ts` (Task 1); `runRelayDaemon` from `@as/client-core` (Task 2).
 - Produces: `AASEngine.listLocalConfigs(): Promise<LocalRelayConfig[]>`, `.addLocalConfig(name: string): Promise<LocalRelayConfig>`, `.removeLocalConfig(id: string): Promise<void>`, `.updateLocalConfig(id: string, patch: { name?: string; port?: number }): Promise<LocalRelayConfig>`, `.toggleLocalConfig(id: string): Promise<LocalRelayConfig>` — consumed by RPC dispatch and, in a later not-yet-planned dashboard/local-provider-detail task, by the GUI.
 
 - [ ] **Step 1: Switch the CLI daemon entrypoint**
@@ -566,13 +566,13 @@ git commit -m "feat(client-core): add relay daemon reconciliation loop for multi
 In `apps/cli/src/index.ts`, change the import line:
 
 ```ts
-import { startRelayServer, resolvePaths } from '@aas/client-core'
+import { startRelayServer, resolvePaths } from '@as/client-core'
 ```
 
 to:
 
 ```ts
-import { runRelayDaemon, resolvePaths } from '@aas/client-core'
+import { runRelayDaemon, resolvePaths } from '@as/client-core'
 ```
 
 Change the `__relay-daemon` case:
@@ -657,7 +657,7 @@ import {
 } from './relay/local-configs'
 ```
 
-Add `LocalRelayConfig` to the existing `import type { ... } from '@aas/types'` block at the top of the file.
+Add `LocalRelayConfig` to the existing `import type { ... } from '@as/types'` block at the top of the file.
 
 Add these five methods to the `AASEngineImpl` class (anywhere among the other public methods, e.g. right after `parsePricingFromUrl`):
 
@@ -747,20 +747,20 @@ git commit -m "feat(client-core,cli): expose local relay config CRUD via AASEngi
 
 - [ ] **Step 1: Run the full monorepo test and type-check suite**
 
-Run: `cd /Users/liushangliang/github/phenix3443/ai-agent-store && bunx turbo run test type-check`
+Run: `cd /Users/liushangliang/github/phenix3443/agent-store && bunx turbo run test type-check`
 Expected: all tasks pass, 0 failures, 0 type errors. (If you see a stale-`dist/`-artifact-looking spurious failure, rerun once before treating it as real — this happened once earlier in this session and resolved on rebuild.)
 
 - [ ] **Step 2: Real-environment smoke test setup**
 
 ```bash
-export AAS_HOME=$(mktemp -d /tmp/aas-multiport-smoketest-XXXX)
-cd /Users/liushangliang/github/phenix3443/ai-agent-store
+export AS_HOME=$(mktemp -d /tmp/as-multiport-smoketest-XXXX)
+cd /Users/liushangliang/github/phenix3443/agent-store
 ```
 
 Start the daemon directly (bypassing the PID-file-managed `aas relay start/stop` CLI wrapper, so you can watch its stdout):
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __relay-daemon &
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __relay-daemon &
 echo $! > /tmp/multiport-daemon.pid
 sleep 1
 ```
@@ -778,7 +778,7 @@ Expected: some HTTP status (likely `503` since no provider is enabled yet) — t
 Using the RPC command (adjust invocation to match `apps/cli`'s actual `__rpc` entrypoint):
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc addLocalConfig '["Second"]'
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc addLocalConfig '["Second"]'
 sleep 4
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18880/v1/messages -X POST -d '{}'
 ```
@@ -788,9 +788,9 @@ Expected: the `addLocalConfig` RPC call returns a JSON success response reportin
 - [ ] **Step 5: Disable the second config and confirm its port stops responding**
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc listLocalConfigs
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc listLocalConfigs
 # note the id of the "Second" config from the output, then:
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc toggleLocalConfig '["<id-from-above>"]'
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc toggleLocalConfig '["<id-from-above>"]'
 sleep 4
 curl -s -o /dev/null -w "%{http_code}\n" --max-time 2 http://127.0.0.1:18880/v1/messages -X POST -d '{}' || echo "connection refused, as expected"
 ```
@@ -802,7 +802,7 @@ Expected: the curl either fails to connect or times out, confirming the daemon s
 ```bash
 kill "$(cat /tmp/multiport-daemon.pid)"
 rm -f /tmp/multiport-daemon.pid
-rm -rf "$AAS_HOME"
+rm -rf "$AS_HOME"
 ```
 
 No commit for this task — it's verification only. If any step fails, treat it as `BLOCKED` and report the exact failure rather than silently proceeding.

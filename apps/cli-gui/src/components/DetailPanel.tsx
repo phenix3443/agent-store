@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, Heart } from 'lucide-react'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'

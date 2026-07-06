@@ -1,5 +1,5 @@
 {
-  "name": "@aas/store",
+  "name": "@as/store",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -11,7 +11,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@aas/types": "workspace:*",
+    "@as/types": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.1",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.3",

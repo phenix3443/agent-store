@@ -1,6 +1,6 @@
 'use client'
 
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import Link from 'next/link'
 import { Heart, Star } from 'lucide-react'
 import { Badge } from './Badge'

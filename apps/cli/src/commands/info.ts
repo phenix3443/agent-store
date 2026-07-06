@@ -1,4 +1,4 @@
-import type { AASEngine } from '@aas/types'
+import type { AASEngine } from '@as/types'
 
 export async function runInfo(
   engine: AASEngine,

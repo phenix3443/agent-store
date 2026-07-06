@@ -544,7 +544,7 @@ git commit -m "feat(cli-gui): extend AppState with nav/filter/selection/favorite
 - Test: `apps/cli-gui/src/lib/__tests__/resources.test.ts`
 
 **Interfaces:**
-- Consumes: `InstalledItem`, `Item`, `ItemDetail` from `@aas/types`; `CategoryFilter`, `ListFilter`, `AgentApp` from `../state/AppState` (Task 4).
+- Consumes: `InstalledItem`, `Item`, `ItemDetail` from `@as/types`; `CategoryFilter`, `ListFilter`, `AgentApp` from `../state/AppState` (Task 4).
 - Produces: `matchesCategoryFilter(category, filter)`, `matchesText(name, description, query)`, `EnrichedInstalledItem` type, `enrichInstalled(item, detail)`, `filterInstalledByListFilter(items, filter, agentApp, favoriteSlugs)`, `filterRecommendedByListFilter(items, filter, favoriteSlugs)`, `showInstalledSection(filter)`, `showRecommendedSection(filter)` — all consumed by `ResourceList.tsx` (Task 7).
 
 - [ ] **Step 1: Write the failing test**
@@ -558,7 +558,7 @@ import {
   filterInstalledByListFilter, filterRecommendedByListFilter,
   showInstalledSection, showRecommendedSection,
 } from '../resources'
-import type { InstalledItem, Item, ItemDetail } from '@aas/types'
+import type { InstalledItem, Item, ItemDetail } from '@as/types'
 
 const publisher = { id: 'p', slug: 'anthropic', name: 'anthropic', avatarUrl: '', tier: 'official' as const }
 
@@ -666,7 +666,7 @@ Expected: FAIL — cannot find module `../resources`.
 Create `apps/cli-gui/src/lib/resources.ts`:
 
 ```ts
-import type { InstalledItem, Item, ItemDetail } from '@aas/types'
+import type { InstalledItem, Item, ItemDetail } from '@as/types'
 import type { AgentApp, CategoryFilter, ListFilter } from '../state/AppState'
 
 export function matchesCategoryFilter(category: Item['category'], filter: CategoryFilter): boolean {
@@ -1087,7 +1087,7 @@ Create `apps/cli-gui/src/components/ResourceList.tsx`:
 
 ```tsx
 import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, ItemDetail } from '@aas/types'
+import type { Item, InstalledItem, ItemDetail } from '@as/types'
 import { Search } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type ListFilter } from '../state/AppState'
@@ -1567,7 +1567,7 @@ Create `apps/cli-gui/src/lib/useSelectedDetail.ts`:
 
 ```ts
 import { useEffect, useState } from 'react'
-import type { Item, ItemDetail } from '@aas/types'
+import type { Item, ItemDetail } from '@as/types'
 import { callRpc } from './rpc'
 import { useAppState } from '../state/AppState'
 

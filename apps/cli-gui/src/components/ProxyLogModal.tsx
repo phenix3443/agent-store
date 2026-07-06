@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
-import type { LocalRelayConfig, RecentRequestRow } from '@aas/types'
+import type { LocalRelayConfig, RecentRequestRow } from '@as/types'
 import { X } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 

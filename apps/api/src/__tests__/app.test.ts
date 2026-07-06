@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'bun:test'
-import type { Item, Publisher } from '@aas/types'
+import type { Item, Publisher } from '@as/types'
 
 const mockItem: Item = {
   id: 'item-1', slug: 'openai-provider', name: 'OpenAI Provider',

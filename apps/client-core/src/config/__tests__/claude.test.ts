@@ -2,7 +2,7 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { syncItemToClaude } from '../claude'
-import type { MCPItem, ProviderItem, SkillItem } from '@aas/types'
+import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
 let aasHome: string
 let claudeDir: string
@@ -40,8 +40,8 @@ async function setupItem(category: string, slug: string, manifest: object, confi
 }
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-test-home-')
-  claudeDir = await mkdtemp('/tmp/aas-test-claude-')
+  aasHome = await mkdtemp('/tmp/as-test-home-')
+  claudeDir = await mkdtemp('/tmp/as-test-claude-')
 })
 
 afterEach(async () => {

@@ -5,7 +5,7 @@ import { readRelayState, writeRelayState, clearRelayState } from '../relay-state
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-relay-state-test-')
+  aasHome = await mkdtemp('/tmp/as-relay-state-test-')
 })
 
 afterEach(async () => {

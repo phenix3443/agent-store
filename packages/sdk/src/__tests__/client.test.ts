@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { AASClient } from '../client'
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 
 describe('AASClient constructor', () => {
   test('uses provided baseUrl', () => {
@@ -155,7 +155,7 @@ describe('AASClient.getItemBySlug', () => {
   })
 })
 
-import type { Publisher } from '@aas/types'
+import type { Publisher } from '@as/types'
 
 const fakePublisher: Publisher = {
   id: 'pub-1',

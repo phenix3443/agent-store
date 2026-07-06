@@ -4,7 +4,7 @@ import {
   filterInstalledByListFilter, filterRecommendedByListFilter,
   showInstalledSection, showRecommendedSection,
 } from '../resources'
-import type { InstalledItem, Item, ItemDetail } from '@aas/types'
+import type { InstalledItem, Item, ItemDetail } from '@as/types'
 
 const publisher = { id: 'p', slug: 'anthropic', name: 'anthropic', avatarUrl: '', tier: 'official' as const }
 

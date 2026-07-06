@@ -2,7 +2,7 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { syncItemToCodex } from '../codex'
-import type { MCPItem, ProviderItem } from '@aas/types'
+import type { MCPItem, ProviderItem } from '@as/types'
 import { parse } from '@iarna/toml'
 
 let aasHome: string
@@ -27,8 +27,8 @@ const providerManifest: ProviderItem = {
 }
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-test-home-')
-  codexDir = await mkdtemp('/tmp/aas-test-codex-')
+  aasHome = await mkdtemp('/tmp/as-test-home-')
+  codexDir = await mkdtemp('/tmp/as-test-codex-')
 })
 
 afterEach(async () => {

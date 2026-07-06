@@ -1,4 +1,4 @@
-import type { Publisher } from '@aas/types'
+import type { Publisher } from '@as/types'
 
 type TierVariant = Publisher['tier']
 type CategoryVariant = 'provider' | 'skill' | 'mcp'

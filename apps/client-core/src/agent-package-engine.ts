@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { AASPaths } from '@aas/types'
+import type { AASPaths } from '@as/types'
 import { upsertClaudeMcpServer } from './config/claude'
 import { buildPackageStdioMcpServerConfig } from './config/mcp'
 import { upsertCodexMcpServer, upsertCodexProviderConnection } from './config/codex'

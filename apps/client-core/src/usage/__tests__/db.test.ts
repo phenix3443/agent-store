@@ -6,7 +6,7 @@ import { openUsageDb } from '../db'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-usage-db-test-')
+  dir = await mkdtemp('/tmp/as-usage-db-test-')
 })
 
 afterEach(async () => {

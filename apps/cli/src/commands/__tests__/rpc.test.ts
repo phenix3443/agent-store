@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runRpc } from '../rpc'
-import type { AASEngine } from '@aas/types'
+import type { AASEngine } from '@as/types'
 
 function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
   return {

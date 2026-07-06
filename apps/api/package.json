@@ -1,5 +1,5 @@
 {
-  "name": "@aas/api",
+  "name": "@as/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@aas/types": "workspace:*",
+    "@as/types": "workspace:*",
     "@supabase/supabase-js": "^2.108.2",
     "hono": "^4.6.0"
   },

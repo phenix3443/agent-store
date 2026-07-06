@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, ItemDetail, UpdateAvailable } from '@aas/types'
+import type { Item, InstalledItem, ItemDetail, UpdateAvailable } from '@as/types'
 import { Search, Filter, Check } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'

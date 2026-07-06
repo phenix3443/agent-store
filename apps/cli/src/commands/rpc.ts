@@ -1,4 +1,4 @@
-import type { AASEngine, ListOptions, SearchOptions, ToolTarget, UsageSummaryOptions } from '@aas/types'
+import type { AASEngine, ListOptions, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: AASEngine, args: unknown[]) => Promise<unknown>
 

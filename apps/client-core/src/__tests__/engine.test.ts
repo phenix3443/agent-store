@@ -2,7 +2,7 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { AASEngineImpl } from '../engine'
-import type { MCPItem, ProviderItem, SkillItem } from '@aas/types'
+import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
 const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'community' as const }
 const baseItem = {
@@ -57,9 +57,9 @@ function mockFetch(items: Record<string, unknown>) {
 }
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-test-home-')
-  claudeDir = await mkdtemp('/tmp/aas-test-claude-')
-  codexDir = await mkdtemp('/tmp/aas-test-codex-')
+  aasHome = await mkdtemp('/tmp/as-test-home-')
+  claudeDir = await mkdtemp('/tmp/as-test-claude-')
+  codexDir = await mkdtemp('/tmp/as-test-codex-')
   engine = new AASEngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000'

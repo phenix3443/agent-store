@@ -7,7 +7,7 @@ import type { ModelPricing } from '../../config/provider'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-usage-logger-test-')
+  dir = await mkdtemp('/tmp/as-usage-logger-test-')
 })
 
 afterEach(async () => {

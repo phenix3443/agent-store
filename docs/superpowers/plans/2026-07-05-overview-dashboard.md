@@ -380,7 +380,7 @@ import { render, screen, cleanup } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 import { AppStateProvider } from '../../state/AppState'
 import { Overview } from '../Overview'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 
 afterEach(() => { cleanup(); mock.restore() })
 
@@ -423,7 +423,7 @@ Create `apps/cli-gui/src/components/Overview.tsx`:
 
 ```tsx
 import { useEffect, useState } from 'react'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 
@@ -629,7 +629,7 @@ category."
 - Test: `apps/cli-gui/src/components/__tests__/UsageTrendChart.test.tsx`
 
 **Interfaces:**
-- Consumes: `getUsageSummary(options?: { days?: number }): Promise<UsageSummaryRow[]>` (existing RPC, `UsageSummaryRow` from `@aas/types`, fields: `date, providerSlug, target, model, requestCount, successCount, unpricedRequestCount, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costUsd`).
+- Consumes: `getUsageSummary(options?: { days?: number }): Promise<UsageSummaryRow[]>` (existing RPC, `UsageSummaryRow` from `@as/types`, fields: `date, providerSlug, target, model, requestCount, successCount, unpricedRequestCount, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costUsd`).
 - Produces: `export function UsageTrendChart({ rows }: { rows: UsageSummaryRow[] }): JSX.Element` — self-contained, only consumed by `Overview.tsx` in this plan.
 
 - [ ] **Step 1: Write the failing test for `UsageTrendChart`**
@@ -640,7 +640,7 @@ Create `apps/cli-gui/src/components/__tests__/UsageTrendChart.test.tsx`:
 import { test, expect, afterEach } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
 import { UsageTrendChart } from '../UsageTrendChart'
-import type { UsageSummaryRow } from '@aas/types'
+import type { UsageSummaryRow } from '@as/types'
 
 afterEach(() => cleanup())
 
@@ -685,7 +685,7 @@ Expected: FAIL — module doesn't exist.
 Create `apps/cli-gui/src/components/UsageTrendChart.tsx`:
 
 ```tsx
-import type { UsageSummaryRow } from '@aas/types'
+import type { UsageSummaryRow } from '@as/types'
 
 const WIDTH = 280
 const HEIGHT = 60
@@ -766,7 +766,7 @@ Expected: FAIL — no "消耗趋势" card exists yet.
 In `apps/cli-gui/src/components/Overview.tsx`, add the import:
 
 ```ts
-import type { InstalledItem, UsageSummaryRow } from '@aas/types'
+import type { InstalledItem, UsageSummaryRow } from '@as/types'
 import { UsageTrendChart } from './UsageTrendChart'
 ```
 
@@ -935,7 +935,7 @@ Create `apps/cli-gui/src/components/LocalRelayDetail.tsx`:
 
 ```tsx
 import { useEffect, useState } from 'react'
-import type { LocalRelayConfig, RelayStatus } from '@aas/types'
+import type { LocalRelayConfig, RelayStatus } from '@as/types'
 import { callRpc } from '../lib/rpc'
 
 export function LocalRelayDetail() {
@@ -1098,7 +1098,7 @@ Expected: FAIL — no "本地代理" card exists yet.
 Add imports and state:
 
 ```ts
-import type { LocalRelayConfig, RelayStatus } from '@aas/types'
+import type { LocalRelayConfig, RelayStatus } from '@as/types'
 ```
 
 ```ts
@@ -1172,7 +1172,7 @@ import { test, expect, afterEach, spyOn, mock } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 import { ProxyLogModal } from '../ProxyLogModal'
-import type { RecentRequestRow } from '@aas/types'
+import type { RecentRequestRow } from '@as/types'
 
 afterEach(() => { cleanup(); mock.restore() })
 
@@ -1218,7 +1218,7 @@ Create `apps/cli-gui/src/components/ProxyLogModal.tsx` (matching whatever exact 
 ```tsx
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
-import type { RecentRequestRow } from '@aas/types'
+import type { RecentRequestRow } from '@as/types'
 import { X } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 
@@ -1313,7 +1313,7 @@ Expected: FAIL — no "最近请求" card exists yet.
 Add imports and state:
 
 ```ts
-import type { RecentRequestRow } from '@aas/types'
+import type { RecentRequestRow } from '@as/types'
 import { ProxyLogModal } from './ProxyLogModal'
 ```
 
@@ -1435,7 +1435,7 @@ Expected: FAIL — no "可更新" card exists yet.
 Add imports and state:
 
 ```ts
-import type { UpdateAvailable } from '@aas/types'
+import type { UpdateAvailable } from '@as/types'
 ```
 
 ```ts
@@ -1484,7 +1484,7 @@ Expected: all pass.
 
 - [ ] **Step 5: Run the full monorepo suite**
 
-Run: `cd /Users/liushangliang/github/phenix3443/ai-agent-store && bunx turbo run test type-check --force`
+Run: `cd /Users/liushangliang/github/phenix3443/agent-store && bunx turbo run test type-check --force`
 Expected: all tasks pass, 0 failures, 0 type errors.
 
 - [ ] **Step 6: Commit**
@@ -1498,12 +1498,12 @@ git commit -m "feat(cli-gui): add updatable-packages card to Overview, completin
 
 Following this session's established technique (see `AGENTS.md`'s UI sign-off rule):
 
-1. Set up an isolated `AAS_HOME` with at least one real installed provider (reuse the real yls-me/skyapi credentials from `~/.code-switch/codex.json`/`~/.code-switch/claude-code.json`, transiently, never committed), some usage history (send a few real requests through a running relay so `getUsageSummary`/`getRecentRequests` return real, non-empty data), and at least one local relay config besides the default.
-2. Run `make dev-gui` (or the equivalent Tauri dev command — check the `Makefile`/`apps/cli-gui/package.json` for the exact target) pointed at that `AAS_HOME`.
+1. Set up an isolated `AS_HOME` with at least one real installed provider (reuse the real yls-me/skyapi credentials from `~/.code-switch/codex.json`/`~/.code-switch/claude-code.json`, transiently, never committed), some usage history (send a few real requests through a running relay so `getUsageSummary`/`getRecentRequests` return real, non-empty data), and at least one local relay config besides the default.
+2. Run `make dev-gui` (or the equivalent Tauri dev command — check the `Makefile`/`apps/cli-gui/package.json` for the exact target) pointed at that `AS_HOME`.
 3. Use `osascript` to focus the native window and `screencapture -R{x},{y},{w},{h}` to capture it (not a plain browser tab — the Tauri IPC bridge must be live, per the established AGENTS.md incident this rule was written from).
 4. Compare screen-by-screen against `docs/ui/Agent Store.dc.html`'s Overview/dashboard screen and the reference screenshots in `docs/ui/screens/` (if present) — confirm: default view is the Overview dashboard (not browse), category counts are real, the consumption trend card renders a visible line (not blank), the local relay card reflects the real running daemon, recent requests shows real rows (not placeholders), clicking "查看全部" opens a populated proxy log modal, clicking the local relay card navigates to a working config-management view, and clicking "浏览商店" still shows the original three-pane browse layout unaffected.
 5. Click through: toggle a local relay config's enabled state and confirm the UI updates; add a local relay config and confirm a new row appears; open the proxy log modal from both entry points (Overview card and `LocalRelayDetail`).
-6. Tear down the isolated `AAS_HOME` and stop any spawned relay daemon.
+6. Tear down the isolated `AS_HOME` and stop any spawned relay daemon.
 
 If any visual or functional mismatch is found, fix it and re-screenshot before considering this task (and the plan) complete. This step has no commit of its own — any fixes found here get their own small commit(s), each following this plan's existing commit-message conventions.
 

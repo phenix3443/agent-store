@@ -1,4 +1,4 @@
-import type { InstalledItem, RegistryJson, ToolTarget } from '@aas/types'
+import type { InstalledItem, RegistryJson, ToolTarget } from '@as/types'
 import { itemDir } from '../paths'
 import { readProviderConnection, type ProviderConnection } from '../config/provider'
 

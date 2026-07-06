@@ -44,7 +44,7 @@ test('submitting closes the modal', () => {
 })
 
 test('mcp transport=http submits headers as parsed JSON on the built item', () => {
-  let latestItems: import('@aas/types').Item[] = []
+  let latestItems: import('@as/types').Item[] = []
   function Probe() {
     const { userItems } = useClientState()
     latestItems = userItems

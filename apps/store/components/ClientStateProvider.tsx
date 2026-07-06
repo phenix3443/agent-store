@@ -1,6 +1,6 @@
 'use client'
 
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
 const STORAGE_KEY = 'aas-store-client-state'

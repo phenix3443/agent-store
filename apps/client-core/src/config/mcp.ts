@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import type { MCPItem } from '@aas/types'
+import type { MCPItem } from '@as/types'
 
 export interface StdioMcpServerConfig {
   type: 'stdio'

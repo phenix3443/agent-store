@@ -1,4 +1,4 @@
-import type { Item, Publisher } from '@aas/types'
+import type { Item, Publisher } from '@as/types'
 
 export type Result<T> = { data: T; error: null } | { data: null; error: string }
 

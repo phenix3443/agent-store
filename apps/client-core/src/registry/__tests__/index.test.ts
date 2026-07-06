@@ -1,7 +1,7 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm } from 'fs/promises'
 import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from '../index'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 
 const entry: InstalledItem = {
   slug: 'test-provider',
@@ -16,7 +16,7 @@ const entry: InstalledItem = {
 let tmpDir: string
 
 beforeEach(async () => {
-  tmpDir = await mkdtemp('/tmp/aas-test-')
+  tmpDir = await mkdtemp('/tmp/as-test-')
 })
 
 afterEach(async () => {

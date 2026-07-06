@@ -1,4 +1,4 @@
-import type { InstalledItem, Item, ItemDetail } from '@aas/types'
+import type { InstalledItem, Item, ItemDetail } from '@as/types'
 import type { AgentApp, CategoryFilter, ListFilter } from '../state/AppState'
 
 export function matchesCategoryFilter(category: Item['category'], filter: CategoryFilter): boolean {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ItemDetail, ToolTarget } from '@aas/types'
+import type { ItemDetail, ToolTarget } from '@as/types'
 import { Check, HelpCircle } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 

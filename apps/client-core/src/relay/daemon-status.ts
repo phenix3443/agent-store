@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import type { RelayStatus } from '@aas/types'
+import type { RelayStatus } from '@as/types'
 
 function isProcessRunning(pid: number): boolean {
   try {

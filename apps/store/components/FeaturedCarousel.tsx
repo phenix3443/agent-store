@@ -1,6 +1,6 @@
 'use client'
 
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'

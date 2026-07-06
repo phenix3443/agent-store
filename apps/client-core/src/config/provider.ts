@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { ModelPricing } from '@aas/types'
+import type { ModelPricing } from '@as/types'
 
-export type { ModelPricing } from '@aas/types'
+export type { ModelPricing } from '@as/types'
 
 export type ProviderAuthType = 'bearer' | 'anthropic' | { header: string }
 

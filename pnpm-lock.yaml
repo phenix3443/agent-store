@@ -23,7 +23,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@aas/types':
+      '@as/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@supabase/supabase-js':
@@ -42,10 +42,10 @@ importers:
 
   apps/cli:
     dependencies:
-      '@aas/client-core':
+      '@as/client-core':
         specifier: workspace:*
         version: link:../client-core
-      '@aas/types':
+      '@as/types':
         specifier: workspace:*
         version: link:../../packages/types
     devDependencies:
@@ -58,7 +58,7 @@ importers:
 
   apps/cli-gui:
     dependencies:
-      '@aas/types':
+      '@as/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@radix-ui/react-dialog':
@@ -122,10 +122,10 @@ importers:
 
   apps/client-core:
     dependencies:
-      '@aas/sdk':
+      '@as/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
-      '@aas/types':
+      '@as/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@iarna/toml':
@@ -147,7 +147,7 @@ importers:
 
   apps/store:
     dependencies:
-      '@aas/types':
+      '@as/types':
         specifier: workspace:*
         version: link:../../packages/types
       '@radix-ui/react-dialog':
@@ -223,7 +223,7 @@ importers:
 
   packages/sdk:
     dependencies:
-      '@aas/types':
+      '@as/types':
         specifier: workspace:*
         version: link:../types
     devDependencies:

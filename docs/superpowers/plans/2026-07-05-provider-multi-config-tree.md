@@ -622,7 +622,7 @@ In `apps/cli-gui/src/components/DetailPanel.tsx`, add imports/state:
 
 ```ts
 import { useEffect, useState } from 'react'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 ```
 
 (merge with the existing `import { useState } from 'react'` line — change to `import { useEffect, useState } from 'react'`.)
@@ -678,22 +678,22 @@ git commit -m "feat(cli-gui): show a child-config count banner on a provider's r
 
 - [ ] **Step 1: Run the full monorepo test and type-check suite**
 
-Run: `cd /Users/liushangliang/github/phenix3443/ai-agent-store && bunx turbo run test type-check --force`
+Run: `cd /Users/liushangliang/github/phenix3443/agent-store && bunx turbo run test type-check --force`
 Expected: all tasks pass, 0 failures, 0 type errors.
 
 - [ ] **Step 2: Real-environment functional check via CLI RPCs (no GUI screenshot required for this plan — chrome-devtools MCP is unavailable this session, and native-window screenshotting proved unreliable due to desktop contention in the prior plan's QA pass)**
 
 ```bash
-export AAS_HOME=$(mktemp -d /tmp/aas-multiconfig-smoketest-XXXX)
-cd /Users/liushangliang/github/phenix3443/ai-agent-store
+export AS_HOME=$(mktemp -d /tmp/as-multiconfig-smoketest-XXXX)
+cd /Users/liushangliang/github/phenix3443/agent-store
 ```
 
 Install a real test provider (or reuse a lightweight fixture item already known to exist in the market backend this repo talks to — check `apps/cli/src/commands/install.ts`'s tests or any existing smoke-test script for a known-good slug), then:
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc list
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc duplicateProvider '["<installed-provider-slug>"]'
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc list
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc list
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc duplicateProvider '["<installed-provider-slug>"]'
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc list
 ```
 
 Expected: the second `list` call shows the new duplicate entry with `parentSlug` set to the original slug, and its `config.json`'s `apiKey` is empty even if the original had one set.
@@ -701,7 +701,7 @@ Expected: the second `list` call shows the new duplicate entry with `parentSlug`
 - [ ] **Step 3: Tear down**
 
 ```bash
-rm -rf "$AAS_HOME"
+rm -rf "$AS_HOME"
 ```
 
 No commit for this task — it's verification only. If real-environment GUI visual confirmation later becomes feasible again (chrome-devtools MCP reconnects, or the desktop is free of contention), a follow-up manual click-through of the tree rendering and 配置/安装 button branching is recommended but not blocking for this plan's completion, given the disclosed tooling constraint.

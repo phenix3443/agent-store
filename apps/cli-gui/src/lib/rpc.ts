@@ -13,7 +13,7 @@ interface RpcFailure {
 type RpcEnvelope<T> = RpcSuccess<T> | RpcFailure
 
 export async function callRpc<T>(method: string, args: unknown[] = []): Promise<T> {
-  const command = Command.sidecar('binaries/aas', ['__rpc', method, JSON.stringify(args)])
+  const command = Command.sidecar('binaries/as', ['__rpc', method, JSON.stringify(args)])
   const output = await command.execute()
 
   let envelope: RpcEnvelope<T>

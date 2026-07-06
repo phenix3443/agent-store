@@ -1,5 +1,5 @@
 {
-  "name": "@aas/cli",
+  "name": "@as/cli",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,8 +10,8 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@aas/client-core": "workspace:*",
-    "@aas/types": "workspace:*"
+    "@as/client-core": "workspace:*",
+    "@as/types": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

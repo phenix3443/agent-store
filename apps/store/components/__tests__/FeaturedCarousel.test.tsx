@@ -1,6 +1,6 @@
 import { test, expect, afterEach } from 'bun:test'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import { FeaturedCarousel } from '../FeaturedCarousel'
 
 function makeItem(id: string, name: string): Item {

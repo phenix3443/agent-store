@@ -30,7 +30,7 @@
 
 **Interfaces:**
 - Consumes: `openUsageDb(aasHome): Database` (existing, `apps/client-core/src/usage/db.ts`).
-- Produces: `export interface RecentRequestRow { id: number; createdAt: string; providerSlug: string; target: string; model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; costUsd: number | null; statusCode: number; latencyMs: number; isStreaming: boolean; isFallback: boolean }` in `apps/client-core/src/usage/queries.ts` (also exported from `@aas/types`); `export function getRecentRequests(aasHome: string, options?: { limit?: number }): RecentRequestRow[]`; `AASEngine.getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]>`.
+- Produces: `export interface RecentRequestRow { id: number; createdAt: string; providerSlug: string; target: string; model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; costUsd: number | null; statusCode: number; latencyMs: number; isStreaming: boolean; isFallback: boolean }` in `apps/client-core/src/usage/queries.ts` (also exported from `@as/types`); `export function getRecentRequests(aasHome: string, options?: { limit?: number }): RecentRequestRow[]`; `AASEngine.getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]>`.
 
 - [ ] **Step 1: Add the `RecentRequestRow` type**
 
@@ -220,7 +220,7 @@ In `packages/types/src/engine.ts`, add to the `AASEngine` interface (after `getU
 Add `RecentRequestRow` to the type-only import at the top of `packages/types/src/engine.ts` if it's a separate file section requiring it (it's defined in the same file per Step 1, so no import needed there — just confirm the interface reference resolves).
 
 In `apps/client-core/src/engine.ts`:
-- Add `RecentRequestRow` to the existing `import type { ... } from '@aas/types'` block.
+- Add `RecentRequestRow` to the existing `import type { ... } from '@as/types'` block.
 - Add `getRecentRequests` to the existing `import { getDailySummary } from './usage/queries'` line, changing it to `import { getDailySummary, getRecentRequests } from './usage/queries'`.
 - Add this method to `AASEngineImpl` (right after `getUsageSummary`):
 
@@ -293,7 +293,7 @@ git commit -m "feat(client-core): add getRecentRequests for raw request-log quer
 
 **Interfaces:**
 - Consumes: nothing new (reads `{aasHome}/relay.pid` directly via `fs/promises`).
-- Produces: `export interface RelayStatus { running: boolean; pid?: number }` in `@aas/types`; `export async function getRelayDaemonStatus(aasHome: string): Promise<RelayStatus>` in `apps/client-core/src/relay/daemon-status.ts`; `AASEngine.getRelayStatus(): Promise<RelayStatus>`.
+- Produces: `export interface RelayStatus { running: boolean; pid?: number }` in `@as/types`; `export async function getRelayDaemonStatus(aasHome: string): Promise<RelayStatus>` in `apps/client-core/src/relay/daemon-status.ts`; `AASEngine.getRelayStatus(): Promise<RelayStatus>`.
 
 - [ ] **Step 1: Add the `RelayStatus` type**
 
@@ -321,7 +321,7 @@ import { getRelayDaemonStatus } from '../daemon-status'
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-daemon-status-test-')
+  aasHome = await mkdtemp('/tmp/as-daemon-status-test-')
 })
 
 afterEach(async () => {
@@ -365,7 +365,7 @@ Create `apps/client-core/src/relay/daemon-status.ts`:
 ```ts
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import type { RelayStatus } from '@aas/types'
+import type { RelayStatus } from '@as/types'
 
 function isProcessRunning(pid: number): boolean {
   try {
@@ -406,7 +406,7 @@ In `packages/types/src/engine.ts`, add to the `AASEngine` interface (after `getR
 ```
 
 In `apps/client-core/src/engine.ts`:
-- Add `RelayStatus` to the existing `import type { ... } from '@aas/types'` block.
+- Add `RelayStatus` to the existing `import type { ... } from '@as/types'` block.
 - Add `import { getRelayDaemonStatus } from './relay/daemon-status'`.
 - Add this method to `AASEngineImpl`:
 
@@ -470,39 +470,39 @@ git commit -m "feat(client-core): add getRelayStatus for read-only relay daemon 
 
 - [ ] **Step 1: Run the full monorepo test and type-check suite**
 
-Run: `cd /Users/liushangliang/github/phenix3443/ai-agent-store && bunx turbo run test type-check`
+Run: `cd /Users/liushangliang/github/phenix3443/agent-store && bunx turbo run test type-check`
 Expected: all tasks pass, 0 failures, 0 type errors.
 
 - [ ] **Step 2: Real-environment sanity check**
 
 ```bash
-export AAS_HOME=$(mktemp -d /tmp/aas-dashboard-backend-smoketest-XXXX)
-cd /Users/liushangliang/github/phenix3443/ai-agent-store
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc getRelayStatus
+export AS_HOME=$(mktemp -d /tmp/as-dashboard-backend-smoketest-XXXX)
+cd /Users/liushangliang/github/phenix3443/agent-store
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc getRelayStatus
 ```
 
 Expected: `{"ok":true,"data":{"running":false}}` (no daemon started in this fresh home).
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __relay-daemon &
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __relay-daemon &
 echo $! > /tmp/dashboard-backend-daemon.pid
 sleep 1
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc getRelayStatus
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc getRelayStatus
 ```
 
 Expected: this call reads `{aasHome}/relay.pid` — note the daemon started via `__relay-daemon` directly (not via `aas relay start`) does NOT write a PID file itself (only `apps/cli/src/commands/relay.ts`'s `spawnDetached`+`writePidFile` path does that) — so this specific manual invocation is expected to still report `{"running":false}`, which is correct: `getRelayStatus` is only meaningful when the daemon was started via `aas relay start`. Confirm this expectation holds, then additionally verify the intended real path:
 
 ```bash
 kill "$(cat /tmp/dashboard-backend-daemon.pid)" 2>/dev/null
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts relay start
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts relay start
 sleep 1
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc getRelayStatus
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc getRelayStatus
 ```
 
 Expected: `{"ok":true,"data":{"running":true,"pid":<some number>}}`.
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts __rpc getRecentRequests
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts __rpc getRecentRequests
 ```
 
 Expected: `{"ok":true,"data":[]}` (no requests logged yet in this fresh home — an empty array, not an error).
@@ -510,9 +510,9 @@ Expected: `{"ok":true,"data":[]}` (no requests logged yet in this fresh home —
 - [ ] **Step 3: Tear down**
 
 ```bash
-AAS_HOME="$AAS_HOME" bun run apps/cli/src/index.ts relay stop
+AS_HOME="$AS_HOME" bun run apps/cli/src/index.ts relay stop
 rm -f /tmp/dashboard-backend-daemon.pid
-rm -rf "$AAS_HOME"
+rm -rf "$AS_HOME"
 ```
 
 No commit for this task — it's verification only. If any step fails, treat it as `BLOCKED` and report the exact failure rather than silently proceeding.

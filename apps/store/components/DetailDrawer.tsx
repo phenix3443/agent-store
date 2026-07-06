@@ -1,6 +1,6 @@
 'use client'
 
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { Badge } from './Badge'

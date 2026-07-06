@@ -3,7 +3,7 @@ import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/re
 import * as rpcModule from '../../lib/rpc'
 import { AppStateProvider, useAppState } from '../../state/AppState'
 import { Overview } from '../Overview'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 
 afterEach(() => { cleanup(); mock.restore() })
 

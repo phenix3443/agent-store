@@ -1,7 +1,7 @@
 import { test, expect, afterEach } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
 import { UsageTrendChart } from '../UsageTrendChart'
-import type { UsageSummaryRow } from '@aas/types'
+import type { UsageSummaryRow } from '@as/types'
 
 afterEach(() => cleanup())
 

@@ -3,8 +3,8 @@
 #   wrangler secret put SUPABASE_URL --env test
 #   wrangler secret put SUPABASE_ANON_KEY --env test
 #
-# Deploy:  wrangler deploy --env test        (→ aas-api-test.<subdomain>.workers.dev)
-#          wrangler deploy --env production   (→ aas-api-prod.<subdomain>.workers.dev)
+# Deploy:  wrangler deploy --env test        (→ as-api-test.<subdomain>.workers.dev)
+#          wrangler deploy --env production   (→ as-api-prod.<subdomain>.workers.dev)
 
 main = "src/worker.ts"
 compatibility_date = "2026-07-01"
@@ -12,8 +12,8 @@ compatibility_flags = ["nodejs_compat"]
 
 # Online TEST environment
 [env.test]
-name = "aas-api-test"
+name = "as-api-test"
 
 # Online PRODUCTION environment (filled out later)
 [env.production]
-name = "aas-api-prod"
+name = "as-api-prod"

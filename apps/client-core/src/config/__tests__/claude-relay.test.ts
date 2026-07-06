@@ -8,8 +8,8 @@ let aasHome: string
 let claudeDir: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-claude-relay-test-')
-  claudeDir = await mkdtemp('/tmp/aas-claude-relay-dir-')
+  aasHome = await mkdtemp('/tmp/as-claude-relay-test-')
+  claudeDir = await mkdtemp('/tmp/as-claude-relay-dir-')
 })
 
 afterEach(async () => {

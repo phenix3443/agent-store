@@ -1,5 +1,5 @@
-import type { RegistryJson, InstalledItem, UpdateAvailable, Item } from '@aas/types'
-import type { AASClient } from '@aas/sdk'
+import type { RegistryJson, InstalledItem, UpdateAvailable, Item } from '@as/types'
+import type { AASClient } from '@as/sdk'
 
 export async function checkUpdates(
   registry: RegistryJson,

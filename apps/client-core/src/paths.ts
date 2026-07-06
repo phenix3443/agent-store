@@ -1,11 +1,11 @@
 import { homedir } from 'os'
 import { join } from 'path'
-import type { AASPaths } from '@aas/types'
+import type { AASPaths } from '@as/types'
 
 export function resolvePaths(overrides?: Partial<AASPaths>): Required<AASPaths> {
   const home = homedir()
   return {
-    aasHome: overrides?.aasHome ?? process.env['AAS_HOME'] ?? join(home, '.agents'),
+    aasHome: overrides?.aasHome ?? process.env['AS_HOME'] ?? join(home, '.agents'),
     claudeConfigDir: overrides?.claudeConfigDir ?? process.env['CLAUDE_CONFIG_DIR'] ?? join(home, '.claude'),
     codexConfigDir: overrides?.codexConfigDir ?? process.env['CODEX_CONFIG_DIR'] ?? join(home, '.codex'),
   }

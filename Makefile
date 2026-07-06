@@ -1,4 +1,4 @@
-# Makefile — Local development workflow for ai-agent-store
+# Makefile — Local development workflow for agent-store
 # Requires: supabase CLI, Docker, pnpm, Bun
 
 .PHONY: setup seed dev dev-api dev-gui build-cli e2e stop status
@@ -22,34 +22,34 @@ seed:
 ## is already isolated from any real backend beyond the local Docker Supabase.
 dev:
 	supabase start
-	pnpm --filter=@aas/store dev
+	pnpm --filter=@as/store dev
 
 ## Start the standalone catalog API server (apps/api) on :3001.
 ## Reads Supabase creds from apps/store/.env.local (NEXT_PUBLIC_SUPABASE_* fallback).
-## Both the web store and the CLI consume this API — the CLI points at it via AAS_STORE_URL.
+## Both the web store and the CLI consume this API — the CLI points at it via AS_STORE_URL.
 dev-api:
 	supabase start
 	set -a; . apps/store/.env.local; set +a; \
-	PORT=3001 pnpm --filter=@aas/api start
+	PORT=3001 pnpm --filter=@as/api start
 
 ## Start GUI client test environment in isolated /tmp dirs — never touches your
 ## real ~/.claude, ~/.codex, or ~/.agents. Starts the catalog API (apps/api) in the
-## background, then launches the Tauri dev window pointed at it via AAS_STORE_URL.
+## background, then launches the Tauri dev window pointed at it via AS_STORE_URL.
 dev-gui:
-	@mkdir -p /tmp/aas-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
+	@mkdir -p /tmp/as-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
 	supabase start
 	set -a; . apps/store/.env.local; set +a; \
-	PORT=3001 pnpm --filter=@aas/api start & API_PID=$$!; \
+	PORT=3001 pnpm --filter=@as/api start & API_PID=$$!; \
 	trap "kill $$API_PID 2>/dev/null" EXIT; \
-	AAS_HOME=/tmp/aas-gui-dev \
-	AAS_STORE_URL=http://127.0.0.1:3001 \
+	AS_HOME=/tmp/as-gui-dev \
+	AS_STORE_URL=http://127.0.0.1:3001 \
 	CLAUDE_CONFIG_DIR=/tmp/claude-gui-dev \
 	CODEX_CONFIG_DIR=/tmp/codex-gui-dev \
-	pnpm --filter=@aas/cli-gui tauri:dev
+	pnpm --filter=@as/cli-gui tauri:dev
 
-## Compile CLI binary to bin/aas
+## Compile CLI binary to bin/as
 build-cli:
-	pnpm --filter=@aas/cli build:bin
+	pnpm --filter=@as/cli build:bin
 
 ## Run full E2E test in isolated /tmp dirs (builds CLI first)
 e2e: build-cli

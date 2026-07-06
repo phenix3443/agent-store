@@ -12,7 +12,7 @@ import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
 import { runUsage } from './commands/usage'
-import { runRelayDaemon, resolvePaths } from '@aas/client-core'
+import { runRelayDaemon, resolvePaths } from '@as/client-core'
 import { readFile, writeFile, rm, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
 import { homedir } from 'os'
@@ -47,7 +47,7 @@ function selfInvocation(): string[] {
 }
 
 function realRelayOps() {
-  const pidFile = join(process.env['AAS_HOME'] ?? join(homedir(), '.agents'), 'relay.pid')
+  const pidFile = join(process.env['AS_HOME'] ?? join(homedir(), '.agents'), 'relay.pid')
   return {
     spawnDetached: () => {
       const proc = Bun.spawn([...selfInvocation(), '__relay-daemon'], { stdio: ['ignore', 'ignore', 'ignore'] })

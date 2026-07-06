@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { LocalRelayConfig, ToolTarget } from '@aas/types'
+import type { LocalRelayConfig, ToolTarget } from '@as/types'
 import { RELAY_PORT } from './server'
 
 const CONFIG_FILE = 'relay-configs.json'

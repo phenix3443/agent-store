@@ -1,4 +1,4 @@
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import { ItemCard } from './ItemCard'
 
 interface ItemGridProps {

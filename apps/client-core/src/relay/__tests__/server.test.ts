@@ -4,13 +4,13 @@ import { join } from 'path'
 import { startRelayServer } from '../server'
 import { writeRegistry } from '../../registry/index'
 import { itemDir } from '../../paths'
-import type { InstalledItem } from '@aas/types'
+import type { InstalledItem } from '@as/types'
 
 let aasHome: string
 let stop: () => void
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-relay-test-')
+  aasHome = await mkdtemp('/tmp/as-relay-test-')
 })
 
 afterEach(async () => {

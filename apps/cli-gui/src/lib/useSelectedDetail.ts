@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Item, ItemDetail } from '@aas/types'
+import type { Item, ItemDetail } from '@as/types'
 import { callRpc } from './rpc'
 import { useAppState } from '../state/AppState'
 

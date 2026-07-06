@@ -1,6 +1,6 @@
 import { test, expect, afterEach, mock } from 'bun:test'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
-import type { Publisher, Item } from '@aas/types'
+import type { Publisher, Item } from '@as/types'
 
 afterEach(() => { cleanup() })
 

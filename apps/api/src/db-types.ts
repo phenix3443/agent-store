@@ -5,7 +5,7 @@ import type {
   SkillItem,
   MCPItem,
   InstallHook,
-} from '@aas/types'
+} from '@as/types'
 
 // ── Raw DB row shapes (snake_case from Supabase) ──────────────────────────────
 

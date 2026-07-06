@@ -9,8 +9,8 @@ let aasHome: string
 let codexDir: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-codex-relay-test-')
-  codexDir = await mkdtemp('/tmp/aas-codex-relay-dir-')
+  aasHome = await mkdtemp('/tmp/as-codex-relay-test-')
+  codexDir = await mkdtemp('/tmp/as-codex-relay-dir-')
 })
 
 afterEach(async () => {

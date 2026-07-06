@@ -1,4 +1,4 @@
-import type { AASEngine, InstalledItem, ToolTarget } from '@aas/types'
+import type { AASEngine, InstalledItem, ToolTarget } from '@as/types'
 import { SYMBOLS, padEnd, formatTable } from '../utils/format'
 
 function getFlag(args: string[], flag: string): string | undefined {

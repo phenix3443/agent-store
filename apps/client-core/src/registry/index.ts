@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import type { RegistryJson, InstalledItem } from '@aas/types'
+import type { RegistryJson, InstalledItem } from '@as/types'
 
 export async function readRegistry(aasHome: string): Promise<RegistryJson> {
   try {

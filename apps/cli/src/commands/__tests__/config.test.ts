@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runConfig } from '../config'
-import type { AASEngine, JsonSchema } from '@aas/types'
+import type { AASEngine, JsonSchema } from '@as/types'
 
 const schema: JsonSchema = {
   type: 'object',

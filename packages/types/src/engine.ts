@@ -7,7 +7,7 @@ export type ToolTarget = 'claude' | 'codex'
 /**
  * Configurable paths — all three must be overridable for test isolation.
  * Default resolution (in AASEngine implementation, not this package):
- *   aasHome       = process.env.AAS_HOME ?? '~/.agents'
+ *   aasHome       = process.env.AS_HOME ?? '~/.agents'
  *   claudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? '~/.claude'
  *   codexConfigDir  = process.env.CODEX_CONFIG_DIR ?? '~/.codex'
  */

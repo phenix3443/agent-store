@@ -3,48 +3,48 @@
 # Runs in isolated /tmp dirs — never touches ~/.claude or ~/.codex.
 set -euo pipefail
 
-export AAS_HOME=/tmp/aas-e2e
+export AS_HOME=/tmp/as-e2e
 export CLAUDE_CONFIG_DIR=/tmp/claude-e2e
 export CODEX_CONFIG_DIR=/tmp/codex-e2e
 
-AAS="$(cd "$(dirname "$0")/.." && pwd)/bin/aas"
+AS="$(cd "$(dirname "$0")/.." && pwd)/bin/as"
 
 echo "=== [setup] cleaning isolated dirs ==="
-rm -rf "$AAS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
-mkdir -p "$AAS_HOME" "$CLAUDE_CONFIG_DIR/skills" "$CODEX_CONFIG_DIR"
+rm -rf "$AS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
+mkdir -p "$AS_HOME" "$CLAUDE_CONFIG_DIR/skills" "$CODEX_CONFIG_DIR"
 
 echo ""
 echo "=== search: verify store is reachable ==="
-$AAS search test
+$AS search test
 
 echo ""
 echo "=== install: all 3 test items ==="
-$AAS install openai-provider-test
-$AAS install hello-skill
-$AAS install fs-mcp-test
+$AS install openai-provider-test
+$AS install hello-skill
+$AS install fs-mcp-test
 
 echo ""
 echo "=== config: apply provider credentials ==="
-printf 'sk-local-e2e\n\n\n' | $AAS config openai-provider-test
+printf 'sk-local-e2e\n\n\n' | $AS config openai-provider-test
 
 echo ""
 echo "=== list: all items installed and enabled ==="
-$AAS list
+$AS list
 
 echo ""
 echo "=== disable + re-enable: test both commands ==="
-$AAS disable openai-provider-test --for claude
-$AAS list
-$AAS enable openai-provider-test --for claude
-$AAS list
+$AS disable openai-provider-test --for claude
+$AS list
+$AS enable openai-provider-test --for claude
+$AS list
 
 echo ""
 echo "=== sync: idempotency check ==="
-$AAS sync
+$AS sync
 
 echo ""
 echo "=== info: spot-check one item ==="
-$AAS info openai-provider-test
+$AS info openai-provider-test
 
 echo ""
 echo "=== verify: checking config files ==="
@@ -69,7 +69,7 @@ grep -q 'model_provider = "openai-provider-test"' "$CODEX_CONFIG_DIR/config.toml
 
 echo ""
 echo "=== [cleanup] removing isolated dirs ==="
-rm -rf "$AAS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
+rm -rf "$AS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
 
 echo ""
 echo "✓ All E2E checks passed"

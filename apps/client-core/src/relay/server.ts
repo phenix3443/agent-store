@@ -1,4 +1,4 @@
-import type { RegistryJson, ToolTarget } from '@aas/types'
+import type { RegistryJson, ToolTarget } from '@as/types'
 import { readRegistry } from '../registry/index'
 import { findOrderedProvidersForTarget } from './provider-order'
 import { forwardWithFailover } from './forward'

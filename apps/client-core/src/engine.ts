@@ -5,8 +5,8 @@ import type {
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,
   UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson, LocalRelayConfig,
   RecentRequestRow, RelayStatus,
-} from '@aas/types'
-import { AASClient } from '@aas/sdk'
+} from '@as/types'
+import { AASClient } from '@as/sdk'
 import { resolvePaths, itemDir } from './paths'
 import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from './registry/index'
 import { runHook, writeManifest } from './installer/hook-runner'
@@ -220,8 +220,8 @@ export class AASEngineImpl implements AASEngine {
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
     const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as {
       name: string; description: string; readmeUrl: string; icon: string
-      publisher: import('@aas/types').Publisher; tags: string[]; downloads: number
-      configSchema?: import('@aas/types').JsonSchema; supportedModels?: string[]
+      publisher: import('@as/types').Publisher; tags: string[]; downloads: number
+      configSchema?: import('@as/types').JsonSchema; supportedModels?: string[]
       transport?: 'stdio' | 'sse' | 'http'; serverCommand?: string
       url?: string; headers?: Record<string, string>; contentUrl?: string
     }

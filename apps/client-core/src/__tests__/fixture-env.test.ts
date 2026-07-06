@@ -26,21 +26,21 @@ test('fixture env requires explicit isolated directories', () => {
   expect(() =>
     withEnv(
       {
-        AAS_HOME: undefined,
+        AS_HOME: undefined,
         CLAUDE_CONFIG_DIR: '/tmp/claude-fixture',
         CODEX_CONFIG_DIR: '/tmp/codex-fixture',
         AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS: undefined,
       },
       () => getIsolatedFixturePathsFromEnv()
     )
-  ).toThrow('AAS_HOME is required')
+  ).toThrow('AS_HOME is required')
 })
 
 test('fixture env rejects real home directories by default', () => {
   expect(() =>
     withEnv(
       {
-        AAS_HOME: `${process.env.HOME}/.agents`,
+        AS_HOME: `${process.env.HOME}/.agents`,
         CLAUDE_CONFIG_DIR: `${process.env.HOME}/.claude`,
         CODEX_CONFIG_DIR: `${process.env.HOME}/.codex`,
         AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS: undefined,
@@ -54,7 +54,7 @@ test('fixture env rejects real home directories with trailing slash', () => {
   expect(() =>
     withEnv(
       {
-        AAS_HOME: `${process.env.HOME}/.agents/`,
+        AS_HOME: `${process.env.HOME}/.agents/`,
         CLAUDE_CONFIG_DIR: `${process.env.HOME}/.claude/`,
         CODEX_CONFIG_DIR: `${process.env.HOME}/.codex/`,
         AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS: undefined,
@@ -67,7 +67,7 @@ test('fixture env rejects real home directories with trailing slash', () => {
 test('fixture env accepts explicit isolated directories', () => {
   const paths = withEnv(
     {
-      AAS_HOME: '/tmp/aas-fixture',
+      AS_HOME: '/tmp/as-fixture',
       CLAUDE_CONFIG_DIR: '/tmp/claude-fixture',
       CODEX_CONFIG_DIR: '/tmp/codex-fixture',
       AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS: undefined,
@@ -76,7 +76,7 @@ test('fixture env accepts explicit isolated directories', () => {
   )
 
   expect(paths).toEqual({
-    aasHome: '/tmp/aas-fixture',
+    aasHome: '/tmp/as-fixture',
     claudeConfigDir: '/tmp/claude-fixture',
     codexConfigDir: '/tmp/codex-fixture',
   })
@@ -85,7 +85,7 @@ test('fixture env accepts explicit isolated directories', () => {
 test('fixture env allows home directories only with explicit override', () => {
   const paths = withEnv(
     {
-      AAS_HOME: `${process.env.HOME}/.agents`,
+      AS_HOME: `${process.env.HOME}/.agents`,
       CLAUDE_CONFIG_DIR: `${process.env.HOME}/.claude`,
       CODEX_CONFIG_DIR: `${process.env.HOME}/.codex`,
       AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS: '1',

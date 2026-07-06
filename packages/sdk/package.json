@@ -1,5 +1,5 @@
 {
-  "name": "@aas/sdk",
+  "name": "@as/sdk",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@aas/types": "workspace:*"
+    "@as/types": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",

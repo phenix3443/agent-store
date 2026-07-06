@@ -1,4 +1,4 @@
-import type { AASEngine, JsonSchema } from '@aas/types'
+import type { AASEngine, JsonSchema } from '@as/types'
 import type { Prompter } from '../utils/prompt'
 import { createReadlinePrompter } from '../utils/prompt'
 

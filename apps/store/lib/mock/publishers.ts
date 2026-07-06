@@ -1,4 +1,4 @@
-import type { Publisher } from '@aas/types'
+import type { Publisher } from '@as/types'
 
 export const MOCK_PUBLISHERS: Publisher[] = [
   {

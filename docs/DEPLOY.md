@@ -11,7 +11,7 @@
 
 | 命令 | 起什么 | 端口 |
 |---|---|---|
-| `make dev-gui` | 本地 Supabase + 目录 API(apps/api) + 桌面客户端(Tauri)，客户端经 `AAS_STORE_URL` 指向本地 API | DB 54321 / API 3001 / app 窗口 |
+| `make dev-gui` | 本地 Supabase + 目录 API(apps/api) + 桌面客户端(Tauri)，客户端经 `AS_STORE_URL` 指向本地 API | DB 54321 / API 3001 / app 窗口 |
 | `make dev-api` | 本地 Supabase + 目录 API | API 3001 |
 | `make dev` | 本地 Supabase + Web 商店(next dev) | web 3000 |
 | `make seed` | 重置本地 DB 并灌 seed（`supabase/seed.sql`，含 local/yls/skyapi） | — |
@@ -28,12 +28,12 @@
 
 ### 已上线 ✅
 - **Supabase 测试项目** `agent-store-test`（ref `faiygihglitiuqywajyh`，Singapore 区），已推 migration + seed（含 local/yls/skyapi）。
-- **目录 API** 在 Cloudflare Workers：**https://aas-api-test.phenix3443.workers.dev**
-  - 冒烟：`curl "https://aas-api-test.phenix3443.workers.dev/api/items?category=provider"` → 返回 6 个 provider。
+- **目录 API** 在 Cloudflare Workers：**https://as-api-test.phenix3443.workers.dev**
+  - 冒烟：`curl "https://as-api-test.phenix3443.workers.dev/api/items?category=provider"` → 返回 6 个 provider。
   - Supabase URL/anon key 已作为 Worker secret 注入（test 环境）。
 - **CLI 指向线上 API** 已验证可用：
   ```bash
-  AAS_STORE_URL=https://aas-api-test.phenix3443.workers.dev \
+  AS_STORE_URL=https://as-api-test.phenix3443.workers.dev \
     bun run apps/cli/src/index.ts __rpc search '[""]'
   ```
 - 凭据（URL/anon/db 密码/worker URL）存于本会话 scratchpad 的 `test-env-creds.env`，**未入库**。

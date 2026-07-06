@@ -2,7 +2,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog'
 import { useState } from 'react'
-import type { Item } from '@aas/types'
+import type { Item } from '@as/types'
 import { X } from 'lucide-react'
 import { FIELD_SCHEMAS, type PublishType } from '@/lib/publish-field-schemas'
 import { useClientState } from './ClientStateProvider'

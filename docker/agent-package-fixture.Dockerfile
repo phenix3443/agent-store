@@ -11,7 +11,7 @@ RUN set -eux; \
   install "$(find /tmp/codex-dist -maxdepth 1 -type f -name 'codex-*-unknown-linux-musl' | head -n 1)" /usr/local/bin/codex; \
   codex --version
 
-ENV AAS_HOME=/root/.aas
+ENV AS_HOME=/root/.aas
 ENV CLAUDE_CONFIG_DIR=/root/.claude
 ENV CODEX_CONFIG_DIR=/root/.codex
 ENV CODEX_HOME=/root/.codex

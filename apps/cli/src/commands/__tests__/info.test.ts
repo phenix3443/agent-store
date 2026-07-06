@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runInfo } from '../info'
-import type { AASEngine, ItemDetail } from '@aas/types'
+import type { AASEngine, ItemDetail } from '@as/types'
 
 const publisher = { id: 'p1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' as const }
 

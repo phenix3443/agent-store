@@ -6,7 +6,7 @@ import { recordUsageAsync } from '../record-usage'
 let dir: string
 
 beforeEach(async () => {
-  dir = await mkdtemp('/tmp/aas-record-usage-test-')
+  dir = await mkdtemp('/tmp/as-record-usage-test-')
 })
 
 afterEach(async () => {

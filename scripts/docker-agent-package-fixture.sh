@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE_NAME="ai-agent-store-agent-package-fixture"
+IMAGE_NAME="agent-store-agent-package-fixture"
 
 if [[ -z "${YLS_ME_API_KEY:-}" ]] && [[ -f "$HOME/.code-switch/codex.json" ]] && command -v jq >/dev/null 2>&1; then
   YLS_ME_API_KEY="$(jq -r '.providers[] | select(.enabled == true and .apiUrl == "https://code.ylsagi.com/codex") | .apiKey' "$HOME/.code-switch/codex.json" | head -n 1)"

@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runInstall } from '../install'
-import type { AASEngine, InstalledItem } from '@aas/types'
+import type { AASEngine, InstalledItem } from '@as/types'
 
 const installedEntry: InstalledItem = {
   slug: 'openai-provider', category: 'provider', version: '1.2.0',

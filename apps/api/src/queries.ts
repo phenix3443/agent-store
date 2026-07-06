@@ -1,4 +1,4 @@
-import type { Item, Publisher } from '@aas/types'
+import type { Item, Publisher } from '@as/types'
 import { getSupabase, type SupabaseEnv } from './supabase'
 import { mapItem, mapPublisher, type DBItem, type DBPublisher } from './db-types'
 

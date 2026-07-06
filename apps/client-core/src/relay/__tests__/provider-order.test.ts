@@ -3,12 +3,12 @@ import { mkdtemp, rm, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { findOrderedProvidersForTarget } from '../provider-order'
 import { itemDir } from '../../paths'
-import type { InstalledItem, RegistryJson } from '@aas/types'
+import type { InstalledItem, RegistryJson } from '@as/types'
 
 let aasHome: string
 
 beforeEach(async () => {
-  aasHome = await mkdtemp('/tmp/aas-provider-order-test-')
+  aasHome = await mkdtemp('/tmp/as-provider-order-test-')
 })
 
 afterEach(async () => {

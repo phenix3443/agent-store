@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
 import { runSync } from '../sync'
 import { runUpdate } from '../update'
-import type { AASEngine, UpdateResult } from '@aas/types'
+import type { AASEngine, UpdateResult } from '@as/types'
 
 function makeSyncEngine(synced: string[] = [], errors: Array<{slug:string;error:string}> = []): AASEngine {
   return { sync: async () => ({ synced, errors }) } as unknown as AASEngine

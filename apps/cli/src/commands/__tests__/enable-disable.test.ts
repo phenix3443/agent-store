@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
 import { runEnable } from '../enable'
 import { runDisable } from '../disable'
-import type { AASEngine } from '@aas/types'
+import type { AASEngine } from '@as/types'
 
 function makeEngine(
   enableFn: (slug: string, target: string) => Promise<void> = async () => {},
