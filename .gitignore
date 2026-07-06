@@ -10,3 +10,5 @@ dist/
 .env.*.local
 bin/aas
 .DS_Store
+.vercel
+.env*
