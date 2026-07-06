@@ -25,7 +25,9 @@ export async function getItems(
   let query = supabase.from('items').select(ITEM_SELECT).eq('status', 'published')
 
   if (category) query = query.eq('category', category)
-  if (q) query = query.ilike('name', `%${q}%`)
+  // Match name/description substring, or an exact tag — mirrors the web+CLI
+  // search that both consume this endpoint.
+  if (q) query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%,tags.cs.{${q}}`)
 
   const orderColumn = sort === 'created' ? 'created_at' : 'downloads'
   query = query.order(orderColumn, { ascending: false })

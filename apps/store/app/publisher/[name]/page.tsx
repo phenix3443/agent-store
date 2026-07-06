@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getPublisherBySlug, getPublisherItems } from '@/lib/catalog'
+import { getPublisherWithItems } from '@/lib/catalog'
 import { ItemCard } from '@/components/ItemCard'
 import { Badge } from '@/components/Badge'
 import { Header } from '@/components/Header'
@@ -9,10 +9,10 @@ interface PublisherPageProps {
 }
 
 export default async function PublisherPage({ params }: PublisherPageProps) {
-  const publisher = await getPublisherBySlug(params.name)
-  if (!publisher) notFound()
+  const result = await getPublisherWithItems(params.name)
+  if (!result) notFound()
 
-  const items = await getPublisherItems(params.name)
+  const { publisher, items } = result
 
   return (
     <>

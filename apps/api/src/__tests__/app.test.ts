@@ -27,7 +27,7 @@ const { app } = await import('../app')
 test('GET / health check', async () => {
   const res = await app.fetch(new Request('http://localhost/'))
   expect(res.status).toBe(200)
-  expect(await res.json()).toEqual({ ok: true, service: 'aas-api' })
+  expect(await res.json()).toEqual({ ok: true, service: 'as-api' })
 })
 
 test('GET /api/items returns { items }', async () => {

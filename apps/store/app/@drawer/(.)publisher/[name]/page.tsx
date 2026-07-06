@@ -1,4 +1,4 @@
-import { getPublisherBySlug, getPublisherItems } from '@/lib/catalog'
+import { getPublisherWithItems } from '@/lib/catalog'
 import { InterceptedPublisher } from '@/components/InterceptedPublisher'
 
 interface InterceptedPublisherProps {
@@ -6,11 +6,9 @@ interface InterceptedPublisherProps {
 }
 
 export default async function InterceptedPublisherDrawer({ params }: InterceptedPublisherProps) {
-  const publisher = await getPublisherBySlug(params.name)
+  const result = await getPublisherWithItems(params.name)
 
-  if (!publisher) return null
+  if (!result) return null
 
-  const items = await getPublisherItems(params.name)
-
-  return <InterceptedPublisher publisher={publisher} items={items} />
+  return <InterceptedPublisher publisher={result.publisher} items={result.items} />
 }

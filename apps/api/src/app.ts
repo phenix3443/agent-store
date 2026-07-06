@@ -10,7 +10,7 @@ export const app = new Hono<{ Bindings: SupabaseEnv }>()
 
 app.use('/api/*', cors())
 
-app.get('/', (c) => c.json({ ok: true, service: 'aas-api' }))
+app.get('/', (c) => c.json({ ok: true, service: 'as-api' }))
 
 app.get('/api/items', async (c) => {
   const rawCategory = c.req.query('category')

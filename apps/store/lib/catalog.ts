@@ -39,12 +39,10 @@ export async function getItemBySlug(slug: string): Promise<Item | null> {
   return data ?? null
 }
 
-export async function getPublisherBySlug(slug: string): Promise<Publisher | null> {
+export async function getPublisherWithItems(
+  slug: string
+): Promise<{ publisher: Publisher; items: Item[] } | null> {
   const { data } = await client.getPublisher(slug)
-  return data?.publisher ?? null
-}
-
-export async function getPublisherItems(slug: string): Promise<Item[]> {
-  const { data } = await client.getPublisher(slug)
-  return data?.items ?? []
+  if (!data?.publisher) return null
+  return { publisher: data.publisher, items: data.items ?? [] }
 }
