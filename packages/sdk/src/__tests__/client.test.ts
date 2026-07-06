@@ -123,6 +123,36 @@ describe('AASClient.getItems', () => {
 
     globalThis.fetch = originalFetch
   })
+
+  test('merges a passed fetchInit (e.g. custom header) into the fetch call', async () => {
+    const originalFetch = globalThis.fetch
+    let capturedInit: RequestInit | undefined
+    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+      capturedInit = init
+      return new Response(JSON.stringify({ items: [] }), { status: 200 })
+    }) as typeof fetch
+
+    const client = new AASClient('http://localhost:3000', { fetchInit: { headers: { 'X-Test': 'yes' } } })
+    await client.getItems()
+    expect((capturedInit?.headers as Record<string, string> | undefined)?.['X-Test']).toBe('yes')
+
+    globalThis.fetch = originalFetch
+  })
+
+  test('a timeoutMs shorter than a hanging fetch yields an error result', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = ((_url: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new Error('The operation was aborted')))
+      })) as typeof fetch
+
+    const client = new AASClient('http://localhost:3000', { timeoutMs: 10 })
+    const result = await client.getItems()
+    expect(result.data).toBeNull()
+    expect(result.error).toBeTruthy()
+
+    globalThis.fetch = originalFetch
+  })
 })
 
 describe('AASClient.getItemBySlug', () => {

@@ -30,9 +30,27 @@ export interface PublisherWithItems {
 
 export class AASClient {
   readonly baseUrl: string
+  private readonly fetchInit?: RequestInit
+  private readonly timeoutMs?: number
 
-  constructor(baseUrl = 'http://localhost:3000') {
+  constructor(baseUrl = 'http://localhost:3000', options: { fetchInit?: RequestInit; timeoutMs?: number } = {}) {
     this.baseUrl = baseUrl.replace(/\/$/, '')
+    this.fetchInit = options.fetchInit
+    this.timeoutMs = options.timeoutMs
+  }
+
+  /** Wraps fetch with the configured fetchInit + an optional timeout; abort/timeout errors propagate like any other network error. */
+  private async _fetch(url: string, init?: RequestInit): Promise<Response> {
+    const mergedInit: RequestInit = { ...this.fetchInit, ...init }
+    if (this.timeoutMs == null) return fetch(url, mergedInit)
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs)
+    try {
+      return await fetch(url, { ...mergedInit, signal: controller.signal })
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   async getItems(params: GetItemsParams = {}): Promise<Result<Item[]>> {
@@ -44,7 +62,7 @@ export class AASClient {
       if (params.offset != null) url.searchParams.set('offset', String(params.offset))
       if (params.sort) url.searchParams.set('sort', params.sort)
 
-      const res = await fetch(url.toString())
+      const res = await this._fetch(url.toString())
       const json = await res.json() as { items?: Item[]; error?: string }
 
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
@@ -57,7 +75,7 @@ export class AASClient {
 
   async getItemBySlug(slug: string): Promise<Result<Item>> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}`)
+      const res = await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}`)
       const json = await res.json() as { item?: Item; error?: string }
 
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
@@ -70,7 +88,7 @@ export class AASClient {
 
   async getPublisher(slug: string): Promise<Result<PublisherWithItems>> {
     try {
-      const res = await fetch(`${this.baseUrl}/api/publishers/${encodeURIComponent(slug)}`)
+      const res = await this._fetch(`${this.baseUrl}/api/publishers/${encodeURIComponent(slug)}`)
       const json = await res.json() as { publisher?: Publisher; items?: Item[]; error?: string }
 
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
@@ -89,7 +107,7 @@ export class AASClient {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (options.cookie) headers['Cookie'] = options.cookie
 
-      const res = await fetch(`${this.baseUrl}/api/items/create`, {
+      const res = await this._fetch(`${this.baseUrl}/api/items/create`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),

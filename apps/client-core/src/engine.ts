@@ -8,6 +8,7 @@ import type {
 } from '@as/types'
 import { AASClient } from '@as/sdk'
 import { resolvePaths, itemDir } from './paths'
+import { readCatalogCache, writeCatalogCache } from './catalog-cache'
 import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from './registry/index'
 import { runHook, writeManifest } from './installer/hook-runner'
 import { postInstall as providerPostInstall } from './installer/provider'
@@ -31,18 +32,35 @@ export class AASEngineImpl implements AASEngine {
 
   constructor(pathOverrides?: Partial<AASPaths>, storeUrl?: string) {
     this.paths = resolvePaths(pathOverrides)
-    this.client = new AASClient(storeUrl)
+    this.client = new AASClient(storeUrl, { timeoutMs: 4000 })
   }
 
   async search(query: string, options?: SearchOptions): Promise<Item[]> {
-    const result = await this.client.getItems({
-      q: query,
-      category: options?.category,
-      limit: options?.limit,
-      offset: options?.offset,
-    })
-    if (result.error || !result.data) return []
-    return result.data
+    const result = await this.client.getItems({ limit: 1000 })
+    let items: Item[]
+    if (result.data) {
+      await writeCatalogCache(this.paths.aasHome, result.data)
+      items = result.data
+    } else {
+      // API-down fallback: serve the last-known-good catalog, filtered locally. No throw.
+      const cache = await readCatalogCache(this.paths.aasHome)
+      items = cache?.items ?? []
+    }
+
+    if (options?.category) items = items.filter(item => item.category === options.category)
+    if (query) {
+      const q = query.toLowerCase()
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(q) ||
+        item.description.toLowerCase().includes(q) ||
+        item.tags.some(tag => tag.toLowerCase().includes(q))
+      )
+    }
+    if (options?.offset != null || options?.limit != null) {
+      const offset = options?.offset ?? 0
+      items = options?.limit != null ? items.slice(offset, offset + options.limit) : items.slice(offset)
+    }
+    return items
   }
 
   async install(slug: string): Promise<InstallResult> {

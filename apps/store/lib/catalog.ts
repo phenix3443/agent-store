@@ -7,7 +7,9 @@ import { AASClient } from '@as/sdk'
 const API_URL =
   process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
-const client = new AASClient(API_URL)
+// revalidate: 300s balances catalog freshness against serving stale-but-cached data
+// (via Next's Data Cache) when the API server is briefly unreachable.
+const client = new AASClient(API_URL, { fetchInit: { next: { revalidate: 300 } } as RequestInit })
 
 export interface GetItemsOptions {
   category?: 'provider' | 'skill' | 'mcp' | null
