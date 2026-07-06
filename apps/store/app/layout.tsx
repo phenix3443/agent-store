@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { ClientStateProvider } from '@/components/ClientStateProvider'
@@ -8,6 +8,12 @@ import './globals.css'
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
   display: 'swap',
 })
 
@@ -27,7 +33,7 @@ export default async function RootLayout({
   const messages = await getMessages()
 
   return (
-    <html lang={locale} className={inter.variable} data-theme="dark">
+    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="dark">
       <body className="min-h-screen bg-store-content text-store-text antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ClientStateProvider>

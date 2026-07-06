@@ -14,8 +14,12 @@
   --accent: #7c82ff;
   --accent-soft: rgba(124, 130, 255, 0.16);
   --green: #3ad29f;
+  --green-soft: rgba(58, 210, 159, 0.15);
   --amber: #f0b34a;
+  --star: #f0b34a;
   --red: #f3675f;
+  --code-bg: rgba(255, 255, 255, 0.055);
+  --term-bg: #0c0c10;
 }
 
 [data-theme='light'] {
@@ -32,7 +36,11 @@
   --text-3: #9797a2;
   --accent: #5b54e8;
   --green: #16a06a;
+  --green-soft: rgba(22, 160, 106, 0.12);
+  --star: #e0a020;
   --red: #e0483f;
+  --code-bg: rgba(0, 0, 0, 0.045);
+  --term-bg: #17171d;
 }
 
 @tailwind base;
