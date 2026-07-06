@@ -391,7 +391,7 @@ INSERT INTO items (
   'local',
   '本地中转',
   '内置本地中转：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
-  'https://example.com/readme/local.md',
+  'https://github.com/phenix3443/agent-store',
   'https://api.dicebear.com/9.x/icons/svg?seed=local-relay',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'agent-store'),
