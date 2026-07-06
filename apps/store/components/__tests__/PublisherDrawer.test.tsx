@@ -14,7 +14,7 @@ const publisher: Publisher = {
 
 const items: Item[] = [{
   id: 'item-1', slug: 'openai-provider', name: 'OpenAI Provider', description: 'desc',
-  readmeUrl: '', icon: '', category: 'provider', version: '1.0.0', publisher,
+ category: 'provider', version: '1.0.0', publisher,
   compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4,
   status: 'published', installHook: { steps: [] },
   createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',

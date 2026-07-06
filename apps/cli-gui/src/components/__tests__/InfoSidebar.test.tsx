@@ -11,7 +11,7 @@ function installedDetail(overrides: Partial<SelectedDetail> = {}): SelectedDetai
   return {
     slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-06-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-    name: 'filesystem', description: 'desc', readmeUrl: 'https://docs.example.com', icon: '',
+    name: 'filesystem', description: 'desc',
     publisher, tags: ['fs', 'io'], downloads: 388000, installed: true,
     ...overrides,
   } as SelectedDetail
@@ -60,7 +60,7 @@ test('shows the 市场 section for a not-yet-installed catalog item too', () => 
     <InfoSidebar
       detail={{
         id: 'i1', slug: 'filesystem', name: 'filesystem', description: 'desc',
-        readmeUrl: '', icon: '', category: 'mcp', version: '0.8.1', publisher,
+ category: 'mcp', version: '0.8.1', publisher,
         compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
         installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z',
         configSchema: {}, installed: false, transport: 'stdio', serverCommand: './server',

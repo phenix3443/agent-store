@@ -1,4 +1,4 @@
-import type { AASEngine, JsonSchema } from '@as/types'
+import type { Engine, JsonSchema } from '@as/types'
 import type { ClosablePrompter, Prompter } from '../utils/prompt'
 import { createReadlinePrompter } from '../utils/prompt'
 
@@ -24,7 +24,7 @@ function sortSchemaProperties(
 }
 
 export async function runConfig(
-  engine: AASEngine,
+  engine: Engine,
   args: string[],
   prompter: Prompter = createReadlinePrompter(),
   out: (s: string) => void = console.log

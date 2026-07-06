@@ -7,12 +7,12 @@ export type ToolTarget = 'claude' | 'codex'
 
 /**
  * Configurable paths — all three must be overridable for test isolation.
- * Default resolution (in AASEngine implementation, not this package):
+ * Default resolution (in Engine implementation, not this package):
  *   aasHome       = process.env.AS_HOME ?? '~/.agents'
  *   claudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? '~/.claude'
  *   codexConfigDir  = process.env.CODEX_CONFIG_DIR ?? '~/.codex'
  */
-export interface AASPaths {
+export interface Paths {
   aasHome: string
   claudeConfigDir: string
   codexConfigDir: string
@@ -135,7 +135,7 @@ export interface RecentRequestRow {
   isFallback: boolean
 }
 
-/** A registry entry — shape stored in ~/.agents/registry.json and returned by AASEngine.list() */
+/** A registry entry — shape stored in ~/.agents/registry.json and returned by Engine.list() */
 export interface InstalledItem {
   slug: string
   category: 'provider' | 'skill' | 'mcp'
@@ -151,7 +151,7 @@ export interface InstalledItem {
 
 /**
  * Full item detail — union of store metadata and local install state.
- * Returned by AASEngine.info(). Category-specific fields are optional
+ * Returned by Engine.info(). Category-specific fields are optional
  * and only populated for the relevant category.
  */
 export interface ItemDetail {
@@ -168,8 +168,6 @@ export interface ItemDetail {
   // Store metadata
   name: string
   description: string
-  readmeUrl: string
-  icon: string
   publisher: Publisher
   tags: string[]
   downloads: number
@@ -193,13 +191,13 @@ export interface ItemDetail {
 }
 
 /**
- * AASEngine interface — the public contract for the engine.
+ * Engine interface — the public contract for the engine.
  * Implementation lives in apps/client-core. CLI and GUI both depend on this interface.
  *
  * IMPORTANT: All methods are pure data I/O. No terminal output, no interactive prompts.
  * The CLI layer calls getConfigSchema() + setConfig() and handles prompting itself.
  */
-export interface AASEngine {
+export interface Engine {
   search(query: string, options?: SearchOptions): Promise<Item[]>
   install(slug: string): Promise<InstallResult>
   uninstall(slug: string): Promise<void>
@@ -245,6 +243,8 @@ export interface AASEngine {
   createCheckout(period: 'monthly' | 'yearly', token?: string): Promise<{ checkoutUrl: string }>
   /** Clears the locally cached plan back to free (e.g. on sign-out). */
   clearEntitlement(): Promise<Entitlements>
+  /** Exports usage rollups to a CSV/JSON file under the AAS home and returns the file path. */
+  exportUsage(format: 'csv' | 'json', days?: number): Promise<string>
   /** Returns the configured spending budget (null limit when unset). */
   getBudget(): Promise<BudgetConfig>
   /** Persists the spending budget and returns the normalized config. */

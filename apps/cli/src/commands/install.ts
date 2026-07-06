@@ -1,8 +1,8 @@
-import type { AASEngine } from '@as/types'
+import type { Engine } from '@as/types'
 import { formatStep } from '../utils/format'
 
 export async function runInstall(
-  engine: AASEngine,
+  engine: Engine,
   args: string[],
   out: (s: string) => void = console.log
 ): Promise<void> {

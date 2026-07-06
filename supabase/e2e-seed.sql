@@ -8,7 +8,7 @@ VALUES ('test-co', 'Test Co', 'https://placehold.co/64x64', 'official')
 ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, status,
   install_hook, metadata
@@ -16,8 +16,6 @@ INSERT INTO items (
   'openai-provider-test',
   'OpenAI Provider Test',
   'Test provider for local E2E verification.',
-  'https://example.com/readme',
-  'https://placehold.co/64x64',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'test-co'),
   ARRAY['claude','codex'], ARRAY['ai','test'], 1000, 'published',
@@ -26,7 +24,7 @@ INSERT INTO items (
 ) ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, status,
   install_hook, metadata
@@ -34,8 +32,6 @@ INSERT INTO items (
   'hello-skill',
   'Hello Skill',
   'Test skill for local E2E verification.',
-  'https://example.com/readme',
-  'https://placehold.co/64x64',
   'skill', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'test-co'),
   ARRAY['claude'], ARRAY['test'], 500, 'published',
@@ -44,7 +40,7 @@ INSERT INTO items (
 ) ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO items (
-  slug, name, description, readme_url, icon,
+  slug, name, description,
   category, version, publisher_id,
   compatible_with, tags, downloads, status,
   install_hook, metadata
@@ -52,8 +48,6 @@ INSERT INTO items (
   'fs-mcp-test',
   'FS MCP Test',
   'Test MCP server for local E2E verification.',
-  'https://example.com/readme',
-  'https://placehold.co/64x64',
   'mcp', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'test-co'),
   ARRAY['claude'], ARRAY['mcp','test'], 200, 'published',

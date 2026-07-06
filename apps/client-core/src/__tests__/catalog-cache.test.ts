@@ -7,7 +7,7 @@ import type { SkillItem } from '@as/types'
 const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'community' as const }
 const fakeItem: SkillItem = {
   id: 'i1', slug: 'test-skill', name: 'Test', description: 'desc',
-  readmeUrl: 'https://r.com', icon: 'https://i.com', category: 'skill',
+ category: 'skill',
   version: '1.0.0', publisher, compatibleWith: ['claude'], tags: ['ai'],
   downloads: 0, rating: 0, status: 'published', installHook: { steps: [] },
   createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',

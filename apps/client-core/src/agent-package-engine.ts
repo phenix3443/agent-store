@@ -1,6 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { AASPaths } from '@as/types'
+import type { Paths } from '@as/types'
 import { upsertClaudeMcpServer } from './config/claude'
 import { buildPackageStdioMcpServerConfig } from './config/mcp'
 import { upsertCodexMcpServer, upsertCodexProviderConnection } from './config/codex'
@@ -186,9 +186,9 @@ function resolveMcpEnv(
 }
 
 export class AgentPackageEngine {
-  private readonly paths: Required<AASPaths>
+  private readonly paths: Required<Paths>
 
-  constructor(pathOverrides?: Partial<AASPaths>) {
+  constructor(pathOverrides?: Partial<Paths>) {
     this.paths = resolvePaths(pathOverrides)
   }
 

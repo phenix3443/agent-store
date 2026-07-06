@@ -24,8 +24,6 @@ export interface DBItem {
   slug: string
   name: string
   description: string
-  readme_url: string
-  icon: string
   category: 'provider' | 'skill' | 'mcp'
   version: string
   publisher_id: string
@@ -73,8 +71,6 @@ export function mapItem(row: DBItem & { publishers: DBPublisher }): Item {
     slug: row.slug,
     name: row.name,
     description: row.description,
-    readmeUrl: row.readme_url,
-    icon: row.icon,
     version: row.version,
     publisher,
     compatibleWith: row.compatible_with as ('claude' | 'codex')[],

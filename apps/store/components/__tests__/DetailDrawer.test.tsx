@@ -7,7 +7,7 @@ afterEach(() => { cleanup() })
 
 const item: Item = {
   id: 'item-1', slug: 'openai-provider', name: 'OpenAI Provider',
-  description: 'GPT-4o provider', readmeUrl: '', icon: '', category: 'provider',
+  description: 'GPT-4o provider', category: 'provider',
   version: '1.0.0',
   publisher: { id: 'p', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' },
   compatibleWith: ['claude'], tags: ['ai'], downloads: 100, rating: 4.5,

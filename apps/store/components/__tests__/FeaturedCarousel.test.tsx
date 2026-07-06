@@ -6,7 +6,7 @@ import { FeaturedCarousel } from '../FeaturedCarousel'
 function makeItem(id: string, name: string): Item {
   return {
     id, slug: id, name, description: `${name} desc`,
-    readmeUrl: '', icon: '', category: 'skill', version: '1.0.0',
+ category: 'skill', version: '1.0.0',
     publisher: { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'official' },
     compatibleWith: ['claude'], tags: [], downloads: 0, rating: 5,
     status: 'published', installHook: { steps: [] },

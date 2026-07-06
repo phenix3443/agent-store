@@ -1,26 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { StoreClient } from '@as/sdk'
+import type { Item } from '@as/types'
 
-interface DashboardItemRow {
-  id: string
-  slug: string
-  name: string
-  category: string
-  status: string
-  version: string
-  created_at: string
-  publishers: Array<{ name: string }> | null
-}
-
-interface DashboardItem {
-  id: string
-  slug: string
-  name: string
-  category: string
-  status: string
-  version: string
-  created_at: string
-  publisher: { name: string } | null
-}
+// All catalog/publisher data goes through the standalone API server.
+const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -40,23 +23,12 @@ export default async function DashboardPage() {
     )
   }
 
-  // Fetch items submitted by this user (status any, including pending/rejected)
-  const { data: myItems } = await supabase
-    .from('items')
-    .select('id, slug, name, category, status, version, created_at, publishers!inner(name)')
-    .eq('publishers.slug', githubUsername)
-    .order('created_at', { ascending: false })
-
-  const items: DashboardItem[] = ((myItems ?? []) as DashboardItemRow[]).map(item => ({
-    id: item.id,
-    slug: item.slug,
-    name: item.name,
-    category: item.category,
-    status: item.status,
-    version: item.version,
-    created_at: item.created_at,
-    publisher: item.publishers?.[0] ?? null,
-  }))
+  // Fetch this publisher's submissions (any status) via the API server, authenticated with the session token.
+  const { data: { session } } = await supabase.auth.getSession()
+  const result = session?.access_token
+    ? await new StoreClient(API_URL).getMyItems(session.access_token)
+    : { data: [] as Item[], error: null }
+  const items: Item[] = result.data ?? []
 
   const statusLabel: Record<string, string> = {
     published: '✓ Published',

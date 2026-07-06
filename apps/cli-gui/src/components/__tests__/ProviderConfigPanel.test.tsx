@@ -17,7 +17,7 @@ function renderPanel(handlers?: Record<string, (...args: unknown[]) => unknown>)
     info: () => ({
       slug: 'yls-me', category: 'provider', version: '0.9.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude', 'codex'], enabledFor: { claude: false, codex: true },
-      name: 'yls-me', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'yls-me', description: 'desc', publisher, tags: [], downloads: 0,
       currentConfig: {
         name: '我的配置', apiKey: 'sk-real', baseUrl: 'https://code.ylsagi.com/codex', authType: 'bearer',
         level: 2, whitelist: ['claude-*'], healthCheck: true,
@@ -172,7 +172,7 @@ function renderLocalPanel(handlers?: Record<string, (...args: unknown[]) => unkn
     info: () => ({
       slug: 'local', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude', 'codex'], enabledFor: { claude: true },
-      name: 'local', description: '内置本地代理', readmeUrl: '', icon: '',
+      name: 'local', description: '内置本地代理',
       publisher: { ...publisher, tier: 'official' as const }, tags: [], downloads: 0,
     }),
     setConfig: () => undefined,

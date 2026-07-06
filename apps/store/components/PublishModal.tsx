@@ -2,10 +2,12 @@
 
 import * as Dialog from '@radix-ui/react-dialog'
 import { useState } from 'react'
-import type { Item } from '@as/types'
+import { StoreClient, type CreateItemBody } from '@as/sdk'
+import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 import { FIELD_SCHEMAS, type PublishType } from '@/lib/publish-field-schemas'
-import { useClientState } from './ClientStateProvider'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
 interface PublishModalProps {
   open: boolean
@@ -14,71 +16,74 @@ interface PublishModalProps {
 
 const TYPE_LABELS: Record<PublishType, string> = { provider: '供应商', skill: '技能', mcp: 'MCP' }
 
-function buildItem(type: PublishType, vals: Record<string, string>): Item {
-  const base = {
-    id: `user-${Date.now()}`,
-    slug: (vals.name ?? 'untitled').toLowerCase().replace(/\s+/g, '-'),
-    name: vals.name ?? 'Untitled',
+function buildCreateBody(type: PublishType, vals: Record<string, string>): CreateItemBody {
+  const name = vals.name ?? 'Untitled'
+  const base: CreateItemBody = {
+    slug: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
     description: vals.homepage ?? vals.repo ?? '',
-    readmeUrl: '',
-    icon: '',
+    category: type,
     version: '0.1.0',
-    publisher: { id: 'me', slug: 'me', name: '我', avatarUrl: '', tier: 'community' as const },
-    compatibleWith: ['claude', 'codex'] as ('claude' | 'codex')[],
+    compatibleWith: ['claude', 'codex'],
     tags: [],
-    downloads: 0,
-    rating: 0,
-    status: 'published' as const,
-    installHook: { steps: [] },
-    createdAt: new Date(0).toISOString(),
-    updatedAt: new Date(0).toISOString(),
   }
 
   if (type === 'provider') {
     return {
       ...base,
-      category: 'provider',
-      configSchema: {},
-      supportedModels: (vals.supportedModels ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+      metadata: { supportedModels: (vals.supportedModels ?? '').split(',').map((s) => s.trim()).filter(Boolean) },
     }
   }
-  if (type === 'skill') {
-    return { ...base, category: 'skill', contentUrl: '' }
-  }
-  if (vals.transport === 'stdio') {
-    return { ...base, category: 'mcp', transport: 'stdio', serverCommand: vals.command ?? '', configSchema: {} }
-  }
-  let headers: Record<string, string> | undefined
-  if (vals.headers) {
-    try {
-      headers = JSON.parse(vals.headers)
-    } catch {
-      headers = undefined
+  if (type === 'mcp') {
+    if (vals.transport === 'stdio') {
+      return { ...base, metadata: { transport: 'stdio', serverCommand: vals.command ?? '' } }
     }
+    let headers: Record<string, string> | undefined
+    if (vals.headers) {
+      try {
+        headers = JSON.parse(vals.headers)
+      } catch {
+        headers = undefined
+      }
+    }
+    return { ...base, metadata: { transport: vals.transport ?? 'http', url: vals.url ?? '', ...(headers ? { headers } : {}) } }
   }
-
-  return {
-    ...base,
-    category: 'mcp',
-    transport: (vals.transport as 'sse' | 'http') ?? 'http',
-    url: vals.url ?? '',
-    configSchema: {},
-    ...(headers ? { headers } : {}),
-  }
+  return base
 }
 
 export function PublishModal({ open, onOpenChange }: PublishModalProps) {
-  const { addUserItem } = useClientState()
   const [type, setType] = useState<PublishType>('provider')
   const [vals, setVals] = useState<Record<string, string>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
   const fields = FIELD_SCHEMAS[type].filter((f) => !f.when || f.when(vals))
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    addUserItem(buildItem(type, vals))
-    setVals({})
-    onOpenChange(false)
+    if (busy) return
+    setError(null)
+    setBusy(true)
+    try {
+      const { data: { session } } = await createClient().auth.getSession()
+      if (!session) {
+        setError('请先登录后再发布')
+        return
+      }
+      const result = await new StoreClient(API_URL).createItem(buildCreateBody(type, vals), {
+        token: session.access_token,
+      })
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setVals({})
+      onOpenChange(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '发布失败')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -176,15 +181,19 @@ export function PublishModal({ open, onOpenChange }: PublishModalProps) {
               ))}
             </div>
 
+            {error && (
+              <p className="border-t border-store-border px-6 pt-3 text-xs text-store-red">{error}</p>
+            )}
             <div className="flex justify-end gap-2 border-t border-store-border px-6 py-3.5">
               <Dialog.Close className="rounded-lg border border-store-border-strong px-4 py-2 text-sm font-semibold text-store-text-2 hover:bg-store-panel">
                 取消
               </Dialog.Close>
               <button
                 type="submit"
-                className="rounded-lg bg-store-accent px-5 py-2 text-sm font-semibold text-white hover:brightness-110"
+                disabled={busy}
+                className="rounded-lg bg-store-accent px-5 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
               >
-                发布
+                {busy ? '发布中…' : '发布'}
               </button>
             </div>
           </form>

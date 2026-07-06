@@ -1,9 +1,9 @@
 import type { RegistryJson, InstalledItem, UpdateAvailable, Item } from '@as/types'
-import type { AASClient } from '@as/sdk'
+import type { StoreClient } from '@as/sdk'
 
 export async function checkUpdates(
   registry: RegistryJson,
-  client: AASClient,
+  client: StoreClient,
   slugs?: string[]
 ): Promise<UpdateAvailable[]> {
   const entries = slugs
@@ -27,7 +27,7 @@ export async function checkUpdates(
 
 export async function applyUpdate(
   slug: string,
-  client: AASClient,
+  client: StoreClient,
   entry: InstalledItem
 ): Promise<{ latestItem: Item; fromVersion: string }> {
   const result = await client.getItemBySlug(slug)

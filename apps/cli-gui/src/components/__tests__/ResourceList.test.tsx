@@ -25,18 +25,18 @@ const installedList = [
 
 const infoBySlug: Record<string, unknown> = {
   filesystem: {
-    ...installedList[0], name: 'filesystem', description: '读写本地文件系统', readmeUrl: '', icon: '',
+    ...installedList[0], name: 'filesystem', description: '读写本地文件系统',
     publisher, tags: ['fs'], downloads: 388000,
   },
   yls: {
-    ...installedList[1], name: 'yls', description: 'YLS 中转端点', readmeUrl: '', icon: '',
+    ...installedList[1], name: 'yls', description: 'YLS 中转端点',
     publisher, tags: [], downloads: 32000,
   },
 }
 
 const catalogItem = {
   id: 'i1', slug: 'context7', name: 'context7', description: '文档上下文',
-  readmeUrl: '', icon: '', category: 'mcp', version: '1.0.0', publisher,
+ category: 'mcp', version: '1.0.0', publisher,
   compatibleWith: ['claude'], tags: [], downloads: 118000, rating: 4.7,
   status: 'published', installHook: { steps: [] },
   createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z', configSchema: {},
@@ -44,7 +44,7 @@ const catalogItem = {
 
 const providerCatalogItem = {
   id: 'i2', slug: 'test-provider', name: 'test-provider', description: '测试供应商',
-  readmeUrl: '', icon: '', category: 'provider', version: '1.0.0', publisher,
+ category: 'provider', version: '1.0.0', publisher,
   compatibleWith: ['claude'], tags: [], downloads: 0, rating: 0,
   status: 'published', installHook: { steps: [] },
   createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z', configSchema: {},
@@ -65,11 +65,11 @@ const providerTreeList = [
 
 const providerTreeInfoBySlug: Record<string, unknown> = {
   'test-provider': {
-    ...providerTreeList[0], name: 'test-provider', description: '测试供应商', readmeUrl: '', icon: '',
+    ...providerTreeList[0], name: 'test-provider', description: '测试供应商',
     publisher, tags: [], downloads: 0,
   },
   'test-provider-copy': {
-    ...providerTreeList[1], name: 'test-provider-copy', description: '测试供应商', readmeUrl: '', icon: '',
+    ...providerTreeList[1], name: 'test-provider-copy', description: '测试供应商',
     publisher, tags: [], downloads: 0,
   },
 }

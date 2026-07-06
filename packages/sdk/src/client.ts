@@ -16,10 +16,8 @@ export interface CreateItemBody {
   description: string
   category: 'provider' | 'skill' | 'mcp'
   version: string
-  readmeUrl: string
-  icon: string
-  compatibleWith: string[]
-  tags: string[]
+  compatibleWith?: string[]
+  tags?: string[]
   metadata?: Record<string, unknown>
 }
 
@@ -28,7 +26,7 @@ export interface PublisherWithItems {
   items: Item[]
 }
 
-export class AASClient {
+export class StoreClient {
   readonly baseUrl: string
   private readonly fetchInit?: RequestInit
   private readonly timeoutMs?: number
@@ -99,15 +97,29 @@ export class AASClient {
     }
   }
 
-  async createItem(
-    body: CreateItemBody,
-    options: { cookie?: string } = {}
-  ): Promise<Result<{ success: true }>> {
+  /** Returns the authenticated publisher's own items (any status). */
+  async getMyItems(token: string): Promise<Result<Item[]>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/me/items`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json() as { items?: Item[]; error?: string }
+
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (json.items == null) return { data: null, error: 'No items in response' }
+      return { data: json.items, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** Publishes a new item for the authenticated publisher (enters as pending). */
+  async createItem(body: CreateItemBody, options: { token?: string } = {}): Promise<Result<{ success: true }>> {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (options.cookie) headers['Cookie'] = options.cookie
+      if (options.token) headers['Authorization'] = `Bearer ${options.token}`
 
-      const res = await this._fetch(`${this.baseUrl}/api/items/create`, {
+      const res = await this._fetch(`${this.baseUrl}/api/items`, {
         method: 'POST',
         headers,
         body: JSON.stringify(body),

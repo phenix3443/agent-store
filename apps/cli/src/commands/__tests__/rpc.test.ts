@@ -1,8 +1,8 @@
 import { test, expect } from 'bun:test'
 import { runRpc } from '../rpc'
-import type { AASEngine } from '@as/types'
+import type { Engine } from '@as/types'
 
-function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
+function makeEngine(overrides?: Partial<Engine>): Engine {
   return {
     search: async () => [],
     install: async () => ({ slug: 'openai-provider', version: '1.2.0', installedAt: '2026-06-18T00:00:00Z' }),
@@ -30,8 +30,9 @@ function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
     syncEntitlement: async () => ({ plan: 'pro', advancedUsageAnalytics: true, smartRouting: true, keyRotation: true }),
     createCheckout: async () => ({ checkoutUrl: 'https://pay.example/cs_1' }),
     clearEntitlement: async () => ({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }),
+    exportUsage: async () => '/tmp/exports/usage.csv',
     ...overrides,
-  } as unknown as AASEngine
+  } as unknown as Engine
 }
 
 test('runRpc calls install with parsed JSON args and prints ok:true', async () => {
@@ -49,7 +50,7 @@ test('runRpc calls enable with two positional args', async () => {
     expect(target).toBe('claude')
   }
   const lines: string[] = []
-  const code = await runRpc(makeEngine({ enable: enable as AASEngine['enable'] }), ['enable', '["openai-provider","claude"]'], s => lines.push(s))
+  const code = await runRpc(makeEngine({ enable: enable as Engine['enable'] }), ['enable', '["openai-provider","claude"]'], s => lines.push(s))
   expect(code).toBe(0)
   expect(JSON.parse(lines[0]).ok).toBe(true)
 })
@@ -111,7 +112,7 @@ test('runRpc calls duplicateProvider with the slug and returns the new slug', as
   }
   const lines: string[] = []
   const code = await runRpc(
-    makeEngine({ duplicateProvider: duplicateProvider as AASEngine['duplicateProvider'] }),
+    makeEngine({ duplicateProvider: duplicateProvider as Engine['duplicateProvider'] }),
     ['duplicateProvider', '["openai-provider"]'],
     s => lines.push(s)
   )
@@ -125,7 +126,7 @@ test('runRpc calls getUsageSummary and returns its rows', async () => {
   const rows = [{ date: '2026-07-05', providerSlug: 'yls', target: 'claude', model: 'claude-sonnet-4-5', requestCount: 3, successCount: 3, unpricedRequestCount: 0, inputTokens: 100, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0.01 }]
   const getUsageSummary = async () => rows
   const lines: string[] = []
-  const code = await runRpc(makeEngine({ getUsageSummary: getUsageSummary as AASEngine['getUsageSummary'] }), ['getUsageSummary', '[]'], s => lines.push(s))
+  const code = await runRpc(makeEngine({ getUsageSummary: getUsageSummary as Engine['getUsageSummary'] }), ['getUsageSummary', '[]'], s => lines.push(s))
   expect(code).toBe(0)
   expect(JSON.parse(lines[0]).data).toEqual(rows)
 })
@@ -135,7 +136,7 @@ test('listLocalConfigs dispatches to engine.listLocalConfigs', async () => {
   const listLocalConfigs = async (...args: unknown[]) => { calls.push(args); return [] }
   const lines: string[] = []
   const code = await runRpc(
-    makeEngine({ listLocalConfigs: listLocalConfigs as AASEngine['listLocalConfigs'] }),
+    makeEngine({ listLocalConfigs: listLocalConfigs as Engine['listLocalConfigs'] }),
     ['listLocalConfigs'],
     s => lines.push(s)
   )

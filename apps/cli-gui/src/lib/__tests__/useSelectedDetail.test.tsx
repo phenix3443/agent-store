@@ -25,7 +25,7 @@ test('fetches local as a normal provider via the info RPC', async () => {
       return {
         slug: 'local', category: 'provider', version: '1.0.0', installedAt: '', updatedAt: '',
         compatibleWith: ['claude', 'codex'], enabledFor: {}, name: 'local', description: '',
-        readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+ publisher, tags: [], downloads: 0,
       }
     }
     throw new Error(`unexpected RPC: ${method}`)

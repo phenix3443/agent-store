@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getItemBySlug } from '@/lib/catalog'
 import { Badge } from '@/components/Badge'
+import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 interface ItemDetailPageProps {
   params: { category: string; slug: string }
@@ -11,13 +12,17 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
 
   if (!item || item.category !== params.category) notFound()
 
+  const cat = CATEGORY_META[item.category]
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <main className="py-8">
         <div className="mb-8 flex items-start gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-store-border bg-store-panel">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.icon} alt={item.name} className="h-12 w-12 object-contain" />
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl text-[28px]"
+            style={{ background: cat.soft, color: cat.color }}
+          >
+            <CategoryGlyph category={item.category} />
           </div>
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">

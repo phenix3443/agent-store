@@ -1,12 +1,12 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { AASEngineImpl } from '../engine'
+import { EngineImpl } from '../engine'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
 const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'community' as const }
 const baseItem = {
-  id: 'i1', name: 'Test', description: 'desc', readmeUrl: 'https://r.com', icon: 'https://i.com',
+  id: 'i1', name: 'Test', description: 'desc',
   version: '1.0.0', publisher, compatibleWith: ['claude' as const, 'codex' as const],
   tags: [], downloads: 0, rating: 0, status: 'published' as const,
   createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
@@ -38,7 +38,7 @@ const skillItem: SkillItem = {
 let aasHome: string
 let claudeDir: string
 let codexDir: string
-let engine: AASEngineImpl
+let engine: EngineImpl
 const origFetch = globalThis.fetch
 
 function mockFetch(items: Record<string, unknown>) {
@@ -60,7 +60,7 @@ beforeEach(async () => {
   aasHome = await mkdtemp('/tmp/as-test-home-')
   claudeDir = await mkdtemp('/tmp/as-test-claude-')
   codexDir = await mkdtemp('/tmp/as-test-codex-')
-  engine = new AASEngineImpl(
+  engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000'
   )

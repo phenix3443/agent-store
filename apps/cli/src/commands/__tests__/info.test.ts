@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runInfo } from '../info'
-import type { AASEngine, ItemDetail } from '@as/types'
+import type { Engine, ItemDetail } from '@as/types'
 
 const publisher = { id: 'p1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' as const }
 
@@ -9,14 +9,14 @@ const detail: ItemDetail = {
   installedAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
   compatibleWith: ['claude', 'codex'], enabledFor: { claude: true, codex: false },
   name: 'OpenAI Provider', description: 'OpenAI API provider',
-  readmeUrl: '', icon: '',
+
   publisher, tags: [], downloads: 1_200_000,
   configSchema: {}, currentConfig: { apiKey: 'sk-test' },
   supportedModels: ['gpt-4o', 'gpt-4o-mini'],
 }
 
-function makeEngine(d: ItemDetail): AASEngine {
-  return { info: async () => d } as unknown as AASEngine
+function makeEngine(d: ItemDetail): Engine {
+  return { info: async () => d } as unknown as Engine
 }
 
 test('runInfo prints slug, version, tier', async () => {

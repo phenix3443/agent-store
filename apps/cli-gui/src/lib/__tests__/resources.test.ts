@@ -16,13 +16,13 @@ const installedItem: InstalledItem = {
 
 const itemDetail: ItemDetail = {
   ...installedItem,
-  name: 'filesystem', description: '读写本地文件系统', readmeUrl: '', icon: '',
+  name: 'filesystem', description: '读写本地文件系统',
   publisher, tags: ['fs'], downloads: 388000,
 }
 
 const catalogItem: Item = {
   id: 'i1', slug: 'context7', name: 'context7', description: '文档上下文',
-  readmeUrl: '', icon: '', category: 'mcp', version: '1.0.0', publisher,
+ category: 'mcp', version: '1.0.0', publisher,
   compatibleWith: ['claude'], tags: [], downloads: 118000, rating: 4.7,
   status: 'published', installHook: { steps: [] },
   createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z',

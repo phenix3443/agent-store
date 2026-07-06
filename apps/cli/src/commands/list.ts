@@ -1,4 +1,4 @@
-import type { AASEngine, InstalledItem, ToolTarget } from '@as/types'
+import type { Engine, InstalledItem, ToolTarget } from '@as/types'
 import { SYMBOLS, padEnd, formatTable } from '../utils/format'
 
 function getFlag(args: string[], flag: string): string | undefined {
@@ -12,7 +12,7 @@ function enabledCell(entry: InstalledItem, tool: ToolTarget): string {
 }
 
 export async function runList(
-  engine: AASEngine,
+  engine: Engine,
   args: string[],
   out: (s: string) => void = console.log,
   updates: Map<string, string> = new Map()

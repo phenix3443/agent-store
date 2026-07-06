@@ -3,6 +3,8 @@ import { getSupabase, type SupabaseEnv } from './supabase'
 export interface AuthUser {
   id: string
   email?: string
+  /** GitHub username from OAuth metadata — maps the user to their publisher profile. */
+  username?: string
 }
 
 /**
@@ -20,7 +22,12 @@ export async function getAuthUser(
     const supabase = getSupabase(env)
     const { data, error } = await supabase.auth.getUser(token)
     if (error || !data.user) return null
-    return { id: data.user.id, email: data.user.email }
+    const username = (data.user.user_metadata as Record<string, unknown> | undefined)?.['user_name']
+    return {
+      id: data.user.id,
+      email: data.user.email,
+      username: typeof username === 'string' ? username : undefined,
+    }
   } catch {
     return null
   }

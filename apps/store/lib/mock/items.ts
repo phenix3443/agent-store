@@ -15,8 +15,8 @@ export const MOCK_ITEMS: Item[] = [
     slug: 'superpowers',
     name: 'Superpowers',
     description: '一套用于头脑风暴、写计划、TDD 执行的技能合集，覆盖完整开发流程。',
-    readmeUrl: 'https://example.com/readme/superpowers.md',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=superpowers',
+
+
     category: 'skill',
     version: '2.4.0',
     publisher: publisher('anthropic'),
@@ -35,8 +35,8 @@ export const MOCK_ITEMS: Item[] = [
     slug: 'pdf-processing',
     name: 'PDF Processing',
     description: '读取、生成、审阅 PDF 文件，支持渲染检查与内容抽取。',
-    readmeUrl: 'https://example.com/readme/pdf-processing.md',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=pdf',
+
+
     category: 'skill',
     version: '1.3.2',
     publisher: publisher('anthropic'),
@@ -55,8 +55,8 @@ export const MOCK_ITEMS: Item[] = [
     slug: 'frontend-design',
     name: 'Frontend Design',
     description: '为新建或重塑 UI 提供有主见的视觉设计指导，避免千篇一律的默认样式。',
-    readmeUrl: 'https://example.com/readme/frontend-design.md',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=frontend',
+
+
     category: 'skill',
     version: '1.0.5',
     publisher: publisher('devfox'),
@@ -76,8 +76,8 @@ export const MOCK_ITEMS: Item[] = [
     name: '本地中转',
     description:
       '内置本地中转：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
-    readmeUrl: 'https://example.com/readme/local.md',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=local-relay',
+
+
     category: 'provider',
     version: '1.0.0',
     publisher: publisher('agent-store'),
@@ -98,8 +98,8 @@ export const MOCK_ITEMS: Item[] = [
     name: 'YLS Code 中转',
     description:
       '伊莉思 Code 中转服务，国内直连免翻墙接入 Codex CLI（GPT-5 Code）与 Claude Code；此预设接入其 Codex 端点，按订阅计费。',
-    readmeUrl: 'https://docs.ylsagi.io/',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=yls-code',
+
+
     category: 'provider',
     version: '1.0.0',
     publisher: publisher('yls-me'),
@@ -143,8 +143,8 @@ export const MOCK_ITEMS: Item[] = [
     name: 'SkyAPI 中转',
     description:
       'SkyAPI 中转服务，稳定线路免翻墙接入 Claude Code，兼容 Cursor / Cline / Windsurf 等客户端。',
-    readmeUrl: 'https://www.skyapi.org/docs/zh-CN/',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=skyapi',
+
+
     category: 'provider',
     version: '1.0.0',
     publisher: publisher('skyapi'),
@@ -187,8 +187,8 @@ export const MOCK_ITEMS: Item[] = [
     slug: 'filesystem-mcp',
     name: 'Filesystem MCP',
     description: '本地文件系统访问的 MCP 服务，通过 stdio 启动。',
-    readmeUrl: 'https://example.com/readme/filesystem-mcp.md',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=fs-mcp',
+
+
     category: 'mcp',
     version: '0.5.3',
     publisher: publisher('anthropic'),
@@ -209,8 +209,8 @@ export const MOCK_ITEMS: Item[] = [
     slug: 'web-search-mcp',
     name: 'Web Search MCP',
     description: '远程 HTTP MCP 服务，提供实时网页检索能力。',
-    readmeUrl: 'https://example.com/readme/web-search-mcp.md',
-    icon: 'https://api.dicebear.com/9.x/icons/svg?seed=search-mcp',
+
+
     category: 'mcp',
     version: '1.1.0',
     publisher: publisher('devfox'),

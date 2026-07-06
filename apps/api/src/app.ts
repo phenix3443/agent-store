@@ -6,6 +6,7 @@ import type { SupabaseEnv } from './supabase'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, type WaffoEnv } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
+import { getMyItems, createItem, validateCreateItem, type CreateItemInput } from './publisher-items'
 import {
   isWebhookProcessed,
   markWebhookProcessed,
@@ -57,6 +58,39 @@ app.get('/api/publishers/:slug', async (c) => {
   if (publisherResult.error) return c.json({ error: 'Failed to fetch publisher' }, 500)
   if (!publisherResult.data) return c.json({ error: 'Not found' }, 404)
   return c.json({ publisher: publisherResult.data, items: itemsResult.data })
+})
+
+// ── Publisher (authenticated) ────────────────────────────────────────────────
+
+// The authenticated publisher's own items (any status), for their dashboard.
+app.get('/api/me/items', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  if (!user.username) return c.json({ error: 'GitHub username not found' }, 422)
+  const { data, error } = await getMyItems(c.env, user.username)
+  if (error) return c.json({ error: 'Failed to fetch items' }, 500)
+  return c.json({ items: data })
+})
+
+// Publish a new item for the authenticated publisher (enters as pending).
+app.post('/api/items', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  if (!user.username) return c.json({ error: 'GitHub username not found' }, 422)
+
+  let body: CreateItemInput
+  try {
+    body = (await c.req.json()) as CreateItemInput
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400)
+  }
+
+  const invalid = validateCreateItem(body)
+  if (invalid) return c.json({ error: invalid.error }, invalid.status as 422)
+
+  const result = await createItem(c.env, user.username, body)
+  if ('error' in result) return c.json({ error: result.error }, result.status as 409 | 422 | 500)
+  return c.json({ success: true }, 201)
 })
 
 // ── Billing (Waffo Pancake, Merchant of Record) ──────────────────────────────

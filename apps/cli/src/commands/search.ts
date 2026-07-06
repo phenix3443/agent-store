@@ -1,8 +1,8 @@
-import type { AASEngine } from '@as/types'
+import type { Engine } from '@as/types'
 import { formatDownloads } from '../utils/format'
 
 export async function runSearch(
-  engine: AASEngine,
+  engine: Engine,
   args: string[],
   out: (s: string) => void = console.log
 ): Promise<void> {

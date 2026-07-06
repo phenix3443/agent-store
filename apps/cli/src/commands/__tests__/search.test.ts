@@ -1,22 +1,22 @@
 import { test, expect } from 'bun:test'
 import { runSearch } from '../search'
-import type { AASEngine, Item } from '@as/types'
+import type { Engine, Item } from '@as/types'
 
 const publisher = { id: 'p1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' as const }
 const mockItem = {
   id: 'i1', slug: 'openai-provider', name: 'OpenAI Provider',
   description: 'OpenAI API provider with GPT-4o support',
-  readmeUrl: '', icon: '', category: 'provider' as const, version: '1.2.0',
+ category: 'provider' as const, version: '1.2.0',
   publisher, compatibleWith: ['claude' as const, 'codex' as const],
   tags: [], downloads: 1_200_000, rating: 0, status: 'published' as const,
   installHook: { steps: [] }, createdAt: '', updatedAt: '',
   configSchema: {}, supportedModels: ['gpt-4o'],
 } satisfies Item
 
-function makeEngine(items: Item[]): AASEngine {
+function makeEngine(items: Item[]): Engine {
   return {
     search: async () => items,
-  } as unknown as AASEngine
+  } as unknown as Engine
 }
 
 test('runSearch prints slug + metadata + description for each result', async () => {

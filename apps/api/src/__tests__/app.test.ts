@@ -3,8 +3,8 @@ import type { Item, Publisher } from '@as/types'
 
 const mockItem: Item = {
   id: 'item-1', slug: 'openai-provider', name: 'OpenAI Provider',
-  description: 'OpenAI API', readmeUrl: 'https://example.com/readme',
-  icon: 'https://example.com/icon.png', category: 'provider', version: '1.0.0',
+  description: 'OpenAI API',
+ category: 'provider', version: '1.0.0',
   publisher: { id: 'pub-1', slug: 'openai', name: 'OpenAI', avatarUrl: 'https://example.com/logo.png', tier: 'official' },
   compatibleWith: ['claude', 'codex'], tags: [], downloads: 1000, rating: 0,
   status: 'published', installHook: { steps: [] },
@@ -97,5 +97,21 @@ test('GET /api/entitlements requires an email', async () => {
 
 test('GET /api/me/entitlements returns 401 without a bearer token', async () => {
   const res = await app.fetch(new Request('http://localhost/api/me/entitlements'))
+  expect(res.status).toBe(401)
+})
+
+test('GET /api/me/items returns 401 without a bearer token', async () => {
+  const res = await app.fetch(new Request('http://localhost/api/me/items'))
+  expect(res.status).toBe(401)
+})
+
+test('POST /api/items returns 401 without a bearer token', async () => {
+  const res = await app.fetch(
+    new Request('http://localhost/api/items', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ slug: 'x', name: 'X' }),
+    })
+  )
   expect(res.status).toBe(401)
 })

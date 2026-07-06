@@ -1,4 +1,4 @@
-import type { AASEngine, ToolTarget } from '@as/types'
+import type { Engine, ToolTarget } from '@as/types'
 
 function getFlag(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag)
@@ -6,7 +6,7 @@ function getFlag(args: string[], flag: string): string | undefined {
 }
 
 export async function runEnable(
-  engine: AASEngine,
+  engine: Engine,
   args: string[],
   out: (s: string) => void = console.log
 ): Promise<void> {

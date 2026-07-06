@@ -1,6 +1,6 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile } from 'fs/promises'
-import { AASEngineImpl } from '../engine'
+import { EngineImpl } from '../engine'
 import { writeCatalogCache, catalogCachePath } from '../catalog-cache'
 import type { SkillItem } from '@as/types'
 
@@ -8,7 +8,7 @@ const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'co
 function makeItem(overrides: Partial<SkillItem>): SkillItem {
   return {
     id: 'i1', slug: 'item', name: 'Item', description: 'desc',
-    readmeUrl: 'https://r.com', icon: 'https://i.com', category: 'skill',
+ category: 'skill',
     version: '1.0.0', publisher, compatibleWith: ['claude'], tags: [],
     downloads: 0, rating: 0, status: 'published', installHook: { steps: [] },
     createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
@@ -23,14 +23,14 @@ const plainItem = makeItem({ slug: 'plain', name: 'Plain Item', tags: [] })
 let aasHome: string
 let claudeDir: string
 let codexDir: string
-let engine: AASEngineImpl
+let engine: EngineImpl
 const origFetch = globalThis.fetch
 
 beforeEach(async () => {
   aasHome = await mkdtemp('/tmp/as-search-home-')
   claudeDir = await mkdtemp('/tmp/as-search-claude-')
   codexDir = await mkdtemp('/tmp/as-search-codex-')
-  engine = new AASEngineImpl(
+  engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000'
   )

@@ -1,5 +1,5 @@
 import type { Item, Publisher } from '@as/types'
-import { AASClient } from '@as/sdk'
+import { StoreClient } from '@as/sdk'
 
 // Web store and CLI share one catalog source: the standalone apps/api server.
 // Point at it via API_URL (set in dev/Makefile and production config); fall back
@@ -9,7 +9,7 @@ const API_URL =
 
 // revalidate: 300s balances catalog freshness against serving stale-but-cached data
 // (via Next's Data Cache) when the API server is briefly unreachable.
-const client = new AASClient(API_URL, { fetchInit: { next: { revalidate: 300 } } as RequestInit })
+const client = new StoreClient(API_URL, { fetchInit: { next: { revalidate: 300 } } as RequestInit })
 
 export interface GetItemsOptions {
   category?: 'provider' | 'skill' | 'mcp' | null

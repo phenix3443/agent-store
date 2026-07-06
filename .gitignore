@@ -12,3 +12,7 @@ bin/aas
 .DS_Store
 .vercel
 .env*
+
+# secrets / build artifacts (never commit)
+g-oauth.txt
+bin/

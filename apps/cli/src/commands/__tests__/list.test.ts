@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runList } from '../list'
-import type { AASEngine, InstalledItem } from '@as/types'
+import type { Engine, InstalledItem } from '@as/types'
 
 const entry: InstalledItem = {
   slug: 'openai-provider', category: 'provider', version: '1.2.0',
@@ -14,8 +14,8 @@ const mcpEntry: InstalledItem = {
   compatibleWith: ['claude'], enabledFor: { claude: true },
 }
 
-function makeEngine(items: InstalledItem[]): AASEngine {
-  return { list: async () => items } as unknown as AASEngine
+function makeEngine(items: InstalledItem[]): Engine {
+  return { list: async () => items } as unknown as Engine
 }
 
 test('runList shows header row', async () => {

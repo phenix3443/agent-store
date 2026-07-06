@@ -35,7 +35,7 @@ test('renders local as a normal provider detail from the info RPC', async () => 
     info: () => ({
       slug: 'local', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude', 'codex'], enabledFor: {},
-      name: 'local', description: '内置本地代理', readmeUrl: '', icon: '',
+      name: 'local', description: '内置本地代理',
       publisher, tags: ['relay', 'built-in'], downloads: 156000,
     }),
     list: () => [],
@@ -56,7 +56,7 @@ test('shows an installed item detail from the info RPC', async () => {
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: { claude: true },
-      name: 'filesystem', description: '读写本地文件系统', readmeUrl: '', icon: '',
+      name: 'filesystem', description: '读写本地文件系统',
       publisher, tags: ['fs'], downloads: 388000,
     }),
   })
@@ -72,7 +72,7 @@ test('shows an install button for a not-yet-installed item and installs it', asy
     info: () => { throw new Error('Item not installed: filesystem') },
     search: () => [{
       id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
-      readmeUrl: '', icon: '', category: 'mcp', version: '0.8.1', publisher,
+ category: 'mcp', version: '0.8.1', publisher,
       compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
       installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
       configSchema: {},
@@ -91,7 +91,7 @@ test('switching to the 评价 tab shows a summary card and generated reviews', a
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -108,7 +108,7 @@ test('switching to the 版本 tab shows a styled version list with a latest badg
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -125,7 +125,7 @@ test('概览 tab renders overview, install command, install steps, use case, and
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: '读写本地文件系统', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'filesystem', description: '读写本地文件系统', publisher, tags: [], downloads: 0,
       transport: 'stdio', serverCommand: './server',
     }),
   })
@@ -148,7 +148,7 @@ test('clicking the heart button toggles favorite state', async () => {
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -163,7 +163,7 @@ test('shows 官方 and 已发布 badges together for an installed official-tier 
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -179,7 +179,7 @@ test('shows a 已验证 tier badge for a verified-tier publisher', async () => {
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher: verifiedPublisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher: verifiedPublisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -194,7 +194,7 @@ test('does not show a tier badge for a community-tier publisher, but still shows
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher: communityPublisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher: communityPublisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -210,7 +210,7 @@ test('shows a 已发布 badge for a not-yet-installed published catalog item', a
     info: () => { throw new Error('Item not installed: filesystem') },
     search: () => [{
       id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
-      readmeUrl: '', icon: '', category: 'mcp', version: '0.8.1', publisher,
+ category: 'mcp', version: '0.8.1', publisher,
       compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
       installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
       configSchema: {},
@@ -227,7 +227,7 @@ test('shows the review count next to the star rating in the meta line', async ()
     info: () => { throw new Error('Item not installed: filesystem') },
     search: () => [{
       id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
-      readmeUrl: '', icon: '', category: 'mcp', version: '0.8.1', publisher,
+ category: 'mcp', version: '0.8.1', publisher,
       compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
       installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
       configSchema: {},
@@ -246,7 +246,7 @@ test('clicking the copy button copies the install command to the clipboard', asy
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', readmeUrl: '', icon: '', publisher, tags: [], downloads: 0,
+      name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
   })
   renderPanel()
@@ -261,17 +261,17 @@ test('shows a child-config count banner for a provider with duplicated configs',
     info: () => ({
       slug: 'test-provider', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: { claude: true },
-      name: 'test-provider', description: 'test provider', readmeUrl: '', icon: '',
+      name: 'test-provider', description: 'test provider',
       publisher, tags: [], downloads: 100, installed: true,
     }),
     list: () => [
       { slug: 'test-provider', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: { claude: true },
-        name: 'test-provider', description: 'test provider', readmeUrl: '', icon: '',
+        name: 'test-provider', description: 'test provider',
         publisher, tags: [], downloads: 100, installed: true },
       { slug: 'test-provider-copy', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: { claude: true },
-        name: 'test-provider-copy', description: 'test provider copy', readmeUrl: '', icon: '',
+        name: 'test-provider-copy', description: 'test provider copy',
         publisher, tags: [], downloads: 50, installed: true, parentSlug: 'test-provider' },
     ],
   })
@@ -285,13 +285,13 @@ test('does not show the child-config banner for a provider with no duplicates', 
     info: () => ({
       slug: 'test-provider', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: { claude: true },
-      name: 'test-provider', description: 'test provider', readmeUrl: '', icon: '',
+      name: 'test-provider', description: 'test provider',
       publisher, tags: [], downloads: 100, installed: true,
     }),
     list: () => [
       { slug: 'test-provider', category: 'provider', version: '1.0.0', installedAt: '2026-01-01T00:00:00Z',
         updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: { claude: true },
-        name: 'test-provider', description: 'test provider', readmeUrl: '', icon: '',
+        name: 'test-provider', description: 'test provider',
         publisher, tags: [], downloads: 100, installed: true },
     ],
   })

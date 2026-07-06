@@ -9,11 +9,9 @@
 
 ---
 
-## A. 立即能做（无依赖）
+## A. 立即能做（无依赖）—— ✅ 已完成
 
-- [ ] **发出 Waffo 询价邮件**（草稿已在你 Gmail 草稿箱，点发送即可）
-  - 打开：https://mail.google.com/mail/u/0/#drafts
-  - 收件人应为 `merchant-support@waffo.com`，主题「关于 Waffo Pancake 订阅收款…」
+- [x] Waffo 询价邮件已发出（→ merchant-support@waffo.com）
 
 ---
 
@@ -31,21 +29,15 @@
 > GitHub 登录后端三件套已齐活，无需再手动操作。
 > 备注：若日后桌面端登录报错，回来核对 GitHub provider 的 client_id/secret 是否填全（现在只知 enabled=true）。
 
-### B4.（可选）Google 登录 —— 未启用
-- [ ] Google Cloud 建 OAuth client（Web），Authorized redirect URI 填 `https://faiygihglitiuqywajyh.supabase.co/auth/v1/callback`
-  - 打开：https://console.cloud.google.com/apis/credentials
-- [ ] 把 Google 的 Client ID/Secret 填进 Supabase → Providers → Google（同 B2 页面）
+### B4. Google 登录 —— ✅ 已启用
+- [x] 远端 `external_google_enabled = true`（已确认）
 
 ---
 
-## C. API 密钥（webhook 写订阅要用）
+## C. API 密钥（webhook 写订阅要用）—— ✅ 已完成（Claude 用 CLI 做的）
 
-- [ ] 取 **service_role key**（密钥，勿外泄）
-  - 打开：https://supabase.com/dashboard/project/faiygihglitiuqywajyh/settings/api
-- [ ] 设为 Cloudflare Worker secret：
-  ```bash
-  wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env test
-  ```
+- [x] service_role key 已通过 supabase Management API 取出（用 CLI 钥匙串 token，值未外泄）
+- [x] 已 `wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env test`（`wrangler secret list` 已确认存在）
 
 ---
 

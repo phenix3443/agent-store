@@ -1,4 +1,4 @@
-import type { AASEngine, ToolTarget } from '@as/types'
+import type { Engine, ToolTarget } from '@as/types'
 import { formatTable } from '../utils/format'
 
 function getFlag(args: string[], flag: string): string | undefined {
@@ -7,7 +7,7 @@ function getFlag(args: string[], flag: string): string | undefined {
 }
 
 export async function runUsage(
-  engine: AASEngine,
+  engine: Engine,
   args: string[],
   out: (s: string) => void = console.log
 ): Promise<void> {

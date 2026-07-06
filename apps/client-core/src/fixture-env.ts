@@ -1,6 +1,6 @@
 import { homedir } from 'os'
 import { join, resolve } from 'path'
-import type { AASPaths } from '@as/types'
+import type { Paths } from '@as/types'
 
 function requireEnv(name: 'AS_HOME' | 'CLAUDE_CONFIG_DIR' | 'CODEX_CONFIG_DIR'): string {
   const value = process.env[name]
@@ -10,9 +10,9 @@ function requireEnv(name: 'AS_HOME' | 'CLAUDE_CONFIG_DIR' | 'CODEX_CONFIG_DIR'):
   return value
 }
 
-export function getIsolatedFixturePathsFromEnv(): Required<AASPaths> {
+export function getIsolatedFixturePathsFromEnv(): Required<Paths> {
   const home = homedir()
-  const paths: Required<AASPaths> = {
+  const paths: Required<Paths> = {
     aasHome: requireEnv('AS_HOME'),
     claudeConfigDir: requireEnv('CLAUDE_CONFIG_DIR'),
     codexConfigDir: requireEnv('CODEX_CONFIG_DIR'),

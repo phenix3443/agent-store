@@ -7,6 +7,7 @@ import { CategoryIcon } from './CategoryIcon'
 import { ProxyLogModal } from './ProxyLogModal'
 import { UsageTrendChart } from './UsageTrendChart'
 import { BudgetCard } from './BudgetCard'
+import { UsageExport } from './UsageExport'
 import { ProGate } from './ProGate'
 
 const CATEGORY_CARDS: { category: InstalledItem['category']; label: string }[] = [
@@ -140,9 +141,12 @@ export function Overview() {
       <ProGate
         feature="advancedUsageAnalytics"
         title="预算与超支告警"
-        description="设置月度消费预算，实时追踪本月花费、月末预测与超支提醒。"
+        description="设置月度消费预算，实时追踪本月花费、月末预测与超支提醒，并可导出账单。"
       >
-        <BudgetCard />
+        <div className="flex flex-col gap-3">
+          <BudgetCard />
+          <UsageExport />
+        </div>
       </ProGate>
 
       <div className="grid grid-cols-3 gap-3">

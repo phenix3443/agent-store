@@ -16,10 +16,6 @@ export interface BaseItem {
   slug: string
   name: string
   description: string
-  /** Supabase Storage URL pointing to Markdown content (documentation) */
-  readmeUrl: string
-  /** Supabase Storage URL for the item icon */
-  icon: string
   category: 'provider' | 'skill' | 'mcp'
   version: string
   publisher: Publisher

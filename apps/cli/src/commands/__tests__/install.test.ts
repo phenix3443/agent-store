@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runInstall } from '../install'
-import type { AASEngine, InstalledItem } from '@as/types'
+import type { Engine, InstalledItem } from '@as/types'
 
 const installedEntry: InstalledItem = {
   slug: 'openai-provider', category: 'provider', version: '1.2.0',
@@ -8,17 +8,17 @@ const installedEntry: InstalledItem = {
   compatibleWith: ['claude', 'codex'], enabledFor: {},
 }
 
-function makeEngine(overrides?: Partial<AASEngine>): AASEngine {
+function makeEngine(overrides?: Partial<Engine>): Engine {
   return {
     install: async () => ({ slug: 'openai-provider', version: '1.2.0', installedAt: '2026-06-18T00:00:00Z' }),
     info: async () => ({
-      ...installedEntry, name: 'OpenAI Provider', description: '', readmeUrl: '',
-      icon: '', publisher: { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'official' },
+      ...installedEntry, name: 'OpenAI Provider', description: '',
+ publisher: { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'official' },
       tags: [], downloads: 0, configSchema: {}, supportedModels: ['gpt-4o'],
     }),
     enable: async () => undefined,
     ...overrides,
-  } as unknown as AASEngine
+  } as unknown as Engine
 }
 
 test('runInstall shows done steps and installed summary', async () => {

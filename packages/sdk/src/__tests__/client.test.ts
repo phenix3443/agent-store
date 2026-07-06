@@ -1,20 +1,20 @@
 import { describe, test, expect } from 'bun:test'
-import { AASClient } from '../client'
+import { StoreClient } from '../client'
 import type { Item } from '@as/types'
 
-describe('AASClient constructor', () => {
+describe('StoreClient constructor', () => {
   test('uses provided baseUrl', () => {
-    const client = new AASClient('https://store.example.com')
+    const client = new StoreClient('https://store.example.com')
     expect(client.baseUrl).toBe('https://store.example.com')
   })
 
   test('defaults to http://localhost:3000', () => {
-    const client = new AASClient()
+    const client = new StoreClient()
     expect(client.baseUrl).toBe('http://localhost:3000')
   })
 
   test('strips trailing slash from baseUrl', () => {
-    const client = new AASClient('https://store.example.com/')
+    const client = new StoreClient('https://store.example.com/')
     expect(client.baseUrl).toBe('https://store.example.com')
   })
 })
@@ -25,8 +25,8 @@ const fakeItem: Item = {
   slug: 'test-provider',
   name: 'Test Provider',
   description: 'A test provider',
-  readmeUrl: 'https://example.com/readme',
-  icon: 'https://example.com/icon.png',
+
+
   category: 'provider',
   version: '1.0.0',
   publisher: {
@@ -48,7 +48,7 @@ const fakeItem: Item = {
   supportedModels: ['gpt-4o'],
 }
 
-describe('AASClient.getItems', () => {
+describe('StoreClient.getItems', () => {
   test('calls GET /api/items and returns items on success', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (url: RequestInfo | URL) => {
@@ -59,7 +59,7 @@ describe('AASClient.getItems', () => {
       })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getItems()
     expect(result.error).toBeNull()
     expect(result.data).toHaveLength(1)
@@ -80,7 +80,7 @@ describe('AASClient.getItems', () => {
       return new Response(JSON.stringify({ items: [] }), { status: 200 })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     await client.getItems({ category: 'provider', q: 'gpt', limit: 5, offset: 10, sort: 'created' })
 
     globalThis.fetch = originalFetch
@@ -91,7 +91,7 @@ describe('AASClient.getItems', () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: 'Failed to fetch items' }), { status: 500 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getItems()
     expect(result.data).toBeNull()
     expect(result.error).toBe('Failed to fetch items')
@@ -103,7 +103,7 @@ describe('AASClient.getItems', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async () => { throw new Error('Network error') }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getItems()
     expect(result.data).toBeNull()
     expect(result.error).toBe('Network error')
@@ -116,7 +116,7 @@ describe('AASClient.getItems', () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({}), { status: 200 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getItems()
     expect(result.data).toBeNull()
     expect(result.error).toBe('No items in response')
@@ -132,7 +132,7 @@ describe('AASClient.getItems', () => {
       return new Response(JSON.stringify({ items: [] }), { status: 200 })
     }) as typeof fetch
 
-    const client = new AASClient('http://localhost:3000', { fetchInit: { headers: { 'X-Test': 'yes' } } })
+    const client = new StoreClient('http://localhost:3000', { fetchInit: { headers: { 'X-Test': 'yes' } } })
     await client.getItems()
     expect((capturedInit?.headers as Record<string, string> | undefined)?.['X-Test']).toBe('yes')
 
@@ -146,7 +146,7 @@ describe('AASClient.getItems', () => {
         init?.signal?.addEventListener('abort', () => reject(new Error('The operation was aborted')))
       })) as typeof fetch
 
-    const client = new AASClient('http://localhost:3000', { timeoutMs: 10 })
+    const client = new StoreClient('http://localhost:3000', { timeoutMs: 10 })
     const result = await client.getItems()
     expect(result.data).toBeNull()
     expect(result.error).toBeTruthy()
@@ -155,7 +155,7 @@ describe('AASClient.getItems', () => {
   })
 })
 
-describe('AASClient.getItemBySlug', () => {
+describe('StoreClient.getItemBySlug', () => {
   test('calls GET /api/items/:slug and returns item on success', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (url: RequestInfo | URL) => {
@@ -163,7 +163,7 @@ describe('AASClient.getItemBySlug', () => {
       return new Response(JSON.stringify({ item: fakeItem }), { status: 200 })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getItemBySlug('test-provider')
     expect(result.error).toBeNull()
     expect(result.data?.slug).toBe('test-provider')
@@ -176,7 +176,7 @@ describe('AASClient.getItemBySlug', () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getItemBySlug('no-such-slug')
     expect(result.data).toBeNull()
     expect(result.error).toBe('Not found')
@@ -195,7 +195,7 @@ const fakePublisher: Publisher = {
   tier: 'official',
 }
 
-describe('AASClient.getPublisher', () => {
+describe('StoreClient.getPublisher', () => {
   test('calls GET /api/publishers/:slug and returns publisher + items', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (url: RequestInfo | URL) => {
@@ -206,7 +206,7 @@ describe('AASClient.getPublisher', () => {
       )
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getPublisher('openai')
     expect(result.error).toBeNull()
     expect(result.data?.publisher.slug).toBe('openai')
@@ -220,7 +220,7 @@ describe('AASClient.getPublisher', () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getPublisher('no-such-publisher')
     expect(result.data).toBeNull()
     expect(result.error).toBe('Not found')
@@ -235,8 +235,8 @@ const createBody: import('../client').CreateItemBody = {
   description: 'A provider',
   category: 'provider',
   version: '1.0.0',
-  readmeUrl: 'https://example.com/readme',
-  icon: 'https://example.com/icon.png',
+
+
   compatibleWith: ['claude'],
   tags: ['ai'],
 }
@@ -247,8 +247,8 @@ const createRemoteMcpBody: import('../client').CreateItemBody = {
   description: 'A remote MCP',
   category: 'mcp',
   version: '1.0.0',
-  readmeUrl: 'https://example.com/readme',
-  icon: 'https://example.com/icon.png',
+
+
   compatibleWith: ['claude', 'codex'],
   tags: ['mcp'],
   metadata: {
@@ -259,18 +259,18 @@ const createRemoteMcpBody: import('../client').CreateItemBody = {
   },
 }
 
-describe('AASClient.createItem', () => {
-  test('calls POST /api/items/create with JSON body and returns success', async () => {
+describe('StoreClient.createItem', () => {
+  test('calls POST /api/items with JSON body and returns success', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
-      expect(String(url)).toBe('http://localhost:3000/api/items/create')
+      expect(String(url)).toBe('http://localhost:3000/api/items')
       expect(init?.method).toBe('POST')
       const body = JSON.parse(init?.body as string)
       expect(body.slug).toBe('my-provider')
       return new Response(JSON.stringify({ success: true }), { status: 201 })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.createItem(createBody)
     expect(result.error).toBeNull()
     expect(result.data?.success).toBe(true)
@@ -278,15 +278,15 @@ describe('AASClient.createItem', () => {
     globalThis.fetch = originalFetch
   })
 
-  test('forwards cookie header when provided', async () => {
+  test('forwards the bearer token when provided', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
-      expect((init?.headers as Record<string, string>)['Cookie']).toBe('sb-token=abc123')
+      expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer sb-token-abc')
       return new Response(JSON.stringify({ success: true }), { status: 201 })
     }
 
-    const client = new AASClient()
-    await client.createItem(createBody, { cookie: 'sb-token=abc123' })
+    const client = new StoreClient()
+    await client.createItem(createBody, { token: 'sb-token-abc' })
 
     globalThis.fetch = originalFetch
   })
@@ -304,7 +304,7 @@ describe('AASClient.createItem', () => {
       return new Response(JSON.stringify({ success: true }), { status: 201 })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     await client.createItem(createRemoteMcpBody)
 
     globalThis.fetch = originalFetch
@@ -315,7 +315,7 @@ describe('AASClient.createItem', () => {
     globalThis.fetch = async () =>
       new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.createItem(createBody)
     expect(result.data).toBeNull()
     expect(result.error).toBe('Unauthorized')
@@ -331,7 +331,7 @@ describe('AASClient.createItem', () => {
         { status: 409 }
       )
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.createItem(createBody)
     expect(result.data).toBeNull()
     expect(result.error).toBe('An item with this slug already exists')
@@ -340,7 +340,37 @@ describe('AASClient.createItem', () => {
   })
 })
 
-describe('AASClient.getMyEntitlements', () => {
+describe('StoreClient.getMyItems', () => {
+  test('sends the bearer token to GET /api/me/items and returns items', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(url)).toBe('http://localhost:3000/api/me/items')
+      expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer tok-1')
+      return new Response(JSON.stringify({ items: [fakeItem] }), { status: 200 })
+    }
+
+    const client = new StoreClient()
+    const result = await client.getMyItems('tok-1')
+    expect(result.error).toBeNull()
+    expect(result.data).toHaveLength(1)
+
+    globalThis.fetch = originalFetch
+  })
+
+  test('returns error on 401', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const client = new StoreClient()
+    const result = await client.getMyItems('bad')
+    expect(result.data).toBeNull()
+    expect(result.error).toBe('Unauthorized')
+
+    globalThis.fetch = originalFetch
+  })
+})
+
+describe('StoreClient.getMyEntitlements', () => {
   test('sends the bearer token and returns the plan', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
@@ -349,7 +379,7 @@ describe('AASClient.getMyEntitlements', () => {
       return new Response(JSON.stringify({ plan: 'pro' }), { status: 200 })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getMyEntitlements('tok-1')
     expect(result.data).toEqual({ plan: 'pro' })
     expect(result.error).toBeNull()
@@ -361,7 +391,7 @@ describe('AASClient.getMyEntitlements', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.getMyEntitlements('bad')
     expect(result.data).toBeNull()
     expect(result.error).toBe('Unauthorized')
@@ -370,7 +400,7 @@ describe('AASClient.getMyEntitlements', () => {
   })
 })
 
-describe('AASClient.createCheckout', () => {
+describe('StoreClient.createCheckout', () => {
   test('posts the period with the bearer token and returns the checkout url', async () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
@@ -381,7 +411,7 @@ describe('AASClient.createCheckout', () => {
       return new Response(JSON.stringify({ checkoutUrl: 'https://pay.example/cs_1' }), { status: 200 })
     }
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.createCheckout({ period: 'yearly' }, { token: 'tok-1' })
     expect(result.data).toEqual({ checkoutUrl: 'https://pay.example/cs_1' })
 
@@ -392,7 +422,7 @@ describe('AASClient.createCheckout', () => {
     const originalFetch = globalThis.fetch
     globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Billing not configured' }), { status: 501 })
 
-    const client = new AASClient()
+    const client = new StoreClient()
     const result = await client.createCheckout({ period: 'monthly' })
     expect(result.data).toBeNull()
     expect(result.error).toBe('Billing not configured')

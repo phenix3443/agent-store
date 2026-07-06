@@ -29,8 +29,8 @@ const mockItem: Item = {
   slug: 'openai-provider',
   name: 'OpenAI Provider',
   description: 'OpenAI API provider with GPT-4o support',
-  readmeUrl: 'https://example.com/readme',
-  icon: 'https://example.com/icon.png',
+
+
   category: 'provider',
   version: '1.2.0',
   publisher: {

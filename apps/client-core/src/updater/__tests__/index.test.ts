@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
 import { checkUpdates, applyUpdate } from '../index'
 import type { RegistryJson, Item, InstalledItem } from '@as/types'
-import type { AASClient } from '@as/sdk'
+import type { StoreClient } from '@as/sdk'
 
 const installedEntry: InstalledItem = {
   slug: 'openai-provider',
@@ -18,11 +18,11 @@ const registry: RegistryJson = { installed: [installedEntry] }
 const storeItemV2 = { slug: 'openai-provider', version: '2.0.0' } as unknown as Item
 const storeItemV1 = { slug: 'openai-provider', version: '1.0.0' } as unknown as Item
 
-function makeClient(item: Item | null, error: string | null = null): AASClient {
+function makeClient(item: Item | null, error: string | null = null): StoreClient {
   return {
     getItemBySlug: async () =>
       error ? { data: null, error } : { data: item, error: null },
-  } as unknown as AASClient
+  } as unknown as StoreClient
 }
 
 test('checkUpdates returns UpdateAvailable when store version is newer', async () => {

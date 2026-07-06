@@ -1,13 +1,13 @@
 import { test, expect } from 'bun:test'
 import { runEnable } from '../enable'
 import { runDisable } from '../disable'
-import type { AASEngine } from '@as/types'
+import type { Engine } from '@as/types'
 
 function makeEngine(
   enableFn: (slug: string, target: string) => Promise<void> = async () => {},
   disableFn: (slug: string, target: string) => Promise<void> = async () => {}
-): AASEngine {
-  return { enable: enableFn, disable: disableFn } as unknown as AASEngine
+): Engine {
+  return { enable: enableFn, disable: disableFn } as unknown as Engine
 }
 
 test('runEnable enables for specified target', async () => {

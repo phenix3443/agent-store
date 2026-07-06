@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { runConfig } from '../config'
-import type { AASEngine, JsonSchema } from '@as/types'
+import type { Engine, JsonSchema } from '@as/types'
 
 const schema: JsonSchema = {
   type: 'object',
@@ -11,11 +11,11 @@ const schema: JsonSchema = {
   },
 }
 
-function makeEngine(setConfigSpy?: (slug: string, values: Record<string, unknown>) => void): AASEngine {
+function makeEngine(setConfigSpy?: (slug: string, values: Record<string, unknown>) => void): Engine {
   return {
     getConfigSchema: async () => ({ schema, current: {} }),
     setConfig: async (slug: string, values: Record<string, unknown>) => { setConfigSpy?.(slug, values) },
-  } as unknown as AASEngine
+  } as unknown as Engine
 }
 
 test('runConfig prompts for each schema property', async () => {
@@ -80,7 +80,7 @@ test('runConfig prompts required fields first, then optional fields by key', asy
       current: {},
     }),
     setConfig: async () => undefined,
-  } as unknown as AASEngine
+  } as unknown as Engine
 
   const prompter = async (q: string) => { prompted.push(q); return '' }
   await runConfig(engine, ['openai-provider'], prompter, () => {})

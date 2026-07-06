@@ -1,17 +1,17 @@
 import { test, expect } from 'bun:test'
 import { runSync } from '../sync'
 import { runUpdate } from '../update'
-import type { AASEngine, UpdateResult } from '@as/types'
+import type { Engine, UpdateResult } from '@as/types'
 
-function makeSyncEngine(synced: string[] = [], errors: Array<{slug:string;error:string}> = []): AASEngine {
-  return { sync: async () => ({ synced, errors }) } as unknown as AASEngine
+function makeSyncEngine(synced: string[] = [], errors: Array<{slug:string;error:string}> = []): Engine {
+  return { sync: async () => ({ synced, errors }) } as unknown as Engine
 }
 
-function makeUpdateEngine(results: UpdateResult[] = []): AASEngine {
+function makeUpdateEngine(results: UpdateResult[] = []): Engine {
   return {
     update: async () => results,
     checkUpdates: async () => [],
-  } as unknown as AASEngine
+  } as unknown as Engine
 }
 
 test('runSync shows synced count', async () => {
@@ -24,7 +24,7 @@ test('runSync passes --for target to engine', async () => {
   let calledWith: string[] | undefined
   const engine = {
     sync: async (targets: string[]) => { calledWith = targets; return { synced: [], errors: [] } },
-  } as unknown as AASEngine
+  } as unknown as Engine
   await runSync(engine, ['--for', 'claude'], () => {})
   expect(calledWith).toEqual(['claude'])
 })
@@ -53,13 +53,13 @@ test('runUpdate shows "No updates" when none', async () => {
 test('runUninstall shows usage when no slug', async () => {
   const { runUninstall } = await import('../uninstall')
   const lines: string[] = []
-  await runUninstall({ uninstall: async () => {} } as unknown as AASEngine, [], s => lines.push(s))
+  await runUninstall({ uninstall: async () => {} } as unknown as Engine, [], s => lines.push(s))
   expect(lines.join('\n')).toContain('Usage')
 })
 
 test('runUninstall shows success', async () => {
   const { runUninstall } = await import('../uninstall')
   const lines: string[] = []
-  await runUninstall({ uninstall: async () => {} } as unknown as AASEngine, ['test-mcp'], s => lines.push(s))
+  await runUninstall({ uninstall: async () => {} } as unknown as Engine, ['test-mcp'], s => lines.push(s))
   expect(lines.join('\n')).toContain('Uninstalled')
 })

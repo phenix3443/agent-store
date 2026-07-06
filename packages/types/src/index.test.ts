@@ -6,7 +6,7 @@ import type {
   MCPItem,
   Item,
   InstallHook,
-  AASPaths,
+  Paths,
   InstalledItem,
   RegistryJson,
   ItemDetail,
@@ -72,8 +72,8 @@ describe('Item discriminated union', () => {
       slug: 'openai-provider',
       name: 'OpenAI Provider',
       description: 'OpenAI API access',
-      readmeUrl: 'https://storage.example.com/readme.md',
-      icon: 'https://storage.example.com/icon.png',
+
+
       category: 'provider',
       version: '1.0.0',
       publisher: { id: 'pub-1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' },
@@ -98,8 +98,8 @@ describe('Item discriminated union', () => {
       slug: 'my-skill',
       name: 'My Skill',
       description: 'A useful skill',
-      readmeUrl: 'https://storage.example.com/readme.md',
-      icon: 'https://storage.example.com/icon.png',
+
+
       category: 'skill',
       version: '0.3.0',
       publisher: { id: 'pub-2', slug: 'alice', name: 'Alice', avatarUrl: '', tier: 'community' },
@@ -123,8 +123,8 @@ describe('Item discriminated union', () => {
       slug: 'filesystem-mcp',
       name: 'Filesystem MCP',
       description: 'Filesystem access via MCP',
-      readmeUrl: 'https://storage.example.com/readme.md',
-      icon: 'https://storage.example.com/icon.png',
+
+
       category: 'mcp',
       version: '0.1.0',
       publisher: { id: 'pub-3', slug: 'bob', name: 'Bob', avatarUrl: '', tier: 'community' },
@@ -154,8 +154,8 @@ describe('Item discriminated union', () => {
       slug: 'remote-browser-mcp',
       name: 'Remote Browser MCP',
       description: 'Remote browser MCP',
-      readmeUrl: 'https://storage.example.com/readme.md',
-      icon: 'https://storage.example.com/icon.png',
+
+
       category: 'mcp',
       version: '0.2.0',
       publisher: { id: 'pub-4', slug: 'carol', name: 'Carol', avatarUrl: '', tier: 'community' },
@@ -184,8 +184,8 @@ describe('Item discriminated union', () => {
       slug: 'invalid-mcp',
       name: 'Invalid MCP',
       description: 'Invalid MCP',
-      readmeUrl: 'https://storage.example.com/readme.md',
-      icon: 'https://storage.example.com/icon.png',
+
+
       category: 'mcp' as const,
       version: '0.1.0',
       publisher: { id: 'pub-5', slug: 'eve', name: 'Eve', avatarUrl: '', tier: 'community' as const },
@@ -215,9 +215,9 @@ describe('Item discriminated union', () => {
   })
 })
 
-describe('AASPaths', () => {
-  test('can construct AASPaths with all three directories', () => {
-    const paths: AASPaths = {
+describe('Paths', () => {
+  test('can construct Paths with all three directories', () => {
+    const paths: Paths = {
       aasHome: '/tmp/test/agents',
       claudeConfigDir: '/tmp/test/claude',
       codexConfigDir: '/tmp/test/codex',

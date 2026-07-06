@@ -1,8 +1,8 @@
 import { test, expect } from 'bun:test'
 import { runUsage } from '../usage'
-import type { AASEngine, UsageSummaryRow } from '@as/types'
+import type { Engine, UsageSummaryRow } from '@as/types'
 
-function makeEngine(rows: UsageSummaryRow[]): AASEngine {
+function makeEngine(rows: UsageSummaryRow[]): Engine {
   return {
     search: async () => [], install: async () => ({ slug: '', version: '', installedAt: '' }),
     uninstall: async () => undefined, enable: async () => undefined, disable: async () => undefined,
@@ -12,7 +12,7 @@ function makeEngine(rows: UsageSummaryRow[]): AASEngine {
     duplicateProvider: async () => ({ newSlug: '' }),
     getUsageSummary: async () => rows,
     parsePricingFromUrl: async () => ({}),
-  } as unknown as AASEngine
+  } as unknown as Engine
 }
 
 const sampleRow: UsageSummaryRow = {

@@ -1,12 +1,12 @@
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import type {
-  AASEngine, AASPaths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
+  Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,
   UsageSummaryRow, UsageSummaryOptions, ModelPricing, RegistryJson, LocalRelayConfig,
   RecentRequestRow, RelayStatus, Entitlements, BudgetConfig, BudgetStatus,
 } from '@as/types'
-import { AASClient } from '@as/sdk'
+import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir } from './paths'
 import { readCatalogCache, writeCatalogCache } from './catalog-cache'
 import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from './registry/index'
@@ -19,6 +19,7 @@ import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './co
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { getDailySummary, getRecentRequests } from './usage/queries'
+import { exportUsageToFile } from './usage/export'
 import { resolveEntitlements, entitlementsForPlan, writeEntitlementCache } from './entitlement/index'
 import { readBudget, writeBudget, getBudgetStatus } from './usage/budget'
 import { getRelayDaemonStatus } from './relay/daemon-status'
@@ -28,13 +29,13 @@ import {
   toggleLocalConfig as _toggleLocalConfig,
 } from './relay/local-configs'
 
-export class AASEngineImpl implements AASEngine {
-  private readonly paths: Required<AASPaths>
-  private readonly client: AASClient
+export class EngineImpl implements Engine {
+  private readonly paths: Required<Paths>
+  private readonly client: StoreClient
 
-  constructor(pathOverrides?: Partial<AASPaths>, storeUrl?: string) {
+  constructor(pathOverrides?: Partial<Paths>, storeUrl?: string) {
     this.paths = resolvePaths(pathOverrides)
-    this.client = new AASClient(storeUrl, { timeoutMs: 4000 })
+    this.client = new StoreClient(storeUrl, { timeoutMs: 4000 })
   }
 
   async search(query: string, options?: SearchOptions): Promise<Item[]> {
@@ -239,7 +240,7 @@ export class AASEngineImpl implements AASEngine {
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
     const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as {
-      name: string; description: string; readmeUrl: string; icon: string
+      name: string; description: string
       publisher: import('@as/types').Publisher; tags: string[]; downloads: number
       configSchema?: import('@as/types').JsonSchema; supportedModels?: string[]
       transport?: 'stdio' | 'sse' | 'http'; serverCommand?: string
@@ -253,8 +254,6 @@ export class AASEngineImpl implements AASEngine {
       ...entry,
       name: manifest.name,
       description: manifest.description,
-      readmeUrl: manifest.readmeUrl,
-      icon: manifest.icon,
       publisher: manifest.publisher,
       tags: manifest.tags,
       downloads: manifest.downloads,
@@ -364,6 +363,10 @@ export class AASEngineImpl implements AASEngine {
   async clearEntitlement(): Promise<Entitlements> {
     await writeEntitlementCache(this.paths.aasHome, 'free')
     return entitlementsForPlan('free')
+  }
+
+  async exportUsage(format: 'csv' | 'json', days?: number): Promise<string> {
+    return exportUsageToFile(this.paths.aasHome, format, { days })
   }
 
   async getBudget(): Promise<BudgetConfig> {
