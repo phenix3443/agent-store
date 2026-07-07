@@ -127,58 +127,91 @@ async function pool<I, O>(items: I[], limit: number, fn: (item: I) => Promise<O>
   return out
 }
 
-// ── MCP: PulseMCP ─────────────────────────────────────────────────────────────
-interface PulseServer {
-  name: string
-  url: string
-  external_url: string | null
-  short_description: string | null
-  source_code_url: string | null
-  github_stars: number | null
-  package_registry: string | null
-  package_name: string | null
-  package_download_count: number | null
-  EXPERIMENTAL_ai_generated_description?: string | null
+// ── MCP: official MCP registry (registry.modelcontextprotocol.io) ─────────────
+// Replaces the deprecated PulseMCP v0beta. Free, unauthenticated, and implements
+// the Generic MCP Registry API spec. PulseMCP v0.1 was the other option but now
+// requires a paid API key + tenant id.
+interface RegistryServer {
+  server: {
+    name: string
+    title?: string
+    description?: string
+    version?: string
+    packages?: Array<{ registryType?: string; identifier?: string; transport?: { type?: string } }>
+    remotes?: Array<{ type: string; url: string }>
+    repository?: { url?: string; source?: string }
+  }
+  _meta?: { 'io.modelcontextprotocol.registry/official'?: { status?: string; isLatest?: boolean } }
 }
-interface PulsePage {
-  servers: PulseServer[]
-  total_count: number
-  next: string | null
+interface RegistryPage {
+  servers: RegistryServer[]
+  metadata?: { nextCursor?: string; count?: number }
+}
+
+// GitHub stars for a repo, used to rank MCP servers by popularity. Uses
+// GITHUB_TOKEN (present in CI) to lift the rate limit; returns null if unavailable.
+async function githubStars(repoUrl: string | undefined, headers: Record<string, string>): Promise<number | null> {
+  const m = repoUrl?.match(/github\.com\/([^/]+)\/([^/#?]+)/i)
+  if (!m) return null
+  try {
+    const repo = await fetchJson<{ stargazers_count: number }>(
+      `https://api.github.com/repos/${m[1]}/${m[2].replace(/\.git$/, '')}`,
+      { retries: 1, headers }
+    )
+    return repo.stargazers_count ?? null
+  } catch {
+    return null
+  }
 }
 
 async function crawlMcp(publishers: Map<string, CrawledPublisher>, taken: Set<string>): Promise<CrawledItem[]> {
-  const COUNT_PER_PAGE = 100
-  const base = 'https://api.pulsemcp.com/v0beta/servers'
-  // v0beta is in its sunset window (~50% of requests randomly rejected as of
-  // mid-2026), so every page gets generous retries.
-  const pageOpts = { retries: 14, retryDelayMs: 350 }
+  const base = 'https://registry.modelcontextprotocol.io/v0/servers'
 
-  const first = await fetchJson<PulsePage>(`${base}?count_per_page=${COUNT_PER_PAGE}`, pageOpts)
-  const total = first.total_count
-  const offsets: number[] = []
-  for (let off = COUNT_PER_PAGE; off < total; off += COUNT_PER_PAGE) offsets.push(off)
-
-  const collected: PulseServer[] = [...first.servers]
-  const pages = await pool(offsets, 6, async (off) => {
+  // Collect active, latest servers across a few pages.
+  const collected: RegistryServer['server'][] = []
+  let cursor: string | undefined
+  for (let page = 0; page < 4 && collected.length < 120; page++) {
+    const url = `${base}?limit=100${cursor ? `&version=latest&cursor=${cursor}` : '&version=latest'}`
+    let res: RegistryPage
     try {
-      const p = await fetchJson<PulsePage>(`${base}?count_per_page=${COUNT_PER_PAGE}&offset=${off}`, pageOpts)
-      return p.servers
+      res = await fetchJson<RegistryPage>(url, { retries: 3 })
     } catch (err) {
-      console.warn(`  [mcp] page offset=${off} failed after retries: ${(err as Error).message}`)
-      return [] as PulseServer[]
+      console.warn(`  [mcp] page ${page} failed: ${(err as Error).message}`)
+      break
     }
-  })
-  for (const s of pages) collected.push(...s)
-  console.log(`  [mcp] fetched ${collected.length}/${total} servers from PulseMCP`)
+    for (const s of res.servers) {
+      const meta = s._meta?.['io.modelcontextprotocol.registry/official']
+      if (meta && meta.status !== 'active') continue
+      collected.push(s.server)
+    }
+    cursor = res.metadata?.nextCursor
+    if (!cursor) break
+  }
+  console.log(`  [mcp] fetched ${collected.length} active servers from the MCP registry`)
 
-  // Prefer genuinely installable entries: npm package with a package name.
-  const installable = collected.filter((s) => s.package_registry === 'npm' && s.package_name)
-  installable.sort((a, b) => (b.github_stars ?? -1) - (a.github_stars ?? -1) || (b.package_download_count ?? 0) - (a.package_download_count ?? 0))
+  // Keep entries we can actually install: an npm package (→ npx stdio) or a remote.
+  type McpEntry = { server: RegistryServer['server']; npmId?: string; remote?: { type: string; url: string } }
+  const installable: McpEntry[] = []
+  for (const server of collected) {
+    const npm = server.packages?.find((p) => p.registryType === 'npm' && p.identifier)
+    const remote = server.remotes?.find((r) => r.type === 'streamable-http' || r.type === 'http' || r.type === 'sse')
+    if (npm?.identifier) installable.push({ server, npmId: npm.identifier })
+    else if (remote) installable.push({ server, remote: { type: remote.type, url: remote.url } })
+  }
+
+  // Rank by GitHub stars (best-effort; the registry has no popularity signal).
+  const ghHeaders: Record<string, string> = { Accept: 'application/vnd.github+json' }
+  if (process.env.GITHUB_TOKEN) ghHeaders.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+  const ranked = await pool(installable.slice(0, 60), 6, async (e) => ({
+    e,
+    stars: (await githubStars(e.server.repository?.url, ghHeaders)) ?? 0,
+  }))
+  ranked.sort((a, b) => b.stars - a.stars)
 
   const rows: CrawledItem[] = []
-  for (const s of installable) {
+  for (const { e, stars } of ranked) {
     if (rows.length >= PER_CATEGORY_LIMIT) break
-    const owner = githubOwnerFrom(s.source_code_url)
+    const owner = githubOwnerFrom(e.server.repository?.url)
     const pubSlug = owner ? sanitizeSlug(owner) : 'community'
     if (!publishers.has(pubSlug)) {
       publishers.set(pubSlug, {
@@ -189,19 +222,24 @@ async function crawlMcp(publishers: Map<string, CrawledPublisher>, taken: Set<st
         bio: null,
       })
     }
-    const slug = uniqueSlug(sanitizeSlug(s.package_name || s.name), taken)
+    // Registry names look like "io.github.owner/name"; use the last segment for the slug.
+    const shortName = e.server.name.split('/').pop() || e.server.name
+    const slug = uniqueSlug(sanitizeSlug(e.npmId || shortName), taken)
+    const remoteMeta = e.remote
+      ? { transport: e.remote.type === 'sse' ? 'sse' : 'http', url: e.remote.url, configSchema: {} }
+      : { transport: 'stdio', serverCommand: `npx -y ${e.npmId}`, configSchema: {} }
     rows.push({
       slug,
-      name: s.name,
-      description: s.short_description || s.EXPERIMENTAL_ai_generated_description || s.name,
+      name: e.server.title || shortName,
+      description: e.server.description || shortName,
       category: 'mcp',
       version: '1.0.0',
       publisherSlug: pubSlug,
       compatibleWith: ['claude', 'codex'],
-      tags: ['mcp', s.package_registry].filter(Boolean) as string[],
-      downloads: s.package_download_count ?? s.github_stars ?? 0,
+      tags: ['mcp', e.remote ? e.remote.type : 'npm'],
+      downloads: stars,
       installHook: { steps: [] },
-      metadata: { transport: 'stdio', serverCommand: `npx -y ${s.package_name}`, configSchema: {} },
+      metadata: remoteMeta,
     })
   }
   return rows
