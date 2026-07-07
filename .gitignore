@@ -22,3 +22,6 @@ bin/
 .waffo*
 waffo-*.pem
 *-private.*
+
+# Local test artifacts (installed skills/mcp/providers)
+.agents/
