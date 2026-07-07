@@ -3,7 +3,7 @@ import { readRegistry } from '../registry/index'
 import { findOrderedProvidersForTarget } from './provider-order'
 import { forwardWithFailover } from './forward'
 import { recordUsageAsync } from '../usage/record-usage'
-import { recordProviderHealthBatch, type ProviderAttempt } from '../usage/provider-health'
+import { recordProviderHealthBatch, getCoolingProviderSlugs, type ProviderAttempt } from '../usage/provider-health'
 
 export const RELAY_PORT = 18780
 
@@ -36,6 +36,12 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
         return Response.json({ error: `no active provider for ${target}` }, { status: 503 })
       }
 
+      // Skip providers currently cooling down. If every eligible provider is cooling,
+      // try them all anyway (half-open) rather than hard-failing the request.
+      const cooling = getCoolingProviderSlugs(aasHome)
+      const routable = eligible.filter(({ item }) => !cooling.has(item.slug))
+      const active = routable.length > 0 ? routable : eligible
+
       const body = await req.json().catch(() => ({}))
       const requestedModel = typeof (body as Record<string, unknown>)['model'] === 'string'
         ? (body as Record<string, unknown>)['model'] as string
@@ -47,7 +53,7 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
         url.pathname,
         body,
         requestedModel,
-        eligible.map(({ item, connection }) => ({
+        active.map(({ item, connection }) => ({
           slug: item.slug,
           connection: {
             baseUrl: connection.baseUrl!,
@@ -65,7 +71,7 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
       // off the response path.
       recordProviderHealthBatch(aasHome, attempts)
 
-      const usedConnection = eligible.find(({ item }) => item.slug === usedSlug)!.connection
+      const usedConnection = active.find(({ item }) => item.slug === usedSlug)!.connection
       const contentType = upstreamResponse.headers.get('content-type') ?? ''
       const isStreaming = contentType.includes('text/event-stream')
 

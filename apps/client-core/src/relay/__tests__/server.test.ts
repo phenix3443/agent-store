@@ -4,7 +4,15 @@ import { join } from 'path'
 import { startRelayServer } from '../server'
 import { writeRegistry } from '../../registry/index'
 import { itemDir } from '../../paths'
+import { recordProviderHealthBatch } from '../../usage/provider-health'
 import type { InstalledItem } from '@as/types'
+
+// Drive a provider into the cooling-down state (2 consecutive server failures).
+function coolDown(home: string, slug: string) {
+  const now = Date.now()
+  recordProviderHealthBatch(home, [{ slug, statusCode: 500, latencyMs: 1 }], now)
+  recordProviderHealthBatch(home, [{ slug, statusCode: 500, latencyMs: 1 }], now)
+}
 
 let aasHome: string
 let stop: () => void
@@ -205,6 +213,49 @@ test('falls back to the next-priority provider when the first returns a 5xx, and
   const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual(['https://flaky.example.com/v1/messages', 'https://reliable.example.com/v1/messages'])
+  expect(res.status).toBe(200)
+})
+
+test('skips a provider that is cooling down and routes to the next healthy one', async () => {
+  await installProviders([
+    { slug: 'cooling', enabledFor: { claude: true }, config: { apiKey: 'k1', baseUrl: 'https://cooling.example.com', level: 1 } },
+    { slug: 'healthy', enabledFor: { claude: true }, config: { apiKey: 'k2', baseUrl: 'https://healthy.example.com', level: 2 } },
+  ])
+  coolDown(aasHome, 'cooling')
+
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+
+  // The cooling level-1 provider is never dialed; the request goes straight to the healthy one.
+  expect(calls).toEqual(['https://healthy.example.com/v1/messages'])
+})
+
+test('when every provider is cooling, still tries them (half-open) instead of failing', async () => {
+  await installProviders([
+    { slug: 'only', enabledFor: { claude: true }, config: { apiKey: 'k1', baseUrl: 'https://only.example.com', level: 1 } },
+  ])
+  coolDown(aasHome, 'only')
+
+  const calls: string[] = []
+  const fetchImpl = (async (url: string) => {
+    calls.push(url)
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+
+  expect(calls).toEqual(['https://only.example.com/v1/messages'])
   expect(res.status).toBe(200)
 })
 
