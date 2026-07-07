@@ -245,49 +245,83 @@ async function crawlMcp(publishers: Map<string, CrawledPublisher>, taken: Set<st
   return rows
 }
 
-// ── Provider: OpenRouter ──────────────────────────────────────────────────────
-interface ORProvider {
-  name: string
+// ── Provider: curated real providers with known endpoints ────────────────────
+// Providers aren't mass-crawlable — there is no registry of relay endpoints, and a
+// provider's baseURL is fixed and provided by the provider. So this is a curated
+// list. Each entry pre-fills its baseURL + auth via a config install step; the user
+// only supplies their API key.
+interface CuratedProvider {
   slug: string
-  privacy_policy_url: string | null
-  terms_of_service_url: string | null
-  status_page_url: string | null
-  headquarters: string | null
+  name: string
+  publisherSlug: string
+  publisherName: string
+  bio: string
+  description: string
+  compatibleWith: string[]
+  connection: { baseUrl: string; authType: string; endpointPath?: string; upstreamProtocol?: string; level?: number }
+  modelsUrl?: string
+  configSchema: Record<string, unknown>
 }
 
-async function crawlProviders(publishers: Map<string, CrawledPublisher>, taken: Set<string>): Promise<CrawledItem[]> {
-  const { data } = await fetchJson<{ data: ORProvider[] }>('https://openrouter.ai/api/v1/providers', { retries: 3 })
-  console.log(`  [provider] fetched ${data.length} providers from OpenRouter`)
+const CURATED_PROVIDERS: CuratedProvider[] = [
+  {
+    slug: 'openrouter',
+    name: 'OpenRouter',
+    publisherSlug: 'openrouter',
+    publisherName: 'OpenRouter',
+    bio: '统一访问 300+ 模型的推理路由服务。',
+    description: 'OpenRouter：一个 API Key 访问 300+ 模型（OpenAI 兼容）。此预设已填好接入地址，你只需填入自己的 OpenRouter API Key。',
+    compatibleWith: ['codex'],
+    connection: { baseUrl: 'https://openrouter.ai/api/v1', authType: 'bearer', endpointPath: '/chat/completions', upstreamProtocol: 'auto', level: 1 },
+    modelsUrl: 'https://openrouter.ai/api/v1/models',
+    configSchema: {
+      type: 'object',
+      required: ['apiKey'],
+      properties: {
+        apiKey: { type: 'string', description: 'OpenRouter API Key (Bearer)' },
+        baseUrl: { type: 'string', description: 'API 地址', default: 'https://openrouter.ai/api/v1' },
+        authType: { type: 'string', default: 'bearer' },
+        level: { type: 'number', default: 1 },
+      },
+    },
+  },
+]
 
+async function crawlProviders(publishers: Map<string, CrawledPublisher>, taken: Set<string>): Promise<CrawledItem[]> {
   const rows: CrawledItem[] = []
-  for (const p of data) {
-    if (rows.length >= PER_CATEGORY_LIMIT) break
-    const pubSlug = sanitizeSlug(p.slug)
-    if (!publishers.has(pubSlug)) {
-      publishers.set(pubSlug, {
-        slug: pubSlug,
-        name: p.name,
-        avatarUrl: `https://api.dicebear.com/9.x/shapes/svg?seed=${pubSlug}`,
-        tier: tierFor(pubSlug),
-        bio: null,
+  for (const p of CURATED_PROVIDERS) {
+    if (!publishers.has(p.publisherSlug)) {
+      publishers.set(p.publisherSlug, {
+        slug: p.publisherSlug,
+        name: p.publisherName,
+        avatarUrl: `https://api.dicebear.com/9.x/shapes/svg?seed=${p.publisherSlug}`,
+        tier: tierFor(p.publisherSlug),
+        bio: p.bio,
       })
     }
-    const slug = uniqueSlug(sanitizeSlug(`${p.slug}-provider`), taken)
-    const hq = p.headquarters ? `（总部 ${p.headquarters}）` : ''
+    let supportedModels: string[] = []
+    if (p.modelsUrl) {
+      try {
+        const { data } = await fetchJson<{ data: Array<{ id: string }> }>(p.modelsUrl, { retries: 2 })
+        supportedModels = data.slice(0, 20).map((m) => m.id)
+      } catch { /* leave empty on failure */ }
+    }
+    const slug = uniqueSlug(sanitizeSlug(p.slug), taken)
     rows.push({
       slug,
       name: p.name,
-      description: `${p.name}：OpenRouter 上的真实推理服务供应商${hq}。`,
+      description: p.description,
       category: 'provider',
       version: '1.0.0',
-      publisherSlug: pubSlug,
-      compatibleWith: ['claude', 'codex'],
-      tags: ['provider', p.headquarters?.toLowerCase()].filter(Boolean) as string[],
+      publisherSlug: p.publisherSlug,
+      compatibleWith: p.compatibleWith,
+      tags: ['provider'],
       downloads: 0,
-      installHook: { steps: [] },
-      metadata: { configSchema: {}, supportedModels: [] },
+      installHook: { steps: [{ type: 'config', patch: { apiKey: '', ...p.connection } }] },
+      metadata: { configSchema: p.configSchema, supportedModels },
     })
   }
+  console.log(`  [provider] emitted ${rows.length} curated providers`)
   return rows
 }
 
@@ -358,13 +392,26 @@ async function crawlSkills(publishers: Map<string, CrawledPublisher>, taken: Set
     }
   }
 
-  const filtered = usedFallback ? repos : repos.filter((r) => r.description && r.description.trim())
-  console.log(`  [skill] scanning ${filtered.length} repos from GitHub${usedFallback ? ' (fallback)' : ''}`)
+  const searchRepos = usedFallback ? repos : repos.filter((r) => r.description && r.description.trim())
 
-  // Walk each repo's tree (1 API call per repo) and collect every SKILL.md — a repo
-  // may be a single skill or a collection of many. Stop once we have enough.
+  // Scan curated seed repos first (quality), then search results; dedup by name.
+  let scanRepos = searchRepos
+  if (!usedFallback) {
+    try {
+      const seeds = await pool(SKILL_FALLBACK, 2, (fullName) =>
+        fetchJson<GHRepo>(`https://api.github.com/repos/${fullName}`, { retries: 1, headers })
+      )
+      const seen = new Set(seeds.map((r) => r.full_name))
+      scanRepos = [...seeds, ...searchRepos.filter((r) => !seen.has(r.full_name))]
+    } catch { /* seeds unavailable; keep search results */ }
+  }
+  console.log(`  [skill] scanning ${scanRepos.length} repos (curated + search)`)
+
+  // Walk each repo's tree (1 API call per repo). Cap per repo so one large collection
+  // doesn't fill the whole quota — keeps the catalog diverse across repos.
+  const PER_REPO = 3
   const candidates: SkillCandidate[] = []
-  for (const r of filtered) {
+  for (const r of scanRepos) {
     if (candidates.length >= PER_CATEGORY_LIMIT) break
     const [owner, repo] = r.full_name.split('/')
     const branch = r.default_branch || 'main'
@@ -378,7 +425,9 @@ async function crawlSkills(publishers: Map<string, CrawledPublisher>, taken: Set
       console.warn(`  [skill] tree for ${r.full_name} failed: ${(err as Error).message}`)
       continue
     }
+    let perRepo = 0
     for (const entry of tree.tree) {
+      if (perRepo >= PER_REPO || candidates.length >= PER_CATEGORY_LIMIT) break
       if (entry.type !== 'blob') continue
       if (entry.path !== 'SKILL.md' && !entry.path.endsWith('/SKILL.md')) continue
       const dir = entry.path === 'SKILL.md' ? repo : entry.path.slice(0, -'/SKILL.md'.length).split('/').pop()!
@@ -392,9 +441,10 @@ async function crawlSkills(publishers: Map<string, CrawledPublisher>, taken: Set
         ownerAvatar: r.owner.avatar_url,
         stars: r.stargazers_count,
       })
+      perRepo++
     }
   }
-  console.log(`  [skill] found ${candidates.length} SKILL.md files`)
+  console.log(`  [skill] found ${candidates.length} SKILL.md files across ${new Set(candidates.map((c) => c.repo)).size} repos`)
 
   // For each chosen skill, fetch its raw SKILL.md (not rate-limited) for real
   // name/description from frontmatter, and emit a file install step that fetches it.
