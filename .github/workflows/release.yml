@@ -70,11 +70,18 @@ jobs:
           releaseBody: |
             桌面客户端安装包。
 
-            - macOS: `.dmg`（Apple Silicon 与 Intel 各一份）
-            - Windows: `.msi` / `.exe`
+            - macOS: `.dmg`（Apple Silicon `aarch64` 与 Intel `x64` 各一份）
+            - Windows: `.msi` / `-setup.exe`
 
-            当前为未签名构建，首次打开会有 Gatekeeper / SmartScreen 安全提示：
-            - macOS: 右键 → 打开，或在「系统设置 › 隐私与安全性」中允许
-            - Windows: 「更多信息」→「仍要运行」
+            当前为**未签名**构建，首次打开会被系统拦截 —— 属正常现象，**并非文件损坏**：
+
+            - **macOS** 若提示「已损坏，无法打开」：把 App 拖入「应用程序」，然后在终端执行
+              ```
+              xattr -cr "/Applications/Agent Store CLI.app"
+              ```
+              再双击打开即可。（这种情况下右键「打开」通常无效，需用上面的命令去除隔离标记。）
+            - **Windows** 若提示「未知发布者」：点「更多信息」→「仍要运行」。
+
+            正式的 Apple Developer ID 签名 + 公证（及 Windows 代码签名）接入后，这些提示会消失。
           releaseDraft: false
           prerelease: false

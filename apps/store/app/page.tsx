@@ -92,6 +92,12 @@ export default async function LandingPage() {
             <span className="text-[15px] font-semibold text-[#e7e7ee]">下载 for Windows</span>
           </a>
         </div>
+        <p className="mt-4 text-[12.5px] text-[#8a8a9e]">
+          未签名构建，macOS 首次打开若提示「已损坏」属正常拦截 ——{' '}
+          <Link href="/docs" className="text-[#c9ccff] underline-offset-2 hover:underline">
+            查看解决办法
+          </Link>
+        </p>
       </div>
 
       {/* product visual: command palette mock */}
