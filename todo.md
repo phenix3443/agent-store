@@ -1,71 +1,44 @@
 # 需要你手动操作的清单
 
-我（Claude）配不了的、需要你点页面的事项。做完对应项就打勾，OAuth 那几项配完给我个信号，我就把桌面端登录 UI + deep-link 写完并真机验证。
+我（Claude）配不了的、需要你点页面或走审核的事项。做完对应项打勾并给我信号，我接着往下做。
 
-关键常量（下面反复用到）：
+关键常量：
 - Supabase 项目 ref：`faiygihglitiuqywajyh`
-- GitHub App 回调（填在 GitHub）：`https://faiygihglitiuqywajyh.supabase.co/auth/v1/callback`
-- 桌面 App 回调（填在 Supabase Redirect URLs）：`agent-store://auth-callback`
+- 桌面 App 回调：`agent-store://auth-callback`
 
 ---
 
-## A. 立即能做（无依赖）—— ✅ 已完成
+## 1. 桌面端代码签名
 
-- [x] Waffo 询价邮件已发出（→ merchant-support@waffo.com）
+### macOS —— ⏳ 已申请 Apple Developer，等审核
+- [ ] Apple Developer Program 审核通过（$99/年，**已提交申请，等待中**）
+- [ ] 通过后拿到 Developer ID Application 证书 + 公证凭据，给我（走 GitHub Secrets，不进代码）：
+      `APPLE_CERTIFICATE`(base64 .p12) / `APPLE_CERTIFICATE_PASSWORD` / `APPLE_SIGNING_IDENTITY` / `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID`
+- [ ] 我接进 `.github/workflows/release.yml`，之后 macOS 下载零提示（消除「已损坏」）
 
----
+### Windows 代码签名 —— 未开始（可选，后续）
+- [ ] Windows OV/EV 证书，消除 SmartScreen「未知发布者」
 
-## B. OAuth 登录（Supabase Auth）
-
-### B1. GitHub OAuth App —— ✅ 已完成
-- [x] GitHub App「Agent Store (test)」已存在，回调 URL 正确
-
-### B2. Supabase 启用 GitHub provider —— ✅ 已完成
-- [x] 远端 `external_github_enabled = true`（已确认）
-
-### B3. 加桌面端回调 URL —— ✅ 已完成（Claude 通过 Management API 加好）
-- [x] `agent-store://auth-callback` 已在 allow list 中
-
-> GitHub 登录后端三件套已齐活，无需再手动操作。
-> 备注：若日后桌面端登录报错，回来核对 GitHub provider 的 client_id/secret 是否填全（现在只知 enabled=true）。
-
-### B4. Google 登录 —— ✅ 已启用
-- [x] 远端 `external_google_enabled = true`（已确认）
+> 现状：v0.1.0 已发版（macOS universal dmg + Windows exe/msi），均为**未签名**构建。
+> 未签名的临时打开办法已写进 Release 说明 / 落地页 / 文档（macOS：`xattr -cr "/Applications/Agent Store CLI.app"`）。
 
 ---
 
-## C. API 密钥（webhook 写订阅要用）—— ✅ 已完成（Claude 用 CLI 做的）
-
-- [x] service_role key 已通过 supabase Management API 取出（用 CLI 钥匙串 token，值未外泄）
-- [x] 已 `wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env test`（`wrangler secret list` 已确认存在）
-
----
-
-## D. Waffo 支付（test 环境）—— ✅ 端到端已跑通并验证
-
-- [x] 店铺 `ai-store` (STO_1RVfXdLKHdCzlWEN8VeEft) + Pro 月/年产品 + webhook 已用 `scripts/waffo-setup.ts` 自动建好
-- [x] 4 个 Worker secret 已灌（MERCHANT_ID / PRIVATE_KEY_BASE64 / PRODUCT_ID 月·年）
-- [x] 真实测试付款（卡 4576…0110）→ webhook → subscriptions 表 → `/api/entitlements=pro` **全通**
-
-### 上真实收款（KYB 过后）
+## 2. Waffo 上真实收款（KYB 过后）
 - [ ] Waffo 完成 KYB / 生产资质审核
-- [ ] 换成 **prod** 凭证重跑 `scripts/waffo-setup.ts`（`WAFFO_TEST=false`）+ 产品 `.publish()`
+- [ ] 换 prod 凭证重跑 `scripts/waffo-setup.ts`（`WAFFO_TEST=false`）+ 产品 `.publish()`
 - [ ] Worker secret 换成 prod 值（同名，`--env production`）
 
+> test 环境端到端已跑通验证过（付款 → webhook → subscriptions 表 → `/api/entitlements=pro`）。
+
 ---
 
-## E. 桌面 GitHub 登录 —— 代码已全部完成 ✅，只差你点一次授权验证
-
-Claude 已完成并通过编译/单测：Auth 上下文、SettingsModal GitHub 登录按钮 + 升级 CTA、Tauri deep-link（Rust 插件 + `agent-store://` scheme + 权限）、entitlement 同步。`cargo check` + 133 前端测试全过。
-
-**最后的端到端验证（需要你，OAuth 授权只能人工点）：**
+## 3. 桌面 GitHub 登录端到端验证（代码已完成，只差你点一次授权）
 ```bash
-# 让桌面 sidecar 指向已部署的 test API（与远端 Supabase 项目匹配，token 才校验得过）
 cd /Users/liushangliang/github/phenix3443/agent-store
 AS_STORE_URL=https://as-api-test.phenix3443.workers.dev make dev-gui
 ```
-- [ ] App 起来后：设置 → 账户 → 点「GitHub 登录」→ 浏览器弹出 GitHub 授权 → 点 Authorize → 自动跳回 App
-- [ ] 观察：账户显示你的邮箱 + 「已登录」；此时 plan 仍是 free（没订阅）
-- [ ] 概览页的「预算与超支告警」仍是锁态（因为 free）——点「升级 Pro」会打开 Waffo checkout（需 D 段 Waffo 配好才有真实产品）
+- [ ] 设置 → 账户 → 「GitHub 登录」→ 浏览器授权 → 自动跳回 App
+- [ ] 账户显示邮箱 + 「已登录」（此时 plan 仍是 free）
 
-> 说明：登录本身现在就能验证；"升级解锁 Pro" 要等 D 段 Waffo 凭证到位、真买一单后 webhook 回填订阅，`syncEntitlement` 才会把你变 pro。想先纯验证解锁逻辑，可临时 `AS_PLAN=pro` 起 sidecar。
+> 想纯验证 Pro 解锁逻辑：临时 `AS_PLAN=pro` 起 sidecar。
