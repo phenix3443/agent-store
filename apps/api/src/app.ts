@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
-import type { SupabaseEnv } from './supabase'
+import { getSupabaseAdmin, type SupabaseEnv } from './supabase'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
@@ -46,6 +46,20 @@ app.get('/api/items/:slug', async (c) => {
   if (error) return c.json({ error: 'Failed to fetch item' }, 500)
   if (!data) return c.json({ error: 'Not found' }, 404)
   return c.json({ item: data })
+})
+
+// Bump the real install count (called by the client after a successful install).
+app.post('/api/items/:slug/install', async (c) => {
+  const slug = c.req.param('slug')
+  try {
+    const supabase = getSupabaseAdmin(c.env)
+    const { data } = await supabase.from('items').select('downloads').eq('slug', slug).single()
+    if (!data) return c.json({ error: 'Not found' }, 404)
+    await supabase.from('items').update({ downloads: (data.downloads ?? 0) + 1 }).eq('slug', slug)
+    return c.json({ ok: true })
+  } catch {
+    return c.json({ error: 'Failed to record install' }, 500)
+  }
 })
 
 app.get('/api/publishers/:slug', async (c) => {

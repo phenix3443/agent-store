@@ -85,6 +85,15 @@ export class StoreClient {
     }
   }
 
+  /** Best-effort: bump a package's real install count. Never throws. */
+  async recordInstall(slug: string): Promise<void> {
+    try {
+      await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}/install`, { method: 'POST' })
+    } catch {
+      /* install counting is non-critical */
+    }
+  }
+
   async getPublisher(slug: string): Promise<Result<PublisherWithItems>> {
     try {
       const res = await this._fetch(`${this.baseUrl}/api/publishers/${encodeURIComponent(slug)}`)

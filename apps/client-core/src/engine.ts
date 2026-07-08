@@ -93,6 +93,8 @@ export class EngineImpl implements Engine {
       enabledFor: existing?.enabledFor ?? {},
     }
     await writeRegistry(this.paths.aasHome, upsertEntry(registry, entry))
+    // Bump the catalog's real install count (best-effort, non-blocking).
+    void this.client.recordInstall(slug)
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
 
