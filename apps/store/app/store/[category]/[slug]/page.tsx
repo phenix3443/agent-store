@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import type { Item } from '@as/types'
 import { getItemBySlug } from '@/lib/catalog'
 import { Badge } from '@/components/Badge'
+import { MarkdownContent } from '@/components/MarkdownContent'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 interface ItemDetailPageProps {
@@ -49,6 +50,17 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
   const review = item.review
   const risk = review ? (RISK_META[review.risk] ?? RISK_META.medium) : null
   const run = runInfo(item)
+
+  // For skills, show the actual SKILL.md so users see what it does before installing.
+  let skillBody: string | null = null
+  if (item.category === 'skill' && item.contentUrl) {
+    try {
+      const res = await fetch(item.contentUrl, { next: { revalidate: 3600 } })
+      if (res.ok) skillBody = (await res.text()).slice(0, 20000).replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '').trim()
+    } catch {
+      /* content unavailable — skip the section */
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -113,6 +125,13 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             </p>
           )}
         </div>
+
+        {skillBody && (
+          <div className="mt-4 rounded-xl border border-store-border bg-store-panel p-5">
+            <p className="mb-3 text-sm font-medium text-store-text">内容</p>
+            <MarkdownContent>{skillBody}</MarkdownContent>
+          </div>
+        )}
       </main>
     </div>
   )
