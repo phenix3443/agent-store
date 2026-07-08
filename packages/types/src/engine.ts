@@ -15,6 +15,12 @@ export type ToolTarget = 'claude' | 'codex'
 export interface Paths {
   aasHome: string
   claudeConfigDir: string
+  /**
+   * Path to Claude Code's `.claude.json` (where it reads user-scope MCP servers).
+   * It lives at `$CLAUDE_CONFIG_DIR/.claude.json` when that env var is set, else
+   * `$HOME/.claude.json` — which is NOT inside claudeConfigDir (`~/.claude`).
+   */
+  claudeJsonPath: string
   codexConfigDir: string
 }
 

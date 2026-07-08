@@ -376,7 +376,7 @@ export class AgentPackageEngine {
         packageDir,
       })
       if (target === 'claude') {
-        await upsertClaudeMcpServer(this.paths.claudeConfigDir, slug, entry)
+        await upsertClaudeMcpServer(this.paths.claudeJsonPath, slug, entry)
       } else {
         await upsertCodexMcpServer(this.paths.codexConfigDir, slug, entry)
       }
@@ -389,7 +389,7 @@ export class AgentPackageEngine {
       ...(component.headers ? { headers: component.headers } : {}),
     }
     if (target === 'claude') {
-      await upsertClaudeMcpServer(this.paths.claudeConfigDir, slug, entry)
+      await upsertClaudeMcpServer(this.paths.claudeJsonPath, slug, entry)
     } else {
       await upsertCodexMcpServer(this.paths.codexConfigDir, slug, entry)
     }

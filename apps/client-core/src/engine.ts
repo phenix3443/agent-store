@@ -420,7 +420,7 @@ export class EngineImpl implements Engine {
     }
 
     if (target === 'claude') {
-      await syncItemToClaude(slug, category, this.paths.aasHome, this.paths.claudeConfigDir, action)
+      await syncItemToClaude(slug, category, this.paths.aasHome, this.paths.claudeConfigDir, this.paths.claudeJsonPath, action)
     } else if (target === 'codex') {
       await syncItemToCodex(slug, category, this.paths.aasHome, this.paths.codexConfigDir, action)
     }

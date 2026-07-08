@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir, copyFile, rm } from 'fs/promises'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import type { MCPItem } from '@as/types'
 import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
@@ -32,25 +32,40 @@ async function writeSettings(claudeConfigDir: string, settings: Record<string, u
   await writeFile(join(claudeConfigDir, 'settings.json'), JSON.stringify(settings, null, 2))
 }
 
+// Claude Code reads user-scope MCP servers from `.claude.json` (NOT settings.json),
+// which may hold other Claude-managed state — so read-merge-write and keep 0600.
+async function readClaudeJson(claudeJsonPath: string): Promise<Record<string, unknown>> {
+  try {
+    return JSON.parse(await readFile(claudeJsonPath, 'utf-8')) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
+async function writeClaudeJson(claudeJsonPath: string, config: Record<string, unknown>): Promise<void> {
+  await mkdir(dirname(claudeJsonPath), { recursive: true })
+  await writeFile(claudeJsonPath, JSON.stringify(config, null, 2), { mode: 0o600 })
+}
+
 export async function upsertClaudeMcpServer(
-  claudeConfigDir: string,
+  claudeJsonPath: string,
   slug: string,
   entry: McpServerConfig
 ): Promise<void> {
-  const settings = await readSettings(claudeConfigDir)
-  const mcpServers = (settings['mcpServers'] ?? {}) as Record<string, unknown>
+  const config = await readClaudeJson(claudeJsonPath)
+  const mcpServers = (config['mcpServers'] ?? {}) as Record<string, unknown>
   mcpServers[slug] = entry
-  settings['mcpServers'] = mcpServers
-  await writeSettings(claudeConfigDir, settings)
+  config['mcpServers'] = mcpServers
+  await writeClaudeJson(claudeJsonPath, config)
 }
 
-export async function removeClaudeMcpServer(claudeConfigDir: string, slug: string): Promise<void> {
-  const settings = await readSettings(claudeConfigDir)
-  const mcpServers = (settings['mcpServers'] ?? {}) as Record<string, unknown>
+export async function removeClaudeMcpServer(claudeJsonPath: string, slug: string): Promise<void> {
+  const config = await readClaudeJson(claudeJsonPath)
+  const mcpServers = (config['mcpServers'] ?? {}) as Record<string, unknown>
   delete mcpServers[slug]
-  if (Object.keys(mcpServers).length > 0) settings['mcpServers'] = mcpServers
-  else delete settings['mcpServers']
-  await writeSettings(claudeConfigDir, settings)
+  if (Object.keys(mcpServers).length > 0) config['mcpServers'] = mcpServers
+  else delete config['mcpServers']
+  await writeClaudeJson(claudeJsonPath, config)
 }
 
 export async function syncItemToClaude(
@@ -58,6 +73,7 @@ export async function syncItemToClaude(
   category: 'provider' | 'skill' | 'mcp',
   aasHome: string,
   claudeConfigDir: string,
+  claudeJsonPath: string,
   action: 'add' | 'remove'
 ): Promise<void> {
   const dir = join(aasHome, CATEGORY_DIR[category], slug)
@@ -66,9 +82,9 @@ export async function syncItemToClaude(
   if (category === 'mcp') {
     if (action === 'add') {
       const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
-      await upsertClaudeMcpServer(claudeConfigDir, slug, buildLegacyMcpServerConfig(manifest, dir))
+      await upsertClaudeMcpServer(claudeJsonPath, slug, buildLegacyMcpServerConfig(manifest, dir))
     } else {
-      await removeClaudeMcpServer(claudeConfigDir, slug)
+      await removeClaudeMcpServer(claudeJsonPath, slug)
     }
   } else if (category === 'skill') {
     // Claude Code discovers skills as directories: skills/<name>/SKILL.md

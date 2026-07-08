@@ -361,8 +361,8 @@ test('installs local stdio mcp package and syncs it to codex and claude', async 
   expect(codexEntry.cwd).toBe(join(aasHome, 'packages', 'local.filesystem-mcp'))
   expect(codexEntry.env).toEqual({ ROOT: '/tmp/workspace' })
 
-  const claudeSettings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  const claudeEntry = claudeSettings.mcpServers['local.filesystem-mcp#filesystem']
+  const claudeConfig = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  const claudeEntry = claudeConfig.mcpServers['local.filesystem-mcp#filesystem']
   expect(claudeEntry.command).toBe(join(aasHome, 'packages', 'local.filesystem-mcp', 'mcp', 'server'))
   expect(claudeEntry.args).toEqual(['--root', '/tmp/workspace'])
   expect(claudeEntry.cwd).toBe(join(aasHome, 'packages', 'local.filesystem-mcp'))
@@ -386,8 +386,8 @@ test('installs local remote mcp package and syncs it to codex and claude', async
   expect(codexEntry.type).toBe('http')
   expect(codexEntry.url).toBe('https://mcp.example.com')
 
-  const claudeSettings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  const claudeEntry = claudeSettings.mcpServers['local.remote-browser-mcp#browser']
+  const claudeConfig = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  const claudeEntry = claudeConfig.mcpServers['local.remote-browser-mcp#browser']
   expect(claudeEntry.type).toBe('http')
   expect(claudeEntry.url).toBe('https://mcp.example.com')
 })

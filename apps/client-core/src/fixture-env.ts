@@ -15,6 +15,7 @@ export function getIsolatedFixturePathsFromEnv(): Required<Paths> {
   const paths: Required<Paths> = {
     aasHome: requireEnv('AS_HOME'),
     claudeConfigDir: requireEnv('CLAUDE_CONFIG_DIR'),
+    claudeJsonPath: join(requireEnv('CLAUDE_CONFIG_DIR'), '.claude.json'),
     codexConfigDir: requireEnv('CODEX_CONFIG_DIR'),
   }
 

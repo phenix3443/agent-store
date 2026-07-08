@@ -78,6 +78,7 @@ test('fixture env accepts explicit isolated directories', () => {
   expect(paths).toEqual({
     aasHome: '/tmp/as-fixture',
     claudeConfigDir: '/tmp/claude-fixture',
+    claudeJsonPath: '/tmp/claude-fixture/.claude.json',
     codexConfigDir: '/tmp/codex-fixture',
   })
 })

@@ -97,8 +97,8 @@ test('enable mcp: writes mcpServers to claude settings', async () => {
   mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.mcpServers?.['test-mcp']).toBeDefined()
+  const config = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  expect(config.mcpServers?.['test-mcp']).toBeDefined()
   const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
   expect(reg.installed[0].enabledFor.claude).toBe(true)
 })
@@ -120,8 +120,8 @@ test('enable remote mcp: writes remote entry to claude and codex configs', async
   await engine.enable('remote-mcp', 'claude')
   await engine.enable('remote-mcp', 'codex')
 
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.mcpServers?.['remote-mcp']).toEqual({
+  const claudeCfg = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  expect(claudeCfg.mcpServers?.['remote-mcp']).toEqual({
     type: 'http',
     url: 'https://mcp.example.com',
     headers: { Authorization: 'Bearer token' },
@@ -138,8 +138,8 @@ test('disable mcp: removes mcpServers entry and sets enabledFor false', async ()
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
   await engine.disable('test-mcp', 'claude')
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.mcpServers?.['test-mcp']).toBeUndefined()
+  const config = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  expect(config.mcpServers?.['test-mcp']).toBeUndefined()
   const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
   expect(reg.installed[0].enabledFor.claude).toBe(false)
 })
@@ -284,12 +284,12 @@ test('sync adds all enabled items to target configs', async () => {
   mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
-  // Clear settings to verify sync rewrites
-  await writeFile(join(claudeDir, 'settings.json'), '{}')
+  // Clear .claude.json to verify sync rewrites the MCP entry
+  await writeFile(join(claudeDir, '.claude.json'), '{}')
   const result = await engine.sync(['claude'])
   expect(result.errors).toHaveLength(0)
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.mcpServers?.['test-mcp']).toBeDefined()
+  const config = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  expect(config.mcpServers?.['test-mcp']).toBeDefined()
 })
 
 test('checkUpdates returns empty when registry is empty', async () => {
