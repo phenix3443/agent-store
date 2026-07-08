@@ -76,7 +76,7 @@ export default function PricingPage() {
         </Card>
 
         {/* Pro */}
-        <Card title="Pro" price={period === 'monthly' ? '$7' : '$70'} sub={period === 'monthly' ? '/ 月' : '/ 年'} highlighted>
+        <Card title="Pro" price={period === 'monthly' ? '$9.99' : '$99'} sub={period === 'monthly' ? '/ 月' : '/ 年'} highlighted>
           <FeatureList items={PRO_FEATURES} />
           <button
             type="button"
