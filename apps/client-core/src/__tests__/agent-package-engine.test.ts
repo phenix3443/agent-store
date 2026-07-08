@@ -324,11 +324,11 @@ test('installs local skill package and syncs the skill file to codex and claude'
   await engine.enablePackage('local.frontend-design-skill', 'claude')
 
   const codexSkill = await readFile(
-    join(codexDir, 'skills', 'local.frontend-design-skill#frontend-design.md'),
+    join(codexDir, 'skills', 'local.frontend-design-skill#frontend-design', 'SKILL.md'),
     'utf-8'
   )
   const claudeSkill = await readFile(
-    join(claudeDir, 'skills', 'local.frontend-design-skill#frontend-design.md'),
+    join(claudeDir, 'skills', 'local.frontend-design-skill#frontend-design', 'SKILL.md'),
     'utf-8'
   )
 

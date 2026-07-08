@@ -350,11 +350,13 @@ export class AgentPackageEngine {
     const packageDir = join(this.paths.aasHome, 'packages', packageIdOf(manifest))
     const sourcePath = join(packageDir, 'sources', component.source.repo, component.source.path)
     const content = await readFile(sourcePath, 'utf-8')
-    const destDir = target === 'claude'
+    // Claude Code / Codex discover skills as directories: skills/<name>/SKILL.md
+    const skillsRoot = target === 'claude'
       ? join(this.paths.claudeConfigDir, 'skills')
       : join(this.paths.codexConfigDir, 'skills')
-    await mkdir(destDir, { recursive: true })
-    await writeFile(join(destDir, `${componentRef(manifest, component)}.md`), content)
+    const skillDir = join(skillsRoot, componentRef(manifest, component))
+    await mkdir(skillDir, { recursive: true })
+    await writeFile(join(skillDir, 'SKILL.md'), content)
   }
 
   private async syncMcpServerComponent(
