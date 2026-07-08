@@ -25,3 +25,14 @@ waffo-*.pem
 
 # Local test artifacts (installed skills/mcp/providers)
 .agents/
+
+# OpenNext Cloudflare build output
+.open-next/
+apps/store/.open-next/
+
+# wrangler local state
+.wrangler/
+apps/*/.wrangler/
+
+# local keys (never commit)
+keys/

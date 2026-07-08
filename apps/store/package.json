@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "build:cf": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
+    "deploy:cf": "wrangler deploy",
+    "preview:cf": "opennextjs-cloudflare preview --dangerouslyUseUnsupportedNextVersion",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
@@ -28,6 +31,7 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.10.5",
+    "@opennextjs/cloudflare": "^1.20.1",
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.0.0",
     "@types/bun": "latest",
@@ -39,6 +43,7 @@
     "eslint-config-next": "14.2.3",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "wrangler": "^4.107.0"
   }
 }

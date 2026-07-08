@@ -5,3 +5,5 @@ overrides:
   '@typescript-eslint/parser': 7.2.0
 allowBuilds:
   esbuild: true
+  sharp: true
+  workerd: true
