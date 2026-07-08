@@ -21,9 +21,24 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 })
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://agent-store-alpha.vercel.app'
+
 export const metadata: Metadata = {
-  title: 'AI Agent Store',
-  description: 'Discover and install AI providers, skills, and MCP servers',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'Agent Store — skills, MCP servers & providers for Claude Code / Codex',
+    template: '%s · Agent Store',
+  },
+  description:
+    '一个入口，装齐所有 Agent 能力。发现并一键安装 Claude Code / Codex 的技能、MCP 服务器与模型供应商，本地代理统一转发、自动降级。',
+  openGraph: {
+    type: 'website',
+    siteName: 'Agent Store',
+    url: SITE_URL,
+    title: 'Agent Store — skills, MCP servers & providers for AI coding agents',
+    description: '发现并一键安装 Claude Code / Codex 的技能、MCP 与供应商。',
+  },
+  twitter: { card: 'summary_large_image' },
 }
 
 export default async function RootLayout({

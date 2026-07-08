@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import type { Item } from '@as/types'
 import { getItemBySlug } from '@/lib/catalog'
@@ -6,6 +7,20 @@ import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 interface ItemDetailPageProps {
   params: { category: string; slug: string }
+}
+
+const CATEGORY_LABEL: Record<string, string> = { provider: '供应商', skill: '技能', mcp: 'MCP' }
+
+export async function generateMetadata({ params }: ItemDetailPageProps): Promise<Metadata> {
+  const item = await getItemBySlug(params.slug)
+  if (!item) return { title: 'Not found' }
+  const desc = item.description.slice(0, 160)
+  return {
+    title: `${item.name} — ${CATEGORY_LABEL[item.category] ?? item.category}`,
+    description: desc,
+    alternates: { canonical: `/store/${item.category}/${item.slug}` },
+    openGraph: { type: 'article', title: item.name, description: desc },
+  }
 }
 
 const RISK_META: Record<string, { label: string; color: string; soft: string }> = {
