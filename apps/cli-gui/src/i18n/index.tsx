@@ -71,7 +71,10 @@ export function useI18n(): I18nValue {
   return useContext(I18nContext) ?? DEFAULT
 }
 
+/** The translate function type. */
+export type TFn = (key: string) => string
+
 /** Convenience hook returning just the translate function. */
-export function useT(): (key: string) => string {
+export function useT(): TFn {
   return useI18n().t
 }

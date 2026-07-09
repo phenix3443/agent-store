@@ -285,7 +285,7 @@ test('shows a child-config count banner for a provider with duplicated configs',
   })
   renderPanel('test-provider')
   fireEvent.click(screen.getByText('select'))
-  expect(await screen.findByText(/已有 1 份配置/)).toBeInTheDocument()
+  expect(await screen.findByText(/1 份配置/)).toBeInTheDocument()
 })
 
 test('does not show the child-config banner for a provider with no duplicates', async () => {
@@ -306,5 +306,5 @@ test('does not show the child-config banner for a provider with no duplicates', 
   renderPanel('test-provider')
   fireEvent.click(screen.getByText('select'))
   await screen.findByRole('heading', { name: 'test-provider' })
-  expect(screen.queryByText(/已有.*份配置/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/份配置/)).not.toBeInTheDocument()
 })

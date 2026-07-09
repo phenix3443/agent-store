@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
+import { useT } from '../i18n'
 
 /** Exports the last 30 days of usage rollups to a CSV/JSON file via the engine. */
 export function UsageExport() {
+  const t = useT()
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -12,9 +14,9 @@ export function UsageExport() {
     setBusy(true)
     try {
       const path = await callRpc<string>('exportUsage', [format, 30])
-      setMessage(`已导出到 ${path}`)
+      setMessage(`${t('usage.exported')} ${path}`)
     } catch {
-      setMessage('导出失败')
+      setMessage(t('usage.exportFailed'))
     } finally {
       setBusy(false)
     }
@@ -23,7 +25,7 @@ export function UsageExport() {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-store-border bg-store-panel px-4 py-3">
       <Download size={15} className="text-store-text-2" />
-      <span className="flex-1 truncate text-xs text-store-text-2">{message ?? '导出近 30 天用量账单'}</span>
+      <span className="flex-1 truncate text-xs text-store-text-2">{message ?? t('usage.exportLabel')}</span>
       {(['csv', 'json'] as const).map((fmt) => (
         <button
           key={fmt}

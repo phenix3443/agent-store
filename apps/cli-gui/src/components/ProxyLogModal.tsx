@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { LocalRelayConfig, RecentRequestRow } from '@as/types'
 import { X } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
+import { useT } from '../i18n'
 
 interface ProxyLogModalProps {
   open: boolean
@@ -16,6 +17,7 @@ function statusColor(row: RecentRequestRow): string {
 }
 
 export function ProxyLogModal({ open, onOpenChange }: ProxyLogModalProps) {
+  const t = useT()
   const [rows, setRows] = useState<RecentRequestRow[]>([])
   const [localConfigs, setLocalConfigs] = useState<LocalRelayConfig[]>([])
 
@@ -34,10 +36,10 @@ export function ProxyLogModal({ open, onOpenChange }: ProxyLogModalProps) {
         <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] max-h-[85vh] w-[620px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-store-border bg-store-content p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-store-text">本地代理 · 请求日志</Dialog.Title>
-              <p className="mt-0.5 font-mono text-xs text-store-text-3">{addr} · 按 Level 顺序转发，失败自动降级</p>
+              <Dialog.Title className="text-lg font-semibold text-store-text">{t('proxyLog.title')}</Dialog.Title>
+              <p className="mt-0.5 font-mono text-xs text-store-text-3">{addr} · {t('proxyLog.sub')}</p>
             </div>
-            <Dialog.Close aria-label="关闭" className="text-store-text-2 hover:text-store-text">
+            <Dialog.Close aria-label={t('window.close')} className="text-store-text-2 hover:text-store-text">
               <X size={18} />
             </Dialog.Close>
           </div>
@@ -55,7 +57,7 @@ export function ProxyLogModal({ open, onOpenChange }: ProxyLogModalProps) {
                     className="rounded text-[9.5px] font-bold text-store-amber"
                     style={{ background: 'rgba(240,179,74,0.16)', padding: '1px 6px' }}
                   >
-                    降级
+                    {t('proxyLog.fallback')}
                   </span>
                 ) : null}
                 <span className="w-[52px] flex-shrink-0 text-right font-mono text-[11px] text-store-text-3">{row.latencyMs}ms</span>

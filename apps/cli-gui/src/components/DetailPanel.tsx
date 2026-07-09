@@ -3,6 +3,7 @@ import { Copy, Heart } from 'lucide-react'
 import type { InstalledItem, PackageReview, UserReview, ItemVersion } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
+import { useT } from '../i18n'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useSelectedDetail } from '../lib/useSelectedDetail'
 import { ProviderConfigPanel } from './ProviderConfigPanel'
@@ -19,10 +20,10 @@ import {
 
 type Tab = 'overview' | 'reviews' | 'versions'
 
-const RISK_META: Record<string, { label: string; cls: string }> = {
-  low: { label: '低风险', cls: 'text-store-green bg-store-green-soft' },
-  medium: { label: '中等风险', cls: 'text-store-amber bg-store-amber-soft' },
-  high: { label: '高风险', cls: 'text-store-red border border-store-red' },
+const RISK_META: Record<string, { labelKey: string; cls: string }> = {
+  low: { labelKey: 'riskLow', cls: 'text-store-green bg-store-green-soft' },
+  medium: { labelKey: 'riskMedium', cls: 'text-store-amber bg-store-amber-soft' },
+  high: { labelKey: 'riskHigh', cls: 'text-store-red border border-store-red' },
 }
 
 export function DetailPanel() {
@@ -30,6 +31,7 @@ export function DetailPanel() {
     useAppState()
   const { appendLine } = useTerminalLog()
   const detail = useSelectedDetail()
+  const t = useT()
   const [tab, setTab] = useState<Tab>('overview')
   const [childCount, setChildCount] = useState(0)
   const [userReviews, setUserReviews] = useState<UserReview[]>([])
@@ -62,7 +64,7 @@ export function DetailPanel() {
   if (!detail) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-store-text-2">
-        从左侧选择一个资源查看详情
+        {t('detail.selectHint')}
       </div>
     )
   }
@@ -72,7 +74,7 @@ export function DetailPanel() {
     appendLine(`$ aas install ${detail.slug}`)
     try {
       const result = await callRpc<{ version: string }>('install', [detail.slug])
-      appendLine(`✓ 已安装 ${detail.slug} ${result.version}`, 'green')
+      appendLine(`✓ ${t('detail.installedPrefix')} ${detail.slug} ${result.version}`, 'green')
       bumpInstalledVersion()
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
@@ -109,14 +111,14 @@ export function DetailPanel() {
               <span className="font-semibold">{detail.publisher.name}</span>
               <span className="text-store-border-strong">|</span>
               <span className="text-store-text-3">↓ {detail.downloads}</span>
-              {review && <span className="text-store-amber">质量 {review.quality}/5</span>}
+              {review && <span className="text-store-amber">{t('detail.quality')} {review.quality}/5</span>}
               <span className={`font-semibold ${type.textClass}`}>{type.label}</span>
             </div>
             <p className="mt-3 max-w-[620px] text-sm leading-relaxed text-store-text-2">{detail.description}</p>
             <div className="mt-4 flex items-center gap-2">
               {detail.installed ? (
                 <span className="flex items-center gap-1.5 rounded-lg border border-store-green bg-store-green-soft px-3 py-1.5 text-xs font-semibold text-store-green">
-                  ✓ 已安装
+                  ✓ {t('common.installed')}
                 </span>
               ) : (
                 <button
@@ -124,12 +126,12 @@ export function DetailPanel() {
                   onClick={install}
                   className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                 >
-                  安装
+                  {t('common.install')}
                 </button>
               )}
               <button
                 type="button"
-                aria-label={isFavorite ? '取消收藏' : '收藏'}
+                aria-label={isFavorite ? t('detail.unfavorite') : t('detail.favorite')}
                 onClick={() => toggleFavorite(detail.slug)}
                 className={`rounded-lg border px-2 py-1.5 ${
                   isFavorite ? 'border-store-red text-store-red' : 'border-store-border-strong text-store-text-2'
@@ -140,7 +142,7 @@ export function DetailPanel() {
             </div>
             {childCount > 0 && (
               <p className="mt-2 text-xs text-store-text-2">
-                已有 {childCount} 份配置 · 在左侧列表展开该条目即可管理
+                {childCount} {t('detail.configCountSuffix')}
               </p>
             )}
           </div>
@@ -151,7 +153,7 @@ export function DetailPanel() {
           <span className="flex-1">{installCmdOf(detail.slug)}</span>
           <button
             type="button"
-            aria-label="复制安装命令"
+            aria-label={t('detail.copyCmd')}
             onClick={() => navigator.clipboard?.writeText(installCmdOf(detail.slug))}
             className="text-store-text-3 hover:text-store-text"
           >
@@ -162,9 +164,9 @@ export function DetailPanel() {
         <div className="mt-5 flex gap-5 border-b border-store-border text-sm">
           {(
             [
-              { key: 'overview', label: '概览' },
-              { key: 'reviews', label: '审查' },
-              { key: 'versions', label: '版本' },
+              { key: 'overview', label: t('nav.overview') },
+              { key: 'reviews', label: t('detail.tabReview') },
+              { key: 'versions', label: t('detail.tabVersion') },
             ] as const
           ).map((t) => (
             <button
@@ -219,20 +221,20 @@ export function DetailPanel() {
                 <div className="flex items-center gap-4 rounded-xl border border-store-border bg-store-panel px-4 py-4">
                   <div className="text-center">
                     <div className="font-mono text-2xl font-extrabold leading-none text-store-text">{review.quality}/5</div>
-                    <div className="mt-1 text-[11px] text-store-text-3">质量评分</div>
+                    <div className="mt-1 text-[11px] text-store-text-3">{t('detail.qualityScore')}</div>
                   </div>
                   <div className="min-w-0 flex-1">
                     <span
                       className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${(RISK_META[review.risk] ?? RISK_META.medium).cls}`}
                     >
-                      {(RISK_META[review.risk] ?? RISK_META.medium).label}
+                      {t(`detail.${(RISK_META[review.risk] ?? RISK_META.medium).labelKey}`)}
                     </span>
                     <p className="mt-2 text-xs leading-relaxed text-store-text-2">{review.summary}</p>
                   </div>
                 </div>
                 {review.concerns.length > 0 && (
                   <div className="flex flex-col gap-1.5 rounded-xl border border-store-border bg-store-panel px-4 py-3.5">
-                    <p className="text-xs font-semibold text-store-text-2">审查要点</p>
+                    <p className="text-xs font-semibold text-store-text-2">{t('detail.reviewPoints')}</p>
                     {review.concerns.map((c, i) => (
                       <div key={i} className="flex gap-2 text-xs leading-relaxed text-store-text-2">
                         <span className="text-store-amber">⚠</span>
@@ -241,21 +243,21 @@ export function DetailPanel() {
                     ))}
                   </div>
                 )}
-                <p className="text-[11px] text-store-text-3">由自动质量与安全审查生成 · 用户评价系统尚未上线</p>
+                <p className="text-[11px] text-store-text-3">{t('detail.autoReviewNote')}</p>
               </>
             ) : (
               <div className="rounded-xl border border-dashed border-store-border bg-store-panel px-4 py-8 text-center text-sm text-store-text-3">
-                暂无自动审查记录
+                {t('detail.noReview')}
               </div>
             )}
 
             {userReviews.length > 0 && (
               <div className="mt-2 flex flex-col gap-2">
-                <p className="text-xs font-semibold text-store-text-2">用户评价（{userReviews.length}）</p>
+                <p className="text-xs font-semibold text-store-text-2">{t('detail.userReviews')}（{userReviews.length}）</p>
                 {userReviews.map((r, i) => (
                   <div key={i} className="rounded-xl border border-store-border bg-store-panel px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-store-text">{r.authorName ?? '匿名'}</span>
+                      <span className="text-xs font-semibold text-store-text">{r.authorName ?? t('detail.anon')}</span>
                       <span className="text-[11px] text-store-amber">{'★'.repeat(r.rating)}</span>
                       <span className="ml-auto text-[10.5px] text-store-text-3">
                         {new Date(r.updatedAt).toLocaleDateString()}
@@ -264,7 +266,7 @@ export function DetailPanel() {
                     {r.body && <p className="mt-1.5 text-xs leading-relaxed text-store-text-2">{r.body}</p>}
                   </div>
                 ))}
-                <p className="text-[11px] text-store-text-3">在网页版商店可发表评价</p>
+                <p className="text-[11px] text-store-text-3">{t('detail.reviewOnWeb')}</p>
               </div>
             )}
           </div>
@@ -280,7 +282,7 @@ export function DetailPanel() {
                     latest
                   </span>
                 )}
-                <span className="flex-1 text-xs text-store-text-2">{i === 0 ? '当前版本' : ''}</span>
+                <span className="flex-1 text-xs text-store-text-2">{i === 0 ? t('detail.currentVersion') : ''}</span>
                 {v.publishedAt && (
                   <span className="font-mono text-[11px] text-store-text-3">
                     {new Date(v.publishedAt).toLocaleDateString()}

@@ -2,22 +2,29 @@ import { useCallback, useEffect, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import type { ProviderHealth } from '@as/types'
 import { callRpc } from '../lib/rpc'
+import { useT, type TFn } from '../i18n'
 
-const ERROR_LABELS: Record<string, string> = {
-  auth: '认证失败',
-  rate_limit: '被限流',
-  overload: '过载',
-  server: '服务端错误',
-  network: '网络错误',
+const ERROR_KEYS: Record<string, string> = {
+  auth: 'errAuth',
+  rate_limit: 'errRate',
+  overload: 'errOverload',
+  server: 'errServer',
+  network: 'errNetwork',
 }
 
-function remaining(cooldownUntil: number | null): string {
+function errorLabel(kind: string | null | undefined, t: TFn): string {
+  const k = ERROR_KEYS[kind ?? '']
+  return k ? t(`health.${k}`) : (kind ?? '')
+}
+
+function remaining(cooldownUntil: number | null, t: TFn): string {
   if (!cooldownUntil) return ''
   const secs = Math.max(0, Math.round((cooldownUntil - Date.now()) / 1000))
-  return secs >= 60 ? `${Math.round(secs / 60)} 分钟` : `${secs} 秒`
+  return secs >= 60 ? `${Math.round(secs / 60)} ${t('health.minutes')}` : `${secs} ${t('health.seconds')}`
 }
 
 export function ProviderHealthCard() {
+  const t = useT()
   const [health, setHealth] = useState<ProviderHealth[]>([])
 
   const refresh = useCallback(() => {
@@ -45,10 +52,10 @@ export function ProviderHealthCard() {
     <div className="rounded-xl border border-store-border bg-store-panel p-4">
       <div className="mb-2 flex items-center gap-2">
         <ShieldCheck size={15} className="text-store-text-2" />
-        <p className="text-sm font-medium text-store-text">供应商健康</p>
+        <p className="text-sm font-medium text-store-text">{t('health.title')}</p>
         {coolingCount > 0 && (
           <span className="rounded-full bg-store-amber-soft px-1.5 py-0.5 text-[10px] font-medium text-store-amber">
-            {coolingCount} 冷却中
+            {coolingCount} {t('health.coolingSuffix')}
           </span>
         )}
       </div>
@@ -60,17 +67,17 @@ export function ProviderHealthCard() {
               <span className="font-mono font-medium text-store-text">{h.providerSlug}</span>
               {h.status === 'cooling' && (
                 <span className="truncate text-store-text-3">
-                  {ERROR_LABELS[h.lastErrorKind ?? ''] ?? h.lastErrorKind}
-                  {h.lastStatus ? `（${h.lastStatus}）` : ''} · 冷却 {remaining(h.cooldownUntil)}
+                  {errorLabel(h.lastErrorKind, t)}
+                  {h.lastStatus ? `（${h.lastStatus}）` : ''} · {t('health.cooldown')} {remaining(h.cooldownUntil, t)}
                 </span>
               )}
             </div>
             {h.status === 'cooling' ? (
               <button type="button" onClick={() => reset(h.providerSlug)} className="shrink-0 text-store-accent hover:underline">
-                立即恢复
+                {t('health.recoverNow')}
               </button>
             ) : (
-              <span className="shrink-0 text-store-green">正常</span>
+              <span className="shrink-0 text-store-green">{t('health.healthy')}</span>
             )}
           </div>
         ))}
