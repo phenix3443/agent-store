@@ -11,6 +11,12 @@ export interface InstallHook {
   >
 }
 
+/** A published version of a package, for the version-history timeline. */
+export interface ItemVersion {
+  version: string
+  publishedAt: string
+}
+
 /** A user-submitted review of a package (distinct from the automated PackageReview). */
 export interface UserReview {
   authorName: string | null

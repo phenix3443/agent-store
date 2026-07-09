@@ -105,22 +105,26 @@ test('switching to the 审查 tab shows the automated review verdict', async () 
   expect(screen.getByText('执行 npx 远程包')).toBeInTheDocument()
 })
 
-test('switching to the 版本 tab shows the current version and an honest no-history note', async () => {
+test('switching to the 版本 tab shows the real version history', async () => {
   mockRpc({
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
       name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
+    getVersions: () => [
+      { version: '0.8.1', publishedAt: '2026-07-01T00:00:00Z' },
+      { version: '0.8.0', publishedAt: '2026-06-01T00:00:00Z' },
+    ],
   })
   renderPanel()
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
   fireEvent.click(screen.getByRole('button', { name: '版本' }))
+  await waitFor(() => screen.getByText('v0.8.0'))
   expect(screen.getAllByText('v0.8.1').length).toBeGreaterThan(0)
   expect(screen.getByText('latest')).toBeInTheDocument()
   expect(screen.getByText('当前版本')).toBeInTheDocument()
-  expect(screen.getByText('更早的版本历史暂未提供')).toBeInTheDocument()
 })
 
 test('概览 tab renders overview, install command, install steps, use case, and footer facts', async () => {

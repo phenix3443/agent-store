@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import type { Item } from '@as/types'
-import { getItemBySlug } from '@/lib/catalog'
+import { getItemBySlug, getItemVersions } from '@/lib/catalog'
 import { Badge } from '@/components/Badge'
 import { MarkdownContent } from '@/components/MarkdownContent'
 import { ReviewsSection } from '@/components/ReviewsSection'
@@ -53,6 +53,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
   const review = item.review
   const risk = review ? (RISK_META[review.risk] ?? RISK_META.medium) : null
   const run = runInfo(item)
+  const versions = await getItemVersions(slug)
 
   // Rich content so users know what a package does before installing:
   // skills → their SKILL.md; stdio MCP → the npm package README.
@@ -150,6 +151,25 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
           <div className="mt-4 rounded-xl border border-store-border bg-store-panel p-5">
             <p className="mb-3 text-sm font-medium text-store-text">{doc.label}</p>
             <MarkdownContent>{doc.body}</MarkdownContent>
+          </div>
+        )}
+
+        {versions.length > 0 && (
+          <div className="mt-4 rounded-xl border border-store-border bg-store-panel p-5">
+            <p className="mb-3 text-sm font-medium text-store-text">版本历史</p>
+            <ul className="flex flex-col gap-2">
+              {versions.map((v, i) => (
+                <li key={v.version} className="flex items-center gap-3 text-[13px]">
+                  <span className="font-mono font-semibold text-store-text">v{v.version}</span>
+                  {i === 0 && (
+                    <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[10px] font-bold text-store-green">
+                      latest
+                    </span>
+                  )}
+                  <span className="ml-auto text-store-text-3">{new Date(v.publishedAt).toLocaleDateString()}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

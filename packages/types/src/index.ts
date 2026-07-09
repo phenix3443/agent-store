@@ -1,5 +1,5 @@
 export type { Publisher } from './publisher'
-export type { JsonSchema, InstallHook, UserReview, PackageReview, BaseItem, ProviderItem, SkillItem, MCPItem, Item } from './items'
+export type { JsonSchema, InstallHook, ItemVersion, UserReview, PackageReview, BaseItem, ProviderItem, SkillItem, MCPItem, Item } from './items'
 export type {
   ToolTarget,
   Paths,

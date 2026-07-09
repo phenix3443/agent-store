@@ -53,6 +53,11 @@ export async function getFeaturedItems(): Promise<Item[]> {
     .slice(0, 6)
 }
 
+export async function getItemVersions(slug: string) {
+  const { data } = await client.getVersions(slug)
+  return data ?? []
+}
+
 export async function getItemBySlug(slug: string): Promise<Item | null> {
   const { data } = await client.getItemBySlug(slug)
   return data ?? null

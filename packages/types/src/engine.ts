@@ -1,4 +1,4 @@
-import type { Item, JsonSchema, UserReview } from './items'
+import type { Item, JsonSchema, UserReview, ItemVersion } from './items'
 import type { Publisher } from './publisher'
 import type { Entitlements } from './entitlement'
 
@@ -265,6 +265,8 @@ export interface Engine {
   createCheckout(period: 'monthly' | 'yearly' | 'lifetime', token?: string): Promise<{ checkoutUrl: string }>
   /** Public user reviews for an item. */
   getReviews(slug: string): Promise<UserReview[]>
+  /** Public version history for an item. */
+  getVersions(slug: string): Promise<ItemVersion[]>
   /** Clears the locally cached plan back to free (e.g. on sign-out). */
   clearEntitlement(): Promise<Entitlements>
   /** Exports usage rollups to a CSV/JSON file under the AAS home and returns the file path. */

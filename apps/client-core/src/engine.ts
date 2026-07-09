@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
-  ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview,
+  ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview, ItemVersion,
   UsageSummaryRow, UsageSummaryOptions, RegistryJson, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
 } from '@as/types'
@@ -367,6 +367,11 @@ export class EngineImpl implements Engine {
 
   async getReviews(slug: string): Promise<UserReview[]> {
     const result = await this.client.getReviews(slug)
+    return result.data ?? []
+  }
+
+  async getVersions(slug: string): Promise<ItemVersion[]> {
+    const result = await this.client.getVersions(slug)
     return result.data ?? []
   }
 

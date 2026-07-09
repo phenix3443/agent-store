@@ -1,4 +1,4 @@
-import type { Item, Publisher, Plan, UserReview } from '@as/types'
+import type { Item, Publisher, Plan, UserReview, ItemVersion } from '@as/types'
 
 export type Result<T> = { data: T; error: null } | { data: null; error: string }
 
@@ -110,6 +110,19 @@ export class StoreClient {
         updatedAt: r.updated_at,
       }))
       return { data: reviews, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** Public version history for an item (most recent first). */
+  async getVersions(slug: string): Promise<Result<ItemVersion[]>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}/versions`)
+      const json = (await res.json()) as { versions?: { version: string; published_at: string }[]; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      const versions = (json.versions ?? []).map((v) => ({ version: v.version, publishedAt: v.published_at }))
+      return { data: versions, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }

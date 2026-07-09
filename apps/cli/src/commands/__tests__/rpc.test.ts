@@ -29,6 +29,7 @@ function makeEngine(overrides?: Partial<Engine>): Engine {
     syncEntitlement: async () => ({ plan: 'pro', advancedUsageAnalytics: true, smartRouting: true, keyRotation: true }),
     createCheckout: async () => ({ checkoutUrl: 'https://pay.example/cs_1' }),
     getReviews: async () => [],
+    getVersions: async () => [],
     clearEntitlement: async () => ({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }),
     exportUsage: async () => '/tmp/exports/usage.csv',
     ...overrides,

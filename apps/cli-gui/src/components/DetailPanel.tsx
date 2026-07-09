@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, Heart } from 'lucide-react'
-import type { InstalledItem, PackageReview, UserReview } from '@as/types'
+import type { InstalledItem, PackageReview, UserReview, ItemVersion } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
@@ -33,12 +33,16 @@ export function DetailPanel() {
   const [tab, setTab] = useState<Tab>('overview')
   const [childCount, setChildCount] = useState(0)
   const [userReviews, setUserReviews] = useState<UserReview[]>([])
+  const [versions, setVersions] = useState<ItemVersion[]>([])
 
   useEffect(() => {
     if (!detail) return
     callRpc<UserReview[]>('getReviews', [detail.slug])
       .then((r) => setUserReviews(r ?? []))
       .catch(() => setUserReviews([]))
+    callRpc<ItemVersion[]>('getVersions', [detail.slug])
+      .then((v) => setVersions(v ?? []))
+      .catch(() => setVersions([]))
   }, [detail])
 
   useEffect(() => {
@@ -268,14 +272,22 @@ export function DetailPanel() {
 
         {tab === 'versions' && (
           <div className="mt-5 flex flex-col gap-px overflow-hidden rounded-lg border border-store-border">
-            <div className="flex items-center gap-3 bg-store-panel px-3.5 py-3">
-              <span className="font-mono text-xs font-semibold text-store-text">v{detail.version}</span>
-              <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[9.5px] font-bold text-store-green">
-                latest
-              </span>
-              <span className="flex-1 text-xs text-store-text-2">当前版本</span>
-            </div>
-            <div className="bg-store-panel px-3.5 py-2.5 text-[11px] text-store-text-3">更早的版本历史暂未提供</div>
+            {(versions.length > 0 ? versions : [{ version: detail.version, publishedAt: '' }]).map((v, i) => (
+              <div key={v.version} className="flex items-center gap-3 bg-store-panel px-3.5 py-3">
+                <span className="font-mono text-xs font-semibold text-store-text">v{v.version}</span>
+                {i === 0 && (
+                  <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[9.5px] font-bold text-store-green">
+                    latest
+                  </span>
+                )}
+                <span className="flex-1 text-xs text-store-text-2">{i === 0 ? '当前版本' : ''}</span>
+                {v.publishedAt && (
+                  <span className="font-mono text-[11px] text-store-text-3">
+                    {new Date(v.publishedAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

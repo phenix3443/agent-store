@@ -34,6 +34,7 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   syncEntitlement: (e, a) => e.syncEntitlement(a[0] as string),
   createCheckout: (e, a) => e.createCheckout(a[0] as 'monthly' | 'yearly' | 'lifetime', a[1] as string | undefined),
   getReviews: (e, a) => e.getReviews(a[0] as string),
+  getVersions: (e, a) => e.getVersions(a[0] as string),
   clearEntitlement: (e) => e.clearEntitlement(),
   exportUsage: (e, a) => e.exportUsage(a[0] as 'csv' | 'json', a[1] as number | undefined),
   getBudget: (e) => e.getBudget(),

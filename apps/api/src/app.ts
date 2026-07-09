@@ -115,6 +115,23 @@ app.post('/api/items/:slug/reviews', async (c) => {
   }
 })
 
+// Version history for an item (most recent first). Recorded by the registry sync.
+app.get('/api/items/:slug/versions', async (c) => {
+  const slug = c.req.param('slug')
+  try {
+    const supabase = getSupabaseAdmin(c.env)
+    const { data } = await supabase
+      .from('item_versions')
+      .select('version, published_at')
+      .eq('item_slug', slug)
+      .order('published_at', { ascending: false })
+      .limit(50)
+    return c.json({ versions: data ?? [] })
+  } catch {
+    return c.json({ error: 'Failed to load versions' }, 500)
+  }
+})
+
 app.get('/api/publishers/:slug', async (c) => {
   const slug = c.req.param('slug')
   const [publisherResult, itemsResult] = await Promise.all([
