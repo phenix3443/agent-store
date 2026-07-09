@@ -381,3 +381,49 @@ test('Pro plan fails over across every upstream beyond the free cap', async () =
   ])
   expect(res.status).toBe(200)
 })
+
+// ── Key rotation: free vs Pro ────────────────────────────────────────────────
+
+test('Pro key rotation round-robins across a provider\'s keys', async () => {
+  await installProviders([
+    { slug: 'multi', enabledFor: { claude: true }, config: { apiKeys: ['k1', 'k2', 'k3'], baseUrl: 'https://multi.example.com', level: 1 } },
+  ])
+  await writeEntitlementCache(aasHome, 'pro')
+
+  const keys: (string | null)[] = []
+  const fetchImpl = (async (_url: string, init?: RequestInit) => {
+    keys.push(new Headers(init?.headers).get('authorization'))
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  for (let i = 0; i < 4; i++) {
+    await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  }
+
+  expect(keys).toEqual(['Bearer k1', 'Bearer k2', 'Bearer k3', 'Bearer k1'])
+})
+
+test('free plan uses only the first key (no rotation)', async () => {
+  await installProviders([
+    { slug: 'multi', enabledFor: { claude: true }, config: { apiKeys: ['k1', 'k2', 'k3'], baseUrl: 'https://multi.example.com', level: 1 } },
+  ])
+  // No entitlement cache → free.
+
+  const keys: (string | null)[] = []
+  const fetchImpl = (async (_url: string, init?: RequestInit) => {
+    keys.push(new Headers(init?.headers).get('authorization'))
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+
+  const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+  stop = server.stop
+
+  for (let i = 0; i < 3; i++) {
+    await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  }
+
+  expect(keys).toEqual(['Bearer k1', 'Bearer k1', 'Bearer k1'])
+})

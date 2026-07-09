@@ -12,6 +12,23 @@ export const RELAY_PORT = 18780
 // routing lifts this cap and adds proactive health-aware avoidance.
 const FREE_MAX_UPSTREAMS = 2
 
+// Round-robin across a provider's configured keys (Pro key rotation) to spread
+// rate limits. Free — or a single key — always uses the first key. The cursor is
+// per-relay-process and in memory; restarts simply reset rotation to the first key.
+function selectApiKey(
+  slug: string,
+  conn: { apiKey?: string; apiKeys?: string[] },
+  rotate: boolean,
+  cursor: Map<string, number>
+): string {
+  const keys = conn.apiKeys && conn.apiKeys.length > 0 ? conn.apiKeys : conn.apiKey ? [conn.apiKey] : []
+  if (keys.length === 0) return ''
+  if (!rotate || keys.length === 1) return keys[0]
+  const i = cursor.get(slug) ?? 0
+  cursor.set(slug, i + 1)
+  return keys[i % keys.length]
+}
+
 export interface RelayServerOptions {
   aasHome: string
   port?: number
@@ -25,6 +42,7 @@ const ROUTES: Record<string, ToolTarget> = {
 
 export function startRelayServer(options: RelayServerOptions): { stop: () => void; port: number } {
   const { aasHome, port = RELAY_PORT, fetchImpl } = options
+  const keyCursor = new Map<string, number>() // per-provider key-rotation cursor
 
   const server = Bun.serve({
     hostname: '127.0.0.1',
@@ -36,7 +54,9 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
 
       const registry: RegistryJson = await readRegistry(aasHome)
       const candidates = await findOrderedProvidersForTarget(aasHome, registry, target)
-      const eligible = candidates.filter(({ connection }) => connection.apiKey && connection.baseUrl)
+      const eligible = candidates.filter(
+        ({ connection }) => (connection.apiKey || (connection.apiKeys?.length ?? 0) > 0) && connection.baseUrl
+      )
       if (eligible.length === 0) {
         return Response.json({ error: `no active provider for ${target}` }, { status: 503 })
       }
@@ -46,7 +66,7 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
       // anyway (half-open) rather than hard-failing.
       // Free: basic reactive failover across up to FREE_MAX_UPSTREAMS, in order —
       // no proactive avoidance (a cooling provider is just tried and failed over).
-      const { smartRouting } = await resolveEntitlements(aasHome)
+      const { smartRouting, keyRotation } = await resolveEntitlements(aasHome)
       let active: typeof eligible
       if (smartRouting) {
         const cooling = getCoolingProviderSlugs(aasHome)
@@ -71,7 +91,7 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
           slug: item.slug,
           connection: {
             baseUrl: connection.baseUrl!,
-            apiKey: connection.apiKey!,
+            apiKey: selectApiKey(item.slug, connection, keyRotation, keyCursor),
             authType: connection.authType,
             modelMapping: connection.modelMapping,
           },

@@ -8,6 +8,8 @@ export type ProviderAuthType = 'bearer' | 'anthropic' | { header: string }
 
 export interface ProviderConnection {
   apiKey?: string
+  /** Multiple keys for the same provider. Pro's key rotation round-robins across them. */
+  apiKeys?: string[]
   baseUrl?: string
   authType?: ProviderAuthType
   modelMapping?: Record<string, string>
@@ -86,6 +88,7 @@ export async function readProviderConnection(itemDir: string): Promise<ProviderC
     const raw = JSON.parse(await readFile(join(itemDir, 'config.json'), 'utf-8')) as Record<string, unknown>
     return {
       apiKey: readString(raw['apiKey']) ?? readString(raw['token']),
+      apiKeys: readStringArray(raw['apiKeys']),
       baseUrl:
         readString(raw['baseUrl']) ??
         readString(raw['apiUrl']) ??

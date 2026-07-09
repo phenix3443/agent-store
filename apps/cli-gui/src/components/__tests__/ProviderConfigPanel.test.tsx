@@ -2,6 +2,7 @@ import { test, expect, afterEach, mock, spyOn } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { ProviderConfigPanel } from '../ProviderConfigPanel'
 import * as rpcModule from '../../lib/rpc'
+import { EntitlementProvider } from '../../state/Entitlement'
 
 afterEach(() => { cleanup(); mock.restore() })
 
@@ -26,9 +27,14 @@ function renderPanel(handlers?: Record<string, (...args: unknown[]) => unknown>)
     setConfig: () => undefined,
     enable: () => undefined,
     disable: () => undefined,
+    getEntitlements: () => ({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }),
     ...handlers,
   })
-  return render(<ProviderConfigPanel slug="yls-me" onClose={() => {}} />)
+  return render(
+    <EntitlementProvider>
+      <ProviderConfigPanel slug="yls-me" onClose={() => {}} />
+    </EntitlementProvider>
+  )
 }
 
 test('renders the config-name input and the required fields grid with current values', async () => {
@@ -178,9 +184,14 @@ function renderLocalPanel(handlers?: Record<string, (...args: unknown[]) => unkn
     setConfig: () => undefined,
     enable: () => undefined,
     disable: () => undefined,
+    getEntitlements: () => ({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }),
     ...handlers,
   })
-  return render(<ProviderConfigPanel slug="local" onClose={() => {}} />)
+  return render(
+    <EntitlementProvider>
+      <ProviderConfigPanel slug="local" onClose={() => {}} />
+    </EntitlementProvider>
+  )
 }
 
 test('local: shows an essential API 地址 field defaulting to 127.0.0.1:18100 and no API 密钥 field', async () => {

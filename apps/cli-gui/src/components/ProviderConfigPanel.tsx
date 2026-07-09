@@ -2,6 +2,39 @@ import { useEffect, useRef, useState } from 'react'
 import type { ItemDetail, ToolTarget } from '@as/types'
 import { Check, HelpCircle } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
+import { ProGate } from './ProGate'
+
+function MultiKeyEditor({ keys, onChange }: { keys: string[]; onChange: (keys: string[]) => void }) {
+  return (
+    <div className="flex flex-col gap-2 p-1">
+      <p className="text-[11px] font-semibold text-store-text-2">额外密钥（按请求轮换）</p>
+      {keys.map((k, i) => (
+        <div key={i} className="flex gap-2">
+          <input
+            value={k}
+            onChange={(e) => onChange(keys.map((x, j) => (j === i ? e.target.value : x)))}
+            placeholder="sk-..."
+            className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
+          />
+          <button
+            type="button"
+            onClick={() => onChange(keys.filter((_, j) => j !== i))}
+            className="shrink-0 rounded-lg border border-store-border-strong px-2.5 text-xs text-store-text-2 hover:border-store-red hover:text-store-red"
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...keys, ''])}
+        className="self-start rounded-lg border border-dashed border-store-border-strong px-3 py-1.5 text-xs text-store-text-2 hover:border-store-accent hover:text-store-accent"
+      >
+        + 添加密钥
+      </button>
+    </div>
+  )
+}
 
 interface ProviderConfigPanelProps {
   slug: string
@@ -11,6 +44,7 @@ interface ProviderConfigPanelProps {
 interface EditValues {
   name: string
   apiKey: string
+  apiKeys: string[]
   baseUrl: string
   homepage: string
   endpointPath: string
@@ -62,6 +96,7 @@ function toEditValues(
   return {
     name: String(c['name'] ?? (isLocal ? '默认' : fallbackName)),
     apiKey: String(c['apiKey'] ?? (isLocal ? 'built-in' : '')),
+    apiKeys: Array.isArray(c['apiKeys']) ? (c['apiKeys'] as unknown[]).filter((k): k is string => typeof k === 'string') : [],
     baseUrl: String(c['baseUrl'] ?? (isLocal ? LOCAL_DEFAULT_BASE_URL : '')),
     homepage: String(c['homepage'] ?? ''),
     endpointPath: String(c['endpointPath'] ?? ''),
@@ -79,9 +114,12 @@ function toEditValues(
 function toConfigPayload(values: EditValues): Record<string, unknown> {
   const authType = values.authType === 'custom' ? { header: values.customHeader } : values.authType
 
+  const apiKeys = values.apiKeys.map((k) => k.trim()).filter((k) => k !== '')
+
   return {
     name: values.name,
     apiKey: values.apiKey,
+    apiKeys,
     baseUrl: values.baseUrl,
     homepage: values.homepage,
     endpointPath: values.endpointPath,
@@ -270,6 +308,18 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
           </div>
         )}
       </div>
+
+      {!isLocal && (
+        <div className="mx-7 mt-4 max-w-[620px]">
+          <ProGate
+            feature="keyRotation"
+            title="多 Key 轮换"
+            description="为同一供应商配置多把密钥，Pro 会在请求之间轮换使用以分摊限流。"
+          >
+            <MultiKeyEditor keys={values.apiKeys} onChange={(apiKeys) => persist({ ...values, apiKeys })} />
+          </ProGate>
+        </div>
+      )}
 
       <div className="mx-7 mt-4 max-w-[620px] overflow-hidden rounded-xl border border-store-border">
         <button
