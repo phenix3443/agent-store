@@ -2,10 +2,10 @@ import type { SelectedDetail } from './useSelectedDetail'
 
 export type Category = 'provider' | 'skill' | 'mcp'
 
-export const TYPE_META: Record<Category, { label: string; textClass: string; bgClass: string; metaLabel: string }> = {
-  provider: { label: '供应商', textClass: 'text-store-provider', bgClass: 'bg-store-provider-soft', metaLabel: '延迟' },
-  skill: { label: '技能', textClass: 'text-store-green', bgClass: 'bg-store-green-soft', metaLabel: '大小' },
-  mcp: { label: 'MCP', textClass: 'text-store-amber', bgClass: 'bg-store-amber-soft', metaLabel: '工具' },
+export const TYPE_META: Record<Category, { label: string; textClass: string; bgClass: string }> = {
+  provider: { label: '供应商', textClass: 'text-store-provider', bgClass: 'bg-store-provider-soft' },
+  skill: { label: '技能', textClass: 'text-store-green', bgClass: 'bg-store-green-soft' },
+  mcp: { label: 'MCP', textClass: 'text-store-amber', bgClass: 'bg-store-amber-soft' },
 }
 
 export const TIER_META: Record<string, { label: string; textClass: string; bgClass: string }> = {
@@ -20,119 +20,8 @@ export const STATUS_META: Record<string, { label: string; textClass: string; bor
   rejected: { label: '已拒绝', textClass: 'text-store-red', borderClass: 'border-store-red' },
 }
 
-/** Deterministic hash of a string — mirrors the mockup's char-code-sum seed used to
- * pick stable-but-varied placeholder content per item, without a real backend source. */
-function seedOf(text: string): number {
-  return Math.abs([...text].reduce((sum, ch) => sum + ch.charCodeAt(0), 0))
-}
-
 export function statusOf(detail: SelectedDetail): 'published' | 'pending' | 'rejected' {
   return 'status' in detail && detail.status ? detail.status : 'published'
-}
-
-/** Real `rating` is only present on catalog (not-yet-installed) items and is `0` until the
- * rating system ships. Fall back to a stable placeholder (mirrors the mockup's static demo
- * ratings) so the UI doesn't show a broken "★ 0" for every item. */
-export function ratingOf(detail: SelectedDetail): number {
-  const real = 'rating' in detail ? detail.rating : undefined
-  if (real) return real
-  return 4.3 + (seedOf(detail.slug) % 6) / 10
-}
-
-/** No backend field for review counts exists yet — derive a stable placeholder count,
- * same spirit as the mockup's per-item static `reviews` field. */
-export function reviewCountOf(detail: SelectedDetail): number {
-  return 80 + (seedOf(detail.slug) % 4000)
-}
-
-/** No backend field for latency/size/tool-count exists yet — derive a stable per-item
- * placeholder in the same spirit as the mockup's static per-item `meta` value (e.g. "96ms",
- * "3.2MB", "8"), keyed by category so the shape matches what that metaLabel implies. */
-export function metaValueOf(detail: SelectedDetail): string {
-  const seed = seedOf(detail.slug)
-  switch (detail.category) {
-    case 'provider':
-      return `${40 + (seed % 200)}ms`
-    case 'skill': {
-      const kb = 200 + (seed % 3000)
-      return kb >= 1000 ? `${(kb / 1000).toFixed(1)}MB` : `${kb}KB`
-    }
-    case 'mcp':
-      return `${1 + (seed % 30)}`
-  }
-}
-
-export function starGlyphs(rating: number): string {
-  const n = Math.round(rating)
-  return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(0, 5 - n)
-}
-
-const REVIEW_POOL = [
-  { u: 'lin_dev', r: 5, t: '集成顺滑，文档清晰，装上就能用。', d: '2天前' },
-  { u: 'kaito', r: 5, t: '比自己手写配置省事太多，强烈推荐。', d: '1周前' },
-  { u: 'm_zhao', r: 4, t: '整体不错，偶尔需要手动重连一次。', d: '2周前' },
-  { u: 'devon', r: 5, t: '更新很勤，维护者响应 issue 很快。', d: '3周前' },
-  { u: 'sara_k', r: 4, t: '功能齐全，希望能补充更多示例。', d: '1月前' },
-  { u: 'oss_fan', r: 5, t: '开箱即用，和 Claude Code 配合完美。', d: '1月前' },
-  { u: 'quill', r: 3, t: '能用，但大项目下稍慢，期待优化。', d: '2月前' },
-  { u: 'nova', r: 5, t: '团队已全面切换到它来管理，稳定。', d: '2月前' },
-]
-
-const AVATAR_COLORS = ['#7c82ff', '#3ad29f', '#f0b34a', '#58a6f0', '#c07cf0', '#f3675f']
-
-export interface GeneratedReview {
-  u: string
-  stars: string
-  t: string
-  d: string
-  initial: string
-  avatarBg: string
-}
-
-/** Placeholder reviews — the mockup itself has no real review backend, it deterministically
- * samples a fixed review pool keyed by item id. Ported 1:1, keyed by the real slug. */
-export function reviewsFor(slug: string): GeneratedReview[] {
-  const start = seedOf(slug) % REVIEW_POOL.length
-  return Array.from({ length: 3 }, (_, i) => {
-    const r = REVIEW_POOL[(start + i) % REVIEW_POOL.length]
-    return {
-      u: r.u,
-      stars: '★'.repeat(r.r),
-      t: r.t,
-      d: r.d,
-      initial: r.u[0].toUpperCase(),
-      avatarBg: AVATAR_COLORS[(start + i) % AVATAR_COLORS.length],
-    }
-  })
-}
-
-export interface GeneratedVersion {
-  ver: string
-  note: string
-  date: string
-  latest: boolean
-}
-
-/** Ported from the mockup's `genVersions` — synthesizes 2 older versions below the real
- * current version by decrementing the semver, since there is no version-history backend yet. */
-export function genVersions(version: string): GeneratedVersion[] {
-  const notes = ['当前最新版本', '稳定性与性能优化', '修复若干问题']
-  const dates = ['最近更新', '1 个月前', '3 个月前']
-  const parts = version.split('.').map(Number)
-  const out: GeneratedVersion[] = [{ ver: 'v' + version, note: notes[0], date: dates[0], latest: true }]
-  let [a, b, c] = parts
-  for (let i = 1; i < 3; i++) {
-    if (c > 0) c -= 1
-    else if (b > 0) {
-      b -= 1
-      c = 2
-    } else if (a > 0) {
-      a -= 1
-      b = 9
-    }
-    out.push({ ver: 'v' + [a, b, c].join('.'), note: notes[i], date: dates[i], latest: false })
-  }
-  return out
 }
 
 export type ReadmeBlock =

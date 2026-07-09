@@ -17,13 +17,12 @@ function installedDetail(overrides: Partial<SelectedDetail> = {}): SelectedDetai
   } as SelectedDetail
 }
 
-test('shows install info (including the always-on 更新时间 and metaLabel rows) for an installed item', () => {
+test('shows install info (标识 / 版本 / 更新时间) for an installed item', () => {
   render(<InfoSidebar detail={installedDetail()} />)
   expect(screen.getByText('安装信息')).toBeInTheDocument()
   expect(screen.getByText('filesystem')).toBeInTheDocument()
   expect(screen.getByText('v0.8.1')).toBeInTheDocument()
   expect(screen.getByText('更新时间')).toBeInTheDocument()
-  expect(screen.getByText('工具')).toBeInTheDocument()
 })
 
 test('always shows the 市场 section, even for an installed item', () => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, Heart } from 'lucide-react'
-import type { InstalledItem } from '@as/types'
+import type { InstalledItem, PackageReview } from '@as/types'
 import { callRpc } from '../lib/rpc'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
@@ -13,16 +13,17 @@ import {
   TIER_META,
   STATUS_META,
   statusOf,
-  ratingOf,
-  reviewCountOf,
-  starGlyphs,
-  reviewsFor,
-  genVersions,
   buildReadme,
   installCmdOf,
 } from '../lib/detailContent'
 
 type Tab = 'overview' | 'reviews' | 'versions'
+
+const RISK_META: Record<string, { label: string; cls: string }> = {
+  low: { label: '低风险', cls: 'text-store-green bg-store-green-soft' },
+  medium: { label: '中等风险', cls: 'text-store-amber bg-store-amber-soft' },
+  high: { label: '高风险', cls: 'text-store-red border border-store-red' },
+}
 
 export function DetailPanel() {
   const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, editingConfigSlug, setEditingConfigSlug } =
@@ -70,11 +71,8 @@ export function DetailPanel() {
   const type = TYPE_META[detail.category]
   const tier = TIER_META[detail.publisher.tier] ?? TIER_META.community
   const status = STATUS_META[statusOf(detail)]
-  const rating = ratingOf(detail)
-  const reviews = reviewCountOf(detail)
   const readme = buildReadme(detail, detail.description)
-  const reviewList = reviewsFor(detail.slug)
-  const versions = genVersions(detail.version)
+  const review: PackageReview | undefined = 'review' in detail ? detail.review : undefined
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -99,9 +97,7 @@ export function DetailPanel() {
               <span className="font-semibold">{detail.publisher.name}</span>
               <span className="text-store-border-strong">|</span>
               <span className="text-store-text-3">↓ {detail.downloads}</span>
-              <span className="text-store-amber">
-                ★ {rating.toFixed(1)} ({reviews})
-              </span>
+              {review && <span className="text-store-amber">质量 {review.quality}/5</span>}
               <span className={`font-semibold ${type.textClass}`}>{type.label}</span>
             </div>
             <p className="mt-3 max-w-[620px] text-sm leading-relaxed text-store-text-2">{detail.description}</p>
@@ -155,7 +151,7 @@ export function DetailPanel() {
           {(
             [
               { key: 'overview', label: '概览' },
-              { key: 'reviews', label: '评价' },
+              { key: 'reviews', label: '审查' },
               { key: 'versions', label: '版本' },
             ] as const
           ).map((t) => (
@@ -206,58 +202,53 @@ export function DetailPanel() {
 
         {tab === 'reviews' && (
           <div className="mt-5 flex flex-col gap-3">
-            <div className="flex items-center gap-4 rounded-xl border border-store-border bg-store-panel px-4 py-4">
-              <div className="text-center">
-                <div className="font-mono text-2xl font-extrabold leading-none text-store-text">
-                  {rating.toFixed(1)}
-                </div>
-                <div className="mt-1 text-[11px] text-store-amber">{starGlyphs(rating)}</div>
-              </div>
-              <div className="flex-1">
-                <div className="text-sm text-store-text-2">{reviews} 条评价</div>
-                <div className="mt-0.5 text-[11px] text-store-text-3">来自使用过该资源的开发者</div>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-store-border-strong px-3.5 py-2 text-xs font-semibold text-store-text hover:border-store-accent hover:text-store-accent"
-              >
-                写评价
-              </button>
-            </div>
-            {reviewList.map((r, i) => (
-              <div key={i} className="rounded-xl border border-store-border bg-store-panel px-4 py-3.5">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-[11px] font-bold text-white"
-                    style={{ background: r.avatarBg }}
-                  >
-                    {r.initial}
+            {review ? (
+              <>
+                <div className="flex items-center gap-4 rounded-xl border border-store-border bg-store-panel px-4 py-4">
+                  <div className="text-center">
+                    <div className="font-mono text-2xl font-extrabold leading-none text-store-text">{review.quality}/5</div>
+                    <div className="mt-1 text-[11px] text-store-text-3">质量评分</div>
                   </div>
-                  <span className="font-mono text-xs font-semibold text-store-text">{r.u}</span>
-                  <span className="text-[11px] text-store-amber">{r.stars}</span>
-                  <div className="flex-1" />
-                  <span className="text-[10.5px] text-store-text-3">{r.d}</span>
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${(RISK_META[review.risk] ?? RISK_META.medium).cls}`}
+                    >
+                      {(RISK_META[review.risk] ?? RISK_META.medium).label}
+                    </span>
+                    <p className="mt-2 text-xs leading-relaxed text-store-text-2">{review.summary}</p>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-store-text-2">{r.t}</p>
+                {review.concerns.length > 0 && (
+                  <div className="flex flex-col gap-1.5 rounded-xl border border-store-border bg-store-panel px-4 py-3.5">
+                    <p className="text-xs font-semibold text-store-text-2">审查要点</p>
+                    {review.concerns.map((c, i) => (
+                      <div key={i} className="flex gap-2 text-xs leading-relaxed text-store-text-2">
+                        <span className="text-store-amber">⚠</span>
+                        <span>{c}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-store-text-3">由自动质量与安全审查生成 · 用户评价系统尚未上线</p>
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-store-border bg-store-panel px-4 py-8 text-center text-sm text-store-text-3">
+                暂无自动审查记录
               </div>
-            ))}
+            )}
           </div>
         )}
 
         {tab === 'versions' && (
           <div className="mt-5 flex flex-col gap-px overflow-hidden rounded-lg border border-store-border">
-            {versions.map((v, i) => (
-              <div key={i} className="flex items-center gap-3 bg-store-panel px-3.5 py-3">
-                <span className="font-mono text-xs font-semibold text-store-text">{v.ver}</span>
-                {v.latest && (
-                  <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[9.5px] font-bold text-store-green">
-                    latest
-                  </span>
-                )}
-                <span className="flex-1 text-xs text-store-text-2">{v.note}</span>
-                <span className="font-mono text-[11px] text-store-text-3">{v.date}</span>
-              </div>
-            ))}
+            <div className="flex items-center gap-3 bg-store-panel px-3.5 py-3">
+              <span className="font-mono text-xs font-semibold text-store-text">v{detail.version}</span>
+              <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[9.5px] font-bold text-store-green">
+                latest
+              </span>
+              <span className="flex-1 text-xs text-store-text-2">当前版本</span>
+            </div>
+            <div className="bg-store-panel px-3.5 py-2.5 text-[11px] text-store-text-3">更早的版本历史暂未提供</div>
           </div>
         )}
       </div>
