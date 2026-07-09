@@ -3,11 +3,13 @@ import type { ItemDetail, ToolTarget } from '@as/types'
 import { Check, HelpCircle } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { ProGate } from './ProGate'
+import { useT } from '../i18n'
 
 function MultiKeyEditor({ keys, onChange }: { keys: string[]; onChange: (keys: string[]) => void }) {
+  const t = useT()
   return (
     <div className="flex flex-col gap-2 p-1">
-      <p className="text-[11px] font-semibold text-store-text-2">额外密钥（按请求轮换）</p>
+      <p className="text-[11px] font-semibold text-store-text-2">{t('cfg.multiKeyTitle')}</p>
       {keys.map((k, i) => (
         <div key={i} className="flex gap-2">
           <input
@@ -30,7 +32,7 @@ function MultiKeyEditor({ keys, onChange }: { keys: string[]; onChange: (keys: s
         onClick={() => onChange([...keys, ''])}
         className="self-start rounded-lg border border-dashed border-store-border-strong px-3 py-1.5 text-xs text-store-text-2 hover:border-store-accent hover:text-store-accent"
       >
-        + 添加密钥
+        {t('cfg.addKey')}
       </button>
     </div>
   )
@@ -61,17 +63,6 @@ interface EditValues {
 const UPSTREAM_PROTOCOLS = ['自动检测', 'openai_chat', 'claude_messages', 'codex_responses']
 const ICONS = ['默认', 'anthropic', 'openai', 'google', 'adobe']
 const LEVELS = Array.from({ length: 10 }, (_, i) => String(i + 1))
-
-const HELP = {
-  targets: '这份配置对哪些 CLI 生效，可多选。至少选择一个。',
-  baseUrl:
-    '上游供应商的真实地址，留空使用默认。Claude / Codex 始终指向本地代理，代理再按 Level 顺序把请求转发到这里。',
-  endpointPath: '覆盖平台默认端点。留空使用默认（claude: /v1/messages，codex: /responses）。GLM 模型请使用 /v1/chat/completions',
-  upstreamProtocol: '指定上游 API 的协议类型。自动检测时根据端点判断；openai_chat 时自动转换请求与响应格式',
-  authType: '默认使用 Bearer。Anthropic 官方 API 请选择 X-API-Key。',
-  level: '数字越小优先级越高，Level 1 会被优先尝试，失败后依次尝试 Level 2、Level 3 等',
-  localBaseUrl: '本地代理的监听地址。把 Claude Code / Codex 的 API 地址指向这里即可。',
-}
 
 const LOCAL_DEFAULT_BASE_URL = 'http://127.0.0.1:18100'
 
@@ -134,6 +125,7 @@ function toConfigPayload(values: EditValues): Record<string, unknown> {
 }
 
 export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps) {
+  const t = useT()
   const [providerName, setProviderName] = useState(slug)
   const [rootSlug, setRootSlug] = useState(slug)
   const [targets, setTargets] = useState<Partial<Record<ToolTarget, boolean>>>({})
@@ -216,9 +208,17 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
   const noTargets = !targets.claude && !targets.codex
   const noApiKey = values.apiKey.trim() === ''
   const showWarn = noTargets || (!isLocal && noApiKey)
-  const warnText = noTargets
-    ? '尚未选择适用客户端，此配置已保存但不会对任何 CLI 生效'
-    : '尚未填写 API 密钥，此配置已保存但暂时无法使用'
+  const warnText = noTargets ? t('cfg.warnNoTargets') : t('cfg.warnNoApiKey')
+
+  const HELP = {
+    targets: t('cfg.helpTargets'),
+    baseUrl: t('cfg.helpBaseUrl'),
+    endpointPath: t('cfg.helpEndpoint'),
+    upstreamProtocol: t('cfg.helpUpstreamProtocol'),
+    authType: t('cfg.helpAuthType'),
+    level: t('cfg.helpLevel'),
+    localBaseUrl: t('cfg.helpLocalBaseUrl'),
+  }
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -228,22 +228,22 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
             id="cli-config-name"
             value={values.name}
             onChange={(e) => persist({ ...values, name: e.target.value })}
-            placeholder="给这份配置起个名字"
+            placeholder={t('cfg.namePlaceholder')}
             className={`w-full border-b bg-transparent pb-1 font-mono text-lg font-bold text-store-text outline-none focus:border-store-border-strong ${
               nameEmpty ? 'border-store-red' : 'border-transparent'
             }`}
           />
-          {nameEmpty && <p className="mt-1 text-[11px] text-store-red">请先填写配置名称</p>}
+          {nameEmpty && <p className="mt-1 text-[11px] text-store-red">{t('cfg.nameRequired')}</p>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5 pt-1 text-[11.5px] text-store-text-3">
-          {saving && <span>自动保存中…</span>}
+          {saving && <span>{t('cfg.autoSaving')}</span>}
           {!saving && saved && (
             <span className="flex items-center gap-1 text-store-green">
-              <Check size={13} /> 已自动保存
+              <Check size={13} /> {t('cfg.autoSaved')}
             </span>
           )}
         </div>
-        <button type="button" aria-label="关闭" onClick={onClose} className="shrink-0 text-store-text-2 hover:text-store-text">
+        <button type="button" aria-label={t('window.close')} onClick={onClose} className="shrink-0 text-store-text-2 hover:text-store-text">
           ×
         </button>
       </div>
@@ -258,7 +258,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
       <div className="grid max-w-[620px] grid-cols-2 items-start gap-x-5 gap-y-3.5 px-7">
         <div className="col-span-2">
           <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-            适用客户端 <span className="text-store-red">*</span>
+            {t('cfg.applicableClients')} <span className="text-store-red">*</span>
             <HelpIcon text={HELP.targets} onShow={showHelp} onHide={() => setHelpTip(null)} />
           </label>
           <div className="flex gap-2">
@@ -282,7 +282,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
         {isLocal ? (
           <div className="col-span-2">
             <label htmlFor="provider-baseUrl" className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-              API 地址
+              {t('cfg.apiUrl')}
               <HelpIcon text={HELP.localBaseUrl} onShow={showHelp} onHide={() => setHelpTip(null)} />
             </label>
             <input
@@ -296,7 +296,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
         ) : (
           <div className="col-span-2">
             <label htmlFor="provider-apiKey" className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-              API 密钥 <span className="text-store-red">*</span>
+              {t('cfg.apiKey')} <span className="text-store-red">*</span>
             </label>
             <input
               id="provider-apiKey"
@@ -313,8 +313,8 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
         <div className="mx-7 mt-4 max-w-[620px]">
           <ProGate
             feature="keyRotation"
-            title="多 Key 轮换"
-            description="为同一供应商配置多把密钥，Pro 会在请求之间轮换使用以分摊限流。"
+            title={t('pro.keyRotation.title')}
+            description={t('pro.keyRotation.desc')}
           >
             <MultiKeyEditor keys={values.apiKeys} onChange={(apiKeys) => persist({ ...values, apiKeys })} />
           </ProGate>
@@ -328,14 +328,14 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
           className="flex w-full items-center gap-2 px-3.5 py-3 text-left"
         >
           <span aria-hidden="true" className="text-xs text-store-text-3">{moreOpen ? '▾' : '▸'}</span>
-          <span className="text-[12.5px] font-semibold text-store-text">更多设置</span>
-          <span className="text-[10.5px] text-store-text-3">API 地址 · 端点 · 协议 · 认证 · 图标 · 优先级 —— 均有默认值，可不填</span>
+          <span className="text-[12.5px] font-semibold text-store-text">{t('cfg.moreSettings')}</span>
+          <span className="text-[10.5px] text-store-text-3">{t('cfg.moreSettingsHint')}</span>
         </button>
         {moreOpen && (
           <div className="grid grid-cols-2 items-start gap-x-5 gap-y-3.5 border-t border-store-border p-3.5">
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                供应商名称 <span className="cursor-help text-[10px] font-medium text-store-text-3" title="供应商名称由资源本身决定，不可修改">（不可修改）</span>
+                {t('cfg.providerName')} <span className="cursor-help text-[10px] font-medium text-store-text-3" title={t('cfg.readonlyTip')}>{t('cfg.readonly')}</span>
               </label>
               <div className="w-full rounded-lg border border-store-border bg-store-panel-2 px-3 py-2 font-mono text-xs text-store-text-2">
                 {providerName}
@@ -344,7 +344,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
             {!isLocal && (
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                  API 地址
+                  {t('cfg.apiUrl')}
                   <HelpIcon text={HELP.baseUrl} onShow={showHelp} onHide={() => setHelpTip(null)} />
                 </label>
                 <input
@@ -356,7 +356,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
               </div>
             )}
             <div>
-              <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">官网地址</label>
+              <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">{t('cfg.homepage')}</label>
               <input
                 value={values.homepage}
                 onChange={(e) => persist({ ...values, homepage: e.target.value })}
@@ -366,19 +366,19 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
             </div>
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                API 端点
+                {t('cfg.apiEndpoint')}
                 <HelpIcon text={HELP.endpointPath} onShow={showHelp} onHide={() => setHelpTip(null)} />
               </label>
               <input
                 value={values.endpointPath}
                 onChange={(e) => persist({ ...values, endpointPath: e.target.value })}
-                placeholder="留空使用默认，如 /v1/chat/completions"
+                placeholder={t('cfg.endpointPlaceholder')}
                 className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
               />
             </div>
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                上游协议
+                {t('cfg.upstreamProtocol')}
                 <HelpIcon text={HELP.upstreamProtocol} onShow={showHelp} onHide={() => setHelpTip(null)} />
               </label>
               <select
@@ -387,13 +387,13 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
                 className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
               >
                 {UPSTREAM_PROTOCOLS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>{p === '自动检测' ? t('cfg.autoDetect') : p}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                认证方式
+                {t('cfg.authType')}
                 <HelpIcon text={HELP.authType} onShow={showHelp} onHide={() => setHelpTip(null)} />
               </label>
               <select
@@ -403,33 +403,33 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
               >
                 <option value="bearer">Bearer</option>
                 <option value="anthropic">X-API-Key</option>
-                <option value="custom">自定义</option>
+                <option value="custom">{t('cfg.custom')}</option>
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">自定义 Header 名称</label>
+              <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">{t('cfg.customHeaderLabel')}</label>
               <input
                 value={values.customHeader}
                 onChange={(e) => persist({ ...values, customHeader: e.target.value })}
-                placeholder="如 Authorization、X-Custom-Key"
+                placeholder={t('cfg.customHeaderPlaceholder')}
                 className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">图标</label>
+              <label className="mb-1.5 block text-[11px] font-semibold text-store-text-2">{t('cfg.icon')}</label>
               <select
                 value={values.icon}
                 onChange={(e) => persist({ ...values, icon: e.target.value })}
                 className="w-full rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 font-mono text-xs text-store-text outline-none focus:border-store-accent"
               >
                 {ICONS.map((i) => (
-                  <option key={i} value={i}>{i}</option>
+                  <option key={i} value={i}>{i === '默认' ? t('cfg.default') : i}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                优先级分组
+                {t('cfg.priorityGroup')}
                 <HelpIcon text={HELP.level} onShow={showHelp} onHide={() => setHelpTip(null)} />
               </label>
               <select
@@ -453,22 +453,22 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
           className="flex w-full items-center gap-2 px-3.5 py-3 text-left"
         >
           <span aria-hidden="true" className="text-xs text-store-text-3">{advancedOpen ? '▾' : '▸'}</span>
-          <span className="text-[12.5px] font-semibold text-store-text">高级设置</span>
-          <span className="text-[10.5px] text-store-text-3">模型白名单 · 模型映射 · CLI 覆盖 · 可用性监控</span>
+          <span className="text-[12.5px] font-semibold text-store-text">{t('cfg.advancedSettings')}</span>
+          <span className="text-[10.5px] text-store-text-3">{t('cfg.advancedHint')}</span>
         </button>
         {advancedOpen && (
           <div className="flex flex-col gap-4 border-t border-store-border p-3.5">
             <div>
-              <p className="mb-1.5 text-[11px] font-semibold text-store-text-2">模型白名单</p>
+              <p className="mb-1.5 text-[11px] font-semibold text-store-text-2">{t('cfg.whitelist')}</p>
               <div className="flex gap-2">
                 <input
                   value={wlDraft}
                   onChange={(e) => setWlDraft(e.target.value)}
-                  placeholder="输入模型名称，如 claude-*"
+                  placeholder={t('cfg.whitelistPlaceholder')}
                   className="flex-1 rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 text-xs text-store-text"
                 />
                 <button type="button" onClick={addWhitelist} className="rounded-lg border border-store-border-strong px-3 py-2 text-xs font-medium text-store-text">
-                  添加
+                  {t('cfg.add')}
                 </button>
               </div>
               {values.whitelist.length > 0 && (
@@ -484,23 +484,23 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
             </div>
 
             <div>
-              <p className="mb-1.5 text-[11px] font-semibold text-store-text-2">模型映射</p>
+              <p className="mb-1.5 text-[11px] font-semibold text-store-text-2">{t('cfg.modelMapping')}</p>
               <div className="flex items-center gap-2">
                 <input
                   value={mapFromDraft}
                   onChange={(e) => setMapFromDraft(e.target.value)}
-                  placeholder="CLI 模型（如 claude-*）"
+                  placeholder={t('cfg.mapFromPlaceholder')}
                   className="min-w-0 flex-1 rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 text-xs text-store-text"
                 />
                 <span className="text-store-text-3">→</span>
                 <input
                   value={mapToDraft}
                   onChange={(e) => setMapToDraft(e.target.value)}
-                  placeholder="供应商模型（如 kimi-k2）"
+                  placeholder={t('cfg.mapToPlaceholder')}
                   className="min-w-0 flex-1 rounded-lg border border-store-border-strong bg-store-panel px-3 py-2 text-xs text-store-text"
                 />
                 <button type="button" onClick={addMapping} className="rounded-lg border border-store-border-strong px-3 py-2 text-xs font-medium text-store-text">
-                  添加映射
+                  {t('cfg.addMapping')}
                 </button>
               </div>
               {values.modelMapping.length > 0 && (
@@ -517,12 +517,12 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-store-text">可用性监控</p>
-                <p className="text-[10px] text-store-text-3">启用后会定期健康检查，监控此供应商的可用性</p>
+                <p className="text-xs font-semibold text-store-text">{t('cfg.healthCheck')}</p>
+                <p className="text-[10px] text-store-text-3">{t('cfg.healthCheckHint')}</p>
               </div>
               <button
                 type="button"
-                aria-label="可用性监控"
+                aria-label={t('cfg.healthCheck')}
                 aria-pressed={values.healthCheck}
                 onClick={() => persist({ ...values, healthCheck: !values.healthCheck })}
                 className={`h-6 w-11 rounded-full p-0.5 ${values.healthCheck ? 'bg-store-accent' : 'bg-store-border-strong'}`}

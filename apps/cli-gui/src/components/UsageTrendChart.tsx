@@ -1,4 +1,5 @@
 import type { UsageSummaryRow } from '@as/types'
+import { useT } from '../i18n'
 
 const WIDTH = 680
 const HEIGHT = 190
@@ -31,6 +32,7 @@ function formatDateLabel(date: string): string {
 }
 
 export function UsageTrendChart({ rows }: { rows: UsageSummaryRow[] }) {
+  const t = useT()
   const byDate = new Map<string, number>()
   for (const row of rows) {
     byDate.set(row.date, (byDate.get(row.date) ?? 0) + row.costUsd)
@@ -41,7 +43,7 @@ export function UsageTrendChart({ rows }: { rows: UsageSummaryRow[] }) {
     return (
       <div className="relative flex h-[116px] items-center justify-center text-xs text-store-text-3">
         <svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="absolute inset-0" />
-        <span>暂无用量数据</span>
+        <span>{t('extra.noUsageData')}</span>
       </div>
     )
   }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Lock, Sparkles } from 'lucide-react'
 import { useEntitlement, type ProFeature } from '../state/Entitlement'
+import { useT } from '../i18n'
 
 /** Small inline "Pro" tag for labelling gated controls. */
 export function ProBadge() {
@@ -25,6 +26,7 @@ interface ProGateProps {
 
 /** Renders `children` when the current plan unlocks `feature`; otherwise shows an upsell card in its place. */
 export function ProGate({ feature, children, title, description, onUpgrade }: ProGateProps) {
+  const t = useT()
   const { has } = useEntitlement()
   if (has(feature)) return <>{children}</>
 
@@ -44,7 +46,7 @@ export function ProGate({ feature, children, title, description, onUpgrade }: Pr
           onClick={onUpgrade}
           className="mt-1 rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
         >
-          升级到 Pro
+          {t('extra.upgradeCta')}
         </button>
       )}
     </div>

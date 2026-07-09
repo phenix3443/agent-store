@@ -4,6 +4,7 @@ import { Search, Filter, Check } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
+import { useT } from '../i18n'
 import { CategoryIcon } from './CategoryIcon'
 import { TIER_META } from '../lib/detailContent'
 import {
@@ -11,11 +12,6 @@ import {
   filterRecommendedByListFilter, showInstalledSection, showRecommendedSection,
   type EnrichedInstalledItem,
 } from '../lib/resources'
-
-const FOPTS: Record<Exclude<ListFilter, 'all'>, string> = {
-  featured: '精选', popular: '最热门', recent: '最近发布', recommended: '推荐',
-  installed: '已安装', updates: '可更新', enabled: '已启用', disabled: '已禁用',
-}
 
 const DISCOVERY_TOKENS: Exclude<ListFilter, 'all'>[] = ['featured', 'popular', 'recent', 'recommended']
 const STATUS_TOKENS: Exclude<ListFilter, 'all'>[] = ['installed', 'updates', 'enabled', 'disabled']
@@ -33,6 +29,7 @@ export function ResourceList() {
     editingConfigSlug, setEditingConfigSlug,
   } = useAppState()
   const { appendLine } = useTerminalLog()
+  const t = useT()
   const [installed, setInstalled] = useState<EnrichedInstalledItem[]>([])
   const [catalog, setCatalog] = useState<Item[]>([])
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
@@ -145,7 +142,7 @@ export function ResourceList() {
     appendLine(`$ aas uninstall ${item.slug}`)
     try {
       await callRpc('uninstall', [item.slug])
-      appendLine(`✓ 已卸载 ${item.slug}`, 'green')
+      appendLine(`✓ ${t('resList.uninstalledPrefix')} ${item.slug}`, 'green')
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
@@ -158,7 +155,7 @@ export function ResourceList() {
     appendLine(`$ aas install ${item.slug}`)
     try {
       const result = await callRpc<{ version: string }>('install', [item.slug])
-      appendLine(`✓ 已安装 ${item.slug} ${result.version}`, 'green')
+      appendLine(`✓ ${t('common.installed')} ${item.slug} ${result.version}`, 'green')
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
@@ -169,7 +166,7 @@ export function ResourceList() {
     appendLine(`$ aas duplicate ${item.slug}`)
     try {
       const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
-      appendLine(`✓ 已新增子配置 ${result.newSlug}`, 'green')
+      appendLine(`✓ ${t('resList.childAddedPrefix')} ${result.newSlug}`, 'green')
       openConfigEditor(result.newSlug)
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
@@ -182,11 +179,11 @@ export function ResourceList() {
     try {
       if (installedSlugs.has(item.slug)) {
         const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
-        appendLine(`✓ 已新增子配置 ${result.newSlug}`, 'green')
+        appendLine(`✓ ${t('resList.childAddedPrefix')} ${result.newSlug}`, 'green')
         openConfigEditor(result.newSlug)
       } else {
         await callRpc('install', [item.slug])
-        appendLine(`✓ 已安装 ${item.slug}`, 'green')
+        appendLine(`✓ ${t('common.installed')} ${item.slug}`, 'green')
         openConfigEditor(item.slug)
       }
     } catch (err) {
@@ -207,13 +204,13 @@ export function ResourceList() {
               type="text"
               value={searchValue}
               onChange={(e) => handleSearchInput(e.target.value)}
-              placeholder="搜索，或用 @ 过滤…"
+              placeholder={t('resList.searchPlaceholder')}
               className="w-full rounded-lg border border-store-border bg-store-panel py-2 pl-8 pr-8 font-mono text-sm text-store-accent"
             />
             {(textQuery !== '' || listFilter !== 'all') && (
               <button
                 type="button"
-                aria-label="清除"
+                aria-label={t('resList.clear')}
                 onClick={clearSearch}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-store-text-3 hover:text-store-text"
               >
@@ -223,8 +220,8 @@ export function ResourceList() {
           </div>
           <button
             type="button"
-            aria-label="筛选过滤"
-            title="筛选过滤"
+            aria-label={t('resList.filter')}
+            title={t('resList.filter')}
             onClick={() => setTokenMenuOpen((v) => !v)}
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
               tokenMenuOpen ? 'border-store-accent bg-store-accent-soft text-store-accent' : 'border-store-border bg-store-panel text-store-text-3 hover:text-store-text'
@@ -239,7 +236,7 @@ export function ResourceList() {
             onMouseLeave={() => setTokenMenuOpen(false)}
             className="absolute left-0 right-0 top-full z-10 mt-1 rounded-lg border border-store-border-strong bg-store-content p-1.5 shadow-lg"
           >
-            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">发现</p>
+            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">{t('resList.discover')}</p>
             {DISCOVERY_TOKENS.map((key) => (
               <button
                 key={key}
@@ -249,12 +246,12 @@ export function ResourceList() {
                   listFilter === key ? 'bg-store-accent-soft text-store-accent' : 'text-store-text hover:bg-store-panel-2'
                 }`}
               >
-                <span className="flex-1 text-xs font-medium">{FOPTS[key]}</span>
+                <span className="flex-1 text-xs font-medium">{t(`filters.${key}`)}</span>
                 <span className="font-mono text-[10px] text-store-text-3">@{key}</span>
               </button>
             ))}
             <div className="my-1 h-px bg-store-border" />
-            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">状态</p>
+            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">{t('resList.status')}</p>
             {STATUS_TOKENS.map((key) => (
               <button
                 key={key}
@@ -264,12 +261,12 @@ export function ResourceList() {
                   listFilter === key ? 'bg-store-accent-soft text-store-accent' : 'text-store-text hover:bg-store-panel-2'
                 }`}
               >
-                <span className="flex-1 text-xs font-medium">{FOPTS[key]}</span>
+                <span className="flex-1 text-xs font-medium">{t(`filters.${key}`)}</span>
                 <span className="font-mono text-[10px] text-store-text-3">@{key}</span>
               </button>
             ))}
             <div className="my-1 h-px bg-store-border" />
-            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">目标应用</p>
+            <p className="px-2 pb-1 pt-1 text-[9.5px] font-bold uppercase tracking-wide text-store-text-3">{t('resList.targetApp')}</p>
             {APP_OPTIONS.map((app) => (
               <button
                 key={app.key}
@@ -294,7 +291,7 @@ export function ResourceList() {
       {navView === 'browse' && showInstalledSection(listFilter) && (
         <div>
           <p className="mb-2 flex items-center gap-2 text-xs font-medium text-store-text-2">
-            已配置 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
+            {t('resList.configured')} <span className="rounded-full bg-store-panel-2 px-1.5">{visibleInstalled.length}</span>
           </p>
           <div className="flex flex-col gap-1">
             {visibleInstalled.map((item) => {
@@ -321,7 +318,7 @@ export function ResourceList() {
                       {item.category === 'provider' && (
                         <button
                           type="button"
-                          aria-label={`新增子配置 ${item.slug}`}
+                          aria-label={`${t('resList.addChildAria')} ${item.slug}`}
                           onClick={() => addChildConfig(item)}
                           className="flex h-6 w-6 items-center justify-center rounded-md text-store-text-3 hover:bg-store-panel-2 hover:text-store-text"
                         >
@@ -330,7 +327,7 @@ export function ResourceList() {
                       )}
                       <button
                         type="button"
-                        aria-label={`卸载 ${item.slug}`}
+                        aria-label={`${t('resList.uninstallAria')} ${item.slug}`}
                         onClick={() => uninstall(item)}
                         className="flex h-6 w-6 items-center justify-center rounded-md text-store-text-3 hover:bg-store-panel-2 hover:text-store-red"
                       >
@@ -352,7 +349,7 @@ export function ResourceList() {
                           <span className="flex-1 truncate font-mono">{child.slug}</span>
                           <button
                             type="button"
-                            aria-label={`删除 ${child.slug}`}
+                            aria-label={`${t('resList.deleteAria')} ${child.slug}`}
                             onClick={(e) => { e.stopPropagation(); uninstall(child) }}
                             className="text-store-text-3 hover:text-store-red"
                           >
@@ -372,7 +369,7 @@ export function ResourceList() {
       {navView === 'browse' && showRecommendedSection(listFilter) && (
         <div>
           <p className="mb-2 text-xs font-medium text-store-text-2">
-            推荐 <span className="rounded-full bg-store-panel-2 px-1.5">{visibleRecommended.length}</span>
+            {t('resList.recommended')} <span className="rounded-full bg-store-panel-2 px-1.5">{visibleRecommended.length}</span>
           </p>
           <div className="flex flex-col gap-1">
             {visibleRecommended.map((item) => (
@@ -413,7 +410,7 @@ export function ResourceList() {
                     }}
                     className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
                   >
-                    {item.category === 'provider' ? '配置' : '安装'}
+                    {item.category === 'provider' ? t('resList.configure') : t('common.install')}
                   </button>
                 </div>
               </div>

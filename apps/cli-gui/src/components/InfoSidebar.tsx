@@ -2,14 +2,15 @@ import { ExternalLink } from 'lucide-react'
 import type { SelectedDetail } from '../lib/useSelectedDetail'
 import { TYPE_META } from '../lib/detailContent'
 import { openExternal } from '../lib/openExternal'
+import { useT, type TFn } from '../i18n'
 
 const STORE_BASE = 'https://agent-store.panghuli.tech'
 
 /** Real, openable links for a resource — only ones we actually have a URL for. */
-function resourceLinks(detail: SelectedDetail): { label: string; url: string }[] {
-  const links = [{ label: 'Store 页面', url: `${STORE_BASE}/store/${detail.category}/${detail.slug}` }]
+function resourceLinks(detail: SelectedDetail, t: TFn): { label: string; url: string }[] {
+  const links = [{ label: t('info.storePage'), url: `${STORE_BASE}/store/${detail.category}/${detail.slug}` }]
   if (detail.category === 'skill' && 'contentUrl' in detail && detail.contentUrl) {
-    links.push({ label: '源码 (SKILL.md)', url: detail.contentUrl })
+    links.push({ label: t('info.source'), url: detail.contentUrl })
   }
   return links
 }
@@ -45,30 +46,31 @@ function formatDate(value?: string): string {
 }
 
 export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
+  const t = useT()
   const createdAt = 'createdAt' in detail ? detail.createdAt : undefined
   const categories = [TYPE_META[detail.category].label, ...detail.tags.slice(0, 3)]
 
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-6 overflow-y-auto border-l border-store-border bg-store-sidebar p-4">
       <div>
-        <SectionHeading>安装信息</SectionHeading>
+        <SectionHeading>{t('info.installInfo')}</SectionHeading>
         <dl>
-          <Row label="标识" value={detail.slug} />
-          <Row label="版本" value={`v${detail.version}`} />
-          <Row label="更新时间" value={formatDate(detail.updatedAt)} />
+          <Row label={t('info.id')} value={detail.slug} />
+          <Row label={t('info.version')} value={`v${detail.version}`} />
+          <Row label={t('info.updatedAt')} value={formatDate(detail.updatedAt)} />
         </dl>
       </div>
 
       <div>
-        <SectionHeading>市场</SectionHeading>
+        <SectionHeading>{t('info.market')}</SectionHeading>
         <dl>
-          <Row label="发布" value={formatDate(createdAt)} />
-          <Row label="最近发布" value={formatDate(detail.updatedAt)} />
+          <Row label={t('info.published')} value={formatDate(createdAt)} />
+          <Row label={t('info.lastPublished')} value={formatDate(detail.updatedAt)} />
         </dl>
       </div>
 
       <div>
-        <SectionHeading>分类</SectionHeading>
+        <SectionHeading>{t('info.category')}</SectionHeading>
         <div className="flex flex-wrap gap-1.5">
           {categories.map((tag, i) => (
             <Pill key={`${tag}-${i}`}>{tag}</Pill>
@@ -77,9 +79,9 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
       </div>
 
       <div>
-        <SectionHeading>资源</SectionHeading>
+        <SectionHeading>{t('info.resources')}</SectionHeading>
         <div className="flex flex-col gap-2.5">
-          {resourceLinks(detail).map(({ label, url }) => (
+          {resourceLinks(detail, t).map(({ label, url }) => (
             <button
               key={label}
               type="button"
