@@ -23,7 +23,7 @@ mock.module('../waffo', () => ({
     },
   }),
   checkoutSuccessUrl: () => 'https://store.example/thanks',
-  wantsTrial: (plan: string, trial: boolean | undefined) => trial === true && plan !== 'lifetime',
+  trialFlag: (plan: string, trial: boolean | undefined) => (plan === 'lifetime' ? undefined : trial === true),
 }))
 
 // Resolve a signed-in user only for the `good-token` bearer; anything else is anonymous.
@@ -64,6 +64,16 @@ test('a trial requested without a signed-in user is rejected', async () => {
   expect(lastCall).toBeNull()
 })
 
+test('an authenticated direct upgrade sends withTrial:false to skip the default trial', async () => {
+  const res = await checkout({ period: 'monthly', trial: false }, 'good-token')
+  expect(res.status).toBe(200)
+  expect(lastCall?.method).toBe('authenticated')
+  expect(lastCall?.args['buyerIdentity']).toBe('user-1')
+  // Explicit false — not omitted — so Waffo skips the product's default trial.
+  expect(lastCall?.args['withTrial']).toBe(false)
+  expect(lastCall?.args['productId']).toBe('prod_sub')
+})
+
 test('an anonymous checkout uses the anonymous path and disables the trial', async () => {
   const res = await checkout({ period: 'monthly', email: 'a@b.co' })
   expect(res.status).toBe(200)
@@ -73,10 +83,18 @@ test('an anonymous checkout uses the anonymous path and disables the trial', asy
   expect(lastCall?.args['productId']).toBe('prod_sub')
 })
 
-test('lifetime never starts a trial even when requested', async () => {
+test('lifetime omits withTrial entirely (one-time product has no trial to toggle)', async () => {
   const res = await checkout({ period: 'lifetime', trial: true, email: 'a@b.co' })
   expect(res.status).toBe(200)
   expect(lastCall?.method).toBe('anonymous')
-  expect(lastCall?.args['withTrial']).toBe(false)
+  expect(lastCall?.args).not.toHaveProperty('withTrial')
+  expect(lastCall?.args['productId']).toBe('prod_life')
+})
+
+test('an authenticated lifetime purchase also omits withTrial', async () => {
+  const res = await checkout({ period: 'lifetime' }, 'good-token')
+  expect(res.status).toBe(200)
+  expect(lastCall?.method).toBe('authenticated')
+  expect(lastCall?.args).not.toHaveProperty('withTrial')
   expect(lastCall?.args['productId']).toBe('prod_life')
 })

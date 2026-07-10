@@ -6,7 +6,7 @@ import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from '
 import { getDb, type DbEnv } from './db/client'
 import { itemVersions, items, reviews } from './db/schema'
 import type { NeonAuthEnv } from './neon-auth'
-import { getWaffoClient, proProductId, checkoutSuccessUrl, wantsTrial, type WaffoEnv, type BillingPlan } from './waffo'
+import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { getMyItems } from './publisher-items'
@@ -189,7 +189,8 @@ app.post('/api/billing/checkout', async (c) => {
   }
   const period: BillingPlan =
     body.period === 'yearly' ? 'yearly' : body.period === 'lifetime' ? 'lifetime' : 'monthly'
-  const withTrial = wantsTrial(period, body.trial)
+  // `true`/`false` for subscriptions, `undefined` (omit) for lifetime.
+  const withTrial = trialFlag(period, body.trial)
   const productId = proProductId(c.env, period)
   if (!productId) return c.json({ error: 'Billing not configured' }, 501)
 
@@ -207,7 +208,7 @@ app.post('/api/billing/checkout', async (c) => {
   // Trials de-duplicate on a stable, merchant-controlled buyer identity. An
   // anonymous checkout lets the buyer self-report any email and re-claim the
   // trial, so a trial requires an authenticated identity to bind against.
-  if (withTrial && !user) return c.json({ error: 'Sign in to start a free trial' }, 401)
+  if (withTrial === true && !user) return c.json({ error: 'Sign in to start a free trial' }, 401)
 
   const buyerEmail = body.email ?? user?.email
   const metadata: Record<string, string> = {}
@@ -230,20 +231,22 @@ app.post('/api/billing/checkout', async (c) => {
         buyerEmail,
         successUrl,
         metadata: orderMetadata,
-        // Start on the free trial for subscription checkouts that requested it.
-        ...(withTrial ? { withTrial: true } : {}),
+        // Always explicit for subscriptions (true = trial, false = direct upgrade
+        // skips the product's default trial); omitted for lifetime.
+        ...(withTrial !== undefined ? { withTrial } : {}),
       })
       return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
     }
-    // Anonymous checkout has no stable identity (buyer self-reports email), so it
-    // must never grant a trial — `withTrial` is guarded off above and pinned false.
+    // Anonymous checkout has no stable identity (buyer self-reports email), so a
+    // subscription can never grant a trial — `withTrial` is guarded off above and
+    // pinned false here; lifetime omits the field entirely.
     const session = await client.checkout.anonymous.create({
       productId,
       currency: 'USD',
       buyerEmail,
       successUrl,
       metadata: orderMetadata,
-      withTrial: false,
+      ...(withTrial !== undefined ? { withTrial: false } : {}),
     })
     return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
   } catch {
