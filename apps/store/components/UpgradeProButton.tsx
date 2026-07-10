@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { StoreClient } from '@as/sdk'
-import { createClient } from '@/lib/supabase/client'
+import { getAuthToken } from '@/lib/auth/token'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
@@ -23,14 +23,14 @@ export function UpgradeProButton({ className, children }: UpgradeProButtonProps)
     setError(null)
     setBusy(true)
     try {
-      const { data: { session } } = await createClient().auth.getSession()
-      if (!session) {
+      const token = await getAuthToken()
+      if (!token) {
         setError('请先登录')
         return
       }
       const result = await new StoreClient(API_URL).createCheckout(
         { period: 'monthly' },
-        { token: session.access_token },
+        { token },
       )
       if (result.error || !result.data) {
         setError(result.error ?? '发起结算失败')

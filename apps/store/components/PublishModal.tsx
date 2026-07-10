@@ -3,7 +3,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useState } from 'react'
 import type { SubmitManifest } from '@as/sdk'
-import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 import { FIELD_SCHEMAS, type PublishType } from '@/lib/publish-field-schemas'
 
@@ -74,8 +73,9 @@ export function PublishModal({ open, onOpenChange }: PublishModalProps) {
     try {
       // Open GitHub's prefilled "new file" page: the user's own browser session
       // forks the registry and opens a PR when they commit — no bot token needed.
-      const { data: { session } } = await createClient().auth.getSession()
-      const username = (session?.user?.user_metadata?.['user_name'] as string) || 'community'
+      const sessRes = await fetch('/api/auth/get-session', { credentials: 'same-origin' })
+      const sess = sessRes.ok ? ((await sessRes.json()) as { user?: { name?: string } } | null) : null
+      const username = sess?.user?.name || 'community'
       const manifest = {
         $schema: '../schema/package.schema.json',
         ...buildManifest(type, vals),

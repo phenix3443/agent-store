@@ -1,13 +1,11 @@
 import { test, expect, afterEach, beforeEach, mock } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 
-mock.module('@/lib/supabase/client', () => ({
-  createClient: () => ({
-    auth: { getSession: async () => ({ data: { session: { access_token: 'tok' } } }) },
-  }),
-}))
-
-beforeEach(() => { localStorage.clear() })
+beforeEach(() => {
+  localStorage.clear()
+  // Publish reads the signed-in user's GitHub login from the Neon Auth session proxy.
+  globalThis.fetch = (async () => ({ ok: true, json: async () => ({ user: { name: 'tester' } }) })) as unknown as typeof fetch
+})
 afterEach(() => { cleanup() })
 
 const { PublishModal } = await import('../PublishModal')

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { StoreClient } from '@as/sdk'
 import type { UserReview } from '@as/types'
-import { createClient } from '@/lib/supabase/client'
+import { getAuthToken } from '@/lib/auth/token'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
@@ -42,9 +42,7 @@ export function ReviewsSection({ slug, rating, reviewCount }: { slug: string; ra
 
   useEffect(() => {
     void load()
-    void createClient()
-      .auth.getSession()
-      .then(({ data }) => setToken(data.session?.access_token ?? null))
+    void getAuthToken().then(setToken)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
