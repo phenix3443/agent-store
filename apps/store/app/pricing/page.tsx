@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { StoreClient } from '@as/sdk'
 import { PRICING, formatPrice } from '@as/types'
-import { createClient } from '@/lib/supabase/client'
+import { getAuthToken } from '@/lib/auth/token'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
@@ -32,8 +32,8 @@ export default function PricingPage() {
     setBusy(key)
     setError(null)
     try {
-      const { data: { session } } = await createClient().auth.getSession()
-      const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token: session?.access_token })
+      const token = await getAuthToken()
+      const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token: token ?? undefined })
       if (result.data?.checkoutUrl) window.open(result.data.checkoutUrl, '_blank', 'noopener,noreferrer')
       else setError(result.error ?? '发起支付失败')
     } catch {

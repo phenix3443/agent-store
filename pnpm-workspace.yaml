@@ -4,6 +4,7 @@ packages:
 overrides:
   '@typescript-eslint/parser': 7.2.0
 allowBuilds:
+  core-js: false
   esbuild: true
   sharp: true
   workerd: true

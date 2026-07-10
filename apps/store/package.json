@@ -16,6 +16,7 @@
   "dependencies": {
     "@as/sdk": "workspace:*",
     "@as/types": "workspace:*",
+    "@neondatabase/auth": "0.4.2-beta",
     "@radix-ui/react-dialog": "^1.1.1",
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.39.3",
