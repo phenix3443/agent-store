@@ -1,6 +1,6 @@
 import type { Plan } from '@as/types'
 import { desc, eq, sql } from 'drizzle-orm'
-import { getDb, type DbEnv } from './db/client'
+import { getDb, type Database, type DbEnv } from './db/client'
 import { processedWebhooks, subscriptions } from './db/schema'
 import { planForSubscription, type SubscriptionRecord, type SubscriptionStatus } from './billing'
 
@@ -25,9 +25,17 @@ export async function markWebhookProcessed(
   await db.insert(processedWebhooks).values({ deliveryId, eventType })
 }
 
-/** Upserts a subscription row keyed by its Waffo order id. */
-export async function upsertSubscription(env: DbEnv | undefined, record: SubscriptionRecord): Promise<void> {
-  const db = getDb(env)
+/**
+ * Builds the subscription upsert query keyed by Waffo order id.
+ *
+ * Webhook deliveries are not ordered: a late `subscription.activated` (retried
+ * after a network delay) can arrive *after* the `subscription.canceled` that
+ * superseded it. The conflict-update therefore only overwrites the stored row
+ * when the incoming `event_timestamp` is not older than the stored one — so a
+ * stale event can never reactivate a canceled subscription. Rows without a
+ * stored timestamp (pre-existing data) are always allowed to update.
+ */
+export function subscriptionUpsertQuery(db: Database, record: SubscriptionRecord) {
   const values = {
     waffoOrderId: record.waffoOrderId,
     buyerEmail: record.buyerEmail,
@@ -39,7 +47,7 @@ export async function upsertSubscription(env: DbEnv | undefined, record: Subscri
     mode: record.mode,
     eventTimestamp: record.eventTimestamp ? new Date(record.eventTimestamp) : null,
   }
-  await db
+  return db
     .insert(subscriptions)
     .values(values)
     .onConflictDoUpdate({
@@ -54,7 +62,13 @@ export async function upsertSubscription(env: DbEnv | undefined, record: Subscri
         mode: values.mode,
         eventTimestamp: values.eventTimestamp,
       },
+      setWhere: sql`${subscriptions.eventTimestamp} is null or excluded.event_timestamp >= ${subscriptions.eventTimestamp}`,
     })
+}
+
+/** Upserts a subscription row keyed by its Waffo order id. */
+export async function upsertSubscription(env: DbEnv | undefined, record: SubscriptionRecord): Promise<void> {
+  await subscriptionUpsertQuery(getDb(env), record)
 }
 
 /** Resolves the current entitlement plan for a buyer email from their most recent subscription row. */
