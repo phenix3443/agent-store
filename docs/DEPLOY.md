@@ -12,7 +12,7 @@
 | 触发 | wrangler env | API worker | Neon 库 | Store worker | 域名 |
 |---|---|---|---|---|---|
 | push/merge 到 `main` | `test` | `as-api-test` | `agent-store-test`（late-sea） | `agent-store-web-test` | `test.agent-store.panghuli.tech` |
-| push 版本 tag `v*` | `production` | `as-api-prod` | `agent-store`（jolly-breeze） | `agent-store-web` | `agent-store.panghuli.tech` |
+| push 版本 tag `v*` | `production` | `as-api` | `agent-store`（jolly-breeze） | `agent-store-web` | `agent-store.panghuli.tech` |
 
 - **开发**：基于 `main` 建功能分支 → 开 PR（e2e 门控）→ 合入 `main`。合入即部署**测试**环境
   （`e2e` 通过后触发 `deploy-*`，仅当 `apps/api` / `apps/store` / `packages` / lockfile 变更时才部署）。
@@ -119,7 +119,7 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env test
 
 推 `v*` release tag 即部署生产（见顶部「触发 → 环境」表）。已就绪：
 
-- **API** `as-api-prod`（Cloudflare Workers）：https://as-api-prod.phenix3443.workers.dev
+- **API** `as-api`（Cloudflare Workers）：https://as-api.phenix3443.workers.dev
   - 数据层 Neon `agent-store`（jolly-breeze，us-east-1），已 `drizzle-kit migrate` 建表。
   - Neon Auth 已 provision（JWKS 已注入 Worker secret），trusted origin 含
     `https://agent-store.panghuli.tech`。

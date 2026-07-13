@@ -93,7 +93,7 @@ jobs:
       - name: Build (OpenNext)
         run: pnpm --filter @as/store build:cf
         env:
-          NEXT_PUBLIC_API_URL: ${{ needs.changes.outputs.env == 'production' && 'https://as-api-prod.phenix3443.workers.dev' || 'https://as-api-test.phenix3443.workers.dev' }}
+          NEXT_PUBLIC_API_URL: ${{ needs.changes.outputs.env == 'production' && 'https://as-api.phenix3443.workers.dev' || 'https://as-api-test.phenix3443.workers.dev' }}
           NEXT_PUBLIC_SITE_URL: ${{ needs.changes.outputs.env == 'production' && 'https://agent-store.panghuli.tech' || 'https://test.agent-store.panghuli.tech' }}
 
       - name: Deploy to Cloudflare (${{ needs.changes.outputs.env }})

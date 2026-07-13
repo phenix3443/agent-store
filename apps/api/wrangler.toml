@@ -4,10 +4,10 @@
 #   wrangler secret put NEON_AUTH_JWKS_URL --env test    # Neon Auth (JWT verify)
 #
 # Deploy:  wrangler deploy --env test        (→ as-api-test.<subdomain>.workers.dev)
-#          wrangler deploy --env production   (→ as-api-prod.<subdomain>.workers.dev)
+#          wrangler deploy --env production   (→ as-api.<subdomain>.workers.dev)
 
-# Top-level name groups the sibling environments in the dashboard. CI always
-# deploys with `--env test|production`, so this bare name is never the target.
+# Top-level name = the production worker (unified naming: prod = as-api,
+# test = as-api-test). CI always deploys with `--env test|production`.
 name = "as-api"
 main = "src/worker.ts"
 compatibility_date = "2026-07-01"
@@ -22,9 +22,9 @@ name = "as-api-test"
 [env.test.observability]
 enabled = true
 
-# Online PRODUCTION environment (filled out later)
+# Online PRODUCTION environment
 [env.production]
-name = "as-api-prod"
+name = "as-api"
 
 [env.production.observability]
 enabled = true

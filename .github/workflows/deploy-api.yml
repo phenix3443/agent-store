@@ -2,7 +2,7 @@ name: Deploy API to Cloudflare
 
 # Deploys the catalog API (apps/api) to Cloudflare Workers:
 #   push/merge to main → --env test        (as-api-test  → Neon agent-store-test)
-#   push a release tag v* → --env production (as-api-prod  → Neon agent-store)
+#   push a release tag v* → --env production (as-api       → Neon agent-store)
 # Development happens on feature branches off main (PR-gated by e2e); production
 # ships only when you cut a `v*` release tag. The main→test path waits on the e2e
 # workflow (workflow_run) and only deploys when apps/api, packages, or the lockfile
