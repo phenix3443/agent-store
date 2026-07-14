@@ -73,9 +73,9 @@ export const MOCK_ITEMS: Item[] = [
   {
     id: 'item-local',
     slug: 'local',
-    name: '本地中转',
+    name: 'local',
     description:
-      '内置本地中转：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
+      '内置本地转发：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
 
 
     category: 'provider',
@@ -95,16 +95,16 @@ export const MOCK_ITEMS: Item[] = [
   {
     id: 'item-yls-code',
     slug: 'yls',
-    name: 'YLS Code 中转',
+    name: 'YLS Code',
     description:
-      '伊莉思 Code 中转服务，国内直连免翻墙接入 Codex CLI（GPT-5 Code）与 Claude Code；此预设接入其 Codex 端点，按订阅计费。',
+      '伊莉思 Code 服务，国内直连免翻墙接入 Codex CLI（GPT-5 Code）与 Claude Code；此预设接入其 Codex 端点，按订阅计费。',
 
 
     category: 'provider',
     version: '1.0.0',
     publisher: publisher('yls-me'),
     compatibleWith: ['codex'],
-    tags: ['relay', 'codex', '国产中转'],
+    tags: ['relay', 'codex', '国产'],
     downloads: 32_000,
     rating: 4.7,
     status: 'published',
@@ -140,16 +140,16 @@ export const MOCK_ITEMS: Item[] = [
   {
     id: 'item-skyapi',
     slug: 'skyapi',
-    name: 'SkyAPI 中转',
+    name: 'SkyAPI',
     description:
-      'SkyAPI 中转服务，稳定线路免翻墙接入 Claude Code，兼容 Cursor / Cline / Windsurf 等客户端。',
+      'SkyAPI 服务，稳定线路免翻墙接入 Claude Code，兼容 Cursor / Cline / Windsurf 等客户端。',
 
 
     category: 'provider',
     version: '1.0.0',
     publisher: publisher('skyapi'),
     compatibleWith: ['claude'],
-    tags: ['relay', 'claude', '国产中转'],
+    tags: ['relay', 'claude', '国产'],
     downloads: 21_000,
     rating: 4.5,
     status: 'published',

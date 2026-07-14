@@ -23,7 +23,7 @@ export const MOCK_PUBLISHERS: Publisher[] = [
     name: 'YLS.me',
     avatarUrl: 'https://api.dicebear.com/9.x/shapes/svg?seed=yls',
     tier: 'verified',
-    bio: '已验证的第三方模型中转服务。',
+    bio: '已验证的第三方模型接入服务。',
   },
   {
     id: 'pub-community-fox',
@@ -47,7 +47,7 @@ export const MOCK_PUBLISHERS: Publisher[] = [
     name: 'SkyAPI',
     avatarUrl: 'https://api.dicebear.com/9.x/shapes/svg?seed=skyapi',
     tier: 'community',
-    bio: '稳定线路、免翻墙接入 Claude Code 的第三方中转服务。',
+    bio: '稳定线路、免翻墙接入 Claude Code 的第三方接入服务。',
   },
 ]
 
