@@ -11,8 +11,8 @@
 -- ── Publishers (test publishers + crawled) ──────────────────────────────────
 INSERT INTO publishers (slug, name, avatar_url, tier, bio) VALUES
   ('agent-store', 'Agent Store', 'https://api.dicebear.com/9.x/shapes/svg?seed=agent-store', 'official', 'Agent Store 官方内置组件。'),
-  ('yls-me', 'YLS.me', 'https://api.dicebear.com/9.x/shapes/svg?seed=yls', 'verified', '已验证的第三方模型中转服务。'),
-  ('skyapi', 'SkyAPI', 'https://api.dicebear.com/9.x/shapes/svg?seed=skyapi', 'community', '稳定线路、免翻墙接入 Claude Code 的第三方中转服务。'),
+  ('yls-me', 'YLS.me', 'https://api.dicebear.com/9.x/shapes/svg?seed=yls', 'verified', '已验证的第三方模型接入服务。'),
+  ('skyapi', 'SkyAPI', 'https://api.dicebear.com/9.x/shapes/svg?seed=skyapi', 'community', '稳定线路、免翻墙接入 Claude Code 的第三方接入服务。'),
   ('affaan-m', 'affaan-m', 'https://avatars.githubusercontent.com/u/124439313?v=4', 'community', NULL),
   ('agenttrust', 'agenttrust', 'https://github.com/agenttrust.png', 'community', NULL),
   ('ankimcp', 'ankimcp', 'https://github.com/ankimcp.png', 'community', NULL),
@@ -39,8 +39,8 @@ INSERT INTO items (
   install_hook, metadata
 ) VALUES (
   'local',
-  '本地中转',
-  '内置本地中转：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
+  'local',
+  '内置本地转发：将 Claude Code / Codex 的 baseURL 指向本机监听端口，请求按 Level 优先级转发到已配置的上游供应商，失败自动降级。无需 API 密钥。',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'agent-store'),
   ARRAY['claude','codex'], ARRAY['relay','local','内置','test'], 0, 5.0, 'published',
@@ -57,11 +57,11 @@ INSERT INTO items (
   install_hook, metadata
 ) VALUES (
   'yls',
-  'YLS Code 中转',
-  '伊莉思 Code 中转服务，国内直连免翻墙接入 Codex CLI（GPT-5 Code）与 Claude Code；此预设接入其 Codex 端点，按订阅计费。',
+  'YLS Code',
+  '伊莉思 Code 服务，国内直连免翻墙接入 Codex CLI（GPT-5 Code）与 Claude Code；此预设接入其 Codex 端点，按订阅计费。',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'yls-me'),
-  ARRAY['codex'], ARRAY['relay','codex','国产中转','test'], 32000, 4.7, 'published',
+  ARRAY['codex'], ARRAY['relay','codex','国产','test'], 32000, 4.7, 'published',
   $${"steps":[{"type":"config","patch":{"apiKey":"","baseUrl":"https://code.ylsagi.com/codex","authType":"bearer","upstreamProtocol":"auto","level":1}}]}$$,
   $${"configSchema":{"type":"object","required":["apiKey"],"properties":{"apiKey":{"type":"string","description":"API 密钥 (Bearer)"},"baseUrl":{"type":"string","description":"API 地址","default":"https://code.ylsagi.com/codex"},"authType":{"type":"string","default":"bearer"},"upstreamProtocol":{"type":"string","default":"auto"},"level":{"type":"number","default":1}}},"supportedModels":["gpt-5-codex","gpt-5"]}$$
 );
@@ -75,11 +75,11 @@ INSERT INTO items (
   install_hook, metadata
 ) VALUES (
   'skyapi',
-  'SkyAPI 中转',
-  'SkyAPI 中转服务，稳定线路免翻墙接入 Claude Code，兼容 Cursor / Cline / Windsurf 等客户端。',
+  'SkyAPI',
+  'SkyAPI 服务，稳定线路免翻墙接入 Claude Code，兼容 Cursor / Cline / Windsurf 等客户端。',
   'provider', '1.0.0',
   (SELECT id FROM publishers WHERE slug = 'skyapi'),
-  ARRAY['claude'], ARRAY['relay','claude','国产中转','test'], 21000, 4.5, 'published',
+  ARRAY['claude'], ARRAY['relay','claude','国产','test'], 21000, 4.5, 'published',
   $${"steps":[{"type":"config","patch":{"apiKey":"","baseUrl":"http://150.158.2.79:8888","authType":"anthropic","upstreamProtocol":"auto","level":1}}]}$$,
   $${"configSchema":{"type":"object","required":["apiKey"],"properties":{"apiKey":{"type":"string","description":"API 密钥 (x-api-key)"},"baseUrl":{"type":"string","description":"API 地址","default":"http://150.158.2.79:8888"},"authType":{"type":"string","default":"anthropic"},"upstreamProtocol":{"type":"string","default":"auto"},"level":{"type":"number","default":1}}},"supportedModels":["claude-opus-4-8","claude-sonnet-5","claude-haiku-4-5-20251001","claude-opus-4-5"]}$$
 );
