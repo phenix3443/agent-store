@@ -36,6 +36,7 @@ dev-env:
 ## apps/store/.env.local). Both the web store and the CLI consume this API. Also a
 ## building block of `make dev-env`.
 dev-api:
+	@pids=$$(lsof -ti tcp:3001); if [ -n "$$pids" ]; then echo "freeing :3001 (pid $$pids)"; kill $$pids 2>/dev/null; sleep 0.5; fi; true
 	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
 	set -a; . apps/store/.env.local; set +a; \
 	PORT=3001 pnpm --filter=@as/api start
@@ -44,6 +45,7 @@ dev-api:
 ## API_URL and Neon Auth creds from apps/store/.env.local; it has no direct DB
 ## access. Building block of `make dev-env`.
 dev-store:
+	@pids=$$(lsof -ti tcp:3000); if [ -n "$$pids" ]; then echo "freeing :3000 (pid $$pids)"; kill $$pids 2>/dev/null; sleep 0.5; fi; true
 	set -a; . apps/store/.env.local; set +a; \
 	API_URL=http://127.0.0.1:3001 \
 	pnpm --filter=@as/store dev
