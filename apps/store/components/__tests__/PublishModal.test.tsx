@@ -50,7 +50,7 @@ test('submitting opens a GitHub prefilled new-file page for the registry', async
   fireEvent.click(screen.getByText('发布'))
 
   await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
-  expect(opened[0]).toContain('github.com/ai-agent-store/registry/new/main')
+  expect(opened[0]).toContain('github.com/awesome-agent-store/registry/new/main')
   expect(opened[0]).toContain('provider%2Fmy-provider.json')
 
   window.open = originalOpen

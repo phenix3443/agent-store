@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 // Resolve a download target to the matching asset on the latest GitHub Release
 // and 302 to it, so the landing page always links to the newest installer for
 // each platform without hardcoding a version. Falls back to the releases page.
-const REPO = 'phenix3443/agent-store'
+const REPO = 'awesome-agent-store/agent-store'
 const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`
 
 // The macOS build is a single universal .dmg (Apple Silicon + Intel), so all mac

@@ -1,6 +1,6 @@
 # 发布文案（可直接粘贴，按需微调）
 
-> 换掉占位链接：商店 `https://agent-store-alpha.vercel.app`、registry `https://github.com/ai-agent-store/registry`。有域名后统一替换。
+> 换掉占位链接：商店 `https://agent-store-alpha.vercel.app`、registry `https://github.com/awesome-agent-store/registry`。有域名后统一替换。
 
 ---
 

@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { getFeaturedItems } from '@/lib/catalog'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
-const RELEASES_URL = 'https://github.com/phenix3443/agent-store/releases'
-const ORG_URL = 'https://github.com/ai-agent-store'
+const RELEASES_URL = 'https://github.com/awesome-agent-store/agent-store/releases'
+const ORG_URL = 'https://github.com/awesome-agent-store'
 // Installers are built by .github/workflows/release.yml and published to GitHub
 // Releases. The /download/[target] route resolves each button to the newest
 // matching asset, so links always track the latest release.

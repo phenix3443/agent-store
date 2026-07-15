@@ -6,7 +6,7 @@ import type { SubmitManifest } from '@as/sdk'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 import { FIELD_SCHEMAS, type PublishType } from '@/lib/publish-field-schemas'
 
-const REGISTRY_URL = 'https://github.com/ai-agent-store/registry'
+const REGISTRY_URL = 'https://github.com/awesome-agent-store/registry'
 
 interface PublishModalProps {
   open: boolean

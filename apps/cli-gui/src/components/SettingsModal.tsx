@@ -324,7 +324,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => openExternal('https://github.com/ai-agent-store')}
+                      onClick={() => openExternal('https://github.com/awesome-agent-store')}
                       className="cursor-pointer text-xs font-semibold text-store-accent"
                     >
                       {t('settings.about.github')}
