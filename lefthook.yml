@@ -1,0 +1,55 @@
+# 装：lefthook install    手动跑：lefthook run pre-commit
+#
+# 只放【秒级】的检查。测试和构建留给 CI——pre-commit 一旦超过几秒，
+# 人就会开始用 --no-verify，那时候它守什么都没用了。
+#
+# 【为什么不是 .git/hooks 里的软链】.git/ 不进版本控制。重新 clone、
+# 换机器、别人接手，钩子就没了，而且没有任何提示——你以为它在守着。
+# lefthook.yml 入库，`lefthook install` 一条命令恢复。
+
+pre-commit:
+  parallel: true
+
+  commands:
+    # 密钥进了 git 历史就永远在，rewrite history 对已 push 的仓库是场灾难。
+    # 这条不要注释掉。
+    secrets-check:
+      run: gitleaks protect --staged --no-banner
+      skip:
+        - merge
+        - rebase
+
+    # turbo 只重跑受影响的包，缓存命中时几十毫秒。所以这里跑全量，
+    # 不用 {staged_files} 挑文件——挑了反而绕过 turbo 的依赖图。
+    lint:
+      glob: "*.{ts,tsx,js,jsx,mts}"
+      run: pnpm lint
+
+    type-check:
+      glob: "*.{ts,tsx,mts}"
+      run: pnpm type-check
+
+commit-msg:
+  commands:
+    # 【消息文件的路径是 {1}，不是 shell 的 $1】lefthook 自己做占位符替换，
+    # 写 $1 拿到的是空串，然后 head 报 "No such file or directory"。
+    check-message:
+      run: |
+        head -1 "{1}" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+' || {
+          echo "❌ commit message 要用 Conventional Commits：type(scope): 说明"
+          echo "   type: feat fix docs style refactor perf test build ci chore revert"
+          exit 1
+        }
+        echo "✅ Commit message 格式正确"
+
+pre-push:
+  commands:
+    # 推上去的和本地不是一份，是最难查的那类问题：CI 绿的、线上错的
+    check-uncommitted:
+      run: |
+        [ -z "$(git status --porcelain)" ] || {
+          echo "❌ 有未提交的改动，推上去的和本地不是一份"
+          git status --short
+          exit 1
+        }
+        echo "✅ 工作树干净"
