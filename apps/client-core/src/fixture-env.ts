@@ -23,14 +23,15 @@ export function getIsolatedFixturePathsFromEnv(): Required<Paths> {
     return paths
   }
 
-  const disallowed = new Map<string, string>([
-    [resolve(paths.aasHome), resolve(join(home, '.agents'))],
-    [resolve(paths.claudeConfigDir), resolve(join(home, '.claude'))],
-    [resolve(paths.codexConfigDir), resolve(join(home, '.codex'))],
-  ])
+  const disallowed: Array<[string, string]> = [
+    [paths.aasHome, join(home, '.agents')],
+    [paths.aasHome, join(home, '.agent-store')],
+    [paths.claudeConfigDir, join(home, '.claude')],
+    [paths.codexConfigDir, join(home, '.codex')],
+  ]
 
-  for (const [actual, expectedHomePath] of disallowed.entries()) {
-    if (actual === expectedHomePath) {
+  for (const [actual, expectedHomePath] of disallowed) {
+    if (resolve(actual) === resolve(expectedHomePath)) {
       throw new Error(
         `agent-package fixture refuses to use real home directory path: ${actual}. ` +
           'Set explicit isolated dirs, or set AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS=1 in a disposable environment.'

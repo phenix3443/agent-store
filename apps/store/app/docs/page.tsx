@@ -43,7 +43,7 @@ const DOCS: DocSection[] = [
   {
     num: '04',
     title: '三类资源安装到哪里',
-    body: '安装会把资源下载到本机的 ~/.agents 目录（技能、MCP、供应商各有独立子目录），随后按类型接入到你选择的 CLI 工具。启用某个资源时需指定它对哪个工具生效（Claude Code 或 Codex）。',
+    body: '安装会把技能放到 ~/.agents/skills，把 MCP、供应商和应用数据放到 ~/.agent-store，随后按类型接入到你选择的 CLI 工具。启用某个资源时需指定它对哪个工具生效（Claude Code 或 Codex）。',
     bullets: [
       '技能：作为一个 Markdown 文件写入对应工具的 skills 目录（如 ~/.claude/skills/<名称>.md）',
       'MCP：把服务器条目写入工具配置——Claude Code 写入 ~/.claude/settings.json 的 mcpServers，Codex 写入 ~/.codex/config.toml 的 mcp_servers',
