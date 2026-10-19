@@ -8,7 +8,7 @@ export function resolvePaths(overrides?: Partial<Paths>): Required<Paths> {
   // $CLAUDE_CONFIG_DIR/.claude.json when that dir is set, otherwise $HOME/.claude.json.
   const claudeDirSet = overrides?.claudeConfigDir ?? process.env['CLAUDE_CONFIG_DIR']
   return {
-    aasHome: overrides?.aasHome ?? process.env['AS_HOME'] ?? join(home, '.agents'),
+    aasHome: overrides?.aasHome ?? process.env['AS_HOME'] ?? join(home, '.agent-store'),
     claudeConfigDir: overrides?.claudeConfigDir ?? process.env['CLAUDE_CONFIG_DIR'] ?? join(home, '.claude'),
     claudeJsonPath: overrides?.claudeJsonPath ?? join(claudeDirSet ?? home, '.claude.json'),
     codexConfigDir: overrides?.codexConfigDir ?? process.env['CODEX_CONFIG_DIR'] ?? join(home, '.codex'),
@@ -26,5 +26,8 @@ export function itemDir(
   category: 'provider' | 'skill' | 'mcp',
   slug: string
 ): string {
+  if (category === 'skill' && !process.env['AS_HOME'] && aasHome === join(homedir(), '.agent-store')) {
+    return join(homedir(), '.agents', 'skills', slug)
+  }
   return join(aasHome, CATEGORY_DIR[category], slug)
 }

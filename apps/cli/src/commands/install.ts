@@ -18,7 +18,7 @@ export async function runInstall(
     out(formatStep('Running install hooks...', 'done'))
 
     const detail = await engine.info(slug)
-    out(formatStep(`Writing to ~/.agents/${detail.category}s/${slug}/`))
+    out(formatStep(`Writing ${detail.category} files for ${slug}...`))
 
     for (const target of detail.compatibleWith) {
       await engine.enable(slug, target)

@@ -1,7 +1,9 @@
 import { Database } from 'bun:sqlite'
 import { join } from 'path'
+import { mkdirSync } from 'fs'
 
 export function openUsageDb(aasHome: string): Database {
+  mkdirSync(aasHome, { recursive: true })
   const db = new Database(join(aasHome, 'usage.db'), { create: true })
 
   db.exec(`

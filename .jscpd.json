@@ -1,0 +1,29 @@
+{
+  "threshold": 1.5,
+  "minLines": 8,
+  "minTokens": 60,
+  "absolute": true,
+  "format": [
+    "typescript",
+    "tsx",
+    "javascript",
+    "jsx"
+  ],
+  "reporters": [
+    "threshold"
+  ],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/.open-next/**",
+    "**/.turbo/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/test/**",
+    "**/tests/**",
+    "**/e2e/**",
+    "docs/**"
+  ]
+}

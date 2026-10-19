@@ -74,21 +74,16 @@ test('an authenticated direct upgrade sends withTrial:false to skip the default 
   expect(lastCall?.args['productId']).toBe('prod_sub')
 })
 
-test('an anonymous checkout uses the anonymous path and disables the trial', async () => {
+test('an anonymous direct upgrade is rejected', async () => {
   const res = await checkout({ period: 'monthly', email: 'a@b.co' })
-  expect(res.status).toBe(200)
-  expect(lastCall?.method).toBe('anonymous')
-  expect(lastCall?.args['withTrial']).toBe(false)
-  expect(lastCall?.args['buyerEmail']).toBe('a@b.co')
-  expect(lastCall?.args['productId']).toBe('prod_sub')
+  expect(res.status).toBe(401)
+  expect(lastCall).toBeNull()
 })
 
-test('lifetime omits withTrial entirely (one-time product has no trial to toggle)', async () => {
+test('an anonymous lifetime purchase is rejected', async () => {
   const res = await checkout({ period: 'lifetime', trial: true, email: 'a@b.co' })
-  expect(res.status).toBe(200)
-  expect(lastCall?.method).toBe('anonymous')
-  expect(lastCall?.args).not.toHaveProperty('withTrial')
-  expect(lastCall?.args['productId']).toBe('prod_life')
+  expect(res.status).toBe(401)
+  expect(lastCall).toBeNull()
 })
 
 test('an authenticated lifetime purchase also omits withTrial', async () => {

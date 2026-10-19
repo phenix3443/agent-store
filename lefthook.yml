@@ -1,0 +1,81 @@
+# 装：lefthook install    手动跑：lefthook run pre-commit
+#
+# 只放【秒级】的检查。测试和构建留给 CI——pre-commit 一旦超过几秒，
+# 人就会开始用 --no-verify，那时候它守什么都没用了。
+#
+# 【为什么不是 .git/hooks 里的软链】.git/ 不进版本控制。重新 clone、
+# 换机器、别人接手，钩子就没了，而且没有任何提示——你以为它在守着。
+# lefthook.yml 入库，`lefthook install` 一条命令恢复。
+
+pre-commit:
+  parallel: true
+
+  commands:
+    # 密钥进了 git 历史就永远在，rewrite history 对已 push 的仓库是场灾难。
+    # 这条不要注释掉。
+    secrets-check:
+      run: gitleaks protect --staged --no-banner
+      skip:
+        - merge
+        - rebase
+
+    # turbo 只重跑受影响的包，缓存命中时几十毫秒。所以这里跑全量，
+    # 不用 {staged_files} 挑文件——挑了反而绕过 turbo 的依赖图。
+    lint:
+      glob: "*.{ts,tsx,js,jsx,mts}"
+      run: pnpm lint
+
+    type-check:
+      glob: "*.{ts,tsx,mts}"
+      run: pnpm type-check
+
+    # 认知复杂度门禁。配置和存量豁免清单在 eslint.complexity.mjs，
+    # 那里写了为什么用认知复杂度而不是圈复杂度。
+    #
+    # 【--quiet 不能省】noInlineConfig 会为源码里每条写给 next lint 的
+    # eslint-disable 注释发一条 "has no effect" 警告。通过时刷屏和「等十三分钟」
+    # 是同一种失败——训练人无视门禁。三条规则全是 error，--quiet 恰好只留它们。
+    #
+    # 【--no-config-lookup 不能省】否则 eslint 会往上找 apps/store/.eslintrc.json，
+    # 那是 next lint 的配置、eslint 8 的格式，两套会打架。
+    complexity:
+      glob: "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}"
+      run: pnpm exec eslint --quiet --no-config-lookup -c eslint.complexity.mjs {staged_files}
+
+    # 复制粘贴检测。基线实测 0.64%，阈值 1.5 留余量——卡太死会逼人把重复
+    # 改成绕远的抽象，那不比重复好。
+    #
+    # 【扫 . 不扫目录清单】列目录必漏，而且和上面 complexity 的 {staged_files}
+    # 覆盖面对不上。范围只由 .jscpd.json 的 ignore 决定，一处真相。
+    #
+    # 【不能用 {staged_files}】重复是跨文件的关系，只喂暂存的那几个文件，
+    # 「这段和另一个文件里的一模一样」永远发现不了。全量跑 16ms，不值得省。
+    #
+    # 【通过时安静】用 threshold 报告器，超阈值才报错；要明细跑 `pnpm dup`。
+    duplication:
+      run: pnpm exec jscpd .
+
+commit-msg:
+  commands:
+    # 【消息文件的路径是 {1}，不是 shell 的 $1】lefthook 自己做占位符替换，
+    # 写 $1 拿到的是空串，然后 head 报 "No such file or directory"。
+    check-message:
+      run: |
+        head -1 "{1}" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+' || {
+          echo "❌ commit message 要用 Conventional Commits：type(scope): 说明"
+          echo "   type: feat fix docs style refactor perf test build ci chore revert"
+          exit 1
+        }
+        echo "✅ Commit message 格式正确"
+
+pre-push:
+  commands:
+    # 推上去的和本地不是一份，是最难查的那类问题：CI 绿的、线上错的
+    check-uncommitted:
+      run: |
+        [ -z "$(git status --porcelain)" ] || {
+          echo "❌ 有未提交的改动，推上去的和本地不是一份"
+          git status --short
+          exit 1
+        }
+        echo "✅ 工作树干净"

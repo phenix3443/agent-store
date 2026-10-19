@@ -22,7 +22,7 @@ const DOCS: DocSection[] = [
   {
     num: '02',
     title: '安装桌面客户端',
-    body: '从落地页顶部的下载按钮获取 macOS（universal，Apple 芯片与 Intel 通用）或 Windows 桌面客户端。桌面端负责管理本机已安装的资源、维护供应商配置、运行本地代理，并展示消耗仪表盘。安装后无需额外配置即可开始浏览商店；登录后可跨设备同步已安装的技能 / MCP / 供应商。',
+    body: '从落地页顶部的下载按钮获取 macOS（universal，Apple 芯片与 Intel 通用）或 Windows 桌面客户端。桌面端负责管理本机已安装的资源、维护供应商配置、运行本地代理，并展示消耗仪表盘。安装后无需额外配置即可开始浏览商店；已安装的技能、MCP 和供应商配置保存在本机。',
     bullets: [
       '当前为未签名构建，首次打开会被系统拦截，属正常现象而非文件损坏',
       'macOS 若提示「已损坏，无法打开」：把 App 拖入「应用程序」，终端执行 xattr -cr "/Applications/Agent Store CLI.app" 后再双击打开',
@@ -43,7 +43,7 @@ const DOCS: DocSection[] = [
   {
     num: '04',
     title: '三类资源安装到哪里',
-    body: '安装会把资源下载到本机的 ~/.agents 目录（技能、MCP、供应商各有独立子目录），随后按类型接入到你选择的 CLI 工具。启用某个资源时需指定它对哪个工具生效（Claude Code 或 Codex）。',
+    body: '安装会把技能放到 ~/.agents/skills，把 MCP、供应商和应用数据放到 ~/.agent-store，随后按类型接入到你选择的 CLI 工具。启用某个资源时需指定它对哪个工具生效（Claude Code 或 Codex）。',
     bullets: [
       '技能：作为一个 Markdown 文件写入对应工具的 skills 目录（如 ~/.claude/skills/<名称>.md）',
       'MCP：把服务器条目写入工具配置——Claude Code 写入 ~/.claude/settings.json 的 mcpServers，Codex 写入 ~/.codex/config.toml 的 mcp_servers',

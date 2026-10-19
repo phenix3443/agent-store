@@ -43,6 +43,7 @@ await client.webhooks.add({
     'order.completed', 'subscription.activated', 'subscription.payment_succeeded',
     'subscription.canceling', 'subscription.uncanceled', 'subscription.updated',
     'subscription.canceled', 'subscription.past_due',
+    'refund.succeeded', 'refund.failed',
   ] as never,
 })
 

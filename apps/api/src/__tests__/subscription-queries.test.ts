@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import { getDb } from '../db/client'
-import { subscriptionUpsertQuery } from '../subscription-queries'
+import { manageableBillingOrderQuery, subscriptionUpsertQuery } from '../subscription-queries'
 import type { SubscriptionRecord } from '../billing'
 
 // A fake connection string is enough: neon()'s handle is lazy and .toSQL() only
@@ -10,8 +10,12 @@ const db = getDb({ DATABASE_URL: 'postgresql://user:pass@localhost:5432/db' })
 function record(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRecord {
   return {
     waffoOrderId: 'ORD_1',
+    waffoPaymentId: 'PAY_1',
     buyerEmail: 'buyer@example.com',
     buyerIdentity: 'user-1',
+    paidAmount: '9.99',
+    currency: 'USD',
+    billingPeriod: 'monthly',
     plan: 'pro',
     status: 'active',
     productName: null,
@@ -32,4 +36,11 @@ test('the conflict-update only overwrites when the incoming event_timestamp is n
   expect(normalized).toContain('where')
   expect(normalized).toContain('excluded.event_timestamp >=')
   expect(normalized).toContain('is null or')
+})
+
+test('the manageable order query is scoped to the authenticated buyer identity', () => {
+  const { sql, params } = manageableBillingOrderQuery(db, 'user-42').toSQL()
+  expect(sql.toLowerCase()).toContain('buyer_identity')
+  expect(sql.toLowerCase()).toContain('limit')
+  expect(params).toContain('user-42')
 })

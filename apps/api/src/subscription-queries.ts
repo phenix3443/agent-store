@@ -3,6 +3,7 @@ import { desc, eq, sql } from 'drizzle-orm'
 import { getDb, type Database, type DbEnv } from './db/client'
 import { processedWebhooks, subscriptions } from './db/schema'
 import { planForSubscription, type SubscriptionRecord, type SubscriptionStatus } from './billing'
+import type { ManageableBillingOrder } from './billing-management'
 
 /** Whether a webhook delivery id has already been processed (idempotent dedup). */
 export async function isWebhookProcessed(env: DbEnv | undefined, deliveryId: string): Promise<boolean> {
@@ -38,8 +39,12 @@ export async function markWebhookProcessed(
 export function subscriptionUpsertQuery(db: Database, record: SubscriptionRecord) {
   const values = {
     waffoOrderId: record.waffoOrderId,
+    waffoPaymentId: record.waffoPaymentId,
     buyerEmail: record.buyerEmail,
     buyerIdentity: record.buyerIdentity,
+    paidAmount: record.paidAmount,
+    currency: record.currency,
+    billingPeriod: record.billingPeriod,
     plan: record.plan,
     status: record.status,
     productName: record.productName,
@@ -55,6 +60,10 @@ export function subscriptionUpsertQuery(db: Database, record: SubscriptionRecord
       set: {
         buyerEmail: values.buyerEmail,
         buyerIdentity: values.buyerIdentity,
+        waffoPaymentId: sql`coalesce(excluded.waffo_payment_id, ${subscriptions.waffoPaymentId})`,
+        paidAmount: sql`coalesce(excluded.paid_amount, ${subscriptions.paidAmount})`,
+        currency: sql`coalesce(excluded.currency, ${subscriptions.currency})`,
+        billingPeriod: sql`coalesce(excluded.billing_period, ${subscriptions.billingPeriod})`,
         plan: values.plan,
         status: values.status,
         productName: values.productName,
@@ -97,4 +106,31 @@ export async function getPlanByUserId(env: DbEnv | undefined, userId: string): P
   const row = rows[0]
   if (!row) return 'free'
   return planForSubscription(row.status as SubscriptionStatus, row.plan as Plan)
+}
+
+/** Builds the latest-order query scoped to a merchant-controlled buyer identity. */
+export function manageableBillingOrderQuery(db: Database, userId: string) {
+  return db
+    .select({
+      waffoOrderId: subscriptions.waffoOrderId,
+      waffoPaymentId: subscriptions.waffoPaymentId,
+      paidAmount: subscriptions.paidAmount,
+      currency: subscriptions.currency,
+      storeId: subscriptions.waffoStoreId,
+      billingPeriod: subscriptions.billingPeriod,
+      status: subscriptions.status,
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.buyerIdentity, userId))
+    .orderBy(desc(subscriptions.eventTimestamp))
+    .limit(1)
+}
+
+/** Returns the signed-in user's latest Waffo order for buyer self-service. */
+export async function getManageableBillingOrder(
+  env: DbEnv | undefined,
+  userId: string
+): Promise<ManageableBillingOrder | null> {
+  const rows = await manageableBillingOrderQuery(getDb(env), userId)
+  return rows[0] ?? null
 }

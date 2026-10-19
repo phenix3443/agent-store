@@ -68,8 +68,12 @@ export const items = pgTable('items', {
 export const subscriptions = pgTable('subscriptions', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
   waffoOrderId: text('waffo_order_id').notNull().unique(),
+  waffoPaymentId: text('waffo_payment_id'),
   buyerEmail: text('buyer_email').notNull(),
   buyerIdentity: text('buyer_identity'),
+  paidAmount: numeric('paid_amount'),
+  currency: text('currency'),
+  billingPeriod: text('billing_period'),
   plan: text('plan').notNull().default('pro'),
   status: text('status').notNull(),
   productName: text('product_name'),

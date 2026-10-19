@@ -8,12 +8,18 @@
     "type-check": "turbo type-check",
     "test": "turbo test",
     "clean": "turbo clean",
-    "crawl:catalog": "bun scripts/crawl-catalog.ts"
+    "crawl:catalog": "bun scripts/crawl-catalog.ts",
+    "complexity": "eslint --quiet --no-config-lookup -c eslint.complexity.mjs .",
+    "dup": "jscpd -r console-full ."
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
+    "eslint": "^9.39.5",
+    "eslint-plugin-sonarjs": "^4.2.0",
+    "jscpd": "^5.0.16",
     "turbo": "^2.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "typescript-eslint": "^8.67.0"
   },
   "packageManager": "pnpm@11.5.0",
   "workspaces": [

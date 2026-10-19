@@ -6,6 +6,7 @@ import { StoreClient } from '@as/sdk'
 import type { Item, Plan } from '@as/types'
 import { CATEGORY_META, formatDownloads } from '@/lib/item-meta'
 import { UpgradeProButton } from '@/components/UpgradeProButton'
+import { BillingManagement } from '@/components/BillingManagement'
 
 // All catalog/publisher data goes through the standalone API server.
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
@@ -72,9 +73,9 @@ export default async function DashboardPage() {
     token = undefined
   }
   const client = new StoreClient(API_URL)
-  const [itemsResult, entResult] = token
-    ? await Promise.all([client.getMyItems(token), client.getMyEntitlements(token)])
-    : [{ data: [] as Item[], error: null }, { data: null, error: null }]
+  const [itemsResult, entResult, billingResult] = token
+    ? await Promise.all([client.getMyItems(token), client.getMyEntitlements(token), client.getMyBilling(token)])
+    : [{ data: [] as Item[], error: null }, { data: null, error: null }, { data: null, error: null }]
 
   const items: Item[] = itemsResult.data ?? []
   const plan: Plan = entResult.data?.plan ?? 'free'
@@ -136,6 +137,10 @@ export default async function DashboardPage() {
           <span className="text-[12px] font-medium text-store-green">Pro 权益已生效</span>
         )}
       </section>
+
+      {planMeta.premium && token && billingResult.data && (
+        <BillingManagement token={token} initialBilling={billingResult.data} />
+      )}
 
       {/* Overview stat tiles */}
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">

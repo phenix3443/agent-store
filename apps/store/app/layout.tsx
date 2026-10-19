@@ -5,6 +5,7 @@ import { getLocale, getMessages } from 'next-intl/server'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import { ClientStateProvider } from '@/components/ClientStateProvider'
+import { Footer } from '@/components/Footer'
 import { Header } from '@/components/Header'
 import { getCurrentUser } from '@/lib/auth'
 import './globals.css'
@@ -60,6 +61,7 @@ export default async function RootLayout({
             <div className="flex min-h-screen flex-col">
               <Header user={user} />
               <div className="flex-1">{children}</div>
+              <Footer />
             </div>
             {drawer}
           </ClientStateProvider>

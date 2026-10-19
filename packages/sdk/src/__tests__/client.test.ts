@@ -319,3 +319,49 @@ describe('StoreClient.createCheckout', () => {
     globalThis.fetch = originalFetch
   })
 })
+
+describe('StoreClient billing management', () => {
+  test('gets the authenticated billing state', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(url)).toBe('http://localhost:3000/api/me/billing')
+      expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer tok-1')
+      return new Response(JSON.stringify({
+        billing: { paidAmount: '9.99', currency: 'USD', billingPeriod: 'monthly', status: 'active' },
+      }))
+    }
+
+    const result = await new StoreClient().getMyBilling('tok-1')
+    expect(result.data?.status).toBe('active')
+    globalThis.fetch = originalFetch
+  })
+
+  test('posts an authenticated cancellation', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(url)).toBe('http://localhost:3000/api/me/billing/cancel')
+      expect(init?.method).toBe('POST')
+      expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer tok-1')
+      return new Response(JSON.stringify({ orderId: 'ORD_1', status: 'canceling' }))
+    }
+
+    const result = await new StoreClient().cancelMySubscription('tok-1')
+    expect(result.data).toEqual({ status: 'canceling' })
+    globalThis.fetch = originalFetch
+  })
+
+  test('posts an authenticated refund reason', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(url)).toBe('http://localhost:3000/api/me/billing/refund')
+      expect(init?.method).toBe('POST')
+      expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer tok-1')
+      expect(JSON.parse(String(init?.body))).toEqual({ reason: 'Not suitable for my workflow' })
+      return new Response(JSON.stringify({ ticketId: 'TKT_1', status: 'pending' }))
+    }
+
+    const result = await new StoreClient().requestMyRefund('Not suitable for my workflow', 'tok-1')
+    expect(result.data).toEqual({ ticketId: 'TKT_1', status: 'pending' })
+    globalThis.fetch = originalFetch
+  })
+})

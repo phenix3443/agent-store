@@ -27,7 +27,7 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             </div>
             <Dialog.Title className="text-[19px] font-bold tracking-tight text-store-text">登录 Agent Store</Dialog.Title>
             <Dialog.Description className="mt-[7px] text-[12.5px] leading-relaxed text-store-text-3">
-              登录后可发布资源、跨设备同步已安装的技能 / MCP / 供应商。
+              登录后可发布资源、管理个人资料并查看购买权益。
             </Dialog.Description>
           </div>
 
@@ -57,8 +57,9 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
 
           <div className="border-t border-store-border px-8 py-3.5 text-center">
             <span className="text-[11px] leading-relaxed text-store-text-3">
-              继续即表示同意 <span className="text-store-text-2">服务条款</span> 与{' '}
-              <span className="text-store-text-2">隐私政策</span>
+              继续即表示同意{' '}
+              <a href="/terms" className="text-store-text-2 hover:text-store-text">服务条款</a> 与{' '}
+              <a href="/privacy" className="text-store-text-2 hover:text-store-text">隐私政策</a>
             </span>
           </div>
         </Dialog.Content>

@@ -57,7 +57,7 @@ dev-store:
 	pnpm --filter=@as/store dev
 
 ## Desktop client for local dev, in isolated /tmp dirs — never touches your real
-## ~/.claude, ~/.codex, or ~/.agents. Built and run as a packaged debug .app with a
+## ~/.claude, ~/.codex, ~/.agents, or ~/.agent-store. Built and run as a packaged debug .app with a
 ## dev-only identity (com.aas.cli-gui.dev + agent-store-dev://) so macOS routes the
 ## OAuth deep-link back to the running window — `tauri dev`'s unbundled binary does
 ## not receive it. Reads the catalog from the local API (AS_STORE_URL) and points

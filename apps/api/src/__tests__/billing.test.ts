@@ -41,8 +41,11 @@ test('order.completed (one-time / lifetime purchase) grants active', () => {
   expect(statusForEventType('order.completed')).toBe('active')
 })
 
-test('statusForEventType returns null for refunds and unknown events', () => {
-  expect(statusForEventType('refund.succeeded')).toBeNull()
+test('statusForEventType revokes access after a successful refund', () => {
+  expect(statusForEventType('refund.succeeded')).toBe('canceled')
+})
+
+test('statusForEventType returns null for unknown events', () => {
   expect(statusForEventType('something.unknown')).toBeNull()
 })
 
@@ -56,12 +59,21 @@ test('isActiveStatus grants access through canceling and trialing, not canceled/
 
 test('subscriptionRecordFromEvent builds a record for a subscription event', () => {
   const record = subscriptionRecordFromEvent(
-    makeEvent('subscription.activated', { merchantProvidedBuyerIdentity: 'user-42' })
+    makeEvent('subscription.activated', {
+      merchantProvidedBuyerIdentity: 'user-42',
+      paymentId: 'PAY_1',
+      total: '10.89',
+      billingPeriod: 'monthly',
+    })
   )
   expect(record).toEqual({
     waffoOrderId: 'ORD_1',
+    waffoPaymentId: 'PAY_1',
     buyerEmail: 'buyer@example.com',
     buyerIdentity: 'user-42',
+    paidAmount: '10.89',
+    currency: 'USD',
+    billingPeriod: 'monthly',
     plan: 'pro',
     status: 'active',
     productName: null,
@@ -87,8 +99,10 @@ test('subscriptionRecordFromEvent builds an active record for a one-time (lifeti
   expect(record?.plan).toBe('pro')
 })
 
-test('subscriptionRecordFromEvent returns null for refunds', () => {
-  expect(subscriptionRecordFromEvent(makeEvent('refund.succeeded'))).toBeNull()
+test('subscriptionRecordFromEvent revokes the refunded order entitlement', () => {
+  const record = subscriptionRecordFromEvent(makeEvent('refund.succeeded'))
+  expect(record?.waffoOrderId).toBe('ORD_1')
+  expect(record?.status).toBe('canceled')
 })
 
 test('planForSubscription grants the plan while active-ish, else free', () => {

@@ -27,6 +27,13 @@ export interface PublisherWithItems {
   items: Item[]
 }
 
+export interface BillingState {
+  paidAmount: string | null
+  currency: string | null
+  billingPeriod: string | null
+  status: string
+}
+
 export class StoreClient {
   readonly baseUrl: string
   private readonly fetchInit?: RequestInit
@@ -213,6 +220,51 @@ export class StoreClient {
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
       if (!json.checkoutUrl) return { data: null, error: 'No checkoutUrl in response' }
       return { data: { checkoutUrl: json.checkoutUrl }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async getMyBilling(token: string): Promise<Result<BillingState>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/me/billing`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json() as { billing?: BillingState; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (!json.billing) return { data: null, error: 'No billing state in response' }
+      return { data: json.billing, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async cancelMySubscription(token: string): Promise<Result<{ status: string }>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/me/billing/cancel`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json() as { status?: string; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (!json.status) return { data: null, error: 'No cancellation status in response' }
+      return { data: { status: json.status }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  async requestMyRefund(reason: string, token: string): Promise<Result<{ ticketId: string; status: string }>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/me/billing/refund`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      const json = await res.json() as { ticketId?: string; status?: string; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (!json.ticketId || !json.status) return { data: null, error: 'Invalid refund response' }
+      return { data: { ticketId: json.ticketId, status: json.status }, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }

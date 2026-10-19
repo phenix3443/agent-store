@@ -7,8 +7,12 @@ export type SubscriptionStatus = 'active' | 'canceling' | 'canceled' | 'past_due
 /** A subscription row derived from a webhook event, ready to upsert. */
 export interface SubscriptionRecord {
   waffoOrderId: string
+  waffoPaymentId: string | null
   buyerEmail: string
   buyerIdentity: string | null
+  paidAmount: string
+  currency: string
+  billingPeriod: string | null
   plan: Plan
   status: SubscriptionStatus
   productName: string | null
@@ -19,8 +23,8 @@ export interface SubscriptionRecord {
 
 /**
  * Maps a Waffo webhook event type to the resulting subscription status, or null
- * for events that don't change subscription state (one-time orders, refunds,
- * unknown types). `canceling` still grants access until period end.
+ * for events that don't change subscription state. `canceling` still grants
+ * access until period end; a successful refund revokes access immediately.
  */
 export function statusForEventType(eventType: string): SubscriptionStatus | null {
   switch (eventType) {
@@ -35,6 +39,7 @@ export function statusForEventType(eventType: string): SubscriptionStatus | null
     case 'subscription.canceling':
       return 'canceling'
     case 'subscription.canceled':
+    case 'refund.succeeded':
       return 'canceled'
     case 'subscription.past_due':
       return 'past_due'
@@ -58,8 +63,12 @@ export function subscriptionRecordFromEvent(event: WebhookEvent<WebhookEventData
   const buyerIdentity = data.orderMetadata?.['userId'] ?? data.merchantProvidedBuyerIdentity ?? null
   return {
     waffoOrderId: data.orderId,
+    waffoPaymentId: data.paymentId ?? null,
     buyerEmail: data.buyerEmail,
     buyerIdentity,
+    paidAmount: data.total ?? data.amount,
+    currency: data.currency,
+    billingPeriod: data.billingPeriod ?? null,
     // Only the Pro subscription exists today; product-name/metadata mapping can
     // refine this to 'team' later without changing the webhook plumbing.
     plan: 'pro',

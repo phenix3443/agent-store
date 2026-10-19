@@ -8,6 +8,7 @@ import { itemVersions, items, reviews } from './db/schema'
 import type { NeonAuthEnv } from './neon-auth'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
+import { cancelBillingSubscription, requestBillingRefund } from './billing-management'
 import { getAuthUser } from './auth'
 import { getMyItems } from './publisher-items'
 import {
@@ -16,6 +17,7 @@ import {
   upsertSubscription,
   getPlanByEmail,
   getPlanByUserId,
+  getManageableBillingOrder,
 } from './subscription-queries'
 
 // On Cloudflare Workers, secrets arrive as the fetch handler's `env` (Hono c.env).
@@ -206,18 +208,12 @@ app.post('/api/billing/checkout', async (c) => {
     return c.json({ error: 'Billing not configured' }, 501)
   }
 
-  // Bind the purchase to the logged-in app user when a valid token is present, so
-  // the webhook can link the subscription to their account (buyer_identity).
+  // Every purchase must bind to a merchant-controlled account identity.
   const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Sign in to purchase' }, 401)
 
-  // Trials de-duplicate on a stable, merchant-controlled buyer identity. An
-  // anonymous checkout lets the buyer self-report any email and re-claim the
-  // trial, so a trial requires an authenticated identity to bind against.
-  if (withTrial === true && !user) return c.json({ error: 'Sign in to start a free trial' }, 401)
-
-  const buyerEmail = body.email ?? user?.email
-  const metadata: Record<string, string> = {}
-  if (user) metadata['userId'] = user.id
+  const buyerEmail = body.email ?? user.email
+  const metadata: Record<string, string> = { userId: user.id }
   if (buyerEmail) metadata['buyerEmail'] = buyerEmail
 
   const successUrl = body.successUrl ?? checkoutSuccessUrl(c.env)
@@ -225,33 +221,17 @@ app.post('/api/billing/checkout', async (c) => {
   const orderMetadata = Object.keys(metadata).length > 0 ? metadata : undefined
 
   try {
-    if (user) {
-      // Authenticated checkout binds the order to a merchant-controlled buyer
-      // identity (user.id). The order stays tied to this identity even if the
-      // buyer edits the email on the checkout form, so trials can't be re-farmed.
-      const session = await client.checkout.authenticated.create({
-        productId,
-        currency: 'USD',
-        buyerIdentity: user.id,
-        buyerEmail,
-        successUrl,
-        metadata: orderMetadata,
-        // Always explicit for subscriptions (true = trial, false = direct upgrade
-        // skips the product's default trial); omitted for lifetime.
-        ...(withTrial !== undefined ? { withTrial } : {}),
-      })
-      return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
-    }
-    // Anonymous checkout has no stable identity (buyer self-reports email), so a
-    // subscription can never grant a trial — `withTrial` is guarded off above and
-    // pinned false here; lifetime omits the field entirely.
-    const session = await client.checkout.anonymous.create({
+    // The order stays bound to user.id even if the buyer edits their checkout email.
+    const session = await client.checkout.authenticated.create({
       productId,
       currency: 'USD',
+      buyerIdentity: user.id,
       buyerEmail,
       successUrl,
       metadata: orderMetadata,
-      ...(withTrial !== undefined ? { withTrial: false } : {}),
+      // Always explicit for subscriptions (true = trial, false = direct upgrade
+      // skips the product's default trial); omitted for lifetime.
+      ...(withTrial !== undefined ? { withTrial } : {}),
     })
     return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
   } catch {
@@ -293,6 +273,60 @@ app.get('/api/me/entitlements', async (c) => {
     return c.json({ plan })
   } catch {
     return c.json({ error: 'Failed to resolve entitlements' }, 500)
+  }
+})
+
+app.get('/api/me/billing', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  try {
+    const order = await getManageableBillingOrder(c.env, user.id)
+    if (!order) return c.json({ error: 'No billing order found' }, 404)
+    return c.json({
+      billing: {
+        paidAmount: order.paidAmount,
+        currency: order.currency,
+        billingPeriod: order.billingPeriod,
+        status: order.status,
+      },
+    })
+  } catch {
+    return c.json({ error: 'Failed to resolve billing order' }, 500)
+  }
+})
+
+app.post('/api/me/billing/cancel', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  try {
+    const order = await getManageableBillingOrder(c.env, user.id)
+    if (!order) return c.json({ error: 'No billing order found' }, 404)
+    const result = await cancelBillingSubscription(getWaffoClient(c.env), user.id, order)
+    return c.json(result)
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Only subscriptions can be canceled') {
+      return c.json({ error: error.message }, 400)
+    }
+    return c.json({ error: 'Failed to cancel subscription' }, 502)
+  }
+})
+
+app.post('/api/me/billing/refund', async (c) => {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  const body = (await c.req.json().catch(() => ({}))) as { reason?: string }
+  const reason = body.reason?.trim()
+  if (!reason) return c.json({ error: 'Refund reason is required' }, 400)
+  try {
+    const order = await getManageableBillingOrder(c.env, user.id)
+    if (!order) return c.json({ error: 'No billing order found' }, 404)
+    const result = await requestBillingRefund(getWaffoClient(c.env), user.id, order, reason)
+    return c.json(result)
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Payment details are unavailable') {
+      return c.json({ error: error.message }, 409)
+    }
+    return c.json({ error: 'Failed to request refund' }, 502)
   }
 })
 

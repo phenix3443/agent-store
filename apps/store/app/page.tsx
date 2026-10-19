@@ -3,7 +3,6 @@ import { getFeaturedItems } from '@/lib/catalog'
 import { CATEGORY_META, CategoryGlyph } from '@/lib/item-meta'
 
 const RELEASES_URL = 'https://github.com/awesome-agent-store/agent-store/releases'
-const ORG_URL = 'https://github.com/awesome-agent-store'
 // Installers are built by .github/workflows/release.yml and published to GitHub
 // Releases. The /download/[target] route resolves each button to the newest
 // matching asset, so links always track the latest release.
@@ -175,8 +174,8 @@ export default async function LandingPage() {
           <Feature
             color="#3ad29f"
             soft="rgba(58,210,159,0.16)"
-            title="一键安装，跨端同步"
-            body="技能、MCP、供应商在商店里点一下即装，登录后跨设备同步已安装的资源，随时可更新。"
+            title="一键安装，本地管理"
+            body="技能、MCP、供应商在商店里点一下即可安装，并在本地客户端集中查看、更新和移除。"
             icon={
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M12 2.6c.55 4.9 2.9 7.25 7.8 7.8-4.9.55-7.25 2.9-7.8 7.8-.55-4.9-2.9-7.25-7.8-7.8 4.9-.55 7.25-2.9 7.8-7.8Z" />
@@ -242,45 +241,6 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      {/* footer */}
-      <div className="relative border-t border-white/[0.07]">
-        <div className="mx-auto flex max-w-[1000px] flex-wrap gap-10 px-8 py-11">
-          <div className="min-w-[200px] flex-1">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-store-accent text-white">
-                <svg width="15" height="15" viewBox="0 0 18 18" fill="none" aria-hidden>
-                  <path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-                  <path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <span className="text-sm font-bold text-white">Agent Store</span>
-            </div>
-            <div className="mt-3 text-xs leading-relaxed text-[#6b6b78]">
-              AI Agent 的资源中心。
-              <br />© 2026 Agent Store
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-14">
-            <div className="flex flex-col gap-2.5">
-              <div className="text-xs font-bold text-[#8a8a98]">产品</div>
-              <Link href="/store" className="text-[13px] text-[#a9a9bd] hover:text-white">商店</Link>
-              <Link href="/docs" className="text-[13px] text-[#a9a9bd] hover:text-white">文档</Link>
-              <Link href="/pricing" className="text-[13px] text-[#a9a9bd] hover:text-white">定价</Link>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              <div className="text-xs font-bold text-[#8a8a98]">资源</div>
-              <Link href="/docs" className="text-[13px] text-[#a9a9bd] hover:text-white">开始使用</Link>
-              <a href={RELEASES_URL} className="text-[13px] text-[#a9a9bd] hover:text-white">GitHub</a>
-              <a href={RELEASES_URL} className="text-[13px] text-[#a9a9bd] hover:text-white">更新日志</a>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              <div className="text-xs font-bold text-[#8a8a98]">公司</div>
-              <a href={ORG_URL} className="text-[13px] text-[#a9a9bd] hover:text-white">关于</a>
-              <a href={`${ORG_URL}/registry/issues`} className="text-[13px] text-[#a9a9bd] hover:text-white">联系</a>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

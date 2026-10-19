@@ -33,7 +33,11 @@ export default function PricingPage() {
     setError(null)
     try {
       const token = await getAuthToken()
-      const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token: token ?? undefined })
+      if (!token) {
+        setError('请先登录后购买')
+        return
+      }
+      const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token })
       if (result.data?.checkoutUrl) window.open(result.data.checkoutUrl, '_blank', 'noopener,noreferrer')
       else setError(result.error ?? '发起支付失败')
     } catch {
