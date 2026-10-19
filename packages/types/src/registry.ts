@@ -1,6 +1,6 @@
 import type { InstalledItem } from './engine'
 
-/** Shape of ~/.agents/registry.json */
+/** Shape of ~/.agent-store/registry.json */
 export interface RegistryJson {
   installed: InstalledItem[]
 }

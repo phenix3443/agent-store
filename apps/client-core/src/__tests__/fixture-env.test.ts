@@ -64,6 +64,20 @@ test('fixture env rejects real home directories with trailing slash', () => {
   ).toThrow('refuses to use real home directory path')
 })
 
+test('fixture env rejects the Agent Store data directory', () => {
+  expect(() =>
+    withEnv(
+      {
+        AS_HOME: `${process.env.HOME}/.agent-store`,
+        CLAUDE_CONFIG_DIR: '/tmp/claude-fixture',
+        CODEX_CONFIG_DIR: '/tmp/codex-fixture',
+        AGENT_PACKAGE_FIXTURE_ALLOW_HOME_DIRS: undefined,
+      },
+      () => getIsolatedFixturePathsFromEnv()
+    )
+  ).toThrow('refuses to use real home directory path')
+})
+
 test('fixture env accepts explicit isolated directories', () => {
   const paths = withEnv(
     {

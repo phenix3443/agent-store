@@ -5,12 +5,7 @@ import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
-
-const CATEGORY_DIR: Record<string, string> = {
-  provider: 'providers',
-  skill: 'skills',
-  mcp: 'mcps',
-}
+import { itemDir } from '../paths'
 
 export const RELAY_AUTH_TOKEN_SENTINEL = 'aas-relay'
 
@@ -76,7 +71,7 @@ export async function syncItemToClaude(
   claudeJsonPath: string,
   action: 'add' | 'remove'
 ): Promise<void> {
-  const dir = join(aasHome, CATEGORY_DIR[category], slug)
+  const dir = itemDir(aasHome, category, slug)
   const settings = await readSettings(claudeConfigDir)
 
   if (category === 'mcp') {

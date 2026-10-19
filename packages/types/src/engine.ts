@@ -8,7 +8,8 @@ export type ToolTarget = 'claude' | 'codex'
 /**
  * Configurable paths — all three must be overridable for test isolation.
  * Default resolution (in Engine implementation, not this package):
- *   aasHome       = process.env.AS_HOME ?? '~/.agents'
+ *   aasHome       = process.env.AS_HOME ?? '~/.agent-store'
+ *   installed skills = '~/.agents/skills' by default
  *   claudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? '~/.claude'
  *   codexConfigDir  = process.env.CODEX_CONFIG_DIR ?? '~/.codex'
  */
@@ -155,7 +156,7 @@ export interface ProviderHealth {
   lastErrorAt: string | null
 }
 
-/** A registry entry — shape stored in ~/.agents/registry.json and returned by Engine.list() */
+/** A registry entry — shape stored in ~/.agent-store/registry.json and returned by Engine.list() */
 export interface InstalledItem {
   slug: string
   category: 'provider' | 'skill' | 'mcp'
@@ -194,7 +195,7 @@ export interface ItemDetail {
   // Category-specific (optional — populated based on category)
   /** provider + mcp: JSON Schema for user configuration fields */
   configSchema?: JsonSchema
-  /** provider + mcp: current values stored in ~/.agents/.../config.json */
+  /** provider + mcp: current values stored in ~/.agent-store/.../config.json */
   currentConfig?: Record<string, unknown>
   /** provider only */
   supportedModels?: string[]
