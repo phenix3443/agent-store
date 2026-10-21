@@ -1,6 +1,6 @@
 # Global Skills and MCP management for Claude Code and Codex: current state and phase-one plan
 
-Status: draft plan (SOL-901). No code changes yet.
+Status: draft plan (SOL-901), revision 2. Revision 2 addresses the review in [#41 comment 6320613986](https://github.com/phenix3443/agent-store/issues/41#issuecomment-6320613986): the source contract goes through the real API (§5.3), the skill lifecycle is explicit (§5.4), MCP ownership and rollback are covered (§5.5, §6.2), G10 is assigned (§5.6), and the acceptance script detects failures (§6). No code changes yet.
 
 Goal: get each of Claude Code and Codex to recognize and use user-level (global) Skills and MCP servers installed by Agent Store, designing and passing acceptance for each tool separately. Unify code only where a real shared pattern shows up; no forced abstraction up front. Phase one does not cover project-level configuration.
 
@@ -36,6 +36,8 @@ Observations:
 3. **Codex user-level skills**: read from both `$CODEX_HOME/skills` and **`$HOME/.agents/skills`** (roots `r0`/`r1` in `codex debug prompt-input`); a skill directory symlinked into `~/.agents/skills` is also recognized. `codex app-server`'s `skills/list` returns `scope:"user"` with the resolved real path. Only the exact `SKILL.md` filename is recognized (a lowercase `skill.md` was not picked up on the case-insensitive APFS volume).
 4. **Codex user-level MCP**: `codex mcp add` writes `[mcp_servers.<name>]` (`command`/`args`/`[...env]` or `url`) to `$CODEX_HOME/config.toml` and **preserves the existing comments and formatting**. `codex mcp list --json` shows the parsed config; `codex app-server`'s `mcpServerStatus/list` actually starts the server and returns `serverInfo` plus `tools.echo` (no login required).
 
+5. **Skill identity differs between the tools** (2026-10-22, same isolated setup): the directory `as-dir-x` with frontmatter `name: fm-x` shows up in Claude Code as `as-dir-x` (both `init.skills` and `slash_commands`), but Codex lists it as `fm-x` (`codex debug prompt-input`: `fm-x: probe x (file: r0/as-dir-x/SKILL.md)`). So Claude takes the directory name and Codex takes the frontmatter `name`. Registry skills hit this: the slug `skills-canvas-design` has frontmatter `name: canvas-design`.
+
 Conclusion: for both tools, "recognized" can be checked in an isolated environment without a model call. "Actually usable" (the model calls the skill/tool) needs a real model call, which goes in the real-environment acceptance step (§6).
 
 ## 2. Current state of agent-store / registry
@@ -48,6 +50,8 @@ Paths are relative to `apps/client-core/src/`.
 - Enable: `config/claude.ts:89-97` and `config/codex.ts:180-188` **copy** `<item>/skill.md` to `<tool>/skills/<slug>/SKILL.md`; disable/uninstall is `rm -rf`.
 - Package engine: `agent-package-engine.ts:344-360` also copies just one file, into `skills/<publisher>.<name>#<id>/SKILL.md`; no disable/uninstall.
 - Listing/detection only reads `registry.json` (`engine.ts:231-237`); real directories are never scanned.
+- API contract: `apps/api/src/db-types.ts:73-78` maps a skill to `contentUrl` only, and `SkillItem` (`packages/types/src/items.ts:66-70`) has no source field. So `StoreClient.getItemBySlug` never returns `metadata.source`, and `test/e2e/fixture-server.ts` serves raw objects that skip `mapItem`.
+- CLI: `apps/cli/src/commands/install.ts:9` handles only `args[0]`, and its `catch` prints the error and returns. The process exits 0 when an install fails.
 
 ### 2.2 MCP
 
@@ -61,6 +65,8 @@ Paths are relative to `apps/client-core/src/`.
 
 - `schema/package.schema.json`: `installHook.steps[]` (`script`/`config`/`file`) plus free-form `metadata`.
 - Current packages: 10 skills (all `compatibleWith:["claude"]`, all with `metadata.source{repo,ref,path}`); 8 MCPs (6 stdio, 2 http, all `["claude","codex"]`, none with headers).
+- In all 10 skills `metadata.source.path` points to a **file** (`.../<dir>/SKILL.md`), not a directory, and `ref` is the branch `main` rather than a commit.
+- None of the 8 MCPs declares `configSchema.properties`. The stdio commands are all `npx -y <pkg>` with no quoting. `biel-ai`'s URL contains the template `{project_slug}`, but nothing ever fills it in.
 
 ### 2.4 Tests
 
@@ -82,6 +88,10 @@ Paths are relative to `apps/client-core/src/`.
 | G8 | Package names contain `.`/`#` | Odd tool names (`mcp__a.b#c__x`); Codex compatibility unverified |
 | G9 | Registry skills don't declare `codex` | Codex can't install them through the store |
 | G10 | `serverCommand` split on spaces; config values not injected into `env` | MCPs that take arguments or need keys are unusable |
+| G11 | API/SDK don't expose `source`; registry `source.path` is a file path | A full-directory install can't get its source through the production API |
+| G12 | MCP add/remove is unconditional by name | Can overwrite or delete a same-name MCP the user configured themselves |
+| G13 | `as install` takes one slug and exits 0 on failure | Scripts and acceptance can't detect failures |
+| G14 | Claude names a skill by its directory, Codex by its frontmatter `name` | The same skill has different names in the two tools; recognition checks by slug are wrong for Codex |
 
 ## 3. How each tool manages things (official docs)
 
@@ -91,6 +101,7 @@ Docs consulted 2026-10-21. Tags: [doc] = official docs, [src] = source code, [ex
 
 - Personal skills: `~/.claude/skills/<name>/SKILL.md`; with `CLAUDE_CONFIG_DIR` set, every `~/.claude` path moves under that directory [doc: [skills](https://code.claude.com/docs/en/skills), [claude-directory](https://code.claude.com/docs/en/claude-directory)] [exp].
 - Frontmatter fields are all optional, and `name` defaults to the directory name; but to stay Codex-compatible we always write `name` + `description` [doc].
+- The skill name the tool shows comes from the **directory name**, even when the frontmatter `name` is different (2.1.80) [exp §1.1-5]; see the [naming reference](https://code.claude.com/docs/en/skills#how-a-skill-gets-its-command-name).
 - A skill entry can be a symlink to a directory elsewhere, and the same target is loaded only once [doc] [exp].
 - Skill directories are watched, so edits apply in the current session; a brand-new top-level skills directory needs `/reload-skills` [doc].
 - MCP user scope: the top level of `~/.claude.json`; local scope sits under `projects[path]`, project scope in `.mcp.json`. Precedence is local > project > user, with same-name entries replaced whole [doc: [mcp](https://code.claude.com/docs/en/mcp)].
@@ -107,6 +118,7 @@ Docs consulted 2026-10-21. Tags: [doc] = official docs, [src] = source code, [ex
 - The code also scans `$CODEX_HOME/skills`, annotated "Deprecated user skills location ... kept for backward compatibility" [src: [host_roots.rs](https://github.com/openai/codex/blob/main/codex-rs/ext/skills/src/host_roots.rs)] [exp].
 - `~/.agents/skills` uses `$HOME`, not `CODEX_HOME` [src] [exp].
 - SKILL.md must include `name` and `description`; symlinked skill folders are supported [doc] [exp].
+- The skill name the tool shows comes from the frontmatter `name`, not the directory name [exp §1.1-5].
 - Per-skill disable: in `config.toml`, `[[skills.config]] path="/abs/SKILL.md" enabled=false`, effective after a Codex restart [doc].
 - MCP: `[mcp_servers.<name>]` in `$CODEX_HOME/config.toml`.
   - stdio keys: `command/args/env/env_vars/cwd`.
@@ -132,101 +144,256 @@ Takeaways:
 2. None of the three can serve as a base for Claude Code / Codex MCP management; MCP writes go through the official CLIs (§5).
 3. Reuse ideas only, not code: both skill references are Rust/Tauri, while this repo's client-core is TypeScript/bun.
 
+
 ## 5. Design
 
-Shared principles (both tools follow them independently; this is not a shared abstraction):
+Shared principles. Each tool follows them on its own; they are not a shared abstraction.
 
-- **The canonical skill store is `~/.agents/skills/<name>/`**, matching the existing `~/.agents/skills` convention and `docs/codex-claude-shared-guidance-design.md`. Agent Store writes only the directories it installed itself; each one carries the marker file `.agent-store.json` (source, version, content hash). Directories without a marker belong to the user: never overwrite or delete them, and report a conflict on a name clash.
-- **Write config through the official CLI first** (`claude mcp add-json/remove --scope user`, `codex mcp add/remove`). The CLI handles backups, format preservation, and future format changes. Fall back to file edits only for fields the CLI doesn't support, and then always: abort the write on a parse failure, write atomically (temp file + rename), and back up to `~/.agents/agent-store/backups/<ts>/` first.
-- **Detection is based on the tools' own view**: "installed" comes from the files we wrote, while "recognized" comes from each tool's own interface (§1.1) and is shown in `as doctor` / the acceptance script.
-- Name normalization: the skill/MCP name exposed to a tool is `^[a-z0-9-]{1,60}$` (the registry slug). Package-engine names `<publisher>.<name>#<id>` are converted to `<publisher>-<name>-<id>` (only for new installs; old entries keep their name until the PR6 migration).
+- **The canonical skill store is `~/.agents/skills/<slug>/`**, matching the existing convention and `docs/codex-claude-shared-guidance-design.md`. Agent Store writes only directories it installed itself. Each one carries the marker `.agent-store.json` with `{slug, version, source{repo,ref,resolvedSha,path}, contentHash, runtimeNames{claude,codex}}`. Directories without a marker belong to the user: Agent Store never overwrites or deletes them, and reports a conflict on a name clash.
+- **Write config through the official CLI first** (`claude mcp add-json/remove --scope user`, `codex mcp add/remove`). Ownership and conflicts are decided by Agent Store's own preflight (§5.5), never by the CLI. Fall back to file edits only when the binary is missing, and then always: abort the write on a parse failure, write atomically (temp file + rename), and back up to `~/.agents/agent-store/backups/<ts>/` first.
+- **Detection is based on the tools' own view**: "installed" comes from the files we wrote, and "recognized" comes from each tool's own interface (§1.1), checked by the per-tool resolved identity (§5.3).
+- **Name rules**:
+  - The install directory and MCP entry name are the registry slug (`^[a-z0-9-]{1,60}$`).
+  - Skill frontmatter is **kept as the source wrote it, never rewritten**. So the Claude identity is `<slug>` (directory) and the Codex identity is the frontmatter `name`; both are recorded in the marker as `runtimeNames`.
+  - Package-engine names `<publisher>.<name>#<id>` are converted to `<publisher>-<name>-<id>` for new installs only; old entries keep their name until the PR7 migration.
 
 ### 5.1 Claude Code
 
-| Object | Location | Enable | Disable/uninstall | Recognition check |
-| --- | --- | --- | --- | --- |
-| Skill | `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/<name>` → symlink → `~/.agents/skills/<name>` | Create the symlink; if the target exists and is not our symlink → conflict, no write | Remove only symlinks that point into our store | `init.skills` contains `<name>` |
-| MCP | `${CLAUDE_CONFIG_DIR:-~}/.claude.json` `mcpServers.<name>` | `claude mcp add-json --scope user <name> '<json>'` | `claude mcp remove --scope user <name>` | `claude mcp get <name>` is Connected; `init.mcp_servers[].status=="connected"` |
+| Object | Location | Identity | Recognition check |
+| --- | --- | --- | --- |
+| Skill | `${CLAUDE_CONFIG_DIR:-~/.claude}/skills/<slug>` → symlink → `~/.agents/skills/<slug>` | `<slug>` | `init.skills` contains `<slug>` |
+| MCP | `${CLAUDE_CONFIG_DIR:-~}/.claude.json` top-level `mcpServers.<slug>` | `<slug>`, tools `mcp__<slug>__*` | `init.mcp_servers[name==<slug>].status=="connected"` |
 
-- When the `claude` binary is unavailable, fall back to editing `.claude.json` safely as described above (keep the current `claude.ts` logic, but fix G4: abort on parse failure, write atomically, back up).
-- JSON fields: stdio `{type,command,args,env}`; http/sse `{type,url,headers}`.
+- Without `CLAUDE_CONFIG_DIR`, the defaults are `~/.claude/skills` and `~/.claude.json` (Q2, accepted in review).
+- JSON fields: stdio `{type,command,args,env}`; http/sse `{type,url,headers}`. When the `claude` binary is missing, the fallback is the safe file edit above (fixes G4).
 
 ### 5.2 Codex
 
-| Object | Location | Enable | Disable/uninstall | Recognition check |
-| --- | --- | --- | --- | --- |
-| Skill | `~/.agents/skills/<name>` (read natively by Codex; **nothing is written to `~/.codex/skills` anymore**) | Done once installed into the store | Uninstall deletes the store directory; for "disable in Codex only" see open question Q1 | `codex app-server` `skills/list` has `scope:"user"` and `name==<name>` |
-| MCP | `${CODEX_HOME:-~/.codex}/config.toml` `[mcp_servers.<name>]` | `codex mcp add <name> [--env K=V] -- <cmd> <args...>` / `--url <url> [--bearer-token-env-var X]` | `codex mcp remove <name>` | `mcpServerStatus/list` returns the server's `tools` |
+| Object | Location | Identity | Recognition check |
+| --- | --- | --- | --- |
+| Skill | `~/.agents/skills/<slug>` (read natively; **nothing is written to `~/.codex/skills` anymore**) | frontmatter `name` | `app-server` `skills/list` has `scope:"user"`, `name==runtimeNames.codex`, and a path that resolves to our directory |
+| MCP | `${CODEX_HOME:-~/.codex}/config.toml` `[mcp_servers.<slug>]` | `<slug>` | `mcpServerStatus/list` returns the server's `tools` |
 
-- Codex fields: stdio `command/args/env`; http `url/bearer_token_env_var/http_headers`. **SSE is not supported**; a manifest that declares only `sse` is marked `compatibleWith` without codex.
-- Fields the CLI can't express (`http_headers`, `startup_timeout_sec`) are out of phase one; no current registry package uses them.
-- Remove the `CODEX_CONFIG_DIR` → `CODEX_HOME` mismatch: read `CODEX_HOME` first, keeping `CODEX_CONFIG_DIR` as a compatibility alias.
+- Codex fields: stdio `command/args/env`; http `url/bearer_token_env_var`. **SSE is not supported**: an sse-only manifest is rejected for codex with a clear error.
+- Fields the CLI can't express (`http_headers`, `startup_timeout_sec`) are out of phase one; no current registry package uses them. A manifest that needs them is rejected for codex.
+- Read `CODEX_HOME` first and keep `CODEX_CONFIG_DIR` as a compatibility alias.
 
-### 5.3 Skill content install (both tools)
+### 5.3 Skill source contract and content install (fixes G1, G11, G14)
 
-- Prefer `metadata.source{repo,ref,path}`: download that subdirectory's tarball (GitHub `codeload` tar.gz, extracting only `path/`) into a temp directory, check that `SKILL.md` exists and its frontmatter has `name`/`description`, then atomically rename it to `~/.agents/skills/<name>`.
-- Fall back to a single-file `file` step, and write it as `SKILL.md` (uppercase).
-- Updates replace the whole directory; when the content hash has changed (the user edited it locally), require `--force`.
+**API/SDK contract** (PR2):
 
-### 5.4 Migrating existing installs
+- `SkillItem` gets `source?: { repo: string; ref: string; dir: string }` in `packages/types`. `dir` is a repo-relative **directory** path.
+- `mapItem` (`apps/api/src/db-types.ts`) reads `metadata.source` and normalizes it:
+  - a `path` ending in `/SKILL.md` is changed to its parent directory (all 10 current packages);
+  - an empty string means the repo root;
+  - `..`, absolute paths, and backslashes make the field drop out (it is then omitted, not guessed).
+- `contentUrl` stays for the single-file fallback. The SDK needs only the type change, because `StoreClient` returns `Item`.
+- The registry validator gets a warning for file-shaped paths. Changing the manifests themselves is a separate registry PR (PR2b) and not required, because the API normalizes either form.
 
-- The old layout (`~/.agents/skills/<slug>/skill.md + manifest.json`, the copy in `~/.claude/skills/<slug>/SKILL.md`, the copy in `~/.codex/skills/<slug>/SKILL.md`): `as migrate` (in PR6) recognizes these entries by `registry.json` and converts them to the new layout; old copies are first moved into `~/.agents/agent-store/backups/<ts>/`. A user's own `~/.claude/skills` real directories with no marker are not migrated.
+**Client install** (PR4):
+
+1. Resolve `ref` to a commit (`GET https://api.github.com/repos/<repo>/commits/<ref>` → `sha`, or read the top directory `<repo>-<sha>` of the codeload tarball).
+2. Download `https://codeload.github.com/<repo>/tar.gz/<sha>` into a temp directory and extract only `<dir>/`. Reject symlinks pointing outside `<dir>`, absolute entries, and anything over 20 MB.
+3. Check that `SKILL.md` (exact case) exists and its frontmatter has `name` and `description`. Record `runtimeNames = {claude: slug, codex: frontmatter.name}`.
+4. Codex identity collision check: if another `SKILL.md` visible to Codex (`~/.agents/skills/*`, `$CODEX_HOME/skills/*`) already uses the same frontmatter `name`, fail with a conflict error. Override with `--force`.
+5. Write the marker, then atomically rename the directory to `~/.agents/skills/<slug>`.
+6. When `source` is absent, fall back to the single file from `contentUrl`, written as `SKILL.md` (Q3, accepted).
+
+Updates replace the whole directory. If the content hash differs from the marker (a local edit), the update needs `--force`.
+
+**Verification that uses production shapes**:
+
+- `apps/api` unit test: the real record `skill/skills-canvas-design.json` from registry `8c4a806` goes through `mapItem` and gives `source.dir=="skills/canvas-design"`.
+- The e2e fixture server builds its responses through the same `mapItem` from DB-row-shaped records instead of raw objects, so no field can exist that production doesn't return.
+- The fixture serves a codeload-shaped tarball whose skill has `references/token.md`. The installed `~/.agents/skills/<slug>/references/token.md` must exist, and the `--use` step reads the token from it.
+
+### 5.4 Skill lifecycle (fixes the Q1 contradiction)
+
+Facts that bind the design:
+
+- Content lives in `~/.agents/skills` (the convention), and Codex reads that directory natively. So **installed ⇒ visible to Codex**.
+- The only Codex-side off switch is `[[skills.config]] enabled=false`, which is out of phase one.
+
+Supported operations in phase one:
+
+| Operation | Effect | `enabledFor` | Notes |
+| --- | --- | --- | --- |
+| `install <slug>` | Content into `~/.agents/skills/<slug>` (§5.3); then create the Claude symlink | `codex:true`, `claude:true` | A skill whose `compatibleWith` lacks `codex` is **rejected** ("~/.agents/skills is shared with Codex"). PR2b adds `codex` to the registry skills that pass validation; that PR merges before PR4 ships |
+| `install <slug> --target codex` | Content only, no Claude symlink | `codex:true`, `claude:false` | |
+| `install <slug> --target claude` | **Rejected** for skills | — | Codex would see the skill anyway; the error says so and suggests `--target codex` + `enable claude`, or a plain install |
+| `enable <slug> claude` | Create the symlink; conflict if `~/.claude/skills/<slug>` exists and isn't our symlink | `claude:true` | Re-enable after disable is the same operation |
+| `disable <slug> claude` | Remove only our symlink; **content stays** | `claude:false` | |
+| `enable <slug> codex` | No-op when installed | `codex:true` (already) | |
+| `disable <slug> codex` | **Rejected** (`CodexSkillDisableUnsupported`: "uninstall to remove the skill from Codex") | unchanged | Deferred to a later phase via `[[skills.config]]` |
+| `uninstall <slug>` | Remove our Claude symlink, then the content directory (marker matches; hash changed → needs `--force`), then the registry entry | entry removed | |
+| `sync` | Claude: recreate a missing symlink when `claude:true`. Codex: report the content as missing (no rewrite) | not changed by sync | Drift goes to `as doctor` |
+
+Partial failure:
+
+- Install writes in this order: staged content → rename → registry entry `{codex:true, claude:false}` → symlink → `claude:true`.
+- A symlink failure leaves the registry truthful (`claude:false`), and the CLI exits non-zero naming the step. `as enable <slug> claude` recovers.
+- Any failure before the rename leaves no trace: the temp directory is deleted.
+
+Callers:
+
+- The CLI enable/disable commands surface the rejection as a non-zero exit.
+- The RPC path (`commands/rpc.ts`) returns the error to the caller.
+- The desktop client calls enable/disable only from `ProviderConfigPanel.tsx:175` (providers). There is no skill toggle, so **phase one changes no UI**, and the design-file requirement does not apply. A future skill toggle must first be added to `docs/ui/Agent Store.dc.html`.
+
+Acceptance for both tools, run by `accept-global --isolated`:
+
+1. install
+2. Claude and Codex both recognize the skill
+3. `disable claude` → Claude no longer lists it, Codex still does
+4. `disable codex` → rejected, exits non-zero, state unchanged
+5. `enable claude` → recognized again
+6. `install --target claude` → rejected
+7. uninstall → neither tool lists it, and the directory and symlink are gone
+8. Partial failure: a pre-existing real directory `~/.claude/skills/<slug>` makes the symlink step fail. Expect a non-zero exit, a registry with `claude:false`, Codex still recognizing the skill, and the user's directory untouched.
+
+Each tool's view is re-read in a fresh process after every step; that is the "restart".
+
+### 5.5 MCP ownership and conflicts (fixes G12)
+
+Each tool is independent: `enable <slug> <tool>` adds that tool's entry and `disable` removes it. Ownership is recorded per tool in `~/.agents/mcps/<slug>/targets.json`:
+
+```json
+{ "claude": { "name": "<slug>", "written": { ...exact entry we wrote... }, "previous": null },
+  "codex":  { "name": "<slug>", "written": { ... }, "previous": null } }
+```
+
+- **Preflight before every write.** Read the current user-scope entry for the name: parse `.claude.json` `mcpServers.<name>` read-only, and `codex mcp get <name> --json`. Then:
+  - absent → add it and record `written`;
+  - equal to our `written` → no-op;
+  - different and not ours → **fail with a conflict** and write nothing. `--replace` is the explicit adopt flow: save the existing entry to `previous`, then write ours.
+- **Disable/uninstall.** Read the entry again:
+  - equal to `written` → remove it and, if `previous` is set, restore it;
+  - edited externally (differs) or already gone → do not remove anything, exit non-zero with "changed outside Agent Store", and leave `enabledFor` unchanged. `--force` removes it anyway and still restores `previous`.
+- **setConfig resync**: replace the entry only when it still equals `written`; otherwise fail the same way.
+- **Shadowing**: a same-name Claude local/project-scope entry, or a Codex profile override, shadows the user entry. `as doctor` warns about it; phase one doesn't change those scopes.
+- **Tests**:
+  - PR3/PR5 unit tests: user entry already exists → conflict and file byte-identical; `--replace` → previous restored on uninstall; external edit → uninstall refuses and keeps it; setConfig on a drifted entry → refused.
+  - `accept-global --isolated`: a pre-seeded user MCP with the probe name gives a conflict, and after `--replace` + uninstall the original is restored byte-for-byte (compare `jq .mcpServers` / `codex mcp get --json`).
+
+### 5.6 MCP arguments and configuration (fixes G10)
+
+**Arguments** (PR3 for the shared builder in `config/mcp.ts`):
+
+- When the manifest has `metadata.command` + `metadata.args[]`, use them as given.
+- Otherwise tokenize `serverCommand` with POSIX shell-word rules: single and double quotes, backslash escapes, **no** expansion.
+- Reject unbalanced quotes and shell operators (`|`, `&`, `;`, `>`, `<`, `$(`, backticks) with a clear error rather than guessing.
+- The resulting `command`/`args` array is passed to `claude mcp add-json` as JSON and to `codex mcp add -- <cmd> <args...>` as separate argv elements, so no shell re-splitting happens.
+
+**Config → environment/auth binding:**
+
+- A `configSchema.properties.<key>` may declare `x-env: "<ENV_NAME>"` (default `<KEY>` upper-snake). Values from `as config` (`config.json`) are injected:
+  - stdio → `env` (Claude `env`, Codex `--env K=V`);
+  - http → `{key}` placeholders in `url` are substituted;
+  - an `x-bearer: true` property → Claude `headers.Authorization: Bearer <v>`, and for Codex `bearer_token_env_var=<ENV_NAME>` (the value stays in the user's environment; `as config` prints the variable to export).
+- **Required but missing values**: `enable` fails before writing anything ("run `as config <slug>`"). Install still succeeds, and the CLI install exits non-zero with that message only when an enable was requested.
+- Unsupported (rejected with a clear error): http headers for Codex other than bearer, sse for Codex, and values containing newlines.
+- **Secret handling**: values are written into the tool config in plaintext (the current behavior for env too). `.claude.json` stays 0600, and `config.toml` is set to 0600 when we create it. This is noted in §8.
+- **Verification**: a fixture MCP `as-probe-mcp-env` started as `node "<dir with space>/probe-env.mjs" --greeting "hello world"`, whose `probe` returns `$PROBE_TOKEN` + argv. `as config` sets `PROBE_TOKEN` (required). Checks:
+  - before config, enable fails;
+  - after config, both tools' recognition check lists `probe`;
+  - `--use` (§6) checks that the returned text contains the token and `hello world` as one argument.
 
 ## 6. Acceptance script ("both tools actually recognize and use it")
 
-`scripts/accept-global.sh` (added in PR1), with two modes:
+`scripts/accept-global.ts` (added in PR1, run with `bun`). It is TypeScript rather than shell so it can bound every child process (`AbortSignal.timeout`, default 90 s per call), parse JSON events, and speak the `app-server` JSON-RPC. Rules:
 
-**`--isolated` (default, used by CI and every PR)**: create temp `HOME`/`CLAUDE_CONFIG_DIR`/`CODEX_HOME`/`AS_HOME`, start the local fixture API (extend the existing `test/e2e/fixture-server.ts` and `test/e2e/fixtures/`: the fixture skill `as-probe-skill` adds a `references/token.md` sub-file and `metadata.source`, and the fixture MCP `as-probe-mcp` exposes `probe` returning a fixed token), then:
+- Every step records `PASS`/`FAIL`/`SKIP` with its command, exit code, and a stderr excerpt. Results print as JSON with separate `recognition`, `lifecycle`, and `usage` sections.
+- **Exit codes**: 0 only if every required item passed; 1 on any FAIL; 2 (`INCOMPLETE`) if a required item was skipped.
+- Installs run one slug per command (`as install as-probe-skill`, then `as install as-probe-mcp`, then `as install as-probe-mcp-env`). The script asserts each exit code.
+- **Prerequisite in PR1**: `as install` (and enable/disable/uninstall) exits non-zero on failure. Multi-slug install stays out of scope; the usage message says one slug.
+- On any failure or signal, a `finally` handler uninstalls the probes (isolated: deletes the temp root; real: runs §6.2 restore) and prints what it cleaned up.
 
-1. `as install as-probe-skill as-probe-mcp` (the built CLI)
-2. Claude recognition: the `init` event of `claude -p ping --output-format stream-json --verbose --max-turns 1` contains skill `as-probe-skill`, `mcp_servers[as-probe-mcp].status=="connected"`, and tool `mcp__as-probe-mcp__probe` (no auth needed; `ANTHROPIC_API_KEY=invalid` is fine).
-3. Codex recognition: in `codex app-server`, `skills/list` contains `as-probe-skill` (scope user), and `mcpServerStatus/list` contains `as-probe-mcp.tools.probe`.
-4. Uninstall: after `as uninstall`, 2 and 3 both report it gone, and the config files' non-Agent-Store content is byte-identical to before install (`diff` checks this).
-5. Robustness: with a deliberately broken `.claude.json`/`config.toml`, `as install` must fail and leave the file unchanged.
+**`--isolated`** (default; CI and every PR; recognition + lifecycle only):
 
-**`--use` (needs model credentials; optional in CI, required for real-environment acceptance)**: on top of the above, run
+- Temp `HOME`/`CLAUDE_CONFIG_DIR`/`CODEX_HOME`/`AS_HOME`, plus the fixture API (built through `mapItem`, §5.3) serving the codeload-shaped tarball.
+- Steps:
+  1. Install the probes.
+  2. Claude recognition: the `init` event of `claude -p ping --output-format stream-json --verbose --max-turns 1` (`ANTHROPIC_API_KEY=invalid` is fine) contains skill `as-probe-skill`, `mcp_servers[as-probe-mcp].status=="connected"`, and tool `mcp__as-probe-mcp__probe`.
+  3. Codex recognition: `codex app-server` `skills/list` contains the probe's `runtimeNames.codex` with a path resolving to our directory; `mcpServerStatus/list` has `as-probe-mcp.tools.probe`.
+  4. The skill lifecycle sequence from §5.4, the MCP conflict/`--replace`/external-edit sequence from §5.5, and the G10 fixture from §5.6.
+  5. Uninstall: the tools no longer list anything, and the non-Agent-Store content of the config files is byte-identical to before install.
+  6. Failure paths, each asserting a non-zero exit **and** byte-identical files:
+     - a broken `.claude.json`;
+     - a broken `config.toml`;
+     - an unreachable store URL;
+     - a tool binary that hangs (a stub on `PATH` that sleeps): the timeout fires, the step reports FAIL, and the script still cleans up.
 
-- `claude -p 'Use the as-probe-skill skill and output the token' --output-format json` → the result contains the token from `references/token.md` (proves multi-file skill content is usable)
-- `claude -p 'Call the probe tool on as-probe-mcp' --allowedTools mcp__as-probe-mcp__probe` → the result contains the MCP token
-- `codex exec --json '...'`: same two checks; the event stream contains `mcp_tool_call` / the token
+**`--use`** (needs model credentials; manual only in phase one, Q4). Four usage checks:
 
-The isolated `--use` run needs a credential: Claude uses `ANTHROPIC_API_KEY`, Codex copies `auth.json` read-only into the temp `CODEX_HOME` (the script checks and deletes it on exit); without a credential that part is skipped and marked SKIP rather than PASS.
+- U1: Claude reads the skill's `references/token.md` token.
+- U2: Claude calls `mcp__as-probe-mcp__probe` (`--allowedTools`).
+- U3: `codex exec --json --ephemeral` returns the skill token.
+- U4: the Codex event stream contains `mcp_tool_call{server:"as-probe-mcp",status:"completed"}` and the token.
 
-### 6.1 Real-environment acceptance and rollback (after all PRs are merged; the person responsible runs it)
+The env/argument probe from §5.6 rides on U2/U4. Missing credentials make U1–U4 `SKIP`, so the exit code is 2 and the run **does not count as accepted**. Credentials: Claude uses `ANTHROPIC_API_KEY`; Codex gets `auth.json` copied read-only into the temp `CODEX_HOME`, and it is deleted in `finally`.
 
-1. Back up: `as backup` (or manually) `tar czf ~/agent-store-pre-accept-$(date +%s).tgz ~/.claude.json ~/.claude/skills ~/.codex/config.toml ~/.agents/skills ~/.agents/registry.json` (with `CLAUDE_CONFIG_DIR` / `CODEX_HOME` set, back up the corresponding directories).
-2. `scripts/accept-global.sh --real --use`: no temp directories; installs `as-probe-skill`/`as-probe-mcp` (the fixture API, or the real store's test package), runs the same recognition + usage checks, then uninstalls automatically.
-3. Then install one real registry package of each type (e.g. `context7` + one multi-file skill) and confirm by hand in a new interactive session of each tool (`/skills`, `/mcp` in Claude; `/skills`, `/mcp` in Codex).
-4. Rollback: `as uninstall <slug>` (this deletes only marked/our-own entries); if that is abnormal, restore the backup from step 1 with `tar xzf` and restart both tools.
+The CI result therefore means recognition + lifecycle only. Final acceptance needs a `--real --use` run with U1–U4 all `PASS`.
+
+### 6.1 Identity of the run
+
+The script prints the tool versions, `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and `AS_HOME` it targets, and refuses `--real` when any of them points inside a temp or Paperclip agent-profile directory unless `--i-mean-this-home` is given.
+
+### 6.2 Real-environment acceptance and rollback (after all PRs are merged; the person responsible runs it)
+
+Close interactive Claude Code and Codex sessions first, because both rewrite their config files.
+
+1. **Preflight**: `bun scripts/accept-global.ts --real --preflight`. It fails if any probe name already exists in:
+   - `~/.agents/skills`
+   - `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`
+   - `.claude.json` `mcpServers` / `codex mcp get --json`
+   - `~/.agents/registry.json`
+2. **Backup**: `bun scripts/accept-global.ts --real --backup --root ~/.agents/agent-store/accept-backup/<ts>` (the root is explicit and printed; it must not exist yet). It stores:
+   - `manifest.json`: whether each config file existed, its sha256, and the top-level entry list (name, type, symlink target) of both skills directories;
+   - copies of `.claude.json`'s `mcpServers` subtree, the whole `config.toml`, and `registry.json`;
+   - `skills.tar` of both skills directories with symlinks preserved.
+3. **Run**: `bun scripts/accept-global.ts --real --use --root <same root>`. It installs the probes from the fixture API or the real store's test package, runs recognition, lifecycle and U1–U4, uninstalls, then runs the restore check (step 5).
+4. **Real packages**: install one real registry package of each type (for example `context7` and one multi-file skill). Confirm by hand in a new interactive session of each tool (`/skills` and `/mcp` in both). Then uninstall them.
+5. **Restore**: `bun scripts/accept-global.ts --real --restore --root <root>` (also run automatically by `finally`):
+   - Remove top-level entries in both skills directories that are **not** in the manifest. It removes only symlinks or marker directories; anything else is listed and the restore stops for a human decision.
+   - Re-extract entries that are in the manifest but missing or whose hash changed, from `skills.tar`.
+   - Write the saved `mcpServers` subtree back into `.claude.json` atomically (other keys untouched), and restore `config.toml` and `registry.json` (or delete them if they didn't exist before).
+   - Re-list everything and diff against the manifest. Exit 0 only if identical.
+6. Restart both tools. If step 5 reports a difference, the backup root still has everything for a manual fix. The root is kept until the person responsible deletes it.
 
 ## 7. PR breakdown (one logical change per PR)
 
-Separate tracks: PR2/PR3 are the Claude track and PR4/PR5 the Codex track, and the two tracks can run in parallel. PR1 comes first; PR6/PR7 come last.
+PR1 comes first. PR2/PR2b are the shared source contract. PR3/PR4 are the Claude track and PR5/PR6 the Codex track, which can run in parallel once PR2 is merged. PR7/PR8 come last.
 
 | PR | Content | Verification |
 | --- | --- | --- |
-| PR1 test: acceptance script and fixtures | Add `scripts/accept-global.sh` (isolated/use/real) and the multi-file fixture skill plus the probe MCP; delete/replace the stale `scripts/local-e2e.sh` checks. On the current code it is **expected to fail** on multi-file content/uninstall cleanliness (recorded as the baseline) | Run `--isolated` locally and record which items fail; shellcheck |
-| PR2 fix(client-core): Claude config safe writes | `.claude.json` aborts on parse failure, writes atomically, backs up; MCP goes through `claude mcp add-json/remove --scope user` (falls back to the file when the binary is missing) | bun unit tests (broken JSON is not overwritten, other keys preserved); acceptance Claude MCP items pass |
-| PR3 feat(client-core): Claude skill symlinks + full-directory install | Install the whole skill directory from `metadata.source` into `~/.agents/skills/<name>` (with marker); Claude enables via a symlink, removes only its own symlinks on disable, reports conflicts | Unit tests: tarball extraction, conflicts, symlink removal; acceptance Claude skill items (including `--use` reading the sub-file) pass |
-| PR4 fix(client-core): Codex MCP via codex CLI + field mapping | `codex mcp add/remove`; correct fields (no `type`/`headers`, sse marked incompatible); `CODEX_HOME` first; safe fallback writes keep comments (no full rewrite) | Unit tests: the generated command line, the field mapping; a comment-preservation test; acceptance Codex MCP items pass |
-| PR5 feat(client-core): Codex skills from `~/.agents/skills` | Stop writing to `~/.codex/skills`; Codex enable = present in the store; registry skills that pass get `codex` added (registry repo change goes in its own PR5b) | Acceptance Codex skill items pass; `skills/list` has no duplicate same-name skills |
-| PR6 feat(cli): migrate + doctor | `as migrate` converts the old layout; `as doctor` compares registry.json against the real view of both tools; package-engine name normalization | Unit tests on old-layout fixtures; `--isolated` passes after migration |
-| PR7 refactor: extract real shared parts | Only once PR2–PR5 are merged, and based on actually duplicated code (expected: the safe-write tool, skill store, marker); can be dropped if there is no real shared part | Full unit tests + `accept-global.sh --isolated` all pass |
+| PR1 test+fix(cli): acceptance harness and exit codes | `scripts/accept-global.ts` (isolated/use/real, timeouts, `finally` cleanup, result JSON); the fixture API builds responses through `mapItem`; probe fixtures; replace the stale `scripts/local-e2e.sh` checks. CLI install/enable/disable/uninstall exit non-zero on failure. On the current code the multi-file, lifecycle, conflict and G10 items are **expected to FAIL** (recorded as the baseline) | CLI unit tests for exit codes; `--isolated` run showing the failure-path items detected (hanging stub, broken config, unreachable store); recorded baseline |
+| PR2 feat(api,types): skill source contract | `SkillItem.source{repo,ref,dir}`; `mapItem` normalization (§5.3) | API unit test on the real `skills-canvas-design.json` record; invalid paths dropped |
+| PR2b registry: normalize skill sources and add codex | Registry repo. `source.path` becomes a directory; add `codex` to skills that pass validation; validator warns on file paths | Registry `validate.ts`; spot-check the API output after sync |
+| PR3 fix(client-core): Claude MCP safe writes, ownership, args/config | `.claude.json` parse-abort/atomic/backup; `claude mcp add-json/remove --scope user`; preflight + `targets.json` (§5.5); shell-word args and config→env/url/bearer (§5.6, shared builder) | Unit tests: conflict, `--replace`/restore, external edit, broken JSON, tokenizer, required config; acceptance Claude MCP + G10 items pass |
+| PR4 feat(client-core): skill store + Claude symlinks + lifecycle | §5.3 install (tarball, marker, runtimeNames, collision check); §5.4 operations for Claude and the codex rejections; `itemDir` for skills keeps `~/.agents/skills/<slug>` | Unit tests: extraction safety, conflicts, lifecycle matrix, partial failure; acceptance Claude skill + lifecycle items pass |
+| PR5 fix(client-core): Codex MCP via codex CLI, fields, ownership | `codex mcp add/remove`; correct fields (no `type`/`headers`, sse rejected); `CODEX_HOME` first; the same preflight/ownership as PR3 for Codex; config binding through `--env`/`--bearer-token-env-var` | Unit tests: generated argv, field mapping, conflict/restore, comment preservation in the fallback; acceptance Codex MCP + G10 items pass |
+| PR6 feat(client-core): Codex skills from `~/.agents/skills` | Stop writing `~/.codex/skills`; Codex recognition by `runtimeNames.codex` | Acceptance Codex skill + lifecycle items pass; `skills/list` has no duplicates |
+| PR7 feat(cli): migrate + doctor | `as migrate` converts the old layout (old copies moved into the backups directory first); `as doctor` compares registry.json/markers/targets.json with both tools' real view and warns on shadowing; package-engine name normalization | Unit tests on old-layout fixtures; `--isolated` passes after migration |
+| PR8 refactor: extract the real shared parts | Only after PR3–PR6 are merged, and based on code that is actually duplicated (expected: safe write, preflight/ownership, skill store); dropped if there is no real duplication | Full unit tests + `--isolated` all pass |
 
-Each PR: `pnpm lint && pnpm type-check && pnpm test` plus the `accept-global.sh --isolated` items for that PR.
+Each PR runs `pnpm lint && pnpm type-check && pnpm test` plus its `accept-global --isolated` items. Final acceptance is §6.2 with U1–U4 all PASS.
 
 ## 8. Risks
 
-- **Concurrent writes**: a running Claude Code also writes `.claude.json`; going through `claude mcp` reduces conflicts, and the fallback writes are atomic, but a concurrent overwrite can't be fully ruled out → in real acceptance, close the interactive sessions first.
-- **Unstable interfaces**: Codex `app-server` is marked experimental and its method names may change; the Claude init event field names are not a contract either. The acceptance script pins the versions of both tools and prints the versions on failure.
-- **Shared `~/.agents/skills` directory**: many skills here are maintained by hand or by other tools (e.g. skills-manager), so a name clash is possible; enforce the marker and conflict rules.
-- **This machine's current real state**: `~/.claude/skills` holds 95 real directories (copies, not symlinks) and `~/.agents/skills` holds 110 entries (counted 2026-10-21 by `ls`, without reading contents); they have no marker, so they count as user-owned and are not migrated; only a same name produces a conflict notice.
-- **Credentials**: `--use` needs model credentials; copying `auth.json` must stay inside the temp directory and be cleaned up at exit.
-- **Different environment on agent machines**: in this machine's Paperclip runs, `CLAUDE_CONFIG_DIR`/`CODEX_HOME` point to agent profiles, so real-environment acceptance must state which `HOME` it targets.
+- **Concurrent writes**: a running Claude Code also writes `.claude.json`. Going through `claude mcp` reduces conflicts and the fallback writes are atomic, but a concurrent overwrite can't be ruled out. Real acceptance closes interactive sessions first, and restore touches only the `mcpServers` subtree.
+- **Unstable interfaces**: Codex `app-server` is marked experimental; the Claude init fields and the directory-vs-frontmatter naming (§1.1-5) are not contracts either. The script prints both versions on failure, and the naming behavior is re-checked in `--isolated`.
+- **Codex sees every installed skill**: there is no per-tool Codex disable in phase one (§5.4), and installs of skills not declared Codex-compatible are rejected.
+- **Unpinned sources**: registry `ref` is a branch; we pin the resolved SHA in the marker, but a reinstall can pick up new upstream content. Updates require `--force` when local content changed.
+- **Shared `~/.agents/skills`**: many skills there are maintained by hand or by other tools, so name and frontmatter-name clashes are possible. The marker, conflict and collision rules apply.
+- **This machine's current real state**: `~/.claude/skills` holds 95 real directories and `~/.agents/skills` 110 entries (counted 2026-10-21 by `ls`, contents not read). They have no marker, so they count as user-owned and are never migrated or removed.
+- **Secrets in plaintext config**: MCP env values end up in `.claude.json`/`config.toml` (0600). Bearer tokens for Codex stay in an environment variable instead.
+- **Credentials for `--use`**: `auth.json` copies stay in the temp directory and are deleted in `finally`.
+- **Agent machines**: Paperclip runs point `CLAUDE_CONFIG_DIR`/`CODEX_HOME` at agent profiles; §6.1 refuses those for `--real`.
 
-## 9. Open questions
+## 9. Decisions and open questions
 
-- Q1: Does Codex need "disable in Codex only, keep in Claude"? It can be done with `[[skills.config]] enabled=false` (§3.2), but needs a format-preserving TOML edit plus a Codex restart. Recommendation: not in phase one; in phase one, a skill's enable/disable acts on both tools together (Claude via the symlink, Codex via the store directory), and the UI says so plainly.
-- Q2: When `CLAUDE_CONFIG_DIR` is not set, should skills go to `~/.claude/skills` and MCP to `~/.claude.json` (the default)? Recommended yes.
-- Q3: Whether a skill without `metadata.source` (single file) is still accepted: recommend accepting it while the registry validator emits a warning.
-- Q4: Whether the `--use` acceptance runs in CI (needs secrets): recommend running it only by hand in phase one.
+- Q1 (resolved by §5.4): no per-tool Codex skill disable in phase one; `disable codex` and `install --target claude` are explicit rejections, and Claude enable/disable is independent.
+- Q2 (accepted in review): default paths `~/.claude/skills` and `~/.claude.json` when `CLAUDE_CONFIG_DIR` is unset.
+- Q3 (accepted in review): single-file skills without `source` are still installed, and the registry validator warns.
+- Q4 (accepted in review): `--use` runs by hand in phase one; final acceptance requires U1–U4 PASS.
+- Q5 (owner, non-blocking): skills keep their source frontmatter, so Claude shows `skills-canvas-design` while Codex shows `canvas-design`. The alternative is to name the install directory after the frontmatter `name` so both match, at the cost of more clashes with user directories. Recommendation: keep the slug directory in phase one and revisit with real usage.
