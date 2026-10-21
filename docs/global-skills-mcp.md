@@ -1,6 +1,6 @@
 # Global Skills and MCP management for Claude Code and Codex: current state and phase-one plan
 
-Status: draft plan (SOL-901), revision 2. Revision 2 addresses the review in [#41 comment 6320613986](https://github.com/phenix3443/agent-store/issues/41#issuecomment-6320613986): the source contract goes through the real API (§5.3), the skill lifecycle is explicit (§5.4), MCP ownership and rollback are covered (§5.5, §6.2), G10 is assigned (§5.6), and the acceptance script detects failures (§6). No code changes yet.
+Status: draft plan (SOL-901), revision 3. Revision 3 addresses [#41 comment 6320891210](https://github.com/phenix3443/agent-store/issues/41#issuecomment-6320891210): Codex `--replace` only adopts entries the CLI can restore exactly, and rejects the rest before writing (§5.2, §5.5). Revision 2 addressed the review in [#41 comment 6320613986](https://github.com/phenix3443/agent-store/issues/41#issuecomment-6320613986): the source contract goes through the real API (§5.3), the skill lifecycle is explicit (§5.4), MCP ownership and rollback are covered (§5.5, §6.2), G10 is assigned (§5.6), and the acceptance script detects failures (§6). No code changes yet.
 
 Goal: get each of Claude Code and Codex to recognize and use user-level (global) Skills and MCP servers installed by Agent Store, designing and passing acceptance for each tool separately. Unify code only where a real shared pattern shows up; no forced abstraction up front. Phase one does not cover project-level configuration.
 
@@ -34,7 +34,7 @@ Observations:
 1. **Claude Code user-level skills**: read from `$CLAUDE_CONFIG_DIR/skills/<name>/SKILL.md` (default `~/.claude/skills`). The `system/init` event of `claude -p --output-format stream-json --verbose` emits `skills: [... "as-hello"]` **before** the model call, so it shows up even with an invalid `ANTHROPIC_API_KEY`. Claude does **not** read `~/.agents/skills` (`as-agents-hello` was not listed). Once the symlink `$CLAUDE_CONFIG_DIR/skills/as-agents-hello -> ~/.agents/skills/as-agents-hello` is created, it is recognized (**symlinks are followed**).
 2. **Claude Code user-level MCP**: `claude mcp add --scope user` writes to the top-level `mcpServers` of `$CLAUDE_CONFIG_DIR/.claude.json` (`{"type":"stdio","command","args","env"}` / `{"type":"http","url"}`) and automatically creates a backup under `$CLAUDE_CONFIG_DIR/backups/`. `claude mcp list` reports `✓ Connected`; the init event reports `mcp_servers:[{"name":"as-echo","status":"connected"}]` and the tool `mcp__as-echo__echo`.
 3. **Codex user-level skills**: read from both `$CODEX_HOME/skills` and **`$HOME/.agents/skills`** (roots `r0`/`r1` in `codex debug prompt-input`); a skill directory symlinked into `~/.agents/skills` is also recognized. `codex app-server`'s `skills/list` returns `scope:"user"` with the resolved real path. Only the exact `SKILL.md` filename is recognized (a lowercase `skill.md` was not picked up on the case-insensitive APFS volume).
-4. **Codex user-level MCP**: `codex mcp add` writes `[mcp_servers.<name>]` (`command`/`args`/`[...env]` or `url`) to `$CODEX_HOME/config.toml` and **preserves the existing comments and formatting**. `codex mcp list --json` shows the parsed config; `codex app-server`'s `mcpServerStatus/list` actually starts the server and returns `serverInfo` plus `tools.echo` (no login required).
+4. **Codex user-level MCP**: `codex mcp add` writes `[mcp_servers.<name>]` (`command`/`args`/`[...env]` or `url`) to `$CODEX_HOME/config.toml` and keeps comments and formatting **outside** the `mcp_servers` tables. Inside them it rewrites the whole section: comments above or inline in any `[mcp_servers.*]` table, including unrelated servers, are dropped, while values are kept (rechecked 2026-10-22 with `add`, `remove` and re-`add`). `codex mcp list --json` shows the parsed config; `codex app-server`'s `mcpServerStatus/list` actually starts the server and returns `serverInfo` plus `tools.echo` (no login required).
 
 5. **Skill identity differs between the tools** (2026-10-22, same isolated setup): the directory `as-dir-x` with frontmatter `name: fm-x` shows up in Claude Code as `as-dir-x` (both `init.skills` and `slash_commands`), but Codex lists it as `fm-x` (`codex debug prompt-input`: `fm-x: probe x (file: r0/as-dir-x/SKILL.md)`). So Claude takes the directory name and Codex takes the frontmatter `name`. Registry skills hit this: the slug `skills-canvas-design` has frontmatter `name: canvas-design`.
 
@@ -125,7 +125,7 @@ Docs consulted 2026-10-21. Tags: [doc] = official docs, [src] = source code, [ex
   - streamable HTTP keys: `url/bearer_token_env_var/http_headers/env_http_headers`.
   - common keys: `startup_timeout_sec/tool_timeout_sec/enabled/required/enabled_tools/disabled_tools`.
   - **No SSE** [doc: [mcp](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)] [src: [mcp_cmd.rs](https://github.com/openai/codex/blob/main/codex-rs/cli/src/mcp_cmd.rs)].
-- `codex mcp add` preserves comments in `config.toml` [exp]; it can only express `--env`/`--url`/`--bearer-token-env-var`/OAuth options [exp].
+- `codex mcp add/remove` preserve comments in `config.toml` outside `mcp_servers`, but drop comments inside any `[mcp_servers.*]` table [exp]; it can only express `--env`/`--url`/`--bearer-token-env-var`/OAuth options [exp].
 - Headless use: `codex exec --json --ephemeral --skip-git-repo-check`. The event stream's `item.completed` with `type:"mcp_tool_call"` carries `{server,tool,arguments,result,error,status}` [src: [exec_events.rs](https://github.com/openai/codex/blob/main/codex-rs/exec/src/exec_events.rs)].
 - There is no skill-use event, so a skill is checked with a sentinel token [inf].
 - Recognition without a model call: `codex app-server` methods `skills/list` and `mcpServerStatus/list` [exp; experimental interface].
@@ -176,6 +176,7 @@ Shared principles. Each tool follows them on its own; they are not a shared abst
 
 - Codex fields: stdio `command/args/env`; http `url/bearer_token_env_var`. **SSE is not supported**: an sse-only manifest is rejected for codex with a clear error.
 - Fields the CLI can't express (`http_headers`, `startup_timeout_sec`) are out of phase one; no current registry package uses them. A manifest that needs them is rejected for codex.
+- The same limit applies to **existing** user entries: `codex mcp add` rebuilds the whole table and resets any field it has no flag for (seen in review with codex-cli 0.163.0: `http_headers` and `startup_timeout_sec` dropped, `enabled=false` turned into `true`, exit 0). So `--replace` only adopts a Codex entry that the CLI can write back exactly; see §5.5.
 - Read `CODEX_HOME` first and keep `CODEX_CONFIG_DIR` as a compatibility alias.
 
 ### 5.3 Skill source contract and content install (fixes G1, G11, G14)
@@ -265,15 +266,25 @@ Each tool is independent: `enable <slug> <tool>` adds that tool's entry and `dis
 - **Preflight before every write.** Read the current user-scope entry for the name: parse `.claude.json` `mcpServers.<name>` read-only, and `codex mcp get <name> --json`. Then:
   - absent → add it and record `written`;
   - equal to our `written` → no-op;
-  - different and not ours → **fail with a conflict** and write nothing. `--replace` is the explicit adopt flow: save the existing entry to `previous`, then write ours.
+  - different and not ours → **fail with a conflict** and write nothing. `--replace` is the explicit adopt flow: save the existing entry to `previous`, then write ours. Restoring `previous` must be lossless, so `--replace` has a per-tool rule (below).
+- **`--replace` restorability, checked before any write:**
+  - **Claude**: `previous` is the raw JSON value of `mcpServers.<name>`, read from `.claude.json`. `claude mcp add-json --scope user <name> '<json>'` takes an arbitrary entry, so every field can be written back. No extra restriction.
+  - **Codex**: `previous` is the raw TOML table `mcp_servers.<name>` (including sub-tables such as `.env`), parsed read-only from `config.toml` and stored as JSON in `targets.json`. The `codex mcp get --json` wrapper is not used as the snapshot, because it is not the table and fills in defaults. The table is restorable only if every key is in the set the CLI can write: `command`, `args` (array of strings), `env` (string map), `url`, `bearer_token_env_var`, and `command`/`url` not both. Any other key (`http_headers`, `env_http_headers`, `startup_timeout_sec`, `tool_timeout_sec`, `enabled` even when `true`, `cwd`, `env_vars`, `enabled_tools`/`disabled_tools`, OAuth settings, or anything unknown) makes `--replace` **fail before writing**, naming the keys, and `config.toml` stays byte-identical. The user can resolve it by hand (rename or remove their entry) and run enable again.
+  - Agent Store does **not** edit `config.toml` itself to restore a table while the `codex` binary is present. The file-edit path in §5 stays limited to a missing binary. This keeps one write mechanism per tool and avoids a second TOML writer that would have to preserve comments.
+  - Restore runs the CLI with the saved values: `codex mcp add <name> -- <command> <args...>` with one `--env K=V` per entry, or `--url <url>` plus `--bearer-token-env-var` when set. After restoring, Agent Store parses the table again and requires it to deep-equal `previous`. If it doesn't, it exits non-zero, keeps `previous` in `targets.json`, and prints the saved table so nothing is lost.
 - **Disable/uninstall.** Read the entry again:
   - equal to `written` → remove it and, if `previous` is set, restore it;
   - edited externally (differs) or already gone → do not remove anything, exit non-zero with "changed outside Agent Store", and leave `enabledFor` unchanged. `--force` removes it anyway and still restores `previous`.
 - **setConfig resync**: replace the entry only when it still equals `written`; otherwise fail the same way.
 - **Shadowing**: a same-name Claude local/project-scope entry, or a Codex profile override, shadows the user entry. `as doctor` warns about it; phase one doesn't change those scopes.
 - **Tests**:
-  - PR3/PR5 unit tests: user entry already exists → conflict and file byte-identical; `--replace` → previous restored on uninstall; external edit → uninstall refuses and keeps it; setConfig on a drifted entry → refused.
-  - `accept-global --isolated`: a pre-seeded user MCP with the probe name gives a conflict, and after `--replace` + uninstall the original is restored byte-for-byte (compare `jq .mcpServers` / `codex mcp get --json`).
+  - PR3/PR5 unit tests: user entry already exists → conflict and file byte-identical; `--replace` → previous restored on uninstall; external edit → uninstall refuses and keeps it; setConfig on a drifted entry → refused. PR5 adds: the restorability check for every key in the list above (allowed and rejected), the argv built for restore, and the post-restore deep-equal check failing when the CLI output differs.
+  - `accept-global --isolated`, Claude (PR3): a pre-seeded `mcpServers.<probe>` with extra fields (`headers`, `env`, an unknown key) gives a conflict with `.claude.json` byte-identical; after `--replace` + uninstall, `mcpServers.<probe>` deep-equals the original and the rest of `mcpServers` is unchanged. This is a semantic comparison of the owned subtree, not whole-file byte equality, because Claude rewrites its own runtime keys.
+  - `accept-global --isolated`, Codex (PR5), three cases, each seeded in a `config.toml` that also contains a top-level key with a comment and an unrelated `[mcp_servers.other]`:
+    1. **Not restorable**: the review case, `[mcp_servers.<probe>]` with `url`, `http_headers={"X-Test"="preserve-me"}`, `startup_timeout_sec=37`, `enabled=false`. `enable --replace` exits non-zero, lists those three keys, and `config.toml` is byte-identical (sha256) before and after.
+    2. **Restorable**: a table with `command`, `args` (one with a space), and `env`. After `enable --replace` then `disable`, the parsed `mcp_servers.<probe>` deep-equals the seed, `mcp_servers.other` deep-equals its seed, and the comment outside `mcp_servers` is still in the file. Comments inside `mcp_servers` are not checked, because the CLI drops them (§1.1-4). The same is repeated with `uninstall` instead of `disable`, and with a `url` + `bearer_token_env_var` table.
+    3. **Failing probe**: a restorable seed, then `enable --replace` with a probe whose server command exits immediately. Recognition reports FAIL, and the `finally` cleanup still disables the probe and restores the seed (same checks as case 2). The script exits 1, not 0.
+  - On the current code, PR1 records these as expected FAIL in the baseline.
 
 ### 5.6 MCP arguments and configuration (fixes G10)
 
@@ -348,7 +359,7 @@ Close interactive Claude Code and Codex sessions first, because both rewrite the
    - `.claude.json` `mcpServers` / `codex mcp get --json`
    - `~/.agents/registry.json`
 2. **Backup**: `bun scripts/accept-global.ts --real --backup --root ~/.agents/agent-store/accept-backup/<ts>` (the root is explicit and printed; it must not exist yet). It stores:
-   - `manifest.json`: whether each config file existed, its sha256, and the top-level entry list (name, type, symlink target) of both skills directories;
+   - `manifest.json`: whether each config file existed, its sha256, and the top-level entry list of both skills directories (name, type, symlink target, and a content hash for real directories, so restore can tell which ones changed);
    - copies of `.claude.json`'s `mcpServers` subtree, the whole `config.toml`, and `registry.json`;
    - `skills.tar` of both skills directories with symlinks preserved.
 3. **Run**: `bun scripts/accept-global.ts --real --use --root <same root>`. It installs the probes from the fixture API or the real store's test package, runs recognition, lifecycle and U1–U4, uninstalls, then runs the restore check (step 5).
@@ -356,8 +367,8 @@ Close interactive Claude Code and Codex sessions first, because both rewrite the
 5. **Restore**: `bun scripts/accept-global.ts --real --restore --root <root>` (also run automatically by `finally`):
    - Remove top-level entries in both skills directories that are **not** in the manifest. It removes only symlinks or marker directories; anything else is listed and the restore stops for a human decision.
    - Re-extract entries that are in the manifest but missing or whose hash changed, from `skills.tar`.
-   - Write the saved `mcpServers` subtree back into `.claude.json` atomically (other keys untouched), and restore `config.toml` and `registry.json` (or delete them if they didn't exist before).
-   - Re-list everything and diff against the manifest. Exit 0 only if identical.
+   - Write the saved `mcpServers` subtree back into `.claude.json` atomically (other keys untouched), and restore `config.toml` and `registry.json`. Any of the three files that did not exist before (per the manifest) is deleted instead, `.claude.json` included.
+   - Re-list everything and diff against the manifest: skill entries by name, type, target and content hash; `config.toml` and `registry.json` by sha256; `.claude.json` by a deep-equal of `mcpServers` only, since Claude may have changed its own runtime keys. Exit 0 only if all of these match.
 6. Restart both tools. If step 5 reports a difference, the backup root still has everything for a manual fix. The root is kept until the person responsible deletes it.
 
 ## 7. PR breakdown (one logical change per PR)
@@ -371,7 +382,7 @@ PR1 comes first. PR2/PR2b are the shared source contract. PR3/PR4 are the Claude
 | PR2b registry: normalize skill sources and add codex | Registry repo. `source.path` becomes a directory; add `codex` to skills that pass validation; validator warns on file paths | Registry `validate.ts`; spot-check the API output after sync |
 | PR3 fix(client-core): Claude MCP safe writes, ownership, args/config | `.claude.json` parse-abort/atomic/backup; `claude mcp add-json/remove --scope user`; preflight + `targets.json` (§5.5); shell-word args and config→env/url/bearer (§5.6, shared builder) | Unit tests: conflict, `--replace`/restore, external edit, broken JSON, tokenizer, required config; acceptance Claude MCP + G10 items pass |
 | PR4 feat(client-core): skill store + Claude symlinks + lifecycle | §5.3 install (tarball, marker, runtimeNames, collision check); §5.4 operations for Claude and the codex rejections; `itemDir` for skills keeps `~/.agents/skills/<slug>` | Unit tests: extraction safety, conflicts, lifecycle matrix, partial failure; acceptance Claude skill + lifecycle items pass |
-| PR5 fix(client-core): Codex MCP via codex CLI, fields, ownership | `codex mcp add/remove`; correct fields (no `type`/`headers`, sse rejected); `CODEX_HOME` first; the same preflight/ownership as PR3 for Codex; config binding through `--env`/`--bearer-token-env-var` | Unit tests: generated argv, field mapping, conflict/restore, comment preservation in the fallback; acceptance Codex MCP + G10 items pass |
+| PR5 fix(client-core): Codex MCP via codex CLI, fields, ownership | `codex mcp add/remove`; correct fields (no `type`/`headers`, sse rejected); `CODEX_HOME` first; the same preflight/ownership as PR3 for Codex; raw-table snapshot, the `--replace` restorability check and CLI-based restore with post-restore deep-equal (§5.5); config binding through `--env`/`--bearer-token-env-var` | Unit tests: generated argv, field mapping, conflict/restore, restorability key matrix, comment preservation in the fallback; acceptance Codex MCP + G10 items pass, including the three Codex `--replace` cases in §5.5 |
 | PR6 feat(client-core): Codex skills from `~/.agents/skills` | Stop writing `~/.codex/skills`; Codex recognition by `runtimeNames.codex` | Acceptance Codex skill + lifecycle items pass; `skills/list` has no duplicates |
 | PR7 feat(cli): migrate + doctor | `as migrate` converts the old layout (old copies moved into the backups directory first); `as doctor` compares registry.json/markers/targets.json with both tools' real view and warns on shadowing; package-engine name normalization | Unit tests on old-layout fixtures; `--isolated` passes after migration |
 | PR8 refactor: extract the real shared parts | Only after PR3–PR6 are merged, and based on code that is actually duplicated (expected: safe write, preflight/ownership, skill store); dropped if there is no real duplication | Full unit tests + `--isolated` all pass |
@@ -386,6 +397,7 @@ Each PR runs `pnpm lint && pnpm type-check && pnpm test` plus its `accept-global
 - **Unpinned sources**: registry `ref` is a branch; we pin the resolved SHA in the marker, but a reinstall can pick up new upstream content. Updates require `--force` when local content changed.
 - **Shared `~/.agents/skills`**: many skills there are maintained by hand or by other tools, so name and frontmatter-name clashes are possible. The marker, conflict and collision rules apply.
 - **This machine's current real state**: `~/.claude/skills` holds 95 real directories and `~/.agents/skills` 110 entries (counted 2026-10-21 by `ls`, contents not read). They have no marker, so they count as user-owned and are never migrated or removed.
+- **Codex drops comments inside `mcp_servers`**: any `codex mcp add/remove`, ours included, removes comments in `[mcp_servers.*]` tables (§1.1-4). Values are kept and the real-acceptance restore (§6.2) puts back the whole `config.toml`; for normal use this is documented as a known CLI behavior, not worked around.
 - **Secrets in plaintext config**: MCP env values end up in `.claude.json`/`config.toml` (0600). Bearer tokens for Codex stay in an environment variable instead.
 - **Credentials for `--use`**: `auth.json` copies stay in the temp directory and are deleted in `finally`.
 - **Agent machines**: Paperclip runs point `CLAUDE_CONFIG_DIR`/`CODEX_HOME` at agent profiles; §6.1 refuses those for `--real`.
