@@ -3,7 +3,7 @@ import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview, ItemVersion,
-  EnableOptions, DisableOptions, UninstallOptions,
+  EnableOptions, DisableOptions, UninstallOptions, InstallOptions, SkillItem,
   UsageSummaryRow, UsageSummaryOptions, RegistryJson, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
 } from '@as/types'
@@ -13,10 +13,11 @@ import { readCatalogCache, writeCatalogCache } from './catalog-cache'
 import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from './registry/index'
 import { runHook, writeManifest } from './installer/hook-runner'
 import { postInstall as providerPostInstall } from './installer/provider'
-import { postInstall as skillPostInstall } from './installer/skill'
 import { postInstall as mcpPostInstall } from './installer/mcp'
 import { syncItemToClaude, enableRelayForClaude, disableRelayForClaude } from './config/claude'
 import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './config/codex'
+import { installSkillContent, readMarker, removeSkillContent } from './skills/store'
+import { hasClaudeSkillLink, linkClaudeSkill, unlinkClaudeSkill } from './skills/claude-link'
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { getDailySummary, getRecentRequests } from './usage/queries'
@@ -30,6 +31,13 @@ import {
   removeLocalConfig as _removeLocalConfig, updateLocalConfig as _updateLocalConfig,
   toggleLocalConfig as _toggleLocalConfig,
 } from './relay/local-configs'
+
+export class CodexSkillDisableUnsupported extends Error {
+  constructor(slug: string) {
+    super(`Codex reads every skill in ~/.agents/skills; there is no per-skill disable for Codex yet. Uninstall to remove ${slug} from Codex: as uninstall ${slug}`)
+    this.name = 'CodexSkillDisableUnsupported'
+  }
+}
 
 export class EngineImpl implements Engine {
   private readonly paths: Required<Paths>
@@ -68,17 +76,17 @@ export class EngineImpl implements Engine {
     return items
   }
 
-  async install(slug: string): Promise<InstallResult> {
+  async install(slug: string, options: InstallOptions = {}): Promise<InstallResult> {
     const itemResult = await this.client.getItemBySlug(slug)
     if (itemResult.error || !itemResult.data) {
       throw new Error(itemResult.error ?? `Item not found: ${slug}`)
     }
     const item = itemResult.data
+    if (item.category === 'skill') return this._installSkill(item, options)
     const dir = itemDir(this.paths.aasHome, item.category, slug)
     await mkdir(dir, { recursive: true })
     await runHook(item.installHook.steps, dir)
     if (item.category === 'provider') await providerPostInstall(dir)
-    else if (item.category === 'skill') await skillPostInstall(dir)
     else if (item.category === 'mcp') await mcpPostInstall(dir)
     await writeManifest(dir, item)
     const registry = await readRegistry(this.paths.aasHome)
@@ -99,10 +107,76 @@ export class EngineImpl implements Engine {
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
 
+  /**
+   * §5.4: content → registry {codex:true, claude:false} → Claude symlink →
+   * claude:true, so a failed symlink leaves the registry truthful.
+   */
+  private async _installSkill(item: SkillItem, options: InstallOptions): Promise<InstallResult> {
+    const slug = item.slug
+    if (options.target === 'claude') {
+      throw new Error(
+        `skills can't be installed for Claude only: they live in ~/.agents/skills, which Codex reads too. ` +
+        `Run a plain "as install ${slug}", or "as install ${slug} --target codex" and later "as enable ${slug} --for claude"`
+      )
+    }
+    if (!item.compatibleWith.includes('codex')) {
+      throw new Error(`${slug} is not declared Codex-compatible, and ~/.agents/skills is shared with Codex; it can't be installed`)
+    }
+    await installSkillContent(this._skillStoreContext, item, { force: options.force })
+
+    const content = this._skillDir(slug)
+    let registry = await readRegistry(this.paths.aasHome)
+    const existing = findEntry(registry, slug)
+    const now = new Date().toISOString()
+    let entry: InstalledItem = {
+      slug,
+      category: 'skill',
+      version: item.version,
+      installedAt: existing?.installedAt ?? now,
+      updatedAt: now,
+      compatibleWith: item.compatibleWith,
+      enabledFor: { codex: true, claude: await hasClaudeSkillLink(this.paths.claudeConfigDir, slug, content) },
+    }
+    registry = upsertEntry(registry, entry)
+    await writeRegistry(this.paths.aasHome, registry)
+    void this.client.recordInstall(slug)
+
+    if (options.target !== 'codex' && item.compatibleWith.includes('claude') && !entry.enabledFor.claude) {
+      try {
+        await linkClaudeSkill(this.paths.claudeConfigDir, slug, content)
+      } catch (e) {
+        throw new Error(`installed for Codex, but the Claude symlink step failed: ${e instanceof Error ? e.message : String(e)}`)
+      }
+      entry = { ...entry, enabledFor: { ...entry.enabledFor, claude: true } }
+      await writeRegistry(this.paths.aasHome, upsertEntry(registry, entry))
+    }
+    return { slug, version: item.version, installedAt: entry.installedAt }
+  }
+
+  private _skillDir(slug: string): string {
+    return itemDir(this.paths.aasHome, 'skill', slug)
+  }
+
+  private get _skillStoreContext() {
+    return { aasHome: this.paths.aasHome, codexConfigDir: this.paths.codexConfigDir }
+  }
+
   async uninstall(slug: string, options: UninstallOptions = {}): Promise<void> {
     let registry = await readRegistry(this.paths.aasHome)
     let entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
+    if (entry.category === 'skill') {
+      // Our Claude symlink, then the content (only with our marker), then the entry.
+      await unlinkClaudeSkill(this.paths.claudeConfigDir, slug, this._skillDir(slug))
+      if (entry.enabledFor['claude']) {
+        entry = { ...entry, enabledFor: { ...entry.enabledFor, claude: false }, updatedAt: new Date().toISOString() }
+        registry = upsertEntry(registry, entry)
+        await writeRegistry(this.paths.aasHome, registry)
+      }
+      await removeSkillContent(this.paths.aasHome, slug, options.force)
+      await writeRegistry(this.paths.aasHome, removeEntry(registry, slug))
+      return
+    }
     for (const target of entry.compatibleWith) {
       if (entry.enabledFor[target]) {
         if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
@@ -155,7 +229,7 @@ export class EngineImpl implements Engine {
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
-    const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as { configSchema?: JsonSchema }
+    const manifest = await this._readManifest(entry.category, dir) as { configSchema?: JsonSchema }
     let current: Record<string, unknown> = {}
     try {
       current = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) as Record<string, unknown>
@@ -210,10 +284,18 @@ export class EngineImpl implements Engine {
       try {
         const { latestItem, fromVersion } = await applyUpdate(entry.slug, this.client, entry)
         if (latestItem.version === fromVersion) continue
+        if (latestItem.category === 'skill') {
+          // The whole directory is replaced; local edits make this fail (needs install --force).
+          await installSkillContent(this._skillStoreContext, latestItem)
+          const updated = upsertEntry(registry, { ...entry, version: latestItem.version, updatedAt: new Date().toISOString() })
+          await writeRegistry(this.paths.aasHome, updated)
+          registry = updated
+          results.push({ slug: entry.slug, fromVersion, toVersion: latestItem.version })
+          continue
+        }
         const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
         await runHook(latestItem.installHook.steps, dir)
         if (latestItem.category === 'provider') await providerPostInstall(dir)
-        else if (latestItem.category === 'skill') await skillPostInstall(dir)
         else if (latestItem.category === 'mcp') await mcpPostInstall(dir)
         await writeManifest(dir, latestItem)
         const now = new Date().toISOString()
@@ -247,7 +329,7 @@ export class EngineImpl implements Engine {
     const entry = entries.find(item => item.slug === slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
-    const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as {
+    const manifest = await this._readManifest(entry.category, dir) as {
       name: string; description: string
       publisher: import('@as/types').Publisher; tags: string[]; downloads: number
       configSchema?: import('@as/types').JsonSchema; supportedModels?: string[]
@@ -401,6 +483,14 @@ export class EngineImpl implements Engine {
     return getBudgetStatus(this.paths.aasHome)
   }
 
+  private async _readManifest(category: 'provider' | 'skill' | 'mcp', dir: string): Promise<unknown> {
+    if (category === 'skill') {
+      const marker = await readMarker(dir)
+      if (marker) return marker.manifest
+    }
+    return JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8'))
+  }
+
   private _hasOtherEnabledProvider(registry: RegistryJson, excludeSlug: string, target: ToolTarget): boolean {
     return registry.installed.some(
       (item) =>
@@ -426,6 +516,21 @@ export class EngineImpl implements Engine {
         if (action === 'add') await enableRelayForCodex(this.paths.aasHome, this.paths.codexConfigDir)
         else await disableRelayForCodex(this.paths.aasHome, this.paths.codexConfigDir)
       }
+      return
+    }
+
+    if (category === 'skill') {
+      const content = this._skillDir(slug)
+      if (action === 'add' && !(await readMarker(content))) {
+        throw new Error(`${content} is missing or was not installed by Agent Store; reinstall with: as install ${slug}`)
+      }
+      if (target === 'claude') {
+        if (action === 'add') await linkClaudeSkill(this.paths.claudeConfigDir, slug, content)
+        else await unlinkClaudeSkill(this.paths.claudeConfigDir, slug, content)
+      } else if (action === 'remove') {
+        throw new CodexSkillDisableUnsupported(slug)
+      }
+      // Codex reads ~/.agents/skills natively: enabling is a no-op once the content is there.
       return
     }
 

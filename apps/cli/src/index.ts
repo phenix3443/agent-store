@@ -23,7 +23,8 @@ Usage: aas <command> [options]
 
 Commands:
   search <query>                   Search the store
-  install <slug>                   Install an item (or update if already installed)
+  install <slug> [--target <tool>] [--force]
+                                   Install an item (or update if already installed)
   uninstall <slug> [--force]       Uninstall an item
   enable <slug> --for <tool> [--replace]   Enable for claude or codex
   disable <slug> --for <tool> [--force]    Disable for claude or codex

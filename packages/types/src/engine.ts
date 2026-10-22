@@ -217,6 +217,16 @@ export interface ItemDetail {
  * IMPORTANT: All methods are pure data I/O. No terminal output, no interactive prompts.
  * The CLI layer calls getConfigSchema() + setConfig() and handles prompting itself.
  */
+export interface InstallOptions {
+  /**
+   * Skills only: `codex` installs the content without the Claude symlink.
+   * `claude` is rejected, because Codex reads ~/.agents/skills anyway.
+   */
+  target?: ToolTarget
+  /** Skills only: replace locally edited content and ignore a Codex name clash. */
+  force?: boolean
+}
+
 export interface EnableOptions {
   /** Take over a same-name MCP entry Agent Store did not write; it is restored on disable/uninstall. */
   replace?: boolean
@@ -231,7 +241,8 @@ export type UninstallOptions = DisableOptions
 
 export interface Engine {
   search(query: string, options?: SearchOptions): Promise<Item[]>
-  install(slug: string): Promise<InstallResult>
+  /** Skills are also enabled here (§5.4); other categories are enabled by the caller. */
+  install(slug: string, options?: InstallOptions): Promise<InstallResult>
   uninstall(slug: string, options?: UninstallOptions): Promise<void>
   enable(slug: string, target: ToolTarget, options?: EnableOptions): Promise<void>
   disable(slug: string, target: ToolTarget, options?: DisableOptions): Promise<void>
