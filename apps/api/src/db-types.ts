@@ -92,7 +92,9 @@ export function mapItem(row: DBItem & { publisher: DBPublisher }): Item {
   }
 
   if (row.category === 'skill') {
-    const source = readSkillSource(metadata['source'])
+    // registry sync tags rows with metadata.source = 'registry' | 'crawler' and
+    // keeps the manifest's source object under skillSource.
+    const source = readSkillSource(metadata['skillSource'] ?? metadata['source'])
     return {
       ...base,
       category: 'skill',

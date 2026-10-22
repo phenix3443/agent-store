@@ -73,3 +73,15 @@ test('skills without metadata.source have no source field', () => {
   const item = mapItem(row({ ...canvasDesign, metadata: { contentUrl: 'https://example.invalid/SKILL.md' } })) as SkillItem
   expect('source' in item).toBe(false)
 })
+
+test('rows written by registry sync keep the source under skillSource', () => {
+  // sync.ts overwrites metadata.source with its provenance tag.
+  const synced = { ...canvasDesign.metadata, source: 'registry', skillSource: canvasDesign.metadata.source }
+  const item = mapItem(row({ ...canvasDesign, metadata: synced })) as SkillItem
+  expect(item.source).toEqual({ repo: 'anthropics/skills', ref: 'main', dir: 'skills/canvas-design' })
+})
+
+test('a provenance tag alone is not a source', () => {
+  const item = mapItem(row({ ...canvasDesign, metadata: { contentUrl: 'x', source: 'registry' } })) as SkillItem
+  expect('source' in item).toBe(false)
+})
