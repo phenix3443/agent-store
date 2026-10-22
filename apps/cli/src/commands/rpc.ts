@@ -1,13 +1,13 @@
-import type { Engine, BudgetConfig, ListOptions, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
+import type { Engine, BudgetConfig, EnableOptions, DisableOptions, ListOptions, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
 
 const RPC_METHODS: Record<string, RpcHandler> = {
   search: (e, a) => e.search(a[0] as string, a[1] as SearchOptions | undefined),
   install: (e, a) => e.install(a[0] as string),
-  uninstall: (e, a) => e.uninstall(a[0] as string),
-  enable: (e, a) => e.enable(a[0] as string, a[1] as ToolTarget),
-  disable: (e, a) => e.disable(a[0] as string, a[1] as ToolTarget),
+  uninstall: (e, a) => e.uninstall(a[0] as string, a[1] as DisableOptions | undefined),
+  enable: (e, a) => e.enable(a[0] as string, a[1] as ToolTarget, a[2] as EnableOptions | undefined),
+  disable: (e, a) => e.disable(a[0] as string, a[1] as ToolTarget, a[2] as DisableOptions | undefined),
   getConfigSchema: (e, a) => e.getConfigSchema(a[0] as string),
   setConfig: (e, a) => e.setConfig(a[0] as string, a[1] as Record<string, unknown>),
   sync: (e, a) => e.sync(a[0] as ToolTarget[] | undefined),

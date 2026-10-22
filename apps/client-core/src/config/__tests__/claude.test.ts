@@ -4,6 +4,9 @@ import { join } from 'path'
 import { syncItemToClaude } from '../claude'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
+// Unit tests use the safe file-edit path, not the installed claude CLI.
+process.env['AS_CLAUDE_BIN'] = ''
+
 let aasHome: string
 let claudeDir: string
 let claudeJson: string
@@ -147,15 +150,16 @@ test('skill remove does not throw if file absent', async () => {
   ).resolves.toBeUndefined()
 })
 
-test('mcp remove works even when item directory does not exist', async () => {
-  // First add the entry, then simulate the directory being deleted already
+test('mcp remove without the item directory: no ENOENT, refused without proof of ownership, --force removes', async () => {
+  // First add the entry, then simulate the directory (manifest + targets.json) being deleted already
   await setupItem('mcp', 'test-mcp', mcpManifest)
   await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'add')
-  // Remove the item directory to simulate post-uninstall state
   await rm(join(aasHome, 'mcps', 'test-mcp'), { recursive: true, force: true })
-  // Remove should succeed without ENOENT
   await expect(
     syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'remove')
+  ).rejects.toThrow(/outside Agent Store/)
+  await expect(
+    syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'remove', { force: true })
   ).resolves.toBeUndefined()
   const config = JSON.parse(await readFile(claudeJson, 'utf-8'))
   expect(config.mcpServers?.['test-mcp']).toBeUndefined()
