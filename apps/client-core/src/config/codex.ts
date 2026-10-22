@@ -92,6 +92,15 @@ export async function upsertCodexMcpServer(
   await writeConfig(codexConfigDir, config)
 }
 
+export async function removeCodexMcpServer(codexConfigDir: string, slug: string): Promise<void> {
+  const config = await readConfig(codexConfigDir)
+  const mcpServers = (config['mcp_servers'] ?? {}) as Record<string, unknown>
+  delete mcpServers[slug]
+  if (Object.keys(mcpServers).length > 0) config['mcp_servers'] = mcpServers
+  else delete config['mcp_servers']
+  await writeConfig(codexConfigDir, config)
+}
+
 interface CodexProviderConfigInput {
   providerKey: string
   name: string

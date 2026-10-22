@@ -9,14 +9,18 @@ import { readRegistry, upsertEntry, writeRegistry } from './registry'
 import { itemDir } from './paths'
 import { contentHash, isLegacyInstall, MARKER, parseFrontmatter, readMarker, type SkillMarker } from './skills/store'
 import { linkClaudeSkill } from './skills/claude-link'
+import { AgentPackageEngine } from './agent-package-engine'
 
 export interface MigratePaths {
   aasHome: string
   claudeConfigDir: string
   codexConfigDir: string
+  /** Defaults the way resolvePaths does for the given claudeConfigDir. */
+  claudeJsonPath?: string
 }
 
 export interface MigrateStep {
+  /** Skill slug, or package id for package-engine steps. */
   slug: string
   /** done: changed; skipped: left alone and why; error: this slug stopped here. */
   result: 'done' | 'skipped' | 'error'
@@ -27,6 +31,10 @@ export interface MigrateResult {
   /** Only created when something was backed up. */
   backupDir: string
   steps: MigrateStep[]
+}
+
+async function exists(path: string): Promise<boolean> {
+  try { await lstat(path); return true } catch { return false }
 }
 
 async function isRealDir(path: string): Promise<boolean> {
@@ -134,5 +142,18 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
       step('error', (e as Error).message)
     }
   }
+
+  // Package-engine components still under <publisher>.<name>#<id> (§2.1).
+  const backedUp = new Set<string>()
+  const engine = new AgentPackageEngine({
+    aasHome: p.aasHome, claudeConfigDir: p.claudeConfigDir, codexConfigDir: p.codexConfigDir,
+    ...(p.claudeJsonPath ? { claudeJsonPath: p.claudeJsonPath } : {}),
+  })
+  const renamed = await engine.migrateLegacyNames(async (path, rel) => {
+    if (backedUp.has(rel) || !(await exists(path))) return
+    backedUp.add(rel)
+    await backup(path, rel)
+  })
+  for (const s of renamed) steps.push({ slug: s.packageId, result: s.result, message: s.message })
   return { backupDir, steps }
 }

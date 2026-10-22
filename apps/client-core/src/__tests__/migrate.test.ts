@@ -103,3 +103,73 @@ test('a skill.md without frontmatter is not converted', async () => {
   expect(res.steps.map(s => s.result)).toEqual(['error'])
   expect(readFileSync(join(p.aasHome, 'skills', 'bare', 'skill.md'), 'utf-8')).toBe('no frontmatter\n')
 })
+
+const PKG_SKILL = '---\nname: pkg-skill\ndescription: d\n---\npkg\n'
+
+/** A package-engine install from before PR7: tool entries named <publisher>.<name>#<id>. */
+function oldPackageInstall() {
+  const dir = join(p.aasHome, 'packages', 'local.pkg')
+  file(join(dir, 'agent-package.json'), JSON.stringify({
+    schemaVersion: 3, name: 'pkg', displayName: 'Pkg', version: '1.0.0', description: 'd',
+    publisher: { slug: 'local', name: 'Local' },
+    components: [
+      { id: 'sk', type: 'skill', version: '1.0.0', source: { repo: 'local/pkg', path: 'SKILL.md' }, targets: { claude: true, codex: true } },
+      { id: 'fs', type: 'mcpServer', version: '1.0.0', transport: 'http', url: 'https://mcp.example.com', targets: { claude: true, codex: true } },
+      { id: 'prov', type: 'provider', version: '1.0.0', configSchema: {}, provider: {}, targets: { codex: true } },
+    ],
+  }))
+  file(join(dir, 'sources', 'local/pkg', 'SKILL.md'), PKG_SKILL)
+  file(join(dir, 'package-config.json'), JSON.stringify({ prov: { apiKey: 'k', baseUrl: 'https://llm.example.com' } }))
+  file(join(p.aasHome, 'packages-registry.json'), JSON.stringify({ installedPackages: [
+    { packageId: 'local.pkg', packageDir: dir, version: '1.0.0', installedAt: '', updatedAt: '', targets: { claude: true, codex: true } },
+  ] }))
+  for (const root of [p.claudeConfigDir, p.codexConfigDir]) file(join(root, 'skills', 'local.pkg#sk', 'SKILL.md'), PKG_SKILL)
+  file(join(p.claudeConfigDir, '.claude.json'), JSON.stringify({ mcpServers: {
+    'local.pkg#fs': { type: 'http', url: 'https://mcp.example.com' }, mine: { type: 'http', url: 'https://mine' },
+  } }))
+  file(join(p.codexConfigDir, 'config.toml'), [
+    'model_provider = "local.pkg#prov"',
+    '[model_providers."local.pkg#prov"]', 'name = "prov"', 'base_url = "https://llm.example.com"',
+    '[mcp_servers."local.pkg#fs"]', 'type = "http"', 'url = "https://mcp.example.com"',
+    '[mcp_servers.mine]', 'url = "https://mine"', '',
+  ].join('\n'))
+}
+
+test('package-engine entries get the <publisher>-<name>-<id> names, old ones backed up first', async () => {
+  oldPackageInstall()
+  const res = await runMigrate(p, NOW)
+  expect(res.steps.filter(s => s.result !== 'done')).toEqual([])
+  expect(res.steps.length).toBe(5)
+
+  for (const root of [p.claudeConfigDir, p.codexConfigDir]) {
+    expect(existsSync(join(root, 'skills', 'local.pkg#sk'))).toBe(false)
+    expect(readFileSync(join(root, 'skills', 'local-pkg-sk', 'SKILL.md'), 'utf-8')).toBe(PKG_SKILL)
+  }
+  const claude = JSON.parse(readFileSync(join(p.claudeConfigDir, '.claude.json'), 'utf-8'))
+  expect(Object.keys(claude.mcpServers).sort()).toEqual(['local-pkg-fs', 'mine'])
+  const codex = readFileSync(join(p.codexConfigDir, 'config.toml'), 'utf-8')
+  expect(codex).not.toContain('local.pkg#')
+  expect(codex).toContain('model_provider = "local-pkg-prov"')
+  expect(codex).toContain('[mcp_servers.local-pkg-fs]')
+  expect(codex).toContain('[mcp_servers.mine]')
+
+  const backup = backupOf()
+  for (const rel of ['packages/claude/skills/local.pkg#sk/SKILL.md', 'packages/codex/skills/local.pkg#sk/SKILL.md', 'packages/claude/.claude.json', 'packages/codex/config.toml']) {
+    expect(existsSync(join(backup, rel))).toBe(true)
+  }
+  expect(readFileSync(join(backup, 'packages/codex/config.toml'), 'utf-8')).toContain('local.pkg#fs')
+
+  const again = await runMigrate(p, new Date('2026-10-23T00:00:00Z'))
+  expect(again.steps).toEqual([])
+})
+
+test('an old package skill dir the user changed is left alone', async () => {
+  oldPackageInstall()
+  file(join(p.claudeConfigDir, 'skills', 'local.pkg#sk', 'notes.md'), 'mine')
+  const res = await runMigrate(p, NOW)
+  expect(res.steps.filter(s => s.result === 'skipped').map(s => s.message)).toEqual([
+    `${join(p.claudeConfigDir, 'skills', 'local.pkg#sk')} differs from the package's skill, so it is treated as the user's and left alone`,
+  ])
+  expect(existsSync(join(p.claudeConfigDir, 'skills', 'local.pkg#sk', 'notes.md'))).toBe(true)
+  expect(res.steps.some(s => s.result === 'error')).toBe(false)
+})
