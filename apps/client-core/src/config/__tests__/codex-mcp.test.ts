@@ -255,7 +255,7 @@ test('a resync whose add fails puts the old entry back and keeps the record', as
   const before = await readMcpTargets(ctx.itemDir)
   const cli = ctx.cli!
   ctx.cli = { ...cli, async add(at, name, entry) {
-    if (entry.env) throw new Error('add failed')
+    if ((entry as { env?: unknown }).env) throw new Error('add failed')
     await cli.add(at, name, entry)
   } }
   await expect(enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } })).rejects.toThrow('add failed')
