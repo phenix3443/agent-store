@@ -1,8 +1,8 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises'
+import { mkdtemp, rm, readFile, readdir, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { syncItemToClaude } from '../claude'
-import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
+import type { MCPItem, ProviderItem } from '@as/types'
 
 // Unit tests use the safe file-edit path, not the installed claude CLI.
 process.env['AS_CLAUDE_BIN'] = ''
@@ -28,10 +28,6 @@ const mcpManifest: MCPItem = {
 const providerManifest: ProviderItem = {
   ...baseItem, slug: 'test-provider', category: 'provider',
   configSchema: {}, supportedModels: ['gpt-4o'],
-}
-
-const skillManifest: SkillItem = {
-  ...baseItem, slug: 'test-skill', category: 'skill', contentUrl: '',
 }
 
 async function setupItem(category: string, slug: string, manifest: object, config?: object) {
@@ -126,28 +122,9 @@ test('provider add preserves existing non-provider settings', async () => {
   expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('sk-123')
 })
 
-test('skill add copies skill.md to claudeDir/skills/<name>/SKILL.md', async () => {
-  const dir = join(aasHome, 'skills', 'test-skill')
-  await mkdir(dir, { recursive: true })
-  await writeFile(join(dir, 'skill.md'), '# Test Skill')
+test('skills are not written into the Claude config dir by this module', async () => {
   await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, claudeJson, 'add')
-  const content = await readFile(join(claudeDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')
-  expect(content).toBe('# Test Skill')
-})
-
-test('skill remove deletes the skill directory', async () => {
-  const dir = join(aasHome, 'skills', 'test-skill')
-  await mkdir(dir, { recursive: true })
-  await writeFile(join(dir, 'skill.md'), '# Test Skill')
-  await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, claudeJson, 'add')
-  await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, claudeJson, 'remove')
-  await expect(readFile(join(claudeDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')).rejects.toThrow()
-})
-
-test('skill remove does not throw if file absent', async () => {
-  await expect(
-    syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, claudeJson, 'remove')
-  ).resolves.toBeUndefined()
+  await expect(readdir(claudeDir)).resolves.toEqual([])
 })
 
 test('mcp remove without the item directory: no ENOENT, refused without proof of ownership, --force removes', async () => {

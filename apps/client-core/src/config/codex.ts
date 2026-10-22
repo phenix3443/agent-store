@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, copyFile, rm } from 'fs/promises'
+import { readFile, writeFile, mkdir, rm } from 'fs/promises'
 import { join } from 'path'
 import { parse, stringify } from '@iarna/toml'
 import type { JsonMap } from '@iarna/toml'
@@ -175,16 +175,8 @@ export async function syncItemToCodex(
     await syncCodexMcp({ aasHome, codexHome: codexConfigDir, itemDir: dir, cli }, slug, action, options)
     return
   }
-  if (category === 'skill') {
-    // Codex discovers skills as directories: skills/<name>/SKILL.md
-    const skillDir = join(codexConfigDir, 'skills', slug)
-    if (action === 'add') {
-      await mkdir(skillDir, { recursive: true })
-      await copyFile(join(dir, 'skill.md'), join(skillDir, 'SKILL.md'))
-    } else {
-      try { await rm(skillDir, { recursive: true, force: true }) } catch { /* already absent */ }
-    }
-  } else if (category === 'provider') {
+  // Skills are not synced here: Codex reads them from ~/.agents/skills (engine + skills/store.ts).
+  if (category === 'provider') {
     if (action === 'add') {
       const connection = await readProviderConnection(dir)
       if (connection.apiKey && connection.baseUrl) {

@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises'
+import { mkdtemp, rm, readFile, readdir, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { syncItemToCodex } from '../codex'
 import type { MCPItem, ProviderItem } from '@as/types'
@@ -99,13 +99,9 @@ test('provider remove deletes direct-apply codex settings', async () => {
   await expect(readFile(join(codexDir, 'auth.json'), 'utf-8')).rejects.toThrow()
 })
 
-test('skill add copies skill.md to codexDir/skills/<name>/SKILL.md', async () => {
-  const dir = join(aasHome, 'skills', 'test-skill')
-  await mkdir(dir, { recursive: true })
-  await writeFile(join(dir, 'skill.md'), '# Skill')
+test('skills are never copied into $CODEX_HOME/skills', async () => {
   await syncItemToCodex('test-skill', 'skill', aasHome, codexDir, 'add')
-  const content = await readFile(join(codexDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')
-  expect(content).toBe('# Skill')
+  await expect(readdir(codexDir)).resolves.toEqual([])
 })
 
 test('mcp remove with the item directory gone needs --force', async () => {
