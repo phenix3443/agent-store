@@ -85,3 +85,10 @@ test('a provenance tag alone is not a source', () => {
   const item = mapItem(row({ ...canvasDesign, metadata: { contentUrl: 'x', source: 'registry' } })) as SkillItem
   expect('source' in item).toBe(false)
 })
+
+test('an mcp with structured command/args passes them through', () => {
+  const mcp = { ...canvasDesign, category: 'mcp', metadata: { transport: 'stdio', serverCommand: 'node "a b"', command: 'node', args: ['a b'] } }
+  expect(mapItem(row(mcp))).toMatchObject({ transport: 'stdio', serverCommand: 'node "a b"', command: 'node', args: ['a b'] })
+  const plain = { ...canvasDesign, category: 'mcp', metadata: { transport: 'stdio', serverCommand: 'npx -y x', args: ['ignored'] } }
+  expect('command' in mapItem(row(plain))).toBe(false)
+})

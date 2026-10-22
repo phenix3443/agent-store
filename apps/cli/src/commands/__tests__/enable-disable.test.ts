@@ -74,3 +74,15 @@ test('runDisable returns 0 on success and 1 on failure', async () => {
 test('runDisable returns usage error when --for missing', async () => {
   expect(await runDisable(makeEngine(), ['test-mcp'], () => {})).toBe(2)
 })
+
+test('runEnable passes --replace and runDisable passes --force', async () => {
+  const seen: unknown[] = []
+  const engine = {
+    enable: async (_s: string, _t: string, o?: unknown) => { seen.push(o) },
+    disable: async (_s: string, _t: string, o?: unknown) => { seen.push(o) },
+  } as unknown as Engine
+  await runEnable(engine, ['m', '--for', 'claude', '--replace'], () => {})
+  await runEnable(engine, ['m', '--for', 'claude'], () => {})
+  await runDisable(engine, ['m', '--for', 'codex', '--force'], () => {})
+  expect(seen).toEqual([{ replace: true }, undefined, { force: true }])
+})
