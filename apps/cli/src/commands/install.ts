@@ -1,15 +1,26 @@
 import type { Engine } from '@as/types'
 import { formatStep } from '../utils/format'
+import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, errorMessage } from '../utils/exit-codes'
 
 export async function runInstall(
   engine: Engine,
   args: string[],
   out: (s: string) => void = console.log
-): Promise<void> {
+): Promise<number> {
+  const option = args.find(a => a.startsWith('-'))
+  if (option) {
+    out(`  Error: unknown option ${option}`)
+    out('Usage: aas install <slug>')
+    return EXIT_USAGE
+  }
   const slug = args[0]
   if (!slug) {
     out('Usage: aas install <slug>')
-    return
+    return EXIT_USAGE
+  }
+  if (args.length > 1) {
+    out('Usage: aas install <slug> (install takes one slug per command)')
+    return EXIT_USAGE
   }
 
   try {
@@ -31,7 +42,9 @@ export async function runInstall(
     if (detail.category === 'provider' || detail.category === 'mcp') {
       out(`  ⚠ Configuration required — run: aas config ${slug}`)
     }
+    return EXIT_OK
   } catch (err) {
-    out(`  Error: ${err instanceof Error ? err.message : String(err)}`)
+    out(`  Error: ${errorMessage(err)}`)
+    return EXIT_FAILURE
   }
 }

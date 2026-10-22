@@ -83,10 +83,10 @@ async function main(): Promise<void> {
     case 'search':    await runSearch(engine, rest); break
     case 'list':      await runList(engine, rest); break
     case 'info':      await runInfo(engine, rest); break
-    case 'install':   await runInstall(engine, rest); break
-    case 'uninstall': await runUninstall(engine, rest); break
-    case 'enable':    await runEnable(engine, rest); break
-    case 'disable':   await runDisable(engine, rest); break
+    case 'install':   process.exitCode = await runInstall(engine, rest); break
+    case 'uninstall': process.exitCode = await runUninstall(engine, rest); break
+    case 'enable':    process.exitCode = await runEnable(engine, rest); break
+    case 'disable':   process.exitCode = await runDisable(engine, rest); break
     case 'config':    await runConfig(engine, rest); break
     case 'sync':      await runSync(engine, rest); break
     case 'update':    await runUpdate(engine, rest); break

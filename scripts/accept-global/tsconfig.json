@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "types": ["bun"],
+    "typeRoots": ["../../apps/client-core/node_modules/@types"]
+  },
+  "include": ["../accept-global.ts", "./*.ts", "../../test/accept/*.ts", "../../test/e2e/fixture-store.ts", "../../test/e2e/fixture-server.ts"]
+}
