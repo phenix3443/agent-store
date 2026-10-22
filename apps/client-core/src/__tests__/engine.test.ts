@@ -665,7 +665,8 @@ test('a setConfig refused by one tool leaves the other tool on the previous valu
   expect(saved).toEqual({ token: 'old' })
 })
 
-test('a setConfig that fails while writing the second tool puts the first tool back', async () => {
+// chmod does not stop root, so the injected Codex failure needs a normal user.
+test.skipIf(process.getuid?.() === 0)('a setConfig that fails while writing the second tool puts the first tool back', async () => {
   const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
   mockFetch({ '/api/items/test-mcp': { item } })
   await engine.install('test-mcp')

@@ -229,8 +229,12 @@ export async function enableClaudeMcp(
       await removeEntry(ctx, name)
       await addEntry(ctx, name, entry)
     } catch (e) {
-      // On a failed put-back the record (written: null, previous) stays, so it is not lost.
-      await putBack(ctx, name, adopted)
+      try {
+        await putBack(ctx, name, adopted)
+      } catch (restoreError) {
+        // The record (written: null, previous) stays, so the replaced entry is not lost.
+        throw new Error(`The Claude MCP entry "${name}" could not be replaced (${(e as Error).message}) and your entry could not be put back (${(restoreError as Error).message}); it is saved as "previous" in ${join(ctx.itemDir, 'targets.json')}, and \`as disable ${name} --for claude --force\` writes it back`)
+      }
       await saveRecord(ctx, undefined)
       throw e
     }
