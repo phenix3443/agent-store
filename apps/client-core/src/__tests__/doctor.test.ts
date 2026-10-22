@@ -122,3 +122,32 @@ test('MCP drift: missing record, missing entry, edited entry, unreadable config'
     'warn:mcp-changed-outside:c',
   ])
 })
+
+test('MCP shadowing: Claude local and project scope, Codex profile', async () => {
+  const written = { type: 'stdio', command: 'node', args: ['x.mjs'] }
+  const proj = join(root, 'proj')
+  mkdirSync(proj, { recursive: true })
+  writeFileSync(join(proj, '.mcp.json'), JSON.stringify({ mcpServers: { m: { command: 'other' } } }))
+  mkdirSync(join(p.aasHome, 'mcps', 'm'), { recursive: true })
+  writeFileSync(join(p.aasHome, 'mcps', 'm', 'targets.json'), JSON.stringify({
+    claude: { name: 'm', written, previous: null },
+    codex: { name: 'm', written: { command: 'node', args: ['x.mjs'] }, previous: null },
+  }))
+  mkdirSync(p.claudeConfigDir, { recursive: true })
+  writeFileSync(p.claudeJsonPath, JSON.stringify({
+    mcpServers: { m: written },
+    projects: { [proj]: { mcpServers: { m: { command: 'local' } } }, [join(root, 'gone')]: {} },
+  }))
+  mkdirSync(p.codexConfigDir, { recursive: true })
+  writeFileSync(join(p.codexConfigDir, 'config.toml'),
+    '[mcp_servers.m]\ncommand = "node"\nargs = ["x.mjs"]\n\n[profiles.work.mcp_servers.m]\ncommand = "other"\n')
+  registry(entry('m', 'mcp', { claude: true, codex: true }))
+  const found = await runDoctor(p)
+  expect(found.map(f => `${f.level}:${f.code}`).sort()).toEqual([
+    'warn:mcp-shadowed', 'warn:mcp-shadowed', 'warn:mcp-shadowed',
+  ])
+  const text = found.map(f => f.message).join('\n')
+  expect(text).toContain(`local scope in ${proj}`)
+  expect(text).toContain(join(proj, '.mcp.json'))
+  expect(text).toContain('profile "work"')
+})
