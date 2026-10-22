@@ -285,7 +285,7 @@ test('a resync that cannot put the old entry back says where it is kept and how 
   const before = await readMcpTargets(ctx.itemDir)
   const cli = ctx.cli!
   ctx.cli = { ...cli, async addJson() { throw new Error('add failed') } }
-  const err = await enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } }).catch(e => e as Error)
+  const err = await enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } }).catch(e => e)
   expect(err.message).toContain('add failed')
   expect(err.message).toContain(join(ctx.itemDir, 'targets.json'))
   expect(err.message).toContain('as sync')
@@ -303,7 +303,7 @@ test('a --replace that cannot put the user entry back keeps it as previous and n
     if (at.claudeJsonPath === ctx.claudeJsonPath) throw new Error('add failed')
     await cli.addJson(at, name, entry)
   } }
-  const err = await enableClaudeMcp(ctx, 'probe', OURS, { replace: true }).catch(e => e as Error)
+  const err = await enableClaudeMcp(ctx, 'probe', OURS, { replace: true }).catch(e => e)
   expect(err.message).toContain('add failed')
   expect(err.message).toContain('as disable probe --for claude --force')
   expect((await readMcpTargets(ctx.itemDir)).claude).toMatchObject({ written: null, previous: USERS })

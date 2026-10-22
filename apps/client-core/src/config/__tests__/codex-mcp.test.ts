@@ -295,7 +295,7 @@ test('a resync that cannot put the old entry back says where it is kept and how 
   const before = await readMcpTargets(ctx.itemDir)
   const cli = ctx.cli!
   ctx.cli = { ...cli, async add() { throw new Error('add failed') } }
-  const err = await enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } }).catch(e => e as Error)
+  const err = await enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } }).catch(e => e)
   expect(err.message).toContain('add failed')
   expect(err.message).toContain(join(ctx.itemDir, 'targets.json'))
   expect(err.message).toContain('as sync')
