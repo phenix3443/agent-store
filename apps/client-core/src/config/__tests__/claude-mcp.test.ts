@@ -256,6 +256,44 @@ test('a resync add that writes and then fails is cleared and the old entry put b
   expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
 })
 
+test('a resync remove that deletes the entry and then fails puts the old entry back', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  let failed = false
+  ctx.cli = { ...cli, async remove(at, name) {
+    await cli.remove(at, name)
+    if (!failed) { failed = true; throw new Error('remove exited 1 after write') }
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('remove exited 1 after write')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a --replace whose remove deletes the user entry and then fails puts it back and drops the record', async () => {
+  const USERS = { type: 'stdio', command: 'node', args: ['users.js'] }
+  await writeServers(ctx, { probe: USERS })
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async remove(at, name) {
+    await cli.remove(at, name)
+    if (at.claudeJsonPath === ctx.claudeJsonPath) throw new Error('remove exited 1 after write')
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', OURS, { replace: true })).rejects.toThrow('remove exited 1 after write')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(USERS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+})
+
+test('a resync remove that fails without deleting leaves the old entry alone', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const calls: string[] = []
+  ctx.cli = { ...fakeCli(calls), async remove() { calls.push('remove (fails)'); throw new Error('remove failed') } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('remove failed')
+  expect(calls).toEqual(['remove (fails)'])
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
 test('a resync whose add fails puts the old entry back and keeps the record', async () => {
   await enableClaudeMcp(ctx, 'probe', OURS)
   const before = await readMcpTargets(ctx.itemDir)
