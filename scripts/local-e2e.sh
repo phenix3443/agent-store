@@ -6,7 +6,8 @@ set -euo pipefail
 
 export AS_HOME=/tmp/as-e2e
 export CLAUDE_CONFIG_DIR=/tmp/claude-e2e
-export CODEX_CONFIG_DIR=/tmp/codex-e2e
+export CODEX_HOME=/tmp/codex-e2e
+export CODEX_CONFIG_DIR="$CODEX_HOME"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AS="$ROOT/bin/as"
@@ -103,13 +104,16 @@ grep -q '"ANTHROPIC_BASE_URL": "http://127.0.0.1:18780"' "$CLAUDE_CONFIG_DIR/set
   && echo "✓ claude routed through local relay" \
   || { echo "✗ claude relay settings missing"; exit 1; }
 
-grep -q '"fs-mcp-test"' "$CLAUDE_CONFIG_DIR/settings.json" \
-  && echo "✓ mcp in claude settings" \
-  || { echo "✗ mcp missing from claude settings"; exit 1; }
+# User-scope MCP servers live in .claude.json (not settings.json); skills are
+# directories with a SKILL.md. Whether the tools actually load them is checked
+# by scripts/accept-global.ts.
+grep -q '"fs-mcp-test"' "$CLAUDE_CONFIG_DIR/.claude.json" \
+  && echo "✓ mcp in claude .claude.json" \
+  || { echo "✗ mcp missing from claude .claude.json"; exit 1; }
 
-[ -s "$CLAUDE_CONFIG_DIR/skills/hello-skill.md" ] \
-  && echo "✓ hello-skill.md exists and non-empty" \
-  || { echo "✗ hello-skill.md missing or empty"; exit 1; }
+[ -s "$CLAUDE_CONFIG_DIR/skills/hello-skill/SKILL.md" ] \
+  && echo "✓ hello-skill/SKILL.md exists and non-empty" \
+  || { echo "✗ hello-skill/SKILL.md missing or empty"; exit 1; }
 
 grep -q 'model_provider = "aas-relay"' "$CODEX_CONFIG_DIR/config.toml" 2>/dev/null \
   && grep -q 'base_url = "http://127.0.0.1:18780"' "$CODEX_CONFIG_DIR/config.toml" 2>/dev/null \
