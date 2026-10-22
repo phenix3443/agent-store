@@ -6,6 +6,7 @@ import { load } from 'js-yaml'
 import type { McpServerConfig } from './mcp'
 import { resolveCodexCli, syncCodexMcp, type CodexMcpCli } from './codex-mcp'
 import { readProviderConnection } from './provider'
+import { atomicWriteFile, ConfigParseError } from './safe-file'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
 
@@ -42,25 +43,33 @@ function normalizeConfig(config: Record<string, unknown>): Record<string, unknow
 }
 
 async function readConfig(codexConfigDir: string): Promise<Record<string, unknown>> {
+  const tomlPath = join(codexConfigDir, 'config.toml')
+  let raw: string | undefined
   try {
-    const raw = await readFile(join(codexConfigDir, 'config.toml'), 'utf-8')
-    return normalizeConfig((parse(raw) as unknown as Record<string, unknown>) ?? {})
-  } catch {
+    raw = await readFile(tomlPath, 'utf-8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+  }
+  if (raw !== undefined) {
+    // A config.toml that does not parse must never be overwritten with a partial view.
     try {
-      const raw = await readFile(join(codexConfigDir, 'config.yaml'), 'utf-8')
-      const parsed = load(raw)
-      return parsed && typeof parsed === 'object'
-        ? normalizeConfig(parsed as Record<string, unknown>)
-        : {}
-    } catch {
-      return {}
+      return normalizeConfig((parse(raw) as unknown as Record<string, unknown>) ?? {})
+    } catch (e) {
+      throw new ConfigParseError(tomlPath, (e as Error).message)
     }
+  }
+  try {
+    const parsed = load(await readFile(join(codexConfigDir, 'config.yaml'), 'utf-8'))
+    return parsed && typeof parsed === 'object'
+      ? normalizeConfig(parsed as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
   }
 }
 
 async function writeConfig(codexConfigDir: string, config: Record<string, unknown>): Promise<void> {
-  await mkdir(codexConfigDir, { recursive: true })
-  await writeFile(join(codexConfigDir, 'config.toml'), stringify(config as JsonMap))
+  await atomicWriteFile(join(codexConfigDir, 'config.toml'), stringify(config as JsonMap), 0o600)
 }
 
 async function readAuth(codexConfigDir: string): Promise<Record<string, unknown>> {
