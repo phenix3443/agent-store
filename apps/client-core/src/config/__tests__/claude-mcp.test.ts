@@ -191,6 +191,18 @@ test('setConfig resync: ours is swapped for the new entry; a drifted one is refu
   await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpChangedOutsideError)
 })
 
+test('--replace again after our takeover was edited outside is refused, edit and previous kept', async () => {
+  const seed = { command: 'node', args: ['users.js'] }
+  await writeServers(ctx, { probe: seed })
+  await enableClaudeMcp(ctx, 'probe', OURS, { replace: true })
+  const edited = { ...OURS, env: { EDITED: '1' } }
+  await writeServers(ctx, { probe: edited })
+  const before = await sha(ctx.claudeJsonPath)
+  await expect(enableClaudeMcp(ctx, 'probe', OURS, { replace: true })).rejects.toThrow(/changed outside Agent Store after it replaced/)
+  expect(await sha(ctx.claudeJsonPath)).toBe(before)
+  expect((await readMcpTargets(ctx.itemDir)).claude?.previous).toEqual(seed)
+})
+
 test('a restore whose read-back differs fails and keeps previous in targets.json', async () => {
   const seed = { command: 'node' }
   await writeServers(ctx, { probe: seed })
