@@ -179,11 +179,6 @@ export function toClaudeEntry(spec: McpServerSpec): McpServerConfig {
   return { type: spec.transport, url: spec.url, ...(Object.keys(headers).length ? { headers } : {}) }
 }
 
-/** Previous Codex entry shape, used by config/codex.ts until it moves to the codex CLI. */
-export function buildLegacyMcpServerConfig(spec: McpServerSpec): McpServerConfig {
-  return toClaudeEntry(spec)
-}
-
 export function buildPackageStdioMcpServerConfig(input: {
   command: string
   args?: string[]
