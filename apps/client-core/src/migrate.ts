@@ -2,8 +2,8 @@
 // current layout (docs/global-skills-mcp.md §7, PR7). Anything it moves or
 // rewrites is copied into ~/.agents/agent-store/backups/migrate-<stamp>/ first.
 // Directories it cannot prove it wrote are reported and left alone.
-import { cp, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { cp, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'fs/promises'
+import { basename, dirname, join } from 'path'
 import type { InstalledItem, Item } from '@as/types'
 import { readRegistry, upsertEntry, writeRegistry } from './registry'
 import { itemDir } from './paths'
@@ -57,10 +57,13 @@ async function convertStoreDir(dir: string, entry: InstalledItem): Promise<Skill
   const fm = parseFrontmatter(body)
   if (!fm?.name || !fm.description) throw new Error('skill.md frontmatter needs name and description; reinstall it instead: as install ' + entry.slug + ' --force')
   const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as Item
-  const stage = `${dir}.as-migrate`
-  await rm(stage, { recursive: true, force: true })
-  await mkdir(stage)
+  // Scratch paths are allocated per call, so nothing that was already next to
+  // `dir` (a user's own `probe.as-migrate`, say) is ever touched.
+  const scratch = await mkdtemp(join(dirname(dir), `.${basename(dir)}.as-migrate-`))
+  let keepScratch = false
   try {
+    const stage = join(scratch, 'new')
+    await mkdir(stage)
     await writeFile(join(stage, 'SKILL.md'), body)
     const marker: SkillMarker = {
       slug: entry.slug,
@@ -71,18 +74,22 @@ async function convertStoreDir(dir: string, entry: InstalledItem): Promise<Skill
       manifest,
     }
     await writeFile(join(stage, MARKER), JSON.stringify(marker, null, 2))
-    const old = `${dir}.as-old`
+    const old = join(scratch, 'old')
     await rename(dir, old)
     try {
       await rename(stage, dir)
     } catch (e) {
-      await rename(old, dir)
+      try {
+        await rename(old, dir)
+      } catch {
+        keepScratch = true
+        throw new Error(`${dir} could not be put back; the original is at ${old}: ${(e as Error).message}`)
+      }
       throw e
     }
-    await rm(old, { recursive: true, force: true })
     return marker
   } finally {
-    await rm(stage, { recursive: true, force: true })
+    if (!keepScratch) await rm(scratch, { recursive: true, force: true })
   }
 }
 
