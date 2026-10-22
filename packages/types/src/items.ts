@@ -63,10 +63,22 @@ export interface ProviderItem extends BaseItem {
   supportedModels: string[]
 }
 
+/** Where a skill's full directory lives: a repo-relative directory at a ref. */
+export interface SkillSource {
+  /** GitHub `owner/name` */
+  repo: string
+  /** Branch, tag or commit */
+  ref: string
+  /** Repo-relative directory holding SKILL.md; '' is the repo root */
+  dir: string
+}
+
 export interface SkillItem extends BaseItem {
   category: 'skill'
   /** Download URL for the installable skill file (distinct from readmeUrl) */
   contentUrl: string
+  /** The skill's whole directory, when the registry knows it */
+  source?: SkillSource
 }
 
 interface BaseMCPItem extends BaseItem {

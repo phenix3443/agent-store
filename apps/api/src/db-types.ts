@@ -3,6 +3,7 @@ import type {
   Item,
   ProviderItem,
   SkillItem,
+  SkillSource,
   MCPItem,
   InstallHook,
 } from '@as/types'
@@ -24,6 +25,26 @@ function readStringRecord(value: unknown): Record<string, string> | undefined {
   const entries = Object.entries(value)
   if (entries.some(([, item]) => typeof item !== 'string')) return undefined
   return Object.fromEntries(entries) as Record<string, string>
+}
+
+const REPO_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
+
+/**
+ * `metadata.source` → the skill's directory. The registry stores `path`, which
+ * may point at the SKILL.md file itself; it is normalized to its directory.
+ * Anything unsafe or malformed drops the field rather than being guessed.
+ */
+export function readSkillSource(value: unknown): SkillSource | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const { repo, ref, path } = value as Record<string, unknown>
+  if (typeof repo !== 'string' || !REPO_RE.test(repo)) return undefined
+  if (typeof ref !== 'string' || ref === '') return undefined
+  if (typeof path !== 'string') return undefined
+  if (path.startsWith('/') || path.includes('\\')) return undefined
+  const segments = path.split('/').filter(s => s !== '' && s !== '.')
+  if (segments.includes('..')) return undefined
+  if (segments.at(-1) === 'SKILL.md') segments.pop()
+  return { repo, ref, dir: segments.join('/') }
 }
 
 // ── Mapping functions ─────────────────────────────────────────────────────────
@@ -71,10 +92,14 @@ export function mapItem(row: DBItem & { publisher: DBPublisher }): Item {
   }
 
   if (row.category === 'skill') {
+    // registry sync tags rows with metadata.source = 'registry' | 'crawler' and
+    // keeps the manifest's source object under skillSource.
+    const source = readSkillSource(metadata['skillSource'] ?? metadata['source'])
     return {
       ...base,
       category: 'skill',
       contentUrl: (metadata['contentUrl'] ?? '') as string,
+      ...(source ? { source } : {}),
     } satisfies SkillItem
   }
 
