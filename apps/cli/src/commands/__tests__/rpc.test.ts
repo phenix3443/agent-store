@@ -45,6 +45,17 @@ test('runRpc calls install with parsed JSON args and prints ok:true', async () =
   expect(parsed.data.slug).toBe('openai-provider')
 })
 
+test('runRpc passes install options through', async () => {
+  let got: unknown
+  const install = async (_slug: string, options?: unknown) => {
+    got = options
+    return { slug: 's', version: '1', installedAt: '' }
+  }
+  const code = await runRpc(makeEngine({ install } as Partial<Engine>), ['install', '["s", {"force": true, "target": "codex"}]'], () => {})
+  expect(code).toBe(0)
+  expect(got).toEqual({ force: true, target: 'codex' })
+})
+
 test('runRpc calls enable with two positional args', async () => {
   const enable = async (slug: string, target: string) => {
     expect(slug).toBe('openai-provider')
