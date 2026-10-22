@@ -89,7 +89,17 @@ function packageIdOf(manifest: AgentPackageManifest): string {
   return `${manifest.publisher.slug}.${manifest.name}`
 }
 
-function componentRef(manifest: AgentPackageManifest, component: AgentPackageComponent): string {
+/**
+ * The name a component gets inside Claude Code / Codex (skill directory, MCP
+ * entry, Codex provider key): `<publisher>-<name>-<id>`. Older versions used
+ * `<publisher>.<name>#<id>`, which `as migrate` renames (docs/global-skills-mcp.md §5).
+ */
+export function componentRef(manifest: AgentPackageManifest, component: AgentPackageComponent): string {
+  return `${manifest.publisher.slug}-${manifest.name}-${component.id}`
+}
+
+/** The pre-PR7 tool-facing name, kept so `as migrate` can find old entries. */
+export function legacyComponentRef(manifest: AgentPackageManifest, component: AgentPackageComponent): string {
   return `${packageIdOf(manifest)}#${component.id}`
 }
 
