@@ -242,11 +242,21 @@ export class EngineImpl implements Engine {
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
-    await writeFile(join(dir, 'config.json'), JSON.stringify(values, null, 2))
-    for (const target of entry.compatibleWith) {
-      if (entry.enabledFor[target]) {
-        await this._syncToTarget(slug, entry.category, target, 'add')
+    const configPath = join(dir, 'config.json')
+    let previous: string | undefined
+    try { previous = await readFile(configPath, 'utf-8') } catch { /* not configured yet */ }
+    await writeFile(configPath, JSON.stringify(values, null, 2))
+    try {
+      for (const target of entry.compatibleWith) {
+        if (entry.enabledFor[target]) {
+          await this._syncToTarget(slug, entry.category, target, 'add')
+        }
       }
+    } catch (e) {
+      // A refused resync must not leave values behind that a later `as sync` would push.
+      if (previous === undefined) await rm(configPath, { force: true })
+      else await writeFile(configPath, previous)
+      throw e
     }
   }
 

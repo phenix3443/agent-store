@@ -630,3 +630,17 @@ test('uninstall refuses an entry changed outside Agent Store and keeps the regis
   await engine.uninstall('test-mcp', { force: true })
   expect(JSON.parse(await readFile(path, 'utf-8')).mcpServers?.['test-mcp']).toBeUndefined()
 })
+
+test('a setConfig whose resync is refused keeps the previous config.json', async () => {
+  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  await engine.install('test-mcp')
+  await engine.setConfig('test-mcp', { token: 'old' })
+  await engine.enable('test-mcp', 'claude')
+  const path = join(claudeDir, '.claude.json')
+  const cfg = JSON.parse(await readFile(path, 'utf-8'))
+  cfg.mcpServers['test-mcp'].args = ['edited']
+  await writeFile(path, JSON.stringify(cfg))
+  await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow(/outside Agent Store/)
+  const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
+  expect(saved).toEqual({ token: 'old' })
+})
