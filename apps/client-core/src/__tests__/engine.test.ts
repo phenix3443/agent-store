@@ -644,3 +644,23 @@ test('a setConfig whose resync is refused keeps the previous config.json', async
   const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
   expect(saved).toEqual({ token: 'old' })
 })
+
+test('a setConfig refused by one tool leaves the other tool on the previous values', async () => {
+  const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
+  mockFetch({ '/api/items/test-mcp': { item } })
+  await engine.install('test-mcp')
+  await engine.setConfig('test-mcp', { token: 'old' })
+  await engine.enable('test-mcp', 'claude')
+  await engine.enable('test-mcp', 'codex')
+  const claudePath = join(claudeDir, '.claude.json')
+  const claudeBefore = JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']
+  expect(JSON.stringify(claudeBefore)).toContain('old')
+  const codexPath = join(codexDir, 'config.toml')
+  await writeFile(codexPath, (await readFile(codexPath, 'utf-8')).replace('"old"', '"edited"'))
+  expect(await readFile(codexPath, 'utf-8')).toContain('edited')
+
+  await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow(/outside Agent Store/)
+  expect(JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']).toEqual(claudeBefore)
+  const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
+  expect(saved).toEqual({ token: 'old' })
+})

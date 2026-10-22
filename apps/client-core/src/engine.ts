@@ -245,17 +245,37 @@ export class EngineImpl implements Engine {
     const configPath = join(dir, 'config.json')
     let previous: string | undefined
     try { previous = await readFile(configPath, 'utf-8') } catch { /* not configured yet */ }
-    await writeFile(configPath, JSON.stringify(values, null, 2))
-    try {
-      for (const target of entry.compatibleWith) {
-        if (entry.enabledFor[target]) {
-          await this._syncToTarget(slug, entry.category, target, 'add')
-        }
-      }
-    } catch (e) {
-      // A refused resync must not leave values behind that a later `as sync` would push.
+    const restoreConfig = async () => {
       if (previous === undefined) await rm(configPath, { force: true })
       else await writeFile(configPath, previous)
+    }
+    const targets = entry.compatibleWith.filter(t => entry.enabledFor[t])
+    await writeFile(configPath, JSON.stringify(values, null, 2))
+    const synced: ToolTarget[] = []
+    try {
+      // Check every MCP target before writing any, so one refusing leaves all of them as they were.
+      if (entry.category === 'mcp') {
+        for (const target of targets) await this._syncToTarget(slug, entry.category, target, 'add', { dryRun: true })
+      }
+      for (const target of targets) {
+        await this._syncToTarget(slug, entry.category, target, 'add')
+        synced.push(target)
+      }
+    } catch (e) {
+      // A refused resync must not leave values behind that a later `as sync` would push,
+      // nor tools that already took the new values.
+      await restoreConfig()
+      const stuck: string[] = []
+      for (const target of synced) {
+        try {
+          await this._syncToTarget(slug, entry.category, target, 'add')
+        } catch (restoreError) {
+          stuck.push(`${target} (${(restoreError as Error).message})`)
+        }
+      }
+      if (stuck.length) {
+        throw new Error(`${(e as Error).message}; the previous config was put back in ${configPath}, but these tools still have the new values: ${stuck.join('; ')}. Run \`as sync\` to retry`)
+      }
       throw e
     }
   }
@@ -516,7 +536,7 @@ export class EngineImpl implements Engine {
     category: 'provider' | 'skill' | 'mcp',
     target: ToolTarget,
     action: 'add' | 'remove',
-    options: EnableOptions & DisableOptions = {}
+    options: EnableOptions & DisableOptions & { dryRun?: boolean } = {}
   ): Promise<void> {
     if (category === 'provider') {
       if (target === 'claude') {
