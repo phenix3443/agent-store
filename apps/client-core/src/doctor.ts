@@ -3,6 +3,7 @@
 // anything. See docs/global-skills-mcp.md §7 (PR7).
 import { lstat, readdir, readFile } from 'fs/promises'
 import { join } from 'path'
+import { parse } from '@iarna/toml'
 import type { InstalledItem, ToolTarget } from '@as/types'
 import { readRegistry } from './registry'
 import { itemDir } from './paths'
@@ -103,6 +104,35 @@ async function checkSkill(p: DoctorPaths, entry: InstalledItem, out: DoctorFindi
   }
 }
 
+function serverNames(container: unknown): string[] {
+  const servers = (container as { mcpServers?: unknown; mcp_servers?: unknown } | null)
+  const table = servers?.mcpServers ?? servers?.mcp_servers
+  return table && typeof table === 'object' ? Object.keys(table) : []
+}
+
+/** Places that override the user-scope entry `name` (§5.5); phase one only warns about them. */
+async function mcpShadows(p: DoctorPaths, tool: ToolTarget, name: string): Promise<string[]> {
+  const found: string[] = []
+  if (tool === 'claude') {
+    let json: { projects?: Record<string, unknown> }
+    try { json = JSON.parse(await readFile(p.claudeJsonPath, 'utf-8')) } catch { return found }
+    for (const [dir, project] of Object.entries(json.projects ?? {})) {
+      if (serverNames(project).includes(name)) found.push(`local scope in ${dir}`)
+      try {
+        const mcpJson = join(dir, '.mcp.json')
+        if (serverNames(JSON.parse(await readFile(mcpJson, 'utf-8'))).includes(name)) found.push(`project scope in ${mcpJson}`)
+      } catch { /* no project file */ }
+    }
+  } else {
+    let config: { profiles?: Record<string, unknown> }
+    try { config = parse(await readFile(join(p.codexConfigDir, 'config.toml'), 'utf-8')) as typeof config } catch { return found }
+    for (const [profile, table] of Object.entries(config.profiles ?? {})) {
+      if (serverNames(table).includes(name)) found.push(`profile "${profile}"`)
+    }
+  }
+  return found
+}
+
 async function checkMcp(p: DoctorPaths, entry: InstalledItem, out: DoctorFinding[]): Promise<void> {
   const slug = entry.slug
   const add = (level: DoctorFinding['level'], code: string, message: string) => out.push({ level, code, slug, message })
@@ -123,6 +153,9 @@ async function checkMcp(p: DoctorPaths, entry: InstalledItem, out: DoctorFinding
     if (!record || record.written === null) {
       add('error', 'mcp-target-missing', `enabled for ${tool} but targets.json has no completed write; run: as enable ${slug} --for ${tool}`)
       continue
+    }
+    for (const where of await mcpShadows(p, tool, record.name)) {
+      add('warn', 'mcp-shadowed', `${tool} uses another MCP server "${record.name}" from the ${where} instead of the user entry`)
     }
     let actual: unknown
     try {
