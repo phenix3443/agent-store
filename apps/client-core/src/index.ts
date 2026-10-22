@@ -4,6 +4,8 @@ export { sanitizeCodexResponsesRequest } from './agent-package-codex-relay'
 export { startRelayServer, RELAY_PORT } from './relay/server'
 export { runRelayDaemon } from './relay/daemon'
 export { resolvePaths } from './paths'
+export { runDoctor } from './doctor'
+export type { DoctorFinding, DoctorPaths } from './doctor'
 export type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,

@@ -12,7 +12,8 @@ import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
 import { runUsage } from './commands/usage'
-import { runRelayDaemon, resolvePaths } from '@as/client-core'
+import { runDoctorCommand } from './commands/doctor'
+import { runRelayDaemon, resolvePaths, runDoctor } from '@as/client-core'
 import { readFile, writeFile, rm, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
 import { homedir } from 'os'
@@ -33,6 +34,7 @@ Commands:
   relay <start|stop|status>        Manage the local provider relay
   usage [--days N] [--provider <slug>] [--for <claude|codex>]   Show usage and cost summary
   update [slug]                    Update installed items
+  doctor                           Compare the registry with what Claude Code and Codex actually see
   list [--for <tool>]              List installed items
   info <slug>                      Show item details`
 
@@ -93,6 +95,7 @@ async function main(): Promise<void> {
     case 'update':    await runUpdate(engine, rest); break
     case 'relay':     await runRelay(rest, realRelayOps()); break
     case 'usage':     await runUsage(engine, rest); break
+    case 'doctor':    process.exitCode = await runDoctorCommand(() => runDoctor(resolvePaths())); break
     case '__relay-daemon': {
       const paths = resolvePaths()
       await runRelayDaemon(paths.aasHome)

@@ -51,7 +51,7 @@ async function exists(path: string): Promise<boolean> {
  * A directory written by Agent Store before markers existed: only its
  * manifest.json (same slug), skill.md and the optional config.json.
  */
-async function isLegacyInstall(dir: string, slug: string): Promise<boolean> {
+export async function isLegacyInstall(dir: string, slug: string): Promise<boolean> {
   try {
     const names = await readdir(dir)
     if (!names.every(n => n === 'manifest.json' || n === 'skill.md' || n === 'config.json')) return false
