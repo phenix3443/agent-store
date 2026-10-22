@@ -71,8 +71,8 @@ export function toolEnv(
   if (r.claudeConfigDirEnv) env['CLAUDE_CONFIG_DIR'] = r.claudeConfigDirEnv
   else delete env['CLAUDE_CONFIG_DIR']
   env['CODEX_HOME'] = r.codexHome
-  // Agent Store before PR5 reads its own CODEX_CONFIG_DIR instead of CODEX_HOME.
-  env['CODEX_CONFIG_DIR'] = r.codexHome
+  // Agent Store reads CODEX_HOME first; drop the old alias so it can't point elsewhere.
+  delete env['CODEX_CONFIG_DIR']
   env['AS_HOME'] = r.asHome
   for (const [k, v] of Object.entries(extra)) {
     if (v === undefined) delete env[k]

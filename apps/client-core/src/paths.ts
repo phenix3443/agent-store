@@ -11,7 +11,8 @@ export function resolvePaths(overrides?: Partial<Paths>): Required<Paths> {
     aasHome: overrides?.aasHome ?? process.env['AS_HOME'] ?? join(home, '.agents'),
     claudeConfigDir: overrides?.claudeConfigDir ?? process.env['CLAUDE_CONFIG_DIR'] ?? join(home, '.claude'),
     claudeJsonPath: overrides?.claudeJsonPath ?? join(claudeDirSet ?? home, '.claude.json'),
-    codexConfigDir: overrides?.codexConfigDir ?? process.env['CODEX_CONFIG_DIR'] ?? join(home, '.codex'),
+    // Codex reads CODEX_HOME; CODEX_CONFIG_DIR is this project's older name for it.
+    codexConfigDir: overrides?.codexConfigDir ?? (process.env['CODEX_HOME'] || process.env['CODEX_CONFIG_DIR'] || join(home, '.codex')),
   }
 }
 

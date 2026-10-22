@@ -3,8 +3,8 @@ import { join } from 'path'
 import { parse, stringify } from '@iarna/toml'
 import type { JsonMap } from '@iarna/toml'
 import { load } from 'js-yaml'
-import type { MCPItem } from '@as/types'
-import { buildLegacyMcpServerConfig, buildMcpServerSpec, type McpServerConfig } from './mcp'
+import type { McpServerConfig } from './mcp'
+import { resolveCodexCli, syncCodexMcp, type CodexMcpCli } from './codex-mcp'
 import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
@@ -92,15 +92,6 @@ export async function upsertCodexMcpServer(
   await writeConfig(codexConfigDir, config)
 }
 
-export async function removeCodexMcpServer(codexConfigDir: string, slug: string): Promise<void> {
-  const config = await readConfig(codexConfigDir)
-  const mcpServers = (config['mcp_servers'] ?? {}) as Record<string, unknown>
-  delete mcpServers[slug]
-  if (Object.keys(mcpServers).length > 0) config['mcp_servers'] = mcpServers
-  else delete config['mcp_servers']
-  await writeConfig(codexConfigDir, config)
-}
-
 interface CodexProviderConfigInput {
   providerKey: string
   name: string
@@ -160,26 +151,31 @@ export async function removeCodexProviderConnection(
   await writeAuth(codexConfigDir, auth)
 }
 
+export interface CodexSyncOptions {
+  /** Take over a same-name user entry (MCP only). */
+  replace?: boolean
+  /** Remove an entry even if it changed outside Agent Store (MCP only). */
+  force?: boolean
+  /** Injected CLI for tests; defaults to the installed `codex`. */
+  cli?: CodexMcpCli | null
+}
+
 export async function syncItemToCodex(
   slug: string,
   category: 'provider' | 'skill' | 'mcp',
   aasHome: string,
   codexConfigDir: string,
-  action: 'add' | 'remove'
+  action: 'add' | 'remove',
+  options: CodexSyncOptions = {}
 ): Promise<void> {
   const dir = join(aasHome, CATEGORY_DIR[category], slug)
-  const config = await readConfig(codexConfigDir)
 
   if (category === 'mcp') {
-    if (action === 'add') {
-      const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
-      let config: Record<string, unknown> = {}
-      try { config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
-      await upsertCodexMcpServer(codexConfigDir, slug, buildLegacyMcpServerConfig(buildMcpServerSpec(manifest, dir, config)))
-    } else {
-      await removeCodexMcpServer(codexConfigDir, slug)
-    }
-  } else if (category === 'skill') {
+    const cli = options.cli === undefined ? resolveCodexCli() : options.cli
+    await syncCodexMcp({ aasHome, codexHome: codexConfigDir, itemDir: dir, cli }, slug, action, options)
+    return
+  }
+  if (category === 'skill') {
     // Codex discovers skills as directories: skills/<name>/SKILL.md
     const skillDir = join(codexConfigDir, 'skills', slug)
     if (action === 'add') {

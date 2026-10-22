@@ -136,7 +136,7 @@ async function main() {
     for (const it of installs) {
       const r = await run(
         ['bun', CLI, 'install', it.slug],
-        { ...baseInstall, CLAUDE_CONFIG_DIR: it.claude, CODEX_CONFIG_DIR: it.codex },
+        { ...baseInstall, CLAUDE_CONFIG_DIR: it.claude, CODEX_HOME: it.codex, CODEX_CONFIG_DIR: it.codex },
         60_000
       )
       const installed = /Installed/.test(r.stdout)
