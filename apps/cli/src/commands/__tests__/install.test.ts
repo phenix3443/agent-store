@@ -90,3 +90,24 @@ test('runInstall rejects unknown options', async () => {
   expect(await runInstall(makeEngine(), ['openai-provider', '--bogus'], s => lines.push(s))).toBe(2)
   expect(lines.join('\n')).toContain('unknown option --bogus')
 })
+
+test('runInstall passes --target and --force to the engine', async () => {
+  let got: unknown
+  const engine = makeEngine({ install: async (_s: string, o?: unknown) => { got = o; return { slug: 'x', version: '1', installedAt: '' } } })
+  expect(await runInstall(engine, ['x', '--target', 'codex', '--force'], () => {})).toBe(0)
+  expect(got).toEqual({ target: 'codex', force: true })
+})
+
+test('runInstall rejects a bad --target value', async () => {
+  expect(await runInstall(makeEngine(), ['x', '--target', 'vim'], () => {})).toBe(2)
+})
+
+test('runInstall leaves enabling skills to the engine', async () => {
+  const enabled: string[] = []
+  const engine = makeEngine({
+    enable: async (_s: string, t: string) => { enabled.push(t) },
+    info: async () => ({ ...installedEntry, category: 'skill', enabledFor: { codex: true, claude: true } }),
+  } as unknown as Partial<Engine>)
+  expect(await runInstall(engine, ['a-skill'], () => {})).toBe(0)
+  expect(enabled).toEqual([])
+})

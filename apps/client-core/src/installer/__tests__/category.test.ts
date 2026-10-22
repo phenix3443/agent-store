@@ -2,7 +2,6 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, access, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { postInstall as providerPostInstall } from '../provider'
-import { postInstall as skillPostInstall } from '../skill'
 import { postInstall as mcpPostInstall } from '../mcp'
 
 let tmpDir: string
@@ -25,10 +24,6 @@ test('provider postInstall does not overwrite existing config', async () => {
   await providerPostInstall(tmpDir)
   const config = JSON.parse(await readFile(join(tmpDir, 'config.json'), 'utf-8'))
   expect(config.apiKey).toBe('sk-existing')
-})
-
-test('skill postInstall completes without error', async () => {
-  await expect(skillPostInstall(tmpDir)).resolves.toBeUndefined()
 })
 
 test('mcp postInstall chmodsx server when present', async () => {

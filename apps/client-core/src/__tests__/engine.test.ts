@@ -34,7 +34,7 @@ const providerItem: ProviderItem = {
 }
 
 const skillItem: SkillItem = {
-  ...baseItem, slug: 'test-skill', category: 'skill', contentUrl: 'https://s.com',
+  ...baseItem, slug: 'test-skill', category: 'skill', contentUrl: 'https://s.com/SKILL.md',
   installHook: { steps: [] },
 }
 
@@ -49,6 +49,7 @@ function mockFetch(items: Record<string, unknown>) {
     const u = String(url)
     for (const [pattern, body] of Object.entries(items)) {
       if (u.includes(pattern)) {
+        if (typeof body === 'string') return new Response(body, { status: 200 })
         return new Response(JSON.stringify(body), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -425,23 +426,22 @@ test('enable on a provider item points Codex at the relay instead of writing the
   expect(auth['OPENAI_API_KEY']).not.toBe('sk-real-secret')
 })
 
+const SKILL_MD = '---\nname: test-skill\ndescription: d\n---\n# Test Skill\n'
+
 test('enable/disable on a skill item is unaffected by the relay change', async () => {
-  mockFetch({ '/api/items/test-skill': { item: skillItem } })
+  mockFetch({ '/api/items/test-skill': { item: skillItem }, 'https://s.com/SKILL.md': SKILL_MD })
   await engine.install('test-skill')
-  await writeFile(join(aasHome, 'skills', 'test-skill', 'skill.md'), '# Test Skill')
+  await engine.disable('test-skill', 'claude')
   await engine.enable('test-skill', 'claude')
 
   const skillContent = await readFile(join(claudeDir, 'skills', 'test-skill', 'SKILL.md'), 'utf-8')
-  expect(skillContent).toBe('# Test Skill')
-  // Skills sync via file copy, not env vars — settings.json should be untouched by this enable call.
+  expect(skillContent).toBe(SKILL_MD)
+  // Skills sync via a symlink, not env vars — settings.json should be untouched by this enable call.
   const { access } = await import('fs/promises')
   await expect(access(join(claudeDir, 'settings.json'))).rejects.toThrow()
 
   await engine.disable('test-skill', 'claude')
 })
-
-// suppress unused variable warning for skillItem
-void skillItem
 
 test('duplicateProvider: copies config into a new slug and registers it disabled', async () => {
   mockFetch({ '/api/items/test-provider': { item: providerItem } })
@@ -479,7 +479,7 @@ test('duplicateProvider: increments the suffix when the copy slug is taken', asy
 })
 
 test('duplicateProvider: throws for a non-provider item', async () => {
-  mockFetch({ '/api/items/test-skill': { item: skillItem } })
+  mockFetch({ '/api/items/test-skill': { item: skillItem }, 'https://s.com/SKILL.md': SKILL_MD })
   await engine.install('test-skill')
   await expect(engine.duplicateProvider('test-skill')).rejects.toThrow('Only providers can be duplicated')
 })
