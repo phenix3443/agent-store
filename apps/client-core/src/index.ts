@@ -5,6 +5,8 @@ export { startRelayServer, RELAY_PORT } from './relay/server'
 export { runRelayDaemon } from './relay/daemon'
 export { resolvePaths } from './paths'
 export { runDoctor } from './doctor'
+export { runMigrate } from './migrate'
+export type { MigrateResult, MigrateStep } from './migrate'
 export type { DoctorFinding, DoctorPaths } from './doctor'
 export type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
