@@ -150,12 +150,12 @@ async function saveRecord(ctx: ClaudeMcpContext, record: McpTargetRecord | undef
 /**
  * Our entry is in place. Ownership comes only from targets.json: without a record a
  * same-name entry is the user's, even when it equals what we would write (§5.5).
- * With a record, the entry may be what we wrote, or what we were about to write when
- * an earlier run stopped between the tool write and the record update.
+ * With a record it must equal `written`; while `written` is null (an enable that stopped
+ * between the tool write and the record update) it must equal what that enable writes.
  */
 function isOurs(current: unknown, record: McpTargetRecord | undefined, desired: unknown): boolean {
   if (current === undefined || !record) return false
-  if (record.written != null && mcpEntriesEqual('claude', current, record.written)) return true
+  if (record.written != null) return mcpEntriesEqual('claude', current, record.written)
   return desired !== undefined && mcpEntriesEqual('claude', current, desired)
 }
 
@@ -172,7 +172,7 @@ export async function enableClaudeMcp(
   if (isOurs(current, record, entry)) {
     if (opts.dryRun) return
     if (mcpEntriesEqual('claude', current, entry)) {
-      if (!mcpEntriesEqual('claude', current, record!.written)) await saveRecord(ctx, { ...record!, written: current })
+      if (record!.written == null) await saveRecord(ctx, { ...record!, written: current })
       return
     }
     // setConfig resync: still ours, so swap it for the new entry. targets.json keeps the
@@ -182,6 +182,8 @@ export async function enableClaudeMcp(
       await addEntry(ctx, name, entry)
     } catch (e) {
       try {
+        // A CLI can write the entry and still exit non-zero; clear that before putting the old one back.
+        if ((await readClaudeMcpEntry(ctx, name)) !== undefined) await removeEntry(ctx, name)
         await restorePrevious(ctx, name, current)
       } catch (restoreError) {
         throw new Error(`The Claude MCP entry "${name}" was removed to apply the new config, the new entry could not be written (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
@@ -231,7 +233,8 @@ export async function enableClaudeMcp(
   try {
     await addEntry(ctx, name, entry)
   } catch (e) {
-    if (!record) await saveRecord(ctx, undefined)
+    // Keep the claim if the entry got written anyway, so it is not mistaken for the user's.
+    if (!record && (await readClaudeMcpEntry(ctx, name)) === undefined) await saveRecord(ctx, undefined)
     throw e
   }
   await saveRecord(ctx, { name, written: await readClaudeMcpEntry(ctx, name), previous, ...(record?.cliVersion ? { cliVersion: record.cliVersion } : {}) })
@@ -245,6 +248,11 @@ export async function disableClaudeMcp(
   const current = await readClaudeMcpEntry(ctx, name)
   const record = (await readMcpTargets(ctx.itemDir)).claude
   if (!record && current === undefined) return
+  // A claim from an enable that stopped before writing anything: nothing to remove.
+  if (current === undefined && record?.written == null && record?.previous == null) {
+    await saveRecord(ctx, undefined)
+    return
+  }
 
   if (!isOurs(current, record, opts.expected) && !opts.force) {
     throw new McpChangedOutsideError('claude', name, current === undefined ? 'removed' : 'changed')

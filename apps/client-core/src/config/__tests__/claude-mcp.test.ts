@@ -227,15 +227,33 @@ test('a user entry equal to ours is still the user\'s: conflict without --replac
   expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
 })
 
-test('an entry left by an interrupted enable is ours through the pending record', async () => {
+test('an add that writes the entry and then fails keeps the claim, so the entry stays ours', async () => {
   const cli = ctx.cli!
-  ctx.cli = { ...cli, async addJson(at, name, entry) { await cli.addJson(at, name, entry); throw new Error('killed after write') } }
-  await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toThrow('killed after write')
-  // A failed add drops the claim; simulate the crash case by writing the claim back.
-  await writeFile(join(ctx.itemDir, 'targets.json'), JSON.stringify({ claude: { name: 'probe', written: null, previous: null } }))
+  ctx.cli = { ...cli, async addJson(at, name, entry) { await cli.addJson(at, name, entry); throw new Error('exit 1 after write') } }
+  await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toThrow('exit 1 after write')
+  expect((await readMcpTargets(ctx.itemDir)).claude).toEqual({ name: 'probe', written: null, previous: null })
   ctx.cli = cli
   await enableClaudeMcp(ctx, 'probe', OURS)
   expect((await readMcpTargets(ctx.itemDir)).claude).toEqual({ name: 'probe', written: OURS, previous: null })
+})
+
+test('a claim left before anything was written does not block disable', async () => {
+  await writeFile(join(ctx.itemDir, 'targets.json'), JSON.stringify({ claude: { name: 'probe', written: null, previous: null } }))
+  await disableClaudeMcp(ctx, 'probe', { expected: OURS })
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+})
+
+test('a resync add that writes and then fails is cleared and the old entry put back', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) {
+    await cli.addJson(at, name, entry)
+    if ((entry as { env?: unknown }).env) throw new Error('exit 1 after write')
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('exit 1 after write')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
 })
 
 test('a resync whose add fails puts the old entry back and keeps the record', async () => {
