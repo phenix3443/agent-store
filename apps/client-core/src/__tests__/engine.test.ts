@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
+import { chmod, mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { EngineImpl } from '../engine'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
@@ -661,6 +661,31 @@ test('a setConfig refused by one tool leaves the other tool on the previous valu
 
   await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow(/outside Agent Store/)
   expect(JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']).toEqual(claudeBefore)
+  const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
+  expect(saved).toEqual({ token: 'old' })
+})
+
+test('a setConfig that fails while writing the second tool puts the first tool back', async () => {
+  const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
+  mockFetch({ '/api/items/test-mcp': { item } })
+  await engine.install('test-mcp')
+  await engine.setConfig('test-mcp', { token: 'old' })
+  await engine.enable('test-mcp', 'claude')
+  await engine.enable('test-mcp', 'codex')
+  const claudePath = join(claudeDir, '.claude.json')
+  const claudeBefore = JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']
+  const codexPath = join(codexDir, 'config.toml')
+  const codexBefore = await readFile(codexPath, 'utf-8')
+
+  // The ownership check only reads, so it passes; the Codex write then fails at runtime.
+  await chmod(codexDir, 0o555)
+  try {
+    await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow()
+  } finally {
+    await chmod(codexDir, 0o755)
+  }
+  expect(JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']).toEqual(claudeBefore)
+  expect(await readFile(codexPath, 'utf-8')).toBe(codexBefore)
   const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
   expect(saved).toEqual({ token: 'old' })
 })

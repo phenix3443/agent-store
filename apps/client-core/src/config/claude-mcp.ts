@@ -138,6 +138,18 @@ async function restorePrevious(ctx: ClaudeMcpContext, name: string, previous: un
   }
 }
 
+/**
+ * Undo a remove-then-add that failed part way. Either CLI call can change the file and
+ * still exit non-zero, so act on what is actually there: leave it if it is still the old
+ * entry, otherwise clear whatever is in place and write the old entry back.
+ */
+async function putBack(ctx: ClaudeMcpContext, name: string, old: unknown): Promise<void> {
+  const now = await readClaudeMcpEntry(ctx, name)
+  if (mcpEntriesEqual('claude', now, old)) return
+  if (now !== undefined) await removeEntry(ctx, name)
+  await restorePrevious(ctx, name, old)
+}
+
 // ── enable / disable ─────────────────────────────────────────────────────────
 
 async function saveRecord(ctx: ClaudeMcpContext, record: McpTargetRecord | undefined): Promise<void> {
@@ -177,16 +189,14 @@ export async function enableClaudeMcp(
     }
     // setConfig resync: still ours, so swap it for the new entry. targets.json keeps the
     // old entry until the new one is in, so a failure here can always be put back.
-    await removeEntry(ctx, name)
     try {
+      await removeEntry(ctx, name)
       await addEntry(ctx, name, entry)
     } catch (e) {
       try {
-        // A CLI can write the entry and still exit non-zero; clear that before putting the old one back.
-        if ((await readClaudeMcpEntry(ctx, name)) !== undefined) await removeEntry(ctx, name)
-        await restorePrevious(ctx, name, current)
+        await putBack(ctx, name, current)
       } catch (restoreError) {
-        throw new Error(`The Claude MCP entry "${name}" was removed to apply the new config, the new entry could not be written (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
+        throw new Error(`The Claude MCP entry "${name}" could not be swapped for the new config (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
       }
       throw e
     }
@@ -215,11 +225,12 @@ export async function enableClaudeMcp(
     if (opts.dryRun) return
     // Record what we replace before touching the file, so a crash cannot lose it.
     await saveRecord(ctx, { name, written: null, previous: adopted, cliVersion })
-    await removeEntry(ctx, name)
     try {
+      await removeEntry(ctx, name)
       await addEntry(ctx, name, entry)
     } catch (e) {
-      await restorePrevious(ctx, name, adopted)
+      // On a failed put-back the record (written: null, previous) stays, so it is not lost.
+      await putBack(ctx, name, adopted)
       await saveRecord(ctx, undefined)
       throw e
     }

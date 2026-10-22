@@ -294,6 +294,18 @@ async function restorePrevious(ctx: CodexMcpContext, name: string, previous: unk
   }
 }
 
+/**
+ * Undo a remove-then-add that failed part way. Either CLI call can change the file and
+ * still exit non-zero, so act on what is actually there: leave it if it is still the old
+ * entry, otherwise clear whatever is in place and write the old entry back.
+ */
+async function putBack(ctx: CodexMcpContext, name: string, old: unknown): Promise<void> {
+  const now = await readCodexMcpEntry(ctx, name)
+  if (mcpEntriesEqual('codex', now, old)) return
+  if (now !== undefined) await removeEntry(ctx, name)
+  await restorePrevious(ctx, name, old)
+}
+
 // ── enable / disable ─────────────────────────────────────────────────────────
 
 async function saveRecord(ctx: CodexMcpContext, record: McpTargetRecord | undefined): Promise<void> {
@@ -333,16 +345,14 @@ export async function enableCodexMcp(
     }
     // setConfig resync: still ours, so swap it for the new entry. targets.json keeps the
     // old entry until the new one is in, so a failure here can always be put back.
-    await removeEntry(ctx, name)
     try {
+      await removeEntry(ctx, name)
       await addEntry(ctx, name, entry)
     } catch (e) {
       try {
-        // A CLI can write the entry and still exit non-zero; clear that before putting the old one back.
-        if ((await readCodexMcpEntry(ctx, name)) !== undefined) await removeEntry(ctx, name)
-        await restorePrevious(ctx, name, current)
+        await putBack(ctx, name, current)
       } catch (restoreError) {
-        throw new Error(`The Codex MCP entry "${name}" was removed to apply the new config, the new entry could not be written (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
+        throw new Error(`The Codex MCP entry "${name}" could not be swapped for the new config (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
       }
       throw e
     }
@@ -371,11 +381,12 @@ export async function enableCodexMcp(
     if (opts.dryRun) return
     // Record what we replace before touching the file, so a crash cannot lose it.
     await saveRecord(ctx, { name, written: null, previous: adopted, cliVersion })
-    await removeEntry(ctx, name)
     try {
+      await removeEntry(ctx, name)
       await addEntry(ctx, name, entry)
     } catch (e) {
-      await restorePrevious(ctx, name, adopted)
+      // On a failed put-back the record (written: null, previous) stays, so it is not lost.
+      await putBack(ctx, name, adopted)
       await saveRecord(ctx, undefined)
       throw e
     }
