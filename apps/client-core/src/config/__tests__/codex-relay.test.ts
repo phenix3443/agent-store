@@ -96,3 +96,10 @@ test('disableRelayForCodex clears the snapshot', async () => {
   const auth = await readAuth()
   expect(auth['OPENAI_API_KEY']).toBe('sk-new-original')
 })
+
+test('a config.toml that does not parse aborts the write and stays byte-identical', async () => {
+  const broken = 'model_provider = "mine"\n[model_providers.mine\n'
+  await writeFile(join(codexDir, 'config.toml'), broken)
+  await expect(enableRelayForCodex(aasHome, codexDir)).rejects.toThrow('could not be parsed')
+  expect(await readFile(join(codexDir, 'config.toml'), 'utf-8')).toBe(broken)
+})
