@@ -271,7 +271,7 @@ test('a skill not declared for claude gets no Claude symlink', async () => {
 test('a pre-marker install (manifest.json + skill.md) can be reinstalled and uninstalled', async () => {
   const legacy = () => {
     mkdirSync(storeDir(), { recursive: true })
-    writeFileSync(join(storeDir(), 'skill.md'), 'old')
+    writeFileSync(join(storeDir(), 'skill.md'), SKILL_MD)
     writeFileSync(join(storeDir(), 'manifest.json'), JSON.stringify({ slug: 'probe-skill', category: 'skill' }))
     mkdirSync(join(aasHome), { recursive: true })
     writeFileSync(join(aasHome, 'registry.json'), JSON.stringify({ installed: [{
@@ -280,7 +280,7 @@ test('a pre-marker install (manifest.json + skill.md) can be reinstalled and uni
     }] }))
   }
   legacy()
-  // The old Codex copy has the same frontmatter name; it is ours, not a clash.
+  // The old Codex copy is the same SKILL.md older versions copied there: provably ours, not a clash.
   mkdirSync(join(codexDir, 'skills', 'probe-skill'), { recursive: true })
   writeFileSync(join(codexDir, 'skills', 'probe-skill', 'SKILL.md'), SKILL_MD)
   serve(item())
@@ -315,6 +315,22 @@ test('a Codex name clash fails unless --force', async () => {
     expect(existsSync(storeDir())).toBe(false)
   }
   await engine.install('probe-skill', { force: true })
+  expect(existsSync(join(storeDir(), MARKER))).toBe(true)
+})
+
+test('a user Codex skill under the same slug still clashes; an old copy Agent Store wrote does not', async () => {
+  const userCopy = join(codexDir, 'skills', 'probe-skill')
+  mkdirSync(userCopy, { recursive: true })
+  writeFileSync(join(userCopy, 'SKILL.md'), '---\nname: probe-codeword\ndescription: mine\n---\n')
+  serve(item())
+  await expect(engine.install('probe-skill')).rejects.toThrow(`Codex already sees a skill named "probe-codeword" at ${userCopy}`)
+  expect(existsSync(storeDir())).toBe(false)
+
+  // The legacy layout: store manifest.json + skill.md, and the same SKILL.md copied to Codex.
+  mkdirSync(storeDir(), { recursive: true })
+  writeFileSync(join(storeDir(), 'manifest.json'), JSON.stringify({ slug: 'probe-skill', category: 'skill', version: '0.9.0' }))
+  writeFileSync(join(storeDir(), 'skill.md'), readFileSync(join(userCopy, 'SKILL.md'), 'utf-8'))
+  await engine.install('probe-skill')
   expect(existsSync(join(storeDir(), MARKER))).toBe(true)
 })
 
