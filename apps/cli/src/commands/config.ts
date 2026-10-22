@@ -6,7 +6,11 @@ interface SchemaProperty {
   type?: string
   description?: string
   default?: unknown
+  'x-env'?: string
+  'x-bearer'?: boolean
 }
+
+const upperSnake = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
 
 function sortSchemaProperties(
   properties: Record<string, SchemaProperty>,
@@ -60,6 +64,12 @@ export async function runConfig(
     await engine.setConfig(slug, values)
     out('')
     out('  Saved. Run `aas sync` to apply changes.')
+    // Codex reads a bearer token from the environment, never from config.toml (§5.6).
+    for (const [key, prop] of Object.entries(properties)) {
+      if (prop['x-bearer'] && values[key] !== undefined && values[key] !== '') {
+        out(`  For Codex, export the token before starting it: export ${prop['x-env'] ?? upperSnake(key)}=<your ${prop.description ?? key}>`)
+      }
+    }
   } finally {
     ;(prompter as ClosablePrompter).close?.()
   }

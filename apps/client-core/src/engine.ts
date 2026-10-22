@@ -537,7 +537,7 @@ export class EngineImpl implements Engine {
     if (target === 'claude') {
       await syncItemToClaude(slug, category, this.paths.aasHome, this.paths.claudeConfigDir, this.paths.claudeJsonPath, action, options)
     } else if (target === 'codex') {
-      await syncItemToCodex(slug, category, this.paths.aasHome, this.paths.codexConfigDir, action)
+      await syncItemToCodex(slug, category, this.paths.aasHome, this.paths.codexConfigDir, action, options)
     }
   }
 }

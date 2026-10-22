@@ -10,7 +10,7 @@ export type ToolTarget = 'claude' | 'codex'
  * Default resolution (in Engine implementation, not this package):
  *   aasHome       = process.env.AS_HOME ?? '~/.agents'
  *   claudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? '~/.claude'
- *   codexConfigDir  = process.env.CODEX_CONFIG_DIR ?? '~/.codex'
+ *   codexConfigDir  = process.env.CODEX_HOME || process.env.CODEX_CONFIG_DIR || '~/.codex'
  */
 export interface Paths {
   aasHome: string
