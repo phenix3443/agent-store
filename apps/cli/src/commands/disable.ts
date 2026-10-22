@@ -16,11 +16,11 @@ export async function runDisable(
   const slug = args[0]
   const target = getFlag(args, '--for') as ToolTarget | undefined
   if (!slug || !target || !TARGETS.includes(target)) {
-    out('Usage: aas disable <slug> --for <claude|codex>')
+    out('Usage: aas disable <slug> --for <claude|codex> [--force]')
     return EXIT_USAGE
   }
   try {
-    await engine.disable(slug, target)
+    await engine.disable(slug, target, args.includes('--force') ? { force: true } : undefined)
     out(`  ${slug} disabled for ${target}`)
     return EXIT_OK
   } catch (err) {

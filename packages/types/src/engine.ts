@@ -217,12 +217,24 @@ export interface ItemDetail {
  * IMPORTANT: All methods are pure data I/O. No terminal output, no interactive prompts.
  * The CLI layer calls getConfigSchema() + setConfig() and handles prompting itself.
  */
+export interface EnableOptions {
+  /** Take over a same-name MCP entry Agent Store did not write; it is restored on disable/uninstall. */
+  replace?: boolean
+}
+
+export interface DisableOptions {
+  /** Remove an MCP entry even if it was changed or removed outside Agent Store. */
+  force?: boolean
+}
+
+export type UninstallOptions = DisableOptions
+
 export interface Engine {
   search(query: string, options?: SearchOptions): Promise<Item[]>
   install(slug: string): Promise<InstallResult>
-  uninstall(slug: string): Promise<void>
-  enable(slug: string, target: ToolTarget): Promise<void>
-  disable(slug: string, target: ToolTarget): Promise<void>
+  uninstall(slug: string, options?: UninstallOptions): Promise<void>
+  enable(slug: string, target: ToolTarget, options?: EnableOptions): Promise<void>
+  disable(slug: string, target: ToolTarget, options?: DisableOptions): Promise<void>
   /** Returns configSchema and current values — CLI/GUI renders prompts/form from this */
   getConfigSchema(slug: string): Promise<{ schema: JsonSchema; current: Record<string, unknown> }>
   /** Saves config values and triggers sync for that item */

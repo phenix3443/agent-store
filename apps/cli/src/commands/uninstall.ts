@@ -8,11 +8,11 @@ export async function runUninstall(
 ): Promise<number> {
   const slug = args[0]
   if (!slug) {
-    out('Usage: aas uninstall <slug>')
+    out('Usage: aas uninstall <slug> [--force]')
     return EXIT_USAGE
   }
   try {
-    await engine.uninstall(slug)
+    await engine.uninstall(slug, args.includes('--force') ? { force: true } : undefined)
     out(`  Uninstalled ${slug}`)
     return EXIT_OK
   } catch (err) {

@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir, copyFile, rm } from 'fs/promises'
-import { dirname, join } from 'path'
-import type { MCPItem } from '@as/types'
-import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
+import { join } from 'path'
+import type { McpServerConfig } from './mcp'
+import { resolveClaudeCli, syncClaudeMcp, type ClaudeMcpCli } from './claude-mcp'
+import { atomicWriteFile, readJsonObject } from './safe-file'
 import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
@@ -34,17 +35,13 @@ async function writeSettings(claudeConfigDir: string, settings: Record<string, u
 
 // Claude Code reads user-scope MCP servers from `.claude.json` (NOT settings.json),
 // which may hold other Claude-managed state — so read-merge-write and keep 0600.
+// A file that does not parse aborts the write instead of being replaced.
 async function readClaudeJson(claudeJsonPath: string): Promise<Record<string, unknown>> {
-  try {
-    return JSON.parse(await readFile(claudeJsonPath, 'utf-8')) as Record<string, unknown>
-  } catch {
-    return {}
-  }
+  return (await readJsonObject(claudeJsonPath)) ?? {}
 }
 
 async function writeClaudeJson(claudeJsonPath: string, config: Record<string, unknown>): Promise<void> {
-  await mkdir(dirname(claudeJsonPath), { recursive: true })
-  await writeFile(claudeJsonPath, JSON.stringify(config, null, 2), { mode: 0o600 })
+  await atomicWriteFile(claudeJsonPath, JSON.stringify(config, null, 2), 0o600, true)
 }
 
 export async function upsertClaudeMcpServer(
@@ -68,25 +65,34 @@ export async function removeClaudeMcpServer(claudeJsonPath: string, slug: string
   await writeClaudeJson(claudeJsonPath, config)
 }
 
+export interface ClaudeSyncOptions {
+  /** Take over a same-name user entry (MCP only). */
+  replace?: boolean
+  /** Remove an entry even if it changed outside Agent Store (MCP only). */
+  force?: boolean
+  /** Injected CLI for tests; defaults to the installed `claude`. */
+  cli?: ClaudeMcpCli | null
+}
+
 export async function syncItemToClaude(
   slug: string,
   category: 'provider' | 'skill' | 'mcp',
   aasHome: string,
   claudeConfigDir: string,
   claudeJsonPath: string,
-  action: 'add' | 'remove'
+  action: 'add' | 'remove',
+  options: ClaudeSyncOptions = {}
 ): Promise<void> {
   const dir = join(aasHome, CATEGORY_DIR[category], slug)
-  const settings = await readSettings(claudeConfigDir)
 
   if (category === 'mcp') {
-    if (action === 'add') {
-      const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
-      await upsertClaudeMcpServer(claudeJsonPath, slug, buildLegacyMcpServerConfig(manifest, dir))
-    } else {
-      await removeClaudeMcpServer(claudeJsonPath, slug)
-    }
-  } else if (category === 'skill') {
+    const cli = options.cli === undefined ? resolveClaudeCli() : options.cli
+    await syncClaudeMcp({ aasHome, claudeConfigDir, claudeJsonPath, itemDir: dir, cli }, slug, action, options)
+    return
+  }
+  const settings = await readSettings(claudeConfigDir)
+
+  if (category === 'skill') {
     // Claude Code discovers skills as directories: skills/<name>/SKILL.md
     const skillDir = join(claudeConfigDir, 'skills', slug)
     if (action === 'add') {

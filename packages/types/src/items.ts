@@ -90,6 +90,9 @@ export interface StdioMCPItem extends BaseMCPItem {
   transport: 'stdio'
   /** Runtime command to start the MCP server AFTER install (e.g. "./server", "node server.js") */
   serverCommand: string
+  /** Structured argv; when set, used as given instead of splitting serverCommand */
+  command?: string
+  args?: string[]
 }
 
 export interface RemoteMCPItem extends BaseMCPItem {
