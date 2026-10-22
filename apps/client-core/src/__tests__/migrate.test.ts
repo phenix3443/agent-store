@@ -96,6 +96,19 @@ test('copies the user changed and directories without our layout are left alone'
   expect(existsSync(join(p.aasHome, 'skills', 'mine', MARKER))).toBe(false)
 })
 
+test('directories next to the skill that migrate did not create are left alone', async () => {
+  oldInstall('probe')
+  file(join(p.aasHome, 'skills', 'probe.as-migrate', 'user-data'), 'mine\n')
+  file(join(p.aasHome, 'skills', 'probe.as-old', 'user-data'), 'mine too\n')
+  registry(entry('probe', { claude: false, codex: true }))
+
+  const res = await runMigrate(p, NOW)
+  expect(res.steps.filter(s => s.result === 'error')).toEqual([])
+  expect(readFileSync(join(p.aasHome, 'skills', 'probe.as-migrate', 'user-data'), 'utf-8')).toBe('mine\n')
+  expect(readFileSync(join(p.aasHome, 'skills', 'probe.as-old', 'user-data'), 'utf-8')).toBe('mine too\n')
+  expect(readdirSync(join(p.aasHome, 'skills')).sort()).toEqual(['probe', 'probe.as-migrate', 'probe.as-old'])
+})
+
 test('a skill.md without frontmatter is not converted', async () => {
   oldInstall('bare', 'no frontmatter\n')
   registry(entry('bare', { claude: false, codex: true }))
