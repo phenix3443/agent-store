@@ -177,6 +177,11 @@ export async function enableClaudeMcp(
         ? new McpChangedOutsideError('claude', name, 'changed')
         : new McpConflictError('claude', name)
     }
+    if (previous !== null && record?.written != null) {
+      // Our takeover was edited outside Agent Store; replacing it again would lose that edit.
+      // (written === null means a takeover was interrupted: reuse the saved previous.)
+      throw new Error(`The Claude MCP entry "${name}" was changed outside Agent Store after it replaced your entry; run \`as disable ${name} --for claude --force\` to put your saved entry back first`)
+    }
     let adopted = previous
     let cliVersion = record?.cliVersion
     if (adopted === null) {
