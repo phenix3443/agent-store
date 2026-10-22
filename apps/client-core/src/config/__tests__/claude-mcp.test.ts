@@ -214,10 +214,41 @@ test('a restore whose read-back differs fails and keeps previous in targets.json
   expect((await readMcpTargets(ctx.itemDir)).claude?.previous).toEqual(seed)
 })
 
-test('legacy entry without a record that equals ours counts as ours', async () => {
+test('a user entry equal to ours is still the user\'s: conflict without --replace, restored after --replace', async () => {
   await writeServers(ctx, { probe: OURS })
+  await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpConflictError)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+  await expect(disableClaudeMcp(ctx, 'probe', { expected: OURS })).rejects.toBeInstanceOf(McpChangedOutsideError)
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+
+  await enableClaudeMcp(ctx, 'probe', OURS, { replace: true })
+  expect((await readMcpTargets(ctx.itemDir)).claude?.previous).toEqual(OURS)
   await disableClaudeMcp(ctx, 'probe', { expected: OURS })
-  expect(await readClaudeMcpEntry(ctx, 'probe')).toBeUndefined()
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+})
+
+test('an entry left by an interrupted enable is ours through the pending record', async () => {
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) { await cli.addJson(at, name, entry); throw new Error('killed after write') } }
+  await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toThrow('killed after write')
+  // A failed add drops the claim; simulate the crash case by writing the claim back.
+  await writeFile(join(ctx.itemDir, 'targets.json'), JSON.stringify({ claude: { name: 'probe', written: null, previous: null } }))
+  ctx.cli = cli
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  expect((await readMcpTargets(ctx.itemDir)).claude).toEqual({ name: 'probe', written: OURS, previous: null })
+})
+
+test('a resync whose add fails puts the old entry back and keeps the record', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) {
+    if ((entry as { env?: unknown }).env) throw new Error('add failed')
+    await cli.addJson(at, name, entry)
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('add failed')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
 })
 
 test('without the binary: safe file edit with a backup, 0600', async () => {

@@ -174,6 +174,8 @@ export interface CodexSyncOptions {
   replace?: boolean
   /** Remove an entry even if it changed outside Agent Store (MCP only). */
   force?: boolean
+  /** Run an MCP enable's ownership checks without writing anything. */
+  dryRun?: boolean
   /** Injected CLI for tests; defaults to the installed `codex`. */
   cli?: CodexMcpCli | null
 }

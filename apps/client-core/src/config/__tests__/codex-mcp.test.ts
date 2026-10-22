@@ -237,6 +237,32 @@ test('setConfig resync replaces our entry and refuses a drifted one', async () =
   await expect(enableCodexMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpChangedOutsideError)
 })
 
+test('a user table equal to ours is still the user\'s: conflict without --replace, restored after --replace', async () => {
+  await writeFile(configFile(), '[mcp_servers.probe]\ncommand = "node"\nargs = ["/probe/as-probe-mcp.mjs"]\n')
+  await expect(enableCodexMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpConflictError)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+  await expect(disableCodexMcp(ctx, 'probe', { expected: OURS })).rejects.toBeInstanceOf(McpChangedOutsideError)
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+
+  await enableCodexMcp(ctx, 'probe', OURS, { replace: true })
+  expect((await readMcpTargets(ctx.itemDir)).codex?.previous).toEqual(OURS)
+  await disableCodexMcp(ctx, 'probe', { expected: OURS })
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+})
+
+test('a resync whose add fails puts the old entry back and keeps the record', async () => {
+  await enableCodexMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async add(at, name, entry) {
+    if (entry.env) throw new Error('add failed')
+    await cli.add(at, name, entry)
+  } }
+  await expect(enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } })).rejects.toThrow('add failed')
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
 // ── fallback without the binary ───────────────────────────────────────────────
 
 test('without the binary: text edit keeps comments, backs up, round-trips', async () => {
