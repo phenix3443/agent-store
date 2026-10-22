@@ -12,6 +12,7 @@ export type {
   InstalledItem,
   ItemDetail,
   Engine,
+  InstallOptions,
   EnableOptions,
   DisableOptions,
   UninstallOptions,

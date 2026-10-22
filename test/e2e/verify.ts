@@ -153,6 +153,8 @@ async function main() {
       `env_key = "CODEX_API_KEY"\n` +
       `wire_api = "responses"\n`
     for (const home of [d.codexSkill, d.codexMcp]) {
+      // Skills no longer write anything under CODEX_HOME, so the dir may not exist yet.
+      await mkdir(home, { recursive: true })
       const existing = await readFile(join(home, 'config.toml'), 'utf-8').catch(() => '')
       await writeFile(join(home, 'config.toml'), codexToml + '\n' + existing)
     }
