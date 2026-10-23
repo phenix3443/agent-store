@@ -12,9 +12,9 @@
 
 跑之前先确认自己在哪个仓库：产品代码在这里，包 manifest 在 `registry`。
 
-## 密钥只在 .secrets/ 和 .env.local
+## 密钥存储
 
-两个都在 `.gitignore` 里。**但 gitignore 守的只有「忘了 add」**——
+原 `.secrets/` 已移动到 `../home-lab/projects/agent-store/secrets/`，由 home-lab 的 `.gitignore` 忽略；本仓库的 `.env.local` 继续被本仓库忽略。**但 gitignore 守的只有「忘了 add」**——
 `git add -f`、文件改名、有人调整 ignore 规则都能绕过去，而密钥进了
 git 历史就永远在。
 
