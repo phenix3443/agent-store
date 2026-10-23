@@ -290,6 +290,25 @@ test('a --replace whose remove deletes the user entry and then fails puts it bac
   expect(await readMcpTargets(ctx.itemDir)).toEqual({})
 })
 
+test('a --replace that cannot put the user entry back keeps it as previous and names the restore command', async () => {
+  const USERS: CodexMcpEntry = { command: 'node', args: ['users.js'] }
+  await enableCodexMcp(ctx, 'other', USERS)
+  await writeFile(join(ctx.itemDir, 'targets.json'), '{}')
+  await writeFile(configFile(), (await readFile(configFile(), 'utf-8')).replace('mcp_servers.other', 'mcp_servers.probe'))
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async add(at, name, entry) {
+    if (at.codexHome === ctx.codexHome) throw new Error('add failed')
+    await cli.add(at, name, entry)
+  } }
+  const err = await enableCodexMcp(ctx, 'probe', OURS, { replace: true }).catch(e => e)
+  expect(err.message).toContain('add failed')
+  expect(err.message).toContain('as disable probe --for codex --force')
+  expect((await readMcpTargets(ctx.itemDir)).codex).toMatchObject({ written: null, previous: USERS })
+  ctx.cli = cli
+  await disableCodexMcp(ctx, 'probe', { force: true })
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(USERS)
+})
+
 test('a resync that cannot put the old entry back says where it is kept and how to restore it', async () => {
   await enableCodexMcp(ctx, 'probe', OURS)
   const before = await readMcpTargets(ctx.itemDir)
