@@ -191,6 +191,18 @@ test('setConfig resync: ours is swapped for the new entry; a drifted one is refu
   await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpChangedOutsideError)
 })
 
+test('--replace again after our takeover was edited outside is refused, edit and previous kept', async () => {
+  const seed = { command: 'node', args: ['users.js'] }
+  await writeServers(ctx, { probe: seed })
+  await enableClaudeMcp(ctx, 'probe', OURS, { replace: true })
+  const edited = { ...OURS, env: { EDITED: '1' } }
+  await writeServers(ctx, { probe: edited })
+  const before = await sha(ctx.claudeJsonPath)
+  await expect(enableClaudeMcp(ctx, 'probe', OURS, { replace: true })).rejects.toThrow(/changed outside Agent Store after it replaced/)
+  expect(await sha(ctx.claudeJsonPath)).toBe(before)
+  expect((await readMcpTargets(ctx.itemDir)).claude?.previous).toEqual(seed)
+})
+
 test('a restore whose read-back differs fails and keeps previous in targets.json', async () => {
   const seed = { command: 'node' }
   await writeServers(ctx, { probe: seed })
@@ -202,10 +214,126 @@ test('a restore whose read-back differs fails and keeps previous in targets.json
   expect((await readMcpTargets(ctx.itemDir)).claude?.previous).toEqual(seed)
 })
 
-test('legacy entry without a record that equals ours counts as ours', async () => {
+test('a user entry equal to ours is still the user\'s: conflict without --replace, restored after --replace', async () => {
   await writeServers(ctx, { probe: OURS })
+  await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpConflictError)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+  await expect(disableClaudeMcp(ctx, 'probe', { expected: OURS })).rejects.toBeInstanceOf(McpChangedOutsideError)
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+
+  await enableClaudeMcp(ctx, 'probe', OURS, { replace: true })
+  expect((await readMcpTargets(ctx.itemDir)).claude?.previous).toEqual(OURS)
   await disableClaudeMcp(ctx, 'probe', { expected: OURS })
-  expect(await readClaudeMcpEntry(ctx, 'probe')).toBeUndefined()
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+})
+
+test('an add that writes the entry and then fails keeps the claim, so the entry stays ours', async () => {
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) { await cli.addJson(at, name, entry); throw new Error('exit 1 after write') } }
+  await expect(enableClaudeMcp(ctx, 'probe', OURS)).rejects.toThrow('exit 1 after write')
+  expect((await readMcpTargets(ctx.itemDir)).claude).toEqual({ name: 'probe', written: null, previous: null })
+  ctx.cli = cli
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  expect((await readMcpTargets(ctx.itemDir)).claude).toEqual({ name: 'probe', written: OURS, previous: null })
+})
+
+test('a claim left before anything was written does not block disable', async () => {
+  await writeFile(join(ctx.itemDir, 'targets.json'), JSON.stringify({ claude: { name: 'probe', written: null, previous: null } }))
+  await disableClaudeMcp(ctx, 'probe', { expected: OURS })
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+})
+
+test('a resync add that writes and then fails is cleared and the old entry put back', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) {
+    await cli.addJson(at, name, entry)
+    if ((entry as { env?: unknown }).env) throw new Error('exit 1 after write')
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('exit 1 after write')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a resync remove that deletes the entry and then fails puts the old entry back', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  let failed = false
+  ctx.cli = { ...cli, async remove(at, name) {
+    await cli.remove(at, name)
+    if (!failed) { failed = true; throw new Error('remove exited 1 after write') }
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('remove exited 1 after write')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a --replace whose remove deletes the user entry and then fails puts it back and drops the record', async () => {
+  const USERS = { type: 'stdio', command: 'node', args: ['users.js'] }
+  await writeServers(ctx, { probe: USERS })
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async remove(at, name) { await cli.remove(at, name); throw new Error('remove exited 1 after write') } }
+  await expect(enableClaudeMcp(ctx, 'probe', OURS, { replace: true })).rejects.toThrow('remove exited 1 after write')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(USERS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+})
+
+test('a resync that cannot put the old entry back says where it is kept and how to restore it', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson() { throw new Error('add failed') } }
+  const err = await enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } }).catch(e => e)
+  expect(err.message).toContain('add failed')
+  expect(err.message).toContain(join(ctx.itemDir, 'targets.json'))
+  expect(err.message).toContain('as sync')
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+  ctx.cli = cli
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+})
+
+test('a --replace that cannot put the user entry back keeps it as previous and names the restore command', async () => {
+  const USERS = { type: 'stdio', command: 'node', args: ['users.js'] }
+  await writeServers(ctx, { probe: USERS })
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) {
+    if (at.claudeJsonPath === ctx.claudeJsonPath) throw new Error('add failed')
+    await cli.addJson(at, name, entry)
+  } }
+  const err = await enableClaudeMcp(ctx, 'probe', OURS, { replace: true }).catch(e => e)
+  expect(err.message).toContain('add failed')
+  expect(err.message).toContain('as disable probe --for claude --force')
+  expect((await readMcpTargets(ctx.itemDir)).claude).toMatchObject({ written: null, previous: USERS })
+  ctx.cli = cli
+  await disableClaudeMcp(ctx, 'probe', { force: true })
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(USERS)
+})
+
+test('a resync remove that fails without deleting leaves the old entry alone', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const calls: string[] = []
+  ctx.cli = { ...fakeCli(calls), async remove() { calls.push('remove (fails)'); throw new Error('remove failed') } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('remove failed')
+  expect(calls).toEqual(['remove (fails)'])
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a resync whose add fails puts the old entry back and keeps the record', async () => {
+  await enableClaudeMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async addJson(at, name, entry) {
+    if ((entry as { env?: unknown }).env) throw new Error('add failed')
+    await cli.addJson(at, name, entry)
+  } }
+  await expect(enableClaudeMcp(ctx, 'probe', { ...OURS, env: { PROBE_TOKEN: 'new' } })).rejects.toThrow('add failed')
+  expect(await readClaudeMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
 })
 
 test('without the binary: safe file edit with a backup, 0600', async () => {

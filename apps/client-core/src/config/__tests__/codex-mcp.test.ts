@@ -237,6 +237,103 @@ test('setConfig resync replaces our entry and refuses a drifted one', async () =
   await expect(enableCodexMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpChangedOutsideError)
 })
 
+test('a user table equal to ours is still the user\'s: conflict without --replace, restored after --replace', async () => {
+  await writeFile(configFile(), '[mcp_servers.probe]\ncommand = "node"\nargs = ["/probe/as-probe-mcp.mjs"]\n')
+  await expect(enableCodexMcp(ctx, 'probe', OURS)).rejects.toBeInstanceOf(McpConflictError)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+  await expect(disableCodexMcp(ctx, 'probe', { expected: OURS })).rejects.toBeInstanceOf(McpChangedOutsideError)
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+
+  await enableCodexMcp(ctx, 'probe', OURS, { replace: true })
+  expect((await readMcpTargets(ctx.itemDir)).codex?.previous).toEqual(OURS)
+  await disableCodexMcp(ctx, 'probe', { expected: OURS })
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+})
+
+test('a resync add that writes and then fails is cleared and the old entry put back', async () => {
+  await enableCodexMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async add(at, name, entry) {
+    await cli.add(at, name, entry)
+    if ((entry as { env?: unknown }).env) throw new Error('exit 1 after write')
+  } }
+  await expect(enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } })).rejects.toThrow('exit 1 after write')
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a resync remove that deletes the entry and then fails puts the old entry back', async () => {
+  await enableCodexMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  let failed = false
+  ctx.cli = { ...cli, async remove(at, name) {
+    await cli.remove(at, name)
+    if (!failed) { failed = true; throw new Error('remove exited 1 after write') }
+  } }
+  await expect(enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } })).rejects.toThrow('remove exited 1 after write')
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a --replace whose remove deletes the user entry and then fails puts it back and drops the record', async () => {
+  const USERS: CodexMcpEntry = { command: 'node', args: ['users.js'] }
+  await enableCodexMcp(ctx, 'other', USERS)
+  await writeFile(join(ctx.itemDir, 'targets.json'), '{}')
+  await writeFile(configFile(), (await readFile(configFile(), 'utf-8')).replace('mcp_servers.other', 'mcp_servers.probe'))
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(USERS)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async remove(at, name) { await cli.remove(at, name); throw new Error('remove exited 1 after write') } }
+  await expect(enableCodexMcp(ctx, 'probe', OURS, { replace: true })).rejects.toThrow('remove exited 1 after write')
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(USERS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual({})
+})
+
+test('a --replace that cannot put the user entry back keeps it as previous and names the restore command', async () => {
+  const USERS: CodexMcpEntry = { command: 'node', args: ['users.js'] }
+  await enableCodexMcp(ctx, 'other', USERS)
+  await writeFile(join(ctx.itemDir, 'targets.json'), '{}')
+  await writeFile(configFile(), (await readFile(configFile(), 'utf-8')).replace('mcp_servers.other', 'mcp_servers.probe'))
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async add(at, name, entry) {
+    if (at.codexHome === ctx.codexHome) throw new Error('add failed')
+    await cli.add(at, name, entry)
+  } }
+  const err = await enableCodexMcp(ctx, 'probe', OURS, { replace: true }).catch(e => e)
+  expect(err.message).toContain('add failed')
+  expect(err.message).toContain('as disable probe --for codex --force')
+  expect((await readMcpTargets(ctx.itemDir)).codex).toMatchObject({ written: null, previous: USERS })
+  ctx.cli = cli
+  await disableCodexMcp(ctx, 'probe', { force: true })
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(USERS)
+})
+
+test('a resync that cannot put the old entry back says where it is kept and how to restore it', async () => {
+  await enableCodexMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async add() { throw new Error('add failed') } }
+  const err = await enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } }).catch(e => e)
+  expect(err.message).toContain('add failed')
+  expect(err.message).toContain(join(ctx.itemDir, 'targets.json'))
+  expect(err.message).toContain('as sync')
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
+test('a resync whose add fails puts the old entry back and keeps the record', async () => {
+  await enableCodexMcp(ctx, 'probe', OURS)
+  const before = await readMcpTargets(ctx.itemDir)
+  const cli = ctx.cli!
+  ctx.cli = { ...cli, async add(at, name, entry) {
+    if ((entry as { env?: unknown }).env) throw new Error('add failed')
+    await cli.add(at, name, entry)
+  } }
+  await expect(enableCodexMcp(ctx, 'probe', { ...OURS, env: { K: 'new' } })).rejects.toThrow('add failed')
+  expect(await readCodexMcpEntry(ctx, 'probe')).toEqual(OURS)
+  expect(await readMcpTargets(ctx.itemDir)).toEqual(before)
+})
+
 // ── fallback without the binary ───────────────────────────────────────────────
 
 test('without the binary: text edit keeps comments, backs up, round-trips', async () => {
