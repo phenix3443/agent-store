@@ -55,3 +55,38 @@ test('runInstall shows error message on failure', async () => {
   await runInstall(engine, ['unknown'], s => lines.push(s))
   expect(lines.join('\n')).toContain('Not found')
 })
+
+test('runInstall returns 0 on success', async () => {
+  expect(await runInstall(makeEngine(), ['openai-provider'], () => {})).toBe(0)
+})
+
+test('runInstall returns non-zero when install fails', async () => {
+  const engine = makeEngine({ install: async () => { throw new Error('Not found') } })
+  expect(await runInstall(engine, ['unknown'], () => {})).toBe(1)
+})
+
+test('runInstall returns non-zero when enabling a target fails', async () => {
+  const lines: string[] = []
+  const engine = makeEngine({ enable: async () => { throw new Error('conflict') } })
+  expect(await runInstall(engine, ['openai-provider'], s => lines.push(s))).toBe(1)
+  expect(lines.join('\n')).toContain('conflict')
+})
+
+test('runInstall returns usage error without a slug', async () => {
+  expect(await runInstall(makeEngine(), [], () => {})).toBe(2)
+})
+
+test('runInstall rejects more than one slug', async () => {
+  let installed = false
+  const lines: string[] = []
+  const engine = makeEngine({ install: async () => { installed = true; return { slug: 'a', version: '1', installedAt: '' } } })
+  expect(await runInstall(engine, ['a', 'b'], s => lines.push(s))).toBe(2)
+  expect(installed).toBe(false)
+  expect(lines.join('\n')).toContain('one slug')
+})
+
+test('runInstall rejects unknown options', async () => {
+  const lines: string[] = []
+  expect(await runInstall(makeEngine(), ['openai-provider', '--bogus'], s => lines.push(s))).toBe(2)
+  expect(lines.join('\n')).toContain('unknown option --bogus')
+})

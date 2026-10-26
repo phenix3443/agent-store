@@ -1,0 +1,53 @@
+name: accept
+
+# Recognition + lifecycle acceptance for global Skills/MCP management
+# (docs/global-skills-mcp.md §6, `--isolated`): installs probe packages through
+# the real `as` CLI into temp homes and asks Claude Code and Codex what they
+# loaded. No model credentials are needed.
+#
+# Non-blocking while the PRs of the plan land one by one (items for code that
+# isn't merged yet are expected to FAIL); the last PR of the plan makes it
+# blocking by removing `continue-on-error`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  accept-isolated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter=@as/types run build
+      - run: pnpm --filter=@as/sdk run build
+      - run: pnpm --filter=@as/client-core run build
+      - run: npm install -g @anthropic-ai/claude-code @openai/codex
+      - run: bun test scripts/accept-global
+      - name: accept-global --isolated
+        id: accept
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bun scripts/accept-global.ts --isolated > accept-result.json
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### accept-global --isolated: ${{ steps.accept.outcome }}"
+            echo '```json'
+            jq '{identity, result, counts, failed: [.. | objects | select(.status? == "FAIL") | "\(.section): \(.name)"]}' accept-result.json || cat accept-result.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accept-result
+          path: accept-result.json
