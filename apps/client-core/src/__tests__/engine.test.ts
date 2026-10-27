@@ -6,6 +6,7 @@ import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
 // Unit tests use the safe file-edit path, not the installed claude CLI.
 process.env['AS_CLAUDE_BIN'] = ''
+process.env['AS_CODEX_BIN'] = ''
 
 const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'community' as const }
 const baseItem = {
@@ -113,16 +114,16 @@ test('enable mcp: writes mcp server to codex config', async () => {
   await engine.enable('test-mcp', 'codex')
   const config = await readFile(join(codexDir, 'config.toml'), 'utf-8')
   expect(config).toContain('[mcp_servers.test-mcp]')
-  expect(config).toContain('type = "stdio"')
+  expect(config).not.toContain('type =')
   const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
   expect(reg.installed[0].enabledFor.codex).toBe(true)
 })
 
-test('enable remote mcp: writes remote entry to claude and codex configs', async () => {
+test('enable remote mcp: writes the claude entry; codex refuses non-bearer headers', async () => {
   mockFetch({ '/api/items/remote-mcp': { item: remoteMcpItem } })
   await engine.install('remote-mcp')
   await engine.enable('remote-mcp', 'claude')
-  await engine.enable('remote-mcp', 'codex')
+  await expect(engine.enable('remote-mcp', 'codex')).rejects.toThrow('HTTP headers')
 
   const claudeCfg = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
   expect(claudeCfg.mcpServers?.['remote-mcp']).toEqual({
@@ -131,10 +132,17 @@ test('enable remote mcp: writes remote entry to claude and codex configs', async
     headers: { Authorization: 'Bearer token' },
   })
 
+  const { access } = await import('fs/promises')
+  await expect(access(join(codexDir, 'config.toml'))).rejects.toThrow()
+})
+
+test('enable remote mcp for codex: url only, no type/headers', async () => {
+  const plain = { ...remoteMcpItem, headers: undefined }
+  mockFetch({ '/api/items/remote-mcp': { item: plain } })
+  await engine.install('remote-mcp')
+  await engine.enable('remote-mcp', 'codex')
   const config = await readFile(join(codexDir, 'config.toml'), 'utf-8')
-  expect(config).toContain('[mcp_servers.remote-mcp]')
-  expect(config).toContain('type = "http"')
-  expect(config).toContain('url = "https://mcp.example.com"')
+  expect(config).toBe('[mcp_servers.remote-mcp]\nurl = "https://mcp.example.com"\n')
 })
 
 test('disable mcp: removes mcpServers entry and sets enabledFor false', async () => {

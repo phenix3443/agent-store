@@ -5,6 +5,9 @@ import { syncItemToCodex } from '../codex'
 import type { MCPItem, ProviderItem } from '@as/types'
 import { parse } from '@iarna/toml'
 
+// Unit tests use the safe file-edit path, not the installed codex CLI.
+process.env['AS_CODEX_BIN'] = ''
+
 let aasHome: string
 let codexDir: string
 
@@ -53,9 +56,9 @@ test('mcp add writes mcpServers to codex config', async () => {
   await setupItem('mcp', 'test-mcp', mcpManifest)
   await syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'add')
   const config = await readConfig(codexDir)
-  const entry = (config.mcp_servers as Record<string, unknown>)['test-mcp'] as { command: string; type: string }
-  expect(entry.command).toBe(join(aasHome, 'mcps', 'test-mcp', 'server'))
-  expect(entry.type).toBe('stdio')
+  const entry = (config.mcp_servers as Record<string, unknown>)['test-mcp'] as Record<string, unknown>
+  // Codex fields only: no Claude `type`/`headers`.
+  expect(entry).toEqual({ command: join(aasHome, 'mcps', 'test-mcp', 'server') })
 })
 
 test('mcp remove deletes mcpServers entry', async () => {
@@ -105,15 +108,14 @@ test('skill add copies skill.md to codexDir/skills/<name>/SKILL.md', async () =>
   expect(content).toBe('# Skill')
 })
 
-test('mcp remove works even when item directory does not exist', async () => {
-  // First add the entry, then simulate the directory being deleted already
+test('mcp remove with the item directory gone needs --force', async () => {
   await setupItem('mcp', 'test-mcp', mcpManifest)
   await syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'add')
-  // Remove the item directory to simulate post-uninstall state
+  // Without targets.json or a manifest nothing proves the entry is ours.
   await rm(join(aasHome, 'mcps', 'test-mcp'), { recursive: true, force: true })
-  // Remove should succeed without ENOENT
+  await expect(syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'remove')).rejects.toThrow('outside Agent Store')
   await expect(
-    syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'remove')
+    syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'remove', { force: true })
   ).resolves.toBeUndefined()
   const config = await readConfig(codexDir)
   expect((config.mcp_servers as Record<string, unknown>)?.['test-mcp']).toBeUndefined()
@@ -128,17 +130,15 @@ test('mcp add preserves existing config keys', async () => {
   expect((config.mcp_servers as Record<string, unknown>)['test-mcp']).toBeDefined()
 })
 
-test('mcp add migrates legacy camelCase mcpServers into mcp_servers', async () => {
-  await writeFile(
-    join(codexDir, 'config.toml'),
-    '[mcpServers.legacy]\ncommand = "keep"\n'
-  )
+test('mcp add leaves the rest of config.toml as written, comments included', async () => {
+  const before = '# my settings\nmodel = "o3" # inline\n\n[mcpServers.legacy]\ncommand = "keep"\n'
+  await writeFile(join(codexDir, 'config.toml'), before)
   await setupItem('mcp', 'test-mcp', mcpManifest)
   await syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'add')
-  const config = await readConfig(codexDir)
-  expect((config.mcp_servers as Record<string, unknown>).legacy).toBeDefined()
-  expect((config.mcp_servers as Record<string, unknown>)['test-mcp']).toBeDefined()
-  expect(config.mcpServers).toBeUndefined()
+  const text = await readFile(join(codexDir, 'config.toml'), 'utf-8')
+  expect(text.startsWith(before)).toBe(true)
+  await syncItemToCodex('test-mcp', 'mcp', aasHome, codexDir, 'remove')
+  expect(await readFile(join(codexDir, 'config.toml'), 'utf-8')).toBe(before)
 })
 
 test('provider add preserves existing config.toml keys', async () => {
