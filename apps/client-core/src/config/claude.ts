@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, copyFile, rm } from 'fs/promises'
+import { readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import type { McpServerConfig } from './mcp'
 import { resolveClaudeCli, syncClaudeMcp, type ClaudeMcpCli } from './claude-mcp'
@@ -92,16 +92,8 @@ export async function syncItemToClaude(
   }
   const settings = await readSettings(claudeConfigDir)
 
-  if (category === 'skill') {
-    // Claude Code discovers skills as directories: skills/<name>/SKILL.md
-    const skillDir = join(claudeConfigDir, 'skills', slug)
-    if (action === 'add') {
-      await mkdir(skillDir, { recursive: true })
-      await copyFile(join(dir, 'skill.md'), join(skillDir, 'SKILL.md'))
-    } else {
-      try { await rm(skillDir, { recursive: true, force: true }) } catch { /* already absent */ }
-    }
-  } else if (category === 'provider') {
+  // Skills are not synced here: Claude sees them through a symlink (engine + skills/claude-link.ts).
+  if (category === 'provider') {
     if (action === 'add') {
       const connection = await readProviderConnection(dir)
       if (connection.apiKey) {
