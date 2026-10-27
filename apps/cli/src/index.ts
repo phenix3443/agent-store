@@ -24,9 +24,9 @@ Usage: aas <command> [options]
 Commands:
   search <query>                   Search the store
   install <slug>                   Install an item (or update if already installed)
-  uninstall <slug>                 Uninstall an item
-  enable <slug> --for <tool>       Enable for claude or codex
-  disable <slug> --for <tool>      Disable for claude or codex
+  uninstall <slug> [--force]       Uninstall an item
+  enable <slug> --for <tool> [--replace]   Enable for claude or codex
+  disable <slug> --for <tool> [--force]    Disable for claude or codex
   config <slug>                    Configure an item's settings
   sync [--for <tool>]              Sync enabled items to tool configs
   relay <start|stop|status>        Manage the local provider relay

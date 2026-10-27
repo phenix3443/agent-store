@@ -22,3 +22,10 @@ test('runUninstall returns 1 on failure', async () => {
 test('runUninstall returns usage error without a slug', async () => {
   expect(await runUninstall(makeEngine(), [], () => {})).toBe(2)
 })
+
+test('runUninstall passes --force', async () => {
+  let opts: unknown
+  const engine = { uninstall: async (_s: string, o?: unknown) => { opts = o } } as unknown as Engine
+  await runUninstall(engine, ['x', '--force'], () => {})
+  expect(opts).toEqual({ force: true })
+})

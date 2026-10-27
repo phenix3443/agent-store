@@ -4,7 +4,7 @@ import { parse, stringify } from '@iarna/toml'
 import type { JsonMap } from '@iarna/toml'
 import { load } from 'js-yaml'
 import type { MCPItem } from '@as/types'
-import { buildLegacyMcpServerConfig, type McpServerConfig } from './mcp'
+import { buildLegacyMcpServerConfig, buildMcpServerSpec, type McpServerConfig } from './mcp'
 import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
@@ -173,7 +173,9 @@ export async function syncItemToCodex(
   if (category === 'mcp') {
     if (action === 'add') {
       const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
-      await upsertCodexMcpServer(codexConfigDir, slug, buildLegacyMcpServerConfig(manifest, dir))
+      let config: Record<string, unknown> = {}
+      try { config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
+      await upsertCodexMcpServer(codexConfigDir, slug, buildLegacyMcpServerConfig(buildMcpServerSpec(manifest, dir, config)))
     } else {
       await removeCodexMcpServer(codexConfigDir, slug)
     }

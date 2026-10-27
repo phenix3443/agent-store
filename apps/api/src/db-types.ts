@@ -20,6 +20,10 @@ function readString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined
 }
 
+function readStringArray(value: unknown): string[] | undefined {
+  return Array.isArray(value) && value.every(v => typeof v === 'string') ? value as string[] : undefined
+}
+
 function readStringRecord(value: unknown): Record<string, string> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
   const entries = Object.entries(value)
@@ -116,11 +120,14 @@ export function mapItem(row: DBItem & { publisher: DBPublisher }): Item {
     } satisfies MCPItem
   }
 
+  const command = readString(metadata['command'])
+  const args = readStringArray(metadata['args'])
   return {
     ...base,
     category: 'mcp',
     transport,
     serverCommand: readString(metadata['serverCommand']) ?? '',
+    ...(command ? { command, args: args ?? [] } : {}),
     configSchema: (metadata['configSchema'] ?? {}) as Record<string, unknown>,
   } satisfies MCPItem
 }

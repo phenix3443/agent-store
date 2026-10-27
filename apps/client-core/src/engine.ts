@@ -3,6 +3,7 @@ import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview, ItemVersion,
+  EnableOptions, DisableOptions, UninstallOptions,
   UsageSummaryRow, UsageSummaryOptions, RegistryJson, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
 } from '@as/types'
@@ -98,26 +99,30 @@ export class EngineImpl implements Engine {
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
 
-  async uninstall(slug: string): Promise<void> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
+  async uninstall(slug: string, options: UninstallOptions = {}): Promise<void> {
+    let registry = await readRegistry(this.paths.aasHome)
+    let entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     for (const target of entry.compatibleWith) {
       if (entry.enabledFor[target]) {
         if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
-          await this._syncToTarget(slug, entry.category, target, 'remove')
+          await this._syncToTarget(slug, entry.category, target, 'remove', options)
         }
+        // Record each removed target, so a later failure leaves the registry truthful.
+        entry = { ...entry, enabledFor: { ...entry.enabledFor, [target]: false }, updatedAt: new Date().toISOString() }
+        registry = upsertEntry(registry, entry)
+        await writeRegistry(this.paths.aasHome, registry)
       }
     }
     await rm(itemDir(this.paths.aasHome, entry.category, slug), { recursive: true, force: true })
     await writeRegistry(this.paths.aasHome, removeEntry(registry, slug))
   }
 
-  async enable(slug: string, target: ToolTarget): Promise<void> {
+  async enable(slug: string, target: ToolTarget, options: EnableOptions = {}): Promise<void> {
     const registry = await readRegistry(this.paths.aasHome)
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
-    await this._syncToTarget(slug, entry.category, target, 'add')
+    await this._syncToTarget(slug, entry.category, target, 'add', options)
     await writeRegistry(
       this.paths.aasHome,
       upsertEntry(registry, {
@@ -128,12 +133,12 @@ export class EngineImpl implements Engine {
     )
   }
 
-  async disable(slug: string, target: ToolTarget): Promise<void> {
+  async disable(slug: string, target: ToolTarget, options: DisableOptions = {}): Promise<void> {
     const registry = await readRegistry(this.paths.aasHome)
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
-      await this._syncToTarget(slug, entry.category, target, 'remove')
+      await this._syncToTarget(slug, entry.category, target, 'remove', options)
     }
     await writeRegistry(
       this.paths.aasHome,
@@ -410,7 +415,8 @@ export class EngineImpl implements Engine {
     slug: string,
     category: 'provider' | 'skill' | 'mcp',
     target: ToolTarget,
-    action: 'add' | 'remove'
+    action: 'add' | 'remove',
+    options: EnableOptions & DisableOptions = {}
   ): Promise<void> {
     if (category === 'provider') {
       if (target === 'claude') {
@@ -424,7 +430,7 @@ export class EngineImpl implements Engine {
     }
 
     if (target === 'claude') {
-      await syncItemToClaude(slug, category, this.paths.aasHome, this.paths.claudeConfigDir, this.paths.claudeJsonPath, action)
+      await syncItemToClaude(slug, category, this.paths.aasHome, this.paths.claudeConfigDir, this.paths.claudeJsonPath, action, options)
     } else if (target === 'codex') {
       await syncItemToCodex(slug, category, this.paths.aasHome, this.paths.codexConfigDir, action)
     }

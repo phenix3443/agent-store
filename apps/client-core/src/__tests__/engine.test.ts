@@ -4,6 +4,9 @@ import { join } from 'path'
 import { EngineImpl } from '../engine'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
+// Unit tests use the safe file-edit path, not the installed claude CLI.
+process.env['AS_CLAUDE_BIN'] = ''
+
 const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'community' as const }
 const baseItem = {
   id: 'i1', name: 'Test', description: 'desc',
@@ -588,4 +591,34 @@ test('getRelayStatus reports running when the pid file names a live process', as
   const status = await engine.getRelayStatus()
 
   expect(status).toEqual({ running: true, pid: process.pid })
+})
+
+test('enable mcp with a missing required config value fails before writing', async () => {
+  const needsToken: MCPItem = {
+    ...mcpItem, slug: 'token-mcp',
+    configSchema: { type: 'object', properties: { token: { type: 'string', 'x-env': 'TOKEN' } }, required: ['token'] },
+  }
+  mockFetch({ '/api/items/token-mcp': { item: needsToken } })
+  await engine.install('token-mcp')
+  await expect(engine.enable('token-mcp', 'claude')).rejects.toThrow(/as config token-mcp/)
+  await expect(readFile(join(claudeDir, '.claude.json'), 'utf-8')).rejects.toThrow()
+  await engine.setConfig('token-mcp', { token: 't 1' })
+  await engine.enable('token-mcp', 'claude')
+  const cfg = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
+  expect(cfg.mcpServers['token-mcp'].env).toEqual({ TOKEN: 't 1' })
+})
+
+test('uninstall refuses an entry changed outside Agent Store and keeps the registry truthful', async () => {
+  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  await engine.install('test-mcp')
+  await engine.enable('test-mcp', 'claude')
+  const path = join(claudeDir, '.claude.json')
+  const cfg = JSON.parse(await readFile(path, 'utf-8'))
+  cfg.mcpServers['test-mcp'].env = { EDITED: '1' }
+  await writeFile(path, JSON.stringify(cfg))
+  await expect(engine.uninstall('test-mcp')).rejects.toThrow(/outside Agent Store/)
+  const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
+  expect(reg.installed[0].enabledFor.claude).toBe(true)
+  await engine.uninstall('test-mcp', { force: true })
+  expect(JSON.parse(await readFile(path, 'utf-8')).mcpServers?.['test-mcp']).toBeUndefined()
 })
