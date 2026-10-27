@@ -14,12 +14,10 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { parse } from '@iarna/toml'
-import type { MCPItem } from '@as/types'
 import { describeFailure, findBinary, runCli } from './cli-runner'
-import { buildMcpServerSpec, type McpServerSpec } from './mcp'
+import type { McpServerSpec } from './mcp'
 import { deepEqual, mcpEntriesEqual, mcpEntryDiff } from './mcp-compare'
-import { readMcpTargets, writeMcpTargets, type McpTargetRecord } from './mcp-targets'
-import { McpChangedOutsideError, McpConflictError, McpNotRestorableError, McpRestoreMismatchError } from './mcp-errors'
+import { disableMcpEntry, enableMcpEntry, syncMcpEntry, type McpEntryStore } from './mcp-ownership'
 import { atomicWriteFile, backupFile, ConfigParseError } from './safe-file'
 
 /** A Codex MCP table as the CLI can write it. */
@@ -286,45 +284,18 @@ export async function trialRestore(cli: CodexMcpCli, name: string, previous: unk
   }
 }
 
-async function restorePrevious(ctx: CodexMcpContext, name: string, previous: unknown): Promise<void> {
-  await addEntry(ctx, name, previous as CodexMcpEntry)
-  const back = await readCodexMcpEntry(ctx, name)
-  if (!mcpEntriesEqual('codex', back, previous)) {
-    throw new McpRestoreMismatchError('codex', name, previous, mcpEntryDiff('codex', previous, back))
+// ── enable / disable (rules in mcp-ownership.ts) ─────────────────────────────
+
+function entryStore(ctx: CodexMcpContext): McpEntryStore {
+  const cli = ctx.cli
+  return {
+    tool: 'codex',
+    itemDir: ctx.itemDir,
+    read: name => readCodexMcpEntry(ctx, name),
+    add: (name, entry) => addEntry(ctx, name, entry as CodexMcpEntry),
+    remove: name => removeEntry(ctx, name),
+    cli: cli && { version: () => cli.version(), trialRestore: (name, previous) => trialRestore(cli, name, previous) },
   }
-}
-
-/**
- * Undo a remove-then-add that failed part way. Either CLI call can change the file and
- * still exit non-zero, so act on what is actually there: leave it if it is still the old
- * entry, otherwise clear whatever is in place and write the old entry back.
- */
-async function putBack(ctx: CodexMcpContext, name: string, old: unknown): Promise<void> {
-  const now = await readCodexMcpEntry(ctx, name)
-  if (mcpEntriesEqual('codex', now, old)) return
-  if (now !== undefined) await removeEntry(ctx, name)
-  await restorePrevious(ctx, name, old)
-}
-
-// ── enable / disable ─────────────────────────────────────────────────────────
-
-async function saveRecord(ctx: CodexMcpContext, record: McpTargetRecord | undefined): Promise<void> {
-  const targets = await readMcpTargets(ctx.itemDir)
-  if (record) targets.codex = record
-  else delete targets.codex
-  await writeMcpTargets(ctx.itemDir, targets)
-}
-
-/**
- * Our entry is in place. Ownership comes only from targets.json: without a record a
- * same-name entry is the user's, even when it equals what we would write (§5.5).
- * With a record it must equal `written`; while `written` is null (an enable that stopped
- * between the tool write and the record update) it must equal what that enable writes.
- */
-function isOurs(current: unknown, record: McpTargetRecord | undefined, desired: unknown): boolean {
-  if (current === undefined || !record) return false
-  if (record.written != null) return mcpEntriesEqual('codex', current, record.written)
-  return desired !== undefined && mcpEntriesEqual('codex', current, desired)
 }
 
 export async function enableCodexMcp(
@@ -333,82 +304,7 @@ export async function enableCodexMcp(
   entry: CodexMcpEntry,
   opts: { replace?: boolean; dryRun?: boolean } = {}
 ): Promise<void> {
-  const current = await readCodexMcpEntry(ctx, name)
-  const record = (await readMcpTargets(ctx.itemDir)).codex
-  const previous = record?.previous ?? null
-
-  if (isOurs(current, record, entry)) {
-    if (opts.dryRun) return
-    if (mcpEntriesEqual('codex', current, entry)) {
-      if (record!.written == null) await saveRecord(ctx, { ...record!, written: current })
-      return
-    }
-    // setConfig resync: still ours, so swap it for the new entry. targets.json keeps the
-    // old entry until the new one is in, so a failure here can always be put back.
-    try {
-      await removeEntry(ctx, name)
-      await addEntry(ctx, name, entry)
-    } catch (e) {
-      try {
-        await putBack(ctx, name, current)
-      } catch (restoreError) {
-        throw new Error(`The Codex MCP entry "${name}" could not be swapped for the new config (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
-      }
-      throw e
-    }
-    await saveRecord(ctx, { ...record!, written: await readCodexMcpEntry(ctx, name) })
-    return
-  } else if (current !== undefined) {
-    if (!opts.replace) {
-      throw record?.written != null
-        ? new McpChangedOutsideError('codex', name, 'changed')
-        : new McpConflictError('codex', name)
-    }
-    if (previous !== null && record?.written != null) {
-      // Our takeover was edited outside Agent Store; replacing it again would lose that edit.
-      // (written === null means a takeover was interrupted: reuse the saved previous.)
-      throw new Error(`The Codex MCP entry "${name}" was changed outside Agent Store after it replaced your entry; run \`as disable ${name} --for codex --force\` to put your saved entry back first`)
-    }
-    let adopted = previous
-    let cliVersion = record?.cliVersion
-    if (adopted === null) {
-      if (!ctx.cli) throw new McpNotRestorableError('codex', name, ['(the codex CLI is not installed; --replace needs it to check the restore)'])
-      const lost = await trialRestore(ctx.cli, name, current)
-      if (lost.length) throw new McpNotRestorableError('codex', name, lost)
-      adopted = current
-      cliVersion = await ctx.cli.version()
-    }
-    if (opts.dryRun) return
-    // Record what we replace before touching the file, so a crash cannot lose it.
-    await saveRecord(ctx, { name, written: null, previous: adopted, cliVersion })
-    try {
-      await removeEntry(ctx, name)
-      await addEntry(ctx, name, entry)
-    } catch (e) {
-      try {
-        await putBack(ctx, name, adopted)
-      } catch (restoreError) {
-        // The record (written: null, previous) stays, so the replaced entry is not lost.
-        throw new Error(`The Codex MCP entry "${name}" could not be replaced (${(e as Error).message}) and your entry could not be put back (${(restoreError as Error).message}); it is saved as "previous" in ${join(ctx.itemDir, 'targets.json')}, and \`as disable ${name} --for codex --force\` writes it back`)
-      }
-      await saveRecord(ctx, undefined)
-      throw e
-    }
-    await saveRecord(ctx, { name, written: await readCodexMcpEntry(ctx, name), previous: adopted, cliVersion })
-    return
-  }
-
-  if (opts.dryRun) return
-  // Claim the name before writing it, so an entry left by an interrupted run is provably ours.
-  if (!record) await saveRecord(ctx, { name, written: null, previous: null })
-  try {
-    await addEntry(ctx, name, entry)
-  } catch (e) {
-    // Keep the claim if the entry got written anyway, so it is not mistaken for the user's.
-    if (!record && (await readCodexMcpEntry(ctx, name)) === undefined) await saveRecord(ctx, undefined)
-    throw e
-  }
-  await saveRecord(ctx, { name, written: await readCodexMcpEntry(ctx, name), previous, ...(record?.cliVersion ? { cliVersion: record.cliVersion } : {}) })
+  await enableMcpEntry(entryStore(ctx), name, entry, opts)
 }
 
 export async function disableCodexMcp(
@@ -416,28 +312,7 @@ export async function disableCodexMcp(
   name: string,
   opts: { force?: boolean; expected?: CodexMcpEntry } = {}
 ): Promise<void> {
-  const current = await readCodexMcpEntry(ctx, name)
-  const record = (await readMcpTargets(ctx.itemDir)).codex
-  if (!record && current === undefined) return
-  // A claim from an enable that stopped before writing anything: nothing to remove.
-  if (current === undefined && record?.written == null && record?.previous == null) {
-    await saveRecord(ctx, undefined)
-    return
-  }
-
-  if (!isOurs(current, record, opts.expected) && !opts.force) {
-    throw new McpChangedOutsideError('codex', name, current === undefined ? 'removed' : 'changed')
-  }
-  if (current !== undefined) await removeEntry(ctx, name)
-  if (record?.previous != null) {
-    try {
-      await restorePrevious(ctx, name, record.previous)
-    } catch (e) {
-      await saveRecord(ctx, { ...record, written: null })
-      throw e
-    }
-  }
-  await saveRecord(ctx, undefined)
+  await disableMcpEntry(entryStore(ctx), name, opts)
 }
 
 // ── Item-level entry point used by the engine ────────────────────────────────
@@ -448,17 +323,5 @@ export async function syncCodexMcp(
   action: 'add' | 'remove',
   opts: { replace?: boolean; force?: boolean; dryRun?: boolean } = {}
 ): Promise<void> {
-  let config: Record<string, unknown> = {}
-  try { config = JSON.parse(await readFile(join(ctx.itemDir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
-  const build = async () => {
-    const manifest = JSON.parse(await readFile(join(ctx.itemDir, 'manifest.json'), 'utf-8')) as MCPItem
-    return toCodexEntry(slug, buildMcpServerSpec(manifest, ctx.itemDir, config))
-  }
-  if (action === 'add') {
-    await enableCodexMcp(ctx, slug, await build(), opts)
-    return
-  }
-  let expected: CodexMcpEntry | undefined
-  try { expected = await build() } catch { /* no manifest or unconfigured: rely on the record */ }
-  await disableCodexMcp(ctx, slug, { force: opts.force, expected })
+  await syncMcpEntry(entryStore(ctx), slug, action, spec => toCodexEntry(slug, spec), opts)
 }
