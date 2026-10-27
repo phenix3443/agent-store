@@ -14,11 +14,10 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { parse } from '@iarna/toml'
-import type { MCPItem } from '@as/types'
 import { describeFailure, findBinary, runCli } from './cli-runner'
-import { buildMcpServerSpec, type McpServerSpec } from './mcp'
+import type { McpServerSpec } from './mcp'
 import { deepEqual, mcpEntriesEqual, mcpEntryDiff } from './mcp-compare'
-import { disableMcpEntry, enableMcpEntry, type McpEntryStore } from './mcp-ownership'
+import { disableMcpEntry, enableMcpEntry, syncMcpEntry, type McpEntryStore } from './mcp-ownership'
 import { atomicWriteFile, backupFile, ConfigParseError } from './safe-file'
 
 /** A Codex MCP table as the CLI can write it. */
@@ -324,17 +323,5 @@ export async function syncCodexMcp(
   action: 'add' | 'remove',
   opts: { replace?: boolean; force?: boolean; dryRun?: boolean } = {}
 ): Promise<void> {
-  let config: Record<string, unknown> = {}
-  try { config = JSON.parse(await readFile(join(ctx.itemDir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
-  const build = async () => {
-    const manifest = JSON.parse(await readFile(join(ctx.itemDir, 'manifest.json'), 'utf-8')) as MCPItem
-    return toCodexEntry(slug, buildMcpServerSpec(manifest, ctx.itemDir, config))
-  }
-  if (action === 'add') {
-    await enableCodexMcp(ctx, slug, await build(), opts)
-    return
-  }
-  let expected: CodexMcpEntry | undefined
-  try { expected = await build() } catch { /* no manifest or unconfigured: rely on the record */ }
-  await disableCodexMcp(ctx, slug, { force: opts.force, expected })
+  await syncMcpEntry(entryStore(ctx), slug, action, spec => toCodexEntry(slug, spec), opts)
 }

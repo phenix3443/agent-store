@@ -41,7 +41,6 @@ async function isRealDir(path: string): Promise<boolean> {
   try { const st = await lstat(path); return st.isDirectory() && !st.isSymbolicLink() } catch { return false }
 }
 
-/** A copy older versions wrote into a tool dir: exactly one SKILL.md equal to `body`. */
 /** Rewrites a legacy store dir (manifest.json + skill.md) as SKILL.md + marker, in place. */
 async function convertStoreDir(dir: string, entry: InstalledItem): Promise<SkillMarker> {
   const body = await readFile(join(dir, 'skill.md'), 'utf-8')

@@ -8,8 +8,10 @@
 //   - a remove-then-add that fails part way puts the old entry back;
 //   - disable only removes an entry that still equals what we wrote, then restores
 //     the replaced entry and checks it.
+import { readFile } from 'fs/promises'
 import { join } from 'path'
-import type { ToolTarget } from '@as/types'
+import type { MCPItem, ToolTarget } from '@as/types'
+import { buildMcpServerSpec, type McpServerSpec } from './mcp'
 import { mcpEntriesEqual, mcpEntryDiff } from './mcp-compare'
 import { readMcpTargets, writeMcpTargets, type McpTargetRecord } from './mcp-targets'
 import { McpChangedOutsideError, McpConflictError, McpNotRestorableError, McpRestoreMismatchError } from './mcp-errors'
@@ -182,4 +184,30 @@ export async function disableMcpEntry(
     }
   }
   await saveRecord(s, undefined)
+}
+
+/**
+ * Item-level entry point used by the engine: build the tool's entry from the installed
+ * manifest and config.json, then enable or disable it under the rules above.
+ */
+export async function syncMcpEntry(
+  s: McpEntryStore,
+  slug: string,
+  action: 'add' | 'remove',
+  toEntry: (spec: McpServerSpec) => unknown,
+  opts: { replace?: boolean; force?: boolean; dryRun?: boolean } = {}
+): Promise<void> {
+  let config: Record<string, unknown> = {}
+  try { config = JSON.parse(await readFile(join(s.itemDir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
+  const build = async () => {
+    const manifest = JSON.parse(await readFile(join(s.itemDir, 'manifest.json'), 'utf-8')) as MCPItem
+    return toEntry(buildMcpServerSpec(manifest, s.itemDir, config))
+  }
+  if (action === 'add') {
+    await enableMcpEntry(s, slug, await build(), opts)
+    return
+  }
+  let expected: unknown
+  try { expected = await build() } catch { /* no manifest or unconfigured: rely on the record */ }
+  await disableMcpEntry(s, slug, { force: opts.force, expected })
 }

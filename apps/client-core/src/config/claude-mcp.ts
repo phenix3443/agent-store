@@ -9,14 +9,13 @@
 //     then restore the replaced entry and check it under the comparison rule.
 // Without the claude binary the same rules apply to a safe file edit, and
 // --replace is refused (the trial needs the CLI).
-import { mkdir, mkdtemp, readFile, rm } from 'fs/promises'
+import { mkdir, mkdtemp, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
-import type { MCPItem } from '@as/types'
 import { describeFailure, findBinary, runCli } from './cli-runner'
-import { buildMcpServerSpec, toClaudeEntry, type McpServerConfig } from './mcp'
+import { toClaudeEntry, type McpServerConfig } from './mcp'
 import { mcpEntryDiff } from './mcp-compare'
-import { disableMcpEntry, enableMcpEntry, type McpEntryStore } from './mcp-ownership'
+import { disableMcpEntry, enableMcpEntry, syncMcpEntry, type McpEntryStore } from './mcp-ownership'
 import { atomicWriteFile, backupFile, ConfigParseError, readJsonObject } from './safe-file'
 
 /** Where a Claude config lives; `home` pins HOME for a scratch config. */
@@ -168,17 +167,5 @@ export async function syncClaudeMcp(
   action: 'add' | 'remove',
   opts: { replace?: boolean; force?: boolean; dryRun?: boolean } = {}
 ): Promise<void> {
-  let config: Record<string, unknown> = {}
-  try { config = JSON.parse(await readFile(join(ctx.itemDir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
-  const build = async () => {
-    const manifest = JSON.parse(await readFile(join(ctx.itemDir, 'manifest.json'), 'utf-8')) as MCPItem
-    return toClaudeEntry(buildMcpServerSpec(manifest, ctx.itemDir, config))
-  }
-  if (action === 'add') {
-    await enableClaudeMcp(ctx, slug, await build(), opts)
-    return
-  }
-  let expected: McpServerConfig | undefined
-  try { expected = await build() } catch { /* no manifest or unconfigured: rely on the record */ }
-  await disableClaudeMcp(ctx, slug, { force: opts.force, expected })
+  await syncMcpEntry(entryStore(ctx), slug, action, spec => toClaudeEntry(spec), opts)
 }
