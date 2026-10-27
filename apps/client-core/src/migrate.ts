@@ -2,12 +2,12 @@
 // current layout (docs/global-skills-mcp.md §7, PR7). Anything it moves or
 // rewrites is copied into ~/.agents/agent-store/backups/migrate-<stamp>/ first.
 // Directories it cannot prove it wrote are reported and left alone.
-import { cp, lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'fs/promises'
+import { cp, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'fs/promises'
 import { basename, dirname, join } from 'path'
 import type { InstalledItem, Item } from '@as/types'
 import { readRegistry, upsertEntry, writeRegistry } from './registry'
 import { itemDir } from './paths'
-import { contentHash, isLegacyInstall, MARKER, parseFrontmatter, readMarker, type SkillMarker } from './skills/store'
+import { contentHash, isLegacyInstall, isLoneSkillMd, MARKER, parseFrontmatter, readMarker, type SkillMarker } from './skills/store'
 import { linkClaudeSkill } from './skills/claude-link'
 import { AgentPackageEngine } from './agent-package-engine'
 
@@ -42,15 +42,6 @@ async function isRealDir(path: string): Promise<boolean> {
 }
 
 /** A copy older versions wrote into a tool dir: exactly one SKILL.md equal to `body`. */
-async function isOldCopy(dir: string, body: string): Promise<boolean> {
-  try {
-    const names = await readdir(dir)
-    return names.length === 1 && names[0] === 'SKILL.md' && (await readFile(join(dir, 'SKILL.md'), 'utf-8')) === body
-  } catch {
-    return false
-  }
-}
-
 /** Rewrites a legacy store dir (manifest.json + skill.md) as SKILL.md + marker, in place. */
 async function convertStoreDir(dir: string, entry: InstalledItem): Promise<SkillMarker> {
   const body = await readFile(join(dir, 'skill.md'), 'utf-8')
@@ -127,7 +118,7 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
       for (const [tool, root] of [['claude', p.claudeConfigDir], ['codex', p.codexConfigDir]] as const) {
         const copy = join(root, 'skills', slug)
         if (!(await isRealDir(copy))) continue
-        if (!(await isOldCopy(copy, body))) {
+        if (!(await isLoneSkillMd(copy, body))) {
           step('skipped', `${copy} differs from the installed skill, so it is treated as the user's and left alone`)
           continue
         }

@@ -144,11 +144,19 @@ async function codexVisibleNames(roots: string[], skip: Set<string>): Promise<Ma
  * The copy an older Agent Store wrote to <codex>/skills/<slug>: exactly one SKILL.md
  * equal to the legacy store's skill.md. Anything else there is the user's.
  */
+/** True when `dir` holds nothing but a SKILL.md whose text is exactly `body` (an old-layout copy). */
+export async function isLoneSkillMd(dir: string, body: string): Promise<boolean> {
+  try {
+    const names = await readdir(dir)
+    return names.length === 1 && names[0] === 'SKILL.md' && (await readFile(join(dir, 'SKILL.md'), 'utf-8')) === body
+  } catch {
+    return false
+  }
+}
+
 async function isOldCodexCopy(copy: string, legacyStore: string): Promise<boolean> {
   try {
-    const names = await readdir(copy)
-    if (names.length !== 1 || names[0] !== 'SKILL.md') return false
-    return (await readFile(join(copy, 'SKILL.md'), 'utf-8')) === (await readFile(join(legacyStore, 'skill.md'), 'utf-8'))
+    return await isLoneSkillMd(copy, await readFile(join(legacyStore, 'skill.md'), 'utf-8'))
   } catch {
     return false
   }
