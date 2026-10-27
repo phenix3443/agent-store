@@ -138,6 +138,18 @@ async function restorePrevious(ctx: ClaudeMcpContext, name: string, previous: un
   }
 }
 
+/**
+ * Undo a remove-then-add that failed part way. Either CLI call can change the file and
+ * still exit non-zero, so act on what is actually there: leave it if it is still the old
+ * entry, otherwise clear whatever is in place and write the old entry back.
+ */
+async function putBack(ctx: ClaudeMcpContext, name: string, old: unknown): Promise<void> {
+  const now = await readClaudeMcpEntry(ctx, name)
+  if (mcpEntriesEqual('claude', now, old)) return
+  if (now !== undefined) await removeEntry(ctx, name)
+  await restorePrevious(ctx, name, old)
+}
+
 // ── enable / disable ─────────────────────────────────────────────────────────
 
 async function saveRecord(ctx: ClaudeMcpContext, record: McpTargetRecord | undefined): Promise<void> {
@@ -147,10 +159,15 @@ async function saveRecord(ctx: ClaudeMcpContext, record: McpTargetRecord | undef
   await writeMcpTargets(ctx.itemDir, targets)
 }
 
-/** Our entry is in place: same as recorded, or (no record) identical to what we would write. */
+/**
+ * Our entry is in place. Ownership comes only from targets.json: without a record a
+ * same-name entry is the user's, even when it equals what we would write (§5.5).
+ * With a record it must equal `written`; while `written` is null (an enable that stopped
+ * between the tool write and the record update) it must equal what that enable writes.
+ */
 function isOurs(current: unknown, record: McpTargetRecord | undefined, desired: unknown): boolean {
-  if (current === undefined) return false
-  if (record?.written != null) return mcpEntriesEqual('claude', current, record.written)
+  if (current === undefined || !record) return false
+  if (record.written != null) return mcpEntriesEqual('claude', current, record.written)
   return desired !== undefined && mcpEntriesEqual('claude', current, desired)
 }
 
@@ -158,24 +175,43 @@ export async function enableClaudeMcp(
   ctx: ClaudeMcpContext,
   name: string,
   entry: McpServerConfig,
-  opts: { replace?: boolean } = {}
+  opts: { replace?: boolean; dryRun?: boolean } = {}
 ): Promise<void> {
   const current = await readClaudeMcpEntry(ctx, name)
   const record = (await readMcpTargets(ctx.itemDir)).claude
   const previous = record?.previous ?? null
 
   if (isOurs(current, record, entry)) {
+    if (opts.dryRun) return
     if (mcpEntriesEqual('claude', current, entry)) {
-      if (record?.written == null) await saveRecord(ctx, { name, written: current, previous })
+      if (record!.written == null) await saveRecord(ctx, { ...record!, written: current })
       return
     }
-    // setConfig resync: still ours, so swap it for the new entry.
-    await removeEntry(ctx, name)
+    // setConfig resync: still ours, so swap it for the new entry. targets.json keeps the
+    // old entry until the new one is in, so a failure here can always be put back.
+    try {
+      await removeEntry(ctx, name)
+      await addEntry(ctx, name, entry)
+    } catch (e) {
+      try {
+        await putBack(ctx, name, current)
+      } catch (restoreError) {
+        throw new Error(`The Claude MCP entry "${name}" could not be swapped for the new config (${(e as Error).message}) and the old one could not be put back (${(restoreError as Error).message}); it is still recorded in ${join(ctx.itemDir, 'targets.json')}, and \`as sync\` writes it again`)
+      }
+      throw e
+    }
+    await saveRecord(ctx, { ...record!, written: await readClaudeMcpEntry(ctx, name) })
+    return
   } else if (current !== undefined) {
     if (!opts.replace) {
       throw record?.written != null
         ? new McpChangedOutsideError('claude', name, 'changed')
         : new McpConflictError('claude', name)
+    }
+    if (previous !== null && record?.written != null) {
+      // Our takeover was edited outside Agent Store; replacing it again would lose that edit.
+      // (written === null means a takeover was interrupted: reuse the saved previous.)
+      throw new Error(`The Claude MCP entry "${name}" was changed outside Agent Store after it replaced your entry; run \`as disable ${name} --for claude --force\` to put your saved entry back first`)
     }
     let adopted = previous
     let cliVersion = record?.cliVersion
@@ -186,13 +222,19 @@ export async function enableClaudeMcp(
       adopted = current
       cliVersion = await ctx.cli.version()
     }
+    if (opts.dryRun) return
     // Record what we replace before touching the file, so a crash cannot lose it.
     await saveRecord(ctx, { name, written: null, previous: adopted, cliVersion })
-    await removeEntry(ctx, name)
     try {
+      await removeEntry(ctx, name)
       await addEntry(ctx, name, entry)
     } catch (e) {
-      await restorePrevious(ctx, name, adopted)
+      try {
+        await putBack(ctx, name, adopted)
+      } catch (restoreError) {
+        // The record (written: null, previous) stays, so the replaced entry is not lost.
+        throw new Error(`The Claude MCP entry "${name}" could not be replaced (${(e as Error).message}) and your entry could not be put back (${(restoreError as Error).message}); it is saved as "previous" in ${join(ctx.itemDir, 'targets.json')}, and \`as disable ${name} --for claude --force\` writes it back`)
+      }
       await saveRecord(ctx, undefined)
       throw e
     }
@@ -200,7 +242,16 @@ export async function enableClaudeMcp(
     return
   }
 
-  await addEntry(ctx, name, entry)
+  if (opts.dryRun) return
+  // Claim the name before writing it, so an entry left by an interrupted run is provably ours.
+  if (!record) await saveRecord(ctx, { name, written: null, previous: null })
+  try {
+    await addEntry(ctx, name, entry)
+  } catch (e) {
+    // Keep the claim if the entry got written anyway, so it is not mistaken for the user's.
+    if (!record && (await readClaudeMcpEntry(ctx, name)) === undefined) await saveRecord(ctx, undefined)
+    throw e
+  }
   await saveRecord(ctx, { name, written: await readClaudeMcpEntry(ctx, name), previous, ...(record?.cliVersion ? { cliVersion: record.cliVersion } : {}) })
 }
 
@@ -212,6 +263,11 @@ export async function disableClaudeMcp(
   const current = await readClaudeMcpEntry(ctx, name)
   const record = (await readMcpTargets(ctx.itemDir)).claude
   if (!record && current === undefined) return
+  // A claim from an enable that stopped before writing anything: nothing to remove.
+  if (current === undefined && record?.written == null && record?.previous == null) {
+    await saveRecord(ctx, undefined)
+    return
+  }
 
   if (!isOurs(current, record, opts.expected) && !opts.force) {
     throw new McpChangedOutsideError('claude', name, current === undefined ? 'removed' : 'changed')
@@ -234,7 +290,7 @@ export async function syncClaudeMcp(
   ctx: ClaudeMcpContext,
   slug: string,
   action: 'add' | 'remove',
-  opts: { replace?: boolean; force?: boolean } = {}
+  opts: { replace?: boolean; force?: boolean; dryRun?: boolean } = {}
 ): Promise<void> {
   let config: Record<string, unknown> = {}
   try { config = JSON.parse(await readFile(join(ctx.itemDir, 'config.json'), 'utf-8')) } catch { /* not configured */ }

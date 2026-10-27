@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
+import { chmod, mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { EngineImpl } from '../engine'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
@@ -629,4 +629,64 @@ test('uninstall refuses an entry changed outside Agent Store and keeps the regis
   expect(reg.installed[0].enabledFor.claude).toBe(true)
   await engine.uninstall('test-mcp', { force: true })
   expect(JSON.parse(await readFile(path, 'utf-8')).mcpServers?.['test-mcp']).toBeUndefined()
+})
+
+test('a setConfig whose resync is refused keeps the previous config.json', async () => {
+  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  await engine.install('test-mcp')
+  await engine.setConfig('test-mcp', { token: 'old' })
+  await engine.enable('test-mcp', 'claude')
+  const path = join(claudeDir, '.claude.json')
+  const cfg = JSON.parse(await readFile(path, 'utf-8'))
+  cfg.mcpServers['test-mcp'].args = ['edited']
+  await writeFile(path, JSON.stringify(cfg))
+  await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow(/outside Agent Store/)
+  const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
+  expect(saved).toEqual({ token: 'old' })
+})
+
+test('a setConfig refused by one tool leaves the other tool on the previous values', async () => {
+  const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
+  mockFetch({ '/api/items/test-mcp': { item } })
+  await engine.install('test-mcp')
+  await engine.setConfig('test-mcp', { token: 'old' })
+  await engine.enable('test-mcp', 'claude')
+  await engine.enable('test-mcp', 'codex')
+  const claudePath = join(claudeDir, '.claude.json')
+  const claudeBefore = JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']
+  expect(JSON.stringify(claudeBefore)).toContain('old')
+  const codexPath = join(codexDir, 'config.toml')
+  await writeFile(codexPath, (await readFile(codexPath, 'utf-8')).replace('"old"', '"edited"'))
+  expect(await readFile(codexPath, 'utf-8')).toContain('edited')
+
+  await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow(/outside Agent Store/)
+  expect(JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']).toEqual(claudeBefore)
+  const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
+  expect(saved).toEqual({ token: 'old' })
+})
+
+// chmod does not stop root, so the injected Codex failure needs a normal user.
+test.skipIf(process.getuid?.() === 0)('a setConfig that fails while writing the second tool puts the first tool back', async () => {
+  const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
+  mockFetch({ '/api/items/test-mcp': { item } })
+  await engine.install('test-mcp')
+  await engine.setConfig('test-mcp', { token: 'old' })
+  await engine.enable('test-mcp', 'claude')
+  await engine.enable('test-mcp', 'codex')
+  const claudePath = join(claudeDir, '.claude.json')
+  const claudeBefore = JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']
+  const codexPath = join(codexDir, 'config.toml')
+  const codexBefore = await readFile(codexPath, 'utf-8')
+
+  // The ownership check only reads, so it passes; the Codex write then fails at runtime.
+  await chmod(codexDir, 0o555)
+  try {
+    await expect(engine.setConfig('test-mcp', { token: 'new' })).rejects.toThrow()
+  } finally {
+    await chmod(codexDir, 0o755)
+  }
+  expect(JSON.parse(await readFile(claudePath, 'utf-8')).mcpServers['test-mcp']).toEqual(claudeBefore)
+  expect(await readFile(codexPath, 'utf-8')).toBe(codexBefore)
+  const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
+  expect(saved).toEqual({ token: 'old' })
 })

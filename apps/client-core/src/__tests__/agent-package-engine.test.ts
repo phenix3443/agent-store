@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, mkdir, writeFile, readFile, cp } from 'fs/promises'
+import { mkdtemp, rm, mkdir, writeFile, readFile } from 'fs/promises'
 import { join } from 'path'
 import { parse } from '@iarna/toml'
 import { AgentPackageEngine } from '../agent-package-engine'
@@ -112,7 +112,7 @@ async function createSkillPackage(): Promise<string> {
 
   const sourceDir = join(dir, 'sources', 'local', 'frontend-design', 'skills', 'frontend-design')
   await mkdir(sourceDir, { recursive: true })
-  await cp('/Users/liushangliang/.agents/skills/frontend-design/SKILL.md', join(sourceDir, 'SKILL.md'))
+  await writeFile(join(sourceDir, 'SKILL.md'), '---\nname: frontend-design\ndescription: test skill\n---\nbody\n')
   return dir
 }
 
@@ -267,7 +267,7 @@ test('installs local provider package, configures it, and syncs to codex and cla
 
   const codexConfig = await readFile(join(codexDir, 'config.toml'), 'utf-8')
   expect(codexConfig).toContain('model = "gpt-5.4"')
-  expect(codexConfig).toContain('model_provider = "local.yls-me-provider#yls-me"')
+  expect(codexConfig).toContain('model_provider = "local-yls-me-provider-yls-me"')
   expect(codexConfig).toContain('base_url = "https://code.ylsagi.com/codex"')
   const codexAuth = JSON.parse(await readFile(join(codexDir, 'auth.json'), 'utf-8'))
   expect(codexAuth.OPENAI_API_KEY).toBe('yls-key')
@@ -304,7 +304,7 @@ test('enabling package provider preserves existing codex config and auth entries
   expect(codexConfig).toContain('model = "gpt-5.4"')
   expect(codexConfig).toContain('[sandbox_workspace_write]')
   expect(codexConfig).toContain('network_access = true')
-  expect(codexConfig).toContain('model_provider = "local.yls-me-provider#yls-me"')
+  expect(codexConfig).toContain('model_provider = "local-yls-me-provider-yls-me"')
 
   const codexAuth = JSON.parse(await readFile(join(codexDir, 'auth.json'), 'utf-8'))
   expect(codexAuth.EXISTING_KEY).toBe('keep-me')
@@ -324,11 +324,11 @@ test('installs local skill package and syncs the skill file to codex and claude'
   await engine.enablePackage('local.frontend-design-skill', 'claude')
 
   const codexSkill = await readFile(
-    join(codexDir, 'skills', 'local.frontend-design-skill#frontend-design', 'SKILL.md'),
+    join(codexDir, 'skills', 'local-frontend-design-skill-frontend-design', 'SKILL.md'),
     'utf-8'
   )
   const claudeSkill = await readFile(
-    join(claudeDir, 'skills', 'local.frontend-design-skill#frontend-design', 'SKILL.md'),
+    join(claudeDir, 'skills', 'local-frontend-design-skill-frontend-design', 'SKILL.md'),
     'utf-8'
   )
 
@@ -354,7 +354,7 @@ test('installs local stdio mcp package and syncs it to codex and claude', async 
   await engine.enablePackage('local.filesystem-mcp', 'claude')
 
   const codexConfig = parse(await readFile(join(codexDir, 'config.toml'), 'utf-8')) as unknown as Record<string, unknown>
-  const codexEntry = (codexConfig.mcp_servers as Record<string, unknown>)['local.filesystem-mcp#filesystem'] as Record<string, unknown>
+  const codexEntry = (codexConfig.mcp_servers as Record<string, unknown>)['local-filesystem-mcp-filesystem'] as Record<string, unknown>
   expect(codexEntry.type).toBe('stdio')
   expect(codexEntry.command).toBe(join(aasHome, 'packages', 'local.filesystem-mcp', 'mcp', 'server'))
   expect(codexEntry.args).toEqual(['--root', '/tmp/workspace'])
@@ -362,7 +362,7 @@ test('installs local stdio mcp package and syncs it to codex and claude', async 
   expect(codexEntry.env).toEqual({ ROOT: '/tmp/workspace' })
 
   const claudeConfig = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
-  const claudeEntry = claudeConfig.mcpServers['local.filesystem-mcp#filesystem']
+  const claudeEntry = claudeConfig.mcpServers['local-filesystem-mcp-filesystem']
   expect(claudeEntry.command).toBe(join(aasHome, 'packages', 'local.filesystem-mcp', 'mcp', 'server'))
   expect(claudeEntry.args).toEqual(['--root', '/tmp/workspace'])
   expect(claudeEntry.cwd).toBe(join(aasHome, 'packages', 'local.filesystem-mcp'))
@@ -382,12 +382,12 @@ test('installs local remote mcp package and syncs it to codex and claude', async
   await engine.enablePackage('local.remote-browser-mcp', 'claude')
 
   const codexConfig = parse(await readFile(join(codexDir, 'config.toml'), 'utf-8')) as unknown as Record<string, unknown>
-  const codexEntry = (codexConfig.mcp_servers as Record<string, unknown>)['local.remote-browser-mcp#browser'] as Record<string, unknown>
+  const codexEntry = (codexConfig.mcp_servers as Record<string, unknown>)['local-remote-browser-mcp-browser'] as Record<string, unknown>
   expect(codexEntry.type).toBe('http')
   expect(codexEntry.url).toBe('https://mcp.example.com')
 
   const claudeConfig = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
-  const claudeEntry = claudeConfig.mcpServers['local.remote-browser-mcp#browser']
+  const claudeEntry = claudeConfig.mcpServers['local-remote-browser-mcp-browser']
   expect(claudeEntry.type).toBe('http')
   expect(claudeEntry.url).toBe('https://mcp.example.com')
 })

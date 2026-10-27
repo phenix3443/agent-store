@@ -51,7 +51,7 @@ async function exists(path: string): Promise<boolean> {
  * A directory written by Agent Store before markers existed: only its
  * manifest.json (same slug), skill.md and the optional config.json.
  */
-async function isLegacyInstall(dir: string, slug: string): Promise<boolean> {
+export async function isLegacyInstall(dir: string, slug: string): Promise<boolean> {
   try {
     const names = await readdir(dir)
     if (!names.every(n => n === 'manifest.json' || n === 'skill.md' || n === 'config.json')) return false
@@ -122,17 +122,15 @@ async function download(url: string): Promise<Uint8Array> {
   return new Uint8Array(await res.arrayBuffer())
 }
 
-/** Every SKILL.md Codex can see, with its frontmatter name (§5.3 step 4). */
-async function codexVisibleNames(roots: string[], slug: string): Promise<Map<string, string>> {
+/** Every SKILL.md Codex can see, with its frontmatter name (§5.3 step 4), apart from `skip`. */
+async function codexVisibleNames(roots: string[], skip: Set<string>): Promise<Map<string, string>> {
   const names = new Map<string, string>()
   for (const root of roots) {
     let entries: string[]
     try { entries = await readdir(root) } catch { continue }
     for (const entry of entries) {
       const dir = join(root, entry)
-      // Our own slug is skipped in every root: the store copy is what we replace, and
-      // <codex>/skills/<slug> is the copy older versions wrote (migrated by `as migrate`).
-      if (entry === slug || entry.startsWith('.')) continue
+      if (skip.has(dir) || entry.startsWith('.')) continue
       try {
         const fm = parseFrontmatter(await readFile(join(dir, 'SKILL.md'), 'utf-8'))
         if (fm?.name && !names.has(fm.name)) names.set(fm.name, dir)
@@ -140,6 +138,20 @@ async function codexVisibleNames(roots: string[], slug: string): Promise<Map<str
     }
   }
   return names
+}
+
+/**
+ * The copy an older Agent Store wrote to <codex>/skills/<slug>: exactly one SKILL.md
+ * equal to the legacy store's skill.md. Anything else there is the user's.
+ */
+async function isOldCodexCopy(copy: string, legacyStore: string): Promise<boolean> {
+  try {
+    const names = await readdir(copy)
+    if (names.length !== 1 || names[0] !== 'SKILL.md') return false
+    return (await readFile(join(copy, 'SKILL.md'), 'utf-8')) === (await readFile(join(legacyStore, 'skill.md'), 'utf-8'))
+  } catch {
+    return false
+  }
 }
 
 export interface InstallSkillContext {
@@ -195,7 +207,11 @@ export async function installSkillContent(
     if (!fm?.name || !fm.description) throw new Error(`${item.slug}: SKILL.md frontmatter needs name and description`)
 
     if (!options.force) {
-      const clash = (await codexVisibleNames([store, join(ctx.codexConfigDir, 'skills')], item.slug)).get(fm.name)
+      // Only the store copy we are replacing is ours to ignore, plus an old Codex copy we can prove we wrote.
+      const skip = new Set([dest])
+      const codexCopy = join(ctx.codexConfigDir, 'skills', item.slug)
+      if (current && !marker && (await isOldCodexCopy(codexCopy, dest))) skip.add(codexCopy)
+      const clash = (await codexVisibleNames([store, join(ctx.codexConfigDir, 'skills')], skip)).get(fm.name)
       if (clash) {
         throw new SkillConflictError(`Codex already sees a skill named "${fm.name}" at ${clash}; pass --force to install anyway`)
       }
