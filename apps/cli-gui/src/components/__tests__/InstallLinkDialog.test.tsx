@@ -207,6 +207,15 @@ test('a catalog failure is reported and nothing is installed', async () => {
   expect(installCalls()).toHaveLength(0)
 })
 
+test('an empty catalog (offline, no cache) is a catalog failure, not a missing package', async () => {
+  mockRpc({ search: () => [] })
+  await renderDialog()
+  await openLink('agent-store://install?slug=filesystem')
+
+  await screen.findByRole('dialog', { name: '目录暂时取不到' })
+  expect(installCalls()).toHaveLength(0)
+})
+
 test('an already installed package offers to view it instead', async () => {
   mockRpc({ info: () => ({ slug: 'filesystem', category: 'mcp' }) })
   await renderDialog()

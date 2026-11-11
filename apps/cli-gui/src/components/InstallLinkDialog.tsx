@@ -33,6 +33,9 @@ async function lookup(slug: string): Promise<Lookup> {
   }
   try {
     const items = await callRpc<Item[]>('search', [''])
+    // search falls back to the local cache without throwing; an empty result means
+    // the catalog was unreachable, not that the package is gone.
+    if (items.length === 0) return { status: 'catalogError', detail: 'catalog unavailable' }
     const item = items.find((i) => i.slug === slug)
     return item ? { status: 'available', item } : { status: 'notFound' }
   } catch (err) {
