@@ -15,10 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: { absolute: t('metaTitle') }, description: t('lede') }
 }
 
-// Route handlers that redirect to the newest release asset, not pages.
+// mac/win are route handlers that redirect to the newest release asset. Linux ships
+// two package formats, so it goes to the download page to pick one.
 const DOWNLOADS = [
   { href: '/download/mac', label: 'downloadMac' },
   { href: '/download/win', label: 'downloadWin' },
+  { href: '/download#linux', label: 'downloadLinux' },
 ] as const
 
 export default async function LandingPage() {

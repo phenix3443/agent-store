@@ -15,8 +15,18 @@ export default async function DownloadPage() {
   const t = await getTranslations('site.download')
 
   const platforms = [
-    { name: t('mac'), detail: t('macDetail'), action: t('macAction'), href: '/download/mac', primary: true },
-    { name: t('win'), detail: t('winDetail'), action: t('winAction'), href: '/download/win', primary: false },
+    { id: 'mac', name: t('mac'), detail: t('macDetail'), actions: [{ label: t('macAction'), href: '/download/mac' }], primary: true },
+    { id: 'win', name: t('win'), detail: t('winDetail'), actions: [{ label: t('winAction'), href: '/download/win' }], primary: false },
+    {
+      id: 'linux',
+      name: t('linux'),
+      detail: t('linuxDetail'),
+      actions: [
+        { label: t('linuxDebAction'), href: '/download/linux-deb' },
+        { label: t('linuxRpmAction'), href: '/download/linux-rpm' },
+      ],
+      primary: false,
+    },
   ]
 
   return (
@@ -30,18 +40,27 @@ export default async function DownloadPage() {
         <ul>
           {platforms.map((p) => (
             <li
-              key={p.href}
-              className="grid gap-x-10 gap-y-3 border-b border-line py-7 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              key={p.id}
+              id={p.id}
+              className="grid scroll-mt-24 gap-x-10 gap-y-3 border-b border-line py-7 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
             >
               <div>
                 <h2 className="text-[28px] leading-9 tracking-[-0.015em] sm:text-[32px]">{p.name}</h2>
                 <p className="mt-1 text-[15px] leading-6 text-ink-2">{p.detail}</p>
               </div>
-              {/* A route handler that redirects to the newest release asset, not a page. */}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-              <a href={p.href} className={p.primary ? 'btn btn-primary sm:min-w-[12rem]' : 'btn min-h-12 px-5 sm:min-w-[12rem]'}>
-                {p.action}
-              </a>
+              <div className="flex flex-wrap gap-3">
+                {p.actions.map((a) => (
+                  // A route handler that redirects to the newest release asset, not a page.
+                  // eslint-disable-next-line @next/next/no-html-link-for-pages
+                  <a
+                    key={a.href}
+                    href={a.href}
+                    className={p.primary ? 'btn btn-primary sm:min-w-[12rem]' : 'btn min-h-12 px-5 sm:min-w-[12rem]'}
+                  >
+                    {a.label}
+                  </a>
+                ))}
+              </div>
             </li>
           ))}
         </ul>
@@ -64,6 +83,7 @@ export default async function DownloadPage() {
             <code>{XATTR}</code>
           </pre>
           <p className="mt-6 border-t border-line pt-6">{t('winSteps')}</p>
+          <p className="mt-6 border-t border-line pt-6">{t('linuxSteps')}</p>
         </div>
       </section>
 

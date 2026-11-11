@@ -1,14 +1,18 @@
-# Linux build of the desktop client plus a virtual display, to exercise
+# Linux .deb and .rpm of the desktop client plus a virtual display, to exercise
 # agent-store:// install links end to end without touching the host's config.
 # Build context is the repo root:
 #   docker build -f test/desktop-linux/Dockerfile -t as-desktop-linux .
 #   docker run --rm --shm-size 1g -v "$PWD/test/desktop-linux/out:/out" as-desktop-linux
-FROM node:22-bookworm
+# Same base as the release job (ubuntu-22.04), so the bundles tested here are the ones shipped.
+FROM ubuntu:22.04
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
     libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
     build-essential curl file ca-certificates \
-    xvfb xdotool imagemagick dbus-x11 xdg-utils desktop-file-utils fonts-noto-cjk \
+    xvfb xdotool imagemagick dbus-x11 xdg-utils desktop-file-utils libglib2.0-bin fonts-noto-cjk sudo unzip rpm2cpio cpio \
   && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash
@@ -25,9 +29,14 @@ RUN pnpm install --frozen-lockfile \
   && pnpm --filter @as/cli-gui build:sidecar \
   && pnpm --filter @as/cli-gui build
 RUN cd apps/cli-gui && pnpm exec tauri build --no-bundle
+RUN cd apps/cli-gui && pnpm exec tauri bundle --bundles deb,rpm \
+  && mkdir /bundles && cp src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/rpm/*.rpm /bundles/ \
+  && chmod a+rx /bundles/*
 
 # A disposable home: the client writes skills and MCP config under it.
-RUN useradd -m -u 1001 tester && chmod -R a+rX /work
+# The deb is installed at run time by run.sh.
+RUN useradd -m -u 1001 tester && chmod -R a+rX /work \
+  && echo 'tester ALL=(root) NOPASSWD: /usr/bin/dpkg' > /etc/sudoers.d/tester
 USER tester
 ENV HOME=/home/tester
 ENTRYPOINT ["bash", "/work/test/desktop-linux/run.sh"]
