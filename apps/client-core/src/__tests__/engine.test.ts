@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { chmod, mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
+import { chmod, mkdtemp, rm, readFile, mkdir, stat, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { EngineImpl } from '../engine'
@@ -739,4 +739,56 @@ test('install of an item with a script step fails and writes nothing', async () 
   await expect(engine.install('test-mcp')).rejects.toThrow(/script/)
   expect(existsSync(join(aasHome, 'mcps', 'test-mcp'))).toBe(false)
   await expect(readFile(join(aasHome, 'registry.json'))).rejects.toThrow()
+})
+
+async function modeOf(path: string): Promise<number> {
+  return (await stat(path)).mode & 0o777
+}
+
+test('install fails on a registry.json that does not parse and leaves it as it was', async () => {
+  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  await writeFile(join(aasHome, 'registry.json'), '{"installed": [{"slug": "kept"')
+  await expect(engine.install('test-mcp')).rejects.toThrow(/registry\.json could not be parsed/)
+  expect(await readFile(join(aasHome, 'registry.json'), 'utf-8')).toBe('{"installed": [{"slug": "kept"')
+})
+
+test('concurrent enables of different items both land in the registry', async () => {
+  mockFetch({
+    '/api/items/test-mcp': { item: mcpItem },
+    '/api/items/remote-mcp': { item: remoteMcpItem },
+  })
+  await engine.install('test-mcp')
+  await engine.install('remote-mcp')
+  await Promise.all([engine.enable('test-mcp', 'claude'), engine.enable('remote-mcp', 'claude')])
+  const list = await engine.list()
+  expect(list.find(e => e.slug === 'test-mcp')?.enabledFor.claude).toBe(true)
+  expect(list.find(e => e.slug === 'remote-mcp')?.enabledFor.claude).toBe(true)
+})
+
+test('provider config.json is 0600 after install, a config hook step and setConfig', async () => {
+  const hooked: ProviderItem = {
+    ...providerItem,
+    installHook: { steps: [{ type: 'config', patch: { baseUrl: 'https://api.example/v1' } }] },
+  }
+  mockFetch({ '/api/items/test-provider': { item: hooked } })
+  await engine.install('test-provider')
+  const configPath = join(aasHome, 'providers', 'test-provider', 'config.json')
+  expect(await modeOf(configPath)).toBe(0o600)
+  await chmod(configPath, 0o644)
+  await engine.setConfig('test-provider', { apiKey: 'sk-test' })
+  expect(await modeOf(configPath)).toBe(0o600)
+})
+
+test('a new provider without a config hook still gets a 0600 config.json', async () => {
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await engine.install('test-provider')
+  expect(await modeOf(join(aasHome, 'providers', 'test-provider', 'config.json'))).toBe(0o600)
+})
+
+test('a duplicated provider config.json is 0600', async () => {
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await engine.install('test-provider')
+  await engine.setConfig('test-provider', { apiKey: 'sk-test', baseUrl: 'https://api.example/v1' })
+  const { newSlug } = await engine.duplicateProvider('test-provider')
+  expect(await modeOf(join(aasHome, 'providers', newSlug, 'config.json'))).toBe(0o600)
 })

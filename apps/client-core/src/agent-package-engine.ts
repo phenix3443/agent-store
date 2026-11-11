@@ -6,6 +6,7 @@ import { buildPackageStdioMcpServerConfig } from './config/mcp'
 import { parse } from '@iarna/toml'
 import { removeCodexMcpServer, removeCodexProviderConnection, upsertCodexMcpServer, upsertCodexProviderConnection } from './config/codex'
 import { resolvePaths } from './paths'
+import { atomicWriteSecretFile, readJsonObject, replaceSecretJsonFile } from './config/safe-file'
 
 type ToolTarget = 'claude' | 'codex'
 
@@ -143,20 +144,15 @@ async function readPackageConfig(packageDir: string): Promise<Record<string, unk
 }
 
 async function writePackageConfig(packageDir: string, values: Record<string, unknown>): Promise<void> {
-  await writeFile(join(packageDir, 'package-config.json'), JSON.stringify(values, null, 2))
+  await atomicWriteSecretFile(join(packageDir, 'package-config.json'), JSON.stringify(values, null, 2))
 }
 
 async function readClaudeSettings(claudeConfigDir: string): Promise<Record<string, unknown>> {
-  try {
-    return await readJson<Record<string, unknown>>(join(claudeConfigDir, 'settings.json'))
-  } catch {
-    return {}
-  }
+  return (await readJsonObject(join(claudeConfigDir, 'settings.json'))) ?? {}
 }
 
-async function writeClaudeSettings(claudeConfigDir: string, settings: Record<string, unknown>): Promise<void> {
-  await mkdir(claudeConfigDir, { recursive: true })
-  await writeFile(join(claudeConfigDir, 'settings.json'), JSON.stringify(settings, null, 2))
+async function writeClaudeSettings(aasHome: string, claudeConfigDir: string, settings: Record<string, unknown>): Promise<void> {
+  await replaceSecretJsonFile(aasHome, join(claudeConfigDir, 'settings.json'), settings)
 }
 
 function readString(value: unknown): string | undefined {
@@ -452,7 +448,7 @@ export class AgentPackageEngine {
       env['ANTHROPIC_AUTH_TOKEN'] = apiKey
       env['ANTHROPIC_BASE_URL'] = baseUrl
       settings['env'] = env
-      await writeClaudeSettings(this.paths.claudeConfigDir, settings)
+      await writeClaudeSettings(this.paths.aasHome, this.paths.claudeConfigDir, settings)
       return
     }
 
@@ -464,7 +460,7 @@ export class AgentPackageEngine {
       apiKey,
       adapter: providerAdapterFor('codex', component.targets.codex),
       model: component.models?.[0],
-    })
+    }, this.paths.aasHome)
   }
 
   private async syncSkillComponent(

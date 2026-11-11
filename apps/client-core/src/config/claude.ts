@@ -1,8 +1,7 @@
-import { readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import type { McpServerConfig } from './mcp'
 import { resolveClaudeCli, syncClaudeMcp, type ClaudeMcpCli } from './claude-mcp'
-import { atomicWriteFile, readJsonObject } from './safe-file'
+import { atomicWriteFile, readJsonObject, replaceSecretJsonFile } from './safe-file'
 import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
@@ -20,17 +19,13 @@ interface ClaudeRelayState {
   originalAuthToken: string | null
 }
 
+// settings.json can hold ANTHROPIC_AUTH_TOKEN, so it is written 0600.
 async function readSettings(claudeConfigDir: string): Promise<Record<string, unknown>> {
-  try {
-    return JSON.parse(await readFile(join(claudeConfigDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
-  } catch {
-    return {}
-  }
+  return (await readJsonObject(join(claudeConfigDir, 'settings.json'))) ?? {}
 }
 
-async function writeSettings(claudeConfigDir: string, settings: Record<string, unknown>): Promise<void> {
-  await mkdir(claudeConfigDir, { recursive: true })
-  await writeFile(join(claudeConfigDir, 'settings.json'), JSON.stringify(settings, null, 2))
+async function writeSettings(aasHome: string, claudeConfigDir: string, settings: Record<string, unknown>): Promise<void> {
+  await replaceSecretJsonFile(aasHome, join(claudeConfigDir, 'settings.json'), settings)
 }
 
 // Claude Code reads user-scope MCP servers from `.claude.json` (NOT settings.json),
@@ -92,10 +87,10 @@ export async function syncItemToClaude(
     await syncClaudeMcp({ aasHome, claudeConfigDir, claudeJsonPath, itemDir: dir, cli }, slug, action, options)
     return
   }
-  const settings = await readSettings(claudeConfigDir)
 
   // Skills are not synced here: Claude sees them through a symlink (engine + skills/claude-link.ts).
   if (category === 'provider') {
+    const settings = await readSettings(claudeConfigDir)
     if (action === 'add') {
       const connection = await readProviderConnection(dir)
       if (connection.apiKey) {
@@ -111,7 +106,7 @@ export async function syncItemToClaude(
       if (Object.keys(env).length > 0) settings['env'] = env
       else delete settings['env']
     }
-    await writeSettings(claudeConfigDir, settings)
+    await writeSettings(aasHome, claudeConfigDir, settings)
   }
 }
 
@@ -130,7 +125,7 @@ export async function enableRelayForClaude(aasHome: string, claudeConfigDir: str
   env['ANTHROPIC_BASE_URL'] = `http://127.0.0.1:${RELAY_PORT}`
   env['ANTHROPIC_AUTH_TOKEN'] = RELAY_AUTH_TOKEN_SENTINEL
   settings['env'] = env
-  await writeSettings(claudeConfigDir, settings)
+  await writeSettings(aasHome, claudeConfigDir, settings)
 }
 
 export async function disableRelayForClaude(aasHome: string, claudeConfigDir: string): Promise<void> {
@@ -147,6 +142,6 @@ export async function disableRelayForClaude(aasHome: string, claudeConfigDir: st
   if (Object.keys(env).length > 0) settings['env'] = env
   else delete settings['env']
 
-  await writeSettings(claudeConfigDir, settings)
+  await writeSettings(aasHome, claudeConfigDir, settings)
   await clearRelayState(aasHome, 'claude')
 }

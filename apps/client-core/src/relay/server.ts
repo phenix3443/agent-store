@@ -52,7 +52,12 @@ export function startRelayServer(options: RelayServerOptions): { stop: () => voi
       const target = ROUTES[url.pathname]
       if (!target) return new Response('Not found', { status: 404 })
 
-      const registry: RegistryJson = await readRegistry(aasHome)
+      let registry: RegistryJson
+      try {
+        registry = await readRegistry(aasHome)
+      } catch (e) {
+        return Response.json({ error: (e as Error).message }, { status: 503 })
+      }
       const candidates = await findOrderedProvidersForTarget(aasHome, registry, target)
       const eligible = candidates.filter(
         ({ connection }) => (connection.apiKey || (connection.apiKeys?.length ?? 0) > 0) && connection.baseUrl

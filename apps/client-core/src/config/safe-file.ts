@@ -1,8 +1,9 @@
 // Config-file writes that never make things worse: a file that does not parse
 // aborts the write, writes are atomic (temp file + rename), and the previous
 // content is copied to ~/.agents/agent-store/backups/<ts>/ first.
-import { copyFile, mkdir, readFile, rename, stat, writeFile } from 'fs/promises'
+import { copyFile, mkdir, readFile, stat } from 'fs/promises'
 import { basename, dirname, join } from 'path'
+import writeFileAtomic from 'write-file-atomic'
 
 export class ConfigParseError extends Error {
   constructor(readonly path: string, cause: string) {
@@ -33,7 +34,7 @@ export async function readJsonObject(path: string): Promise<Record<string, unkno
 }
 
 /**
- * Writes via a temp file + rename. An existing file keeps its mode unless
+ * Writes via a temp file + fsync + rename. An existing file keeps its mode unless
  * `forceMode` is set (files that hold secrets stay 0600).
  */
 export async function atomicWriteFile(path: string, data: string, mode = 0o644, forceMode = false): Promise<void> {
@@ -41,9 +42,20 @@ export async function atomicWriteFile(path: string, data: string, mode = 0o644, 
   if (!forceMode) {
     try { mode = (await stat(path)).mode & 0o777 } catch { /* new file */ }
   }
-  const tmp = `${path}.as-tmp-${process.pid}-${Date.now()}`
-  await writeFile(tmp, data, { mode })
-  await rename(tmp, path)
+  await writeFileAtomic(path, data, { mode })
+}
+
+/** For files that hold secrets: a new file is 0600, an existing one is narrowed to at most 0600. */
+export async function atomicWriteSecretFile(path: string, data: string): Promise<void> {
+  let mode = 0o600
+  try { mode = ((await stat(path)).mode & 0o600) || 0o600 } catch { /* new file */ }
+  await atomicWriteFile(path, data, mode, true)
+}
+
+/** Backs up the current file (when `aasHome` is known) and writes `value` as a 0600 JSON file. */
+export async function replaceSecretJsonFile(aasHome: string | undefined, path: string, value: unknown): Promise<void> {
+  if (aasHome) await backupFile(aasHome, path)
+  await atomicWriteSecretFile(path, JSON.stringify(value, null, 2))
 }
 
 /** Copies `path` (if it exists) into the backups dir; returns the copy's path. */
