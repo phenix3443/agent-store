@@ -17,7 +17,7 @@ export async function isWebhookProcessed(env: DbEnv | undefined, deliveryId: str
 
 /**
  * Applies a webhook's subscription change and marks the delivery processed in one
- * batch (a single transaction): if either fails, neither is kept and Waffo's retry
+ * transaction: if either fails, neither is kept and Waffo's retry
  * processes it again. The upsert is order-safe, so two concurrent deliveries of the
  * same event both applying it is harmless; the second mark is a no-op.
  */
@@ -28,9 +28,10 @@ export async function recordWebhook(
   record: SubscriptionRecord | null
 ): Promise<void> {
   const db = getDb(env)
-  const mark = db.insert(processedWebhooks).values({ deliveryId, eventType }).onConflictDoNothing()
-  if (record) await db.batch([subscriptionUpsertQuery(db, record), mark])
-  else await mark
+  await db.transaction(async (tx) => {
+    if (record) await subscriptionUpsertQuery(tx, record)
+    await tx.insert(processedWebhooks).values({ deliveryId, eventType }).onConflictDoNothing()
+  })
 }
 
 /**
@@ -43,7 +44,8 @@ export async function recordWebhook(
  * stale event can never reactivate a canceled subscription. Rows without a
  * stored timestamp (pre-existing data) are always allowed to update.
  */
-export function subscriptionUpsertQuery(db: Database, record: SubscriptionRecord) {
+// Takes a transaction as well as the pooled client, hence only `insert`.
+export function subscriptionUpsertQuery(db: Pick<Database, 'insert'>, record: SubscriptionRecord) {
   const values = {
     waffoOrderId: record.waffoOrderId,
     buyerEmail: record.buyerEmail,

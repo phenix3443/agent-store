@@ -36,11 +36,12 @@ function StatTile({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 export default async function DashboardPage() {
-  const { data: sessionData } = await auth().getSession()
-  const user = sessionData?.user
+  const h = await headers()
+  const session = await auth().api.getSession({ headers: h })
+  const user = session?.user
   if (!user) redirect('/')
 
-  const githubUsername = user.name ?? undefined
+  const githubUsername = user.username ?? undefined
   if (!githubUsername) {
     return (
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -57,17 +58,12 @@ export default async function DashboardPage() {
   const initial = (githubUsername || email || 'U').charAt(0).toUpperCase()
 
   // Fetch this publisher's submissions and plan via the API server, authenticated
-  // with the Neon Auth JWT (the API resolves the publisher from the token). Pull
-  // the JWT from the same-origin proxy's /token endpoint, forwarding our cookie.
-  const h = await headers()
-  const host = h.get('host')
-  const proto = h.get('x-forwarded-proto') ?? 'http'
+  // with a Better Auth JWT (the API resolves the publisher from its username
+  // claim). Minted in-process: fetching our own public URL would leave the pod
+  // and need the tailnet.
   let token: string | undefined
   try {
-    const tokRes = await fetch(`${proto}://${host}/api/auth/token`, {
-      headers: { cookie: h.get('cookie') ?? '' },
-    })
-    if (tokRes.ok) token = ((await tokRes.json()) as { token?: string }).token
+    token = (await auth().api.getToken({ headers: h })).token
   } catch {
     token = undefined
   }

@@ -1,7 +1,7 @@
 'use client'
 
-import { createAuthClient } from '@neondatabase/auth/next'
+import { createAuthClient } from 'better-auth/react'
 
-// Browser Neon Auth (Better Auth) client. No args = same-origin: it talks to
-// this app's /api/auth/* proxy, so the session cookie lives on our domain.
+// Browser Better Auth client. No baseURL = same origin: it talks to this app's
+// /api/auth/* route, so the session cookie lives on our domain.
 export const authClient = createAuthClient()

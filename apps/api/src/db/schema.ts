@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  boolean,
   check,
   index,
   integer,
@@ -12,14 +13,14 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-// Drizzle schema — the source of truth for the Neon Postgres database.
+// Drizzle schema — the source of truth for the Postgres database.
 // Migrations are generated into ./drizzle and applied with `drizzle-kit migrate`.
 //
 // Scope: tables, columns, types, defaults, checks, foreign keys, unique
 // constraints, and indexes — the structural schema. Deliberately NOT reproduced
 // here:
 //   • RLS policies + anon/authenticated GRANTs — Supabase/PostgREST specific;
-//     authorization moves to the API layer (the Worker is the only DB client).
+//     authorization moves to the API layer (the API is the only catalog client).
 //   • The updated_at trigger + update_updated_at() function — kept for DB-level
 //     parity but expressed in raw SQL, appended to the generated migration
 //     (drizzle-kit does not model triggers). See drizzle/*_*.sql.
@@ -99,7 +100,8 @@ export const reviews = pgTable('reviews', {
   itemSlug: text('item_slug')
     .notNull()
     .references(() => items.slug, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull(),
+  // Better Auth user ids are random text, not UUIDs.
+  userId: text('user_id').notNull(),
   authorName: text('author_name'),
   rating: integer('rating').notNull(),
   body: text('body'),
@@ -122,3 +124,72 @@ export const itemVersions = pgTable('item_versions', {
   unique('item_versions_item_slug_version_key').on(t.itemSlug, t.version),
   index('item_versions_item_slug_idx').on(t.itemSlug),
 ])
+
+// ── Better Auth ──────────────────────────────────────────────────────────────
+// Tables owned by the store's self-hosted Better Auth (apps/store/lib/auth/server.ts).
+// Columns keep Better Auth's camelCase names: its Kysely adapter queries them
+// verbatim, so these must match what `getMigrations` emits for that config. When
+// the auth config changes (new plugin or user field), regenerate and compare.
+
+const tz = { withTimezone: true } as const
+
+export const authUser = pgTable('user', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('emailVerified').notNull(),
+  image: text('image'),
+  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', tz).notNull().defaultNow(),
+  username: text('username'),
+})
+
+export const authSession = pgTable('session', {
+  id: text('id').primaryKey(),
+  expiresAt: timestamp('expiresAt', tz).notNull(),
+  token: text('token').notNull().unique(),
+  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', tz).notNull(),
+  ipAddress: text('ipAddress'),
+  userAgent: text('userAgent'),
+  userId: text('userId')
+    .notNull()
+    .references(() => authUser.id, { onDelete: 'cascade' }),
+}, (t) => [index('session_userId_idx').on(t.userId)])
+
+export const authAccount = pgTable('account', {
+  id: text('id').primaryKey(),
+  accountId: text('accountId').notNull(),
+  providerId: text('providerId').notNull(),
+  userId: text('userId')
+    .notNull()
+    .references(() => authUser.id, { onDelete: 'cascade' }),
+  accessToken: text('accessToken'),
+  refreshToken: text('refreshToken'),
+  idToken: text('idToken'),
+  accessTokenExpiresAt: timestamp('accessTokenExpiresAt', tz),
+  refreshTokenExpiresAt: timestamp('refreshTokenExpiresAt', tz),
+  scope: text('scope'),
+  password: text('password'),
+  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', tz).notNull(),
+}, (t) => [index('account_userId_idx').on(t.userId)])
+
+export const authVerification = pgTable('verification', {
+  id: text('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expiresAt', tz).notNull(),
+  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt', tz).notNull().defaultNow(),
+}, (t) => [index('verification_identifier_idx').on(t.identifier)])
+
+export const authJwks = pgTable('jwks', {
+  id: text('id').primaryKey(),
+  publicKey: text('publicKey').notNull(),
+  privateKey: text('privateKey').notNull(),
+  createdAt: timestamp('createdAt', tz).notNull(),
+  expiresAt: timestamp('expiresAt', tz),
+  alg: text('alg'),
+  crv: text('crv'),
+})

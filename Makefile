@@ -1,13 +1,14 @@
 # Makefile — Local development workflow for agent-store
-# Requires: neonctl (run `neonctl auth` once), pnpm, Bun, psql, Docker (e2e-docker only)
+# Requires: pnpm, Bun, Docker (local Postgres via docker-compose.dev.yml)
 #
-# Local dev/e2e run against ephemeral Neon branches — copy-on-write clones of the
-# test project's `main` branch that inherit its schema + data. No local Postgres.
+# Local dev and e2e run against a Postgres container. `make db` starts it and
+# applies the migrations and the seed; `make seed` wipes it back to the seed.
 
-.PHONY: setup seed dev-env dev-api dev-store dev-client build-cli e2e e2e-docker-build e2e-docker stop status
+.PHONY: setup db seed dev-env dev-api dev-store dev-client build-cli e2e e2e-docker-build e2e-docker stop status
 
-NEON_PROJECT ?= late-sea-44274892
-NEON_DEV_BRANCH ?= dev-$(shell whoami)
+DEV_DB_PORT ?= 55432
+DEV_DATABASE_URL ?= postgres://postgres:dev@127.0.0.1:$(DEV_DB_PORT)/agent_store
+COMPOSE := DEV_DB_PORT=$(DEV_DB_PORT) docker compose -f docker-compose.dev.yml
 
 # Dev-server ports. `make dev-env` picks the first free ports at/above these
 # (see scripts/dev-ports.sh) and passes them to the sub-targets, so a stale
@@ -15,45 +16,45 @@ NEON_DEV_BRANCH ?= dev-$(shell whoami)
 API_PORT ?= 3001
 STORE_PORT ?= 3000
 
-## One-time setup: install Neon CLI, authenticate, create .env.local
-setup:
-	@command -v neonctl >/dev/null || npm i -g neonctl
-	neonctl auth
+## One-time setup: create apps/store/.env.local and start the database
+setup: db
 	@test -f apps/store/.env.local || cp apps/store/.env.local.example apps/store/.env.local
 	@echo ""
-	@echo "Next: fill apps/store/.env.local (Neon Auth creds), then: make dev-env"
-	@echo "Your dev branch ($(NEON_DEV_BRANCH)) is created on first 'make dev-env'."
+	@echo "Next: fill apps/store/.env.local (Better Auth secret, GitHub OAuth app), then: make dev-env"
 
-## Reset your Neon dev branch to the test project's main (drops local changes,
-## re-inherits the current test schema + data)
+## Start the local Postgres, apply migrations, load the seed into an empty catalog
+db:
+	$(COMPOSE) up -d --wait db
+	cd apps/api && DATABASE_URL="$(DEV_DATABASE_URL)" bun src/migrate.ts && DATABASE_URL="$(DEV_DATABASE_URL)" bun src/seed.ts
+
+## Wipe the local database back to the seed (drops everything, including sign-ins)
 seed:
-	neonctl branches reset $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
+	$(COMPOSE) down -v
+	$(MAKE) --no-print-directory db
 
-## Start ALL THREE components locally against your Neon dev branch for full
-## integration testing — catalog API, web store, and the Tauri desktop client —
-## run in parallel as the three sub-targets below. Ports are chosen dynamically
-## (first free at/above 3001 for the API, 3000 for the store) and passed to all
-## three so a stale previous run doesn't collide. Ctrl-C tears all three down.
-## Only dev-api resolves/creates the Neon dev branch, so there is no first-run race.
-dev-env:
+## Start ALL THREE components locally for full integration testing — catalog
+## API, web store, and the Tauri desktop client — run in parallel as the three
+## sub-targets below. Ports are chosen dynamically (first free at/above 3001 for
+## the API, 3000 for the store) and passed to all three so a stale previous run
+## doesn't collide. Ctrl-C tears all three down.
+dev-env: db
 	@ports=$$(scripts/dev-ports.sh); echo "▸ dev-env $$ports"; \
 	$(MAKE) --no-print-directory -j3 dev-api dev-store dev-client $$ports
 
-## Catalog API server (apps/api) on :3001, pointed at your Neon dev branch (reads
-## DATABASE_URL from scripts/neon-dev-branch.sh, Neon Auth creds from
-## apps/store/.env.local). Both the web store and the CLI consume this API. Also a
-## building block of `make dev-env`.
+## Catalog API server (apps/api). Verifies sign-in tokens against the local
+## store's Better Auth JWKS. Both the web store and the CLI consume this API.
 dev-api:
-	DATABASE_URL="$$(scripts/neon-dev-branch.sh $(NEON_DEV_BRANCH))"; export DATABASE_URL; \
-	set -a; . apps/store/.env.local; set +a; \
+	DATABASE_URL="$(DEV_DATABASE_URL)" \
+	AUTH_JWKS_URL=http://localhost:$(STORE_PORT)/api/auth/jwks \
+	AUTH_ISSUER=http://localhost:$(STORE_PORT) \
 	PORT=$(API_PORT) pnpm --filter=@as/api start
 
-## Web store (apps/store) on :3000. Reads its catalog from the local API via
-## API_URL and Neon Auth creds from apps/store/.env.local; it has no direct DB
-## access. Building block of `make dev-env`.
+## Web store (apps/store), which also hosts Better Auth. Reads the catalog from
+## the local API via API_URL; Better Auth uses the same database.
 dev-store:
 	set -a; . apps/store/.env.local; set +a; \
-	PORT=$(STORE_PORT) API_URL=http://127.0.0.1:$(API_PORT) \
+	DATABASE_URL="$(DEV_DATABASE_URL)" BETTER_AUTH_URL=http://localhost:$(STORE_PORT) \
+	PORT=$(STORE_PORT) API_URL=http://127.0.0.1:$(API_PORT) NEXT_PUBLIC_API_URL=http://127.0.0.1:$(API_PORT) \
 	pnpm --filter=@as/store dev
 
 ## Desktop client for local dev, in isolated /tmp dirs — never touches your real
@@ -78,8 +79,8 @@ build-cli:
 	pnpm --filter=@as/cli build:bin
 
 ## Run full E2E test in isolated /tmp dirs (builds CLI first)
-e2e: build-cli
-	@./scripts/local-e2e.sh
+e2e: build-cli db
+	@DEV_DATABASE_URL="$(DEV_DATABASE_URL)" ./scripts/local-e2e.sh
 
 ## Build the real-agent e2e image (claude + codex CLIs, the `as` CLI, fixtures).
 ## Builds the @as/* libs on the host first — their dist/ is copied into the image.
@@ -92,11 +93,11 @@ e2e-docker-build:
 e2e-docker: e2e-docker-build
 	docker run --rm -v "$(PWD)/test/provider:/secrets:ro" agent-store-e2e
 
-## Delete your Neon dev branch (tear down the ephemeral clone)
+## Stop the local Postgres (keeps its data; `make seed` wipes it)
 stop:
-	neonctl branches delete $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
+	$(COMPOSE) down
 
-## Print your Neon dev branch details + pooled connection string
+## Show the local Postgres container and its connection string
 status:
-	neonctl branches get $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT)
-	@neonctl connection-string $(NEON_DEV_BRANCH) --project-id $(NEON_PROJECT) --pooled
+	$(COMPOSE) ps
+	@echo "$(DEV_DATABASE_URL)"

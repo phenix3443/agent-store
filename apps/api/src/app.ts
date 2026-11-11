@@ -7,7 +7,7 @@ import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
 import { getDb, type DbEnv } from './db/client'
 import { itemVersions, items, reviews } from './db/schema'
-import type { NeonAuthEnv } from './neon-auth'
+import type { AuthEnv } from './auth-token'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
@@ -20,10 +20,9 @@ import {
   getPlanByUserId,
 } from './subscription-queries'
 
-// On Cloudflare Workers, secrets arrive as the fetch handler's `env` (Hono c.env).
-// On local Bun (Bun.serve), c.env is the Bun server object with no such keys, so
-// getDb()/getWaffoClient() fall back to process.env.
-type Env = { Bindings: WaffoEnv & DbEnv & NeonAuthEnv; Variables: RequestIdVariables }
+// Under Bun.serve, c.env is the Bun server object with none of these keys, so
+// getDb()/getWaffoClient()/getAuthUser() read process.env. Tests pass them in.
+type Env = { Bindings: WaffoEnv & DbEnv & AuthEnv; Variables: RequestIdVariables }
 
 export const app = new Hono<Env>()
 
@@ -54,6 +53,19 @@ function intQuery(raw: string | undefined, fallback: number): number | null {
 }
 
 app.get('/', (c) => c.json({ ok: true, service: 'as-api' }))
+
+// Liveness: the process answers. Readiness: it can also reach Postgres. Kept
+// apart so a database outage takes the pod out of the Service instead of
+// restarting it in a loop.
+app.get('/healthz', (c) => c.json({ ok: true }))
+app.get('/readyz', async (c) => {
+  try {
+    await getDb(c.env).execute(sql`select 1`)
+    return c.json({ ok: true })
+  } catch (e) {
+    return fail(c, 503, 'Database unavailable', e)
+  }
+})
 
 app.get('/api/items', async (c) => {
   const rawCategory = c.req.query('category')

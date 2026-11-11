@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# E2E test for the full CLI → SDK → catalog API → Neon chain.
-# Runs against an ephemeral Neon branch (deleted on exit) and in isolated /tmp
-# dirs — never touches ~/.claude or ~/.codex. Requires `neonctl auth` + psql.
+# E2E test for the full CLI → SDK → catalog API → Postgres chain.
+# Runs against a throwaway database in the local Postgres (`make db`; dropped on
+# exit) and in isolated /tmp dirs — never touches ~/.claude or ~/.codex.
 set -euo pipefail
 
 export AS_HOME=/tmp/as-e2e
@@ -11,8 +11,10 @@ export CODEX_CONFIG_DIR="$CODEX_HOME"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AS="$ROOT/bin/as"
-NEON_PROJECT="${NEON_PROJECT:-late-sea-44274892}"
-E2E_BRANCH="e2e-$$"
+ADMIN_URL="${DEV_DATABASE_URL:?run via make e2e, or set DEV_DATABASE_URL}"
+E2E_DB="e2e_$$"
+COMPOSE=(docker compose -f "$ROOT/docker-compose.dev.yml")
+psql_admin() { "${COMPOSE[@]}" exec -T db psql -v ON_ERROR_STOP=1 -U postgres "$@"; }
 API_PID=""
 
 cleanup() {
@@ -20,7 +22,7 @@ cleanup() {
     kill "$API_PID" 2>/dev/null || true
     wait "$API_PID" 2>/dev/null || true
   fi
-  neonctl branches delete "$E2E_BRANCH" --project-id "$NEON_PROJECT" >/dev/null 2>&1 || true
+  psql_admin -qc "drop database if exists $E2E_DB" >/dev/null 2>&1 || true
 }
 
 trap cleanup EXIT
@@ -30,17 +32,17 @@ rm -rf "$AS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
 mkdir -p "$AS_HOME" "$CLAUDE_CONFIG_DIR/skills" "$CODEX_CONFIG_DIR"
 
 echo ""
-echo "=== [setup] creating ephemeral Neon branch $E2E_BRANCH ==="
-neonctl branches create --name "$E2E_BRANCH" --parent "${NEON_PARENT_BRANCH:-main}" \
-  --project-id "$NEON_PROJECT" >/dev/null
-DATABASE_URL="$(neonctl connection-string "$E2E_BRANCH" --project-id "$NEON_PROJECT" --pooled)"
+echo "=== [setup] creating throwaway database $E2E_DB ==="
+psql_admin -qc "create database $E2E_DB"
+DATABASE_URL="${ADMIN_URL%/*}/$E2E_DB"
 export DATABASE_URL
+(cd "$ROOT/apps/api" && bun src/migrate.ts && bun src/seed.ts) >/dev/null
 
 echo ""
-echo "=== [setup] seeding E2E fixtures into the Neon branch ==="
+echo "=== [setup] seeding E2E fixtures ==="
 # The E2E fixtures (test-co provider/skill/mcp) live outside the main seed so the
 # store catalog only shows real offerings; apply them here (idempotent).
-psql "$DATABASE_URL" -f "$ROOT/db/e2e-seed.sql" >/dev/null
+psql_admin -q -d "$E2E_DB" < "$ROOT/db/e2e-seed.sql" >/dev/null
 
 echo ""
 echo "=== [setup] starting local catalog API ==="

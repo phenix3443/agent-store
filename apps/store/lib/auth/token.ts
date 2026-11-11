@@ -1,5 +1,5 @@
-// Client-side helper: fetch the current Neon Auth (Better Auth) JWT from the
-// same-origin proxy to authenticate calls to the standalone API. Returns null
+// Client-side helper: fetch the current Better Auth JWT from this origin's
+// /api/auth/token to authenticate calls to the standalone API. Returns null
 // when signed out. The session cookie is sent automatically (same-origin).
 export async function getAuthToken(): Promise<string | null> {
   try {

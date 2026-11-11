@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { auth } from '@/lib/auth/server'
 
 export interface CurrentUser {
@@ -6,18 +7,17 @@ export interface CurrentUser {
   email: string
 }
 
-// Resolve the signed-in user for the persistent nav via the Neon Auth (Better
-// Auth) session cookie. Returns null when signed out. The web store defaults to
+// Resolve the signed-in user for the persistent nav from the Better Auth session
+// cookie. Returns null when signed out. The web store defaults to
 // the logged-out state (design red-line), so any failure is treated as "not
-// logged in". `username` is the Better Auth display name (GitHub login for most
-// accounts); publisher-scoped lookups that need the exact GitHub login resolve
-// it API-side from the token.
+// logged in". `username` is the GitHub login (set from the GitHub profile at
+// sign-in), falling back to the display name.
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   try {
-    const { data } = await auth().getSession()
-    const user = data?.user
+    const session = await auth().api.getSession({ headers: await headers() })
+    const user = session?.user
     if (!user) return null
-    const username = user.name ?? ''
+    const username = user.username ?? user.name ?? ''
     const email = user.email ?? ''
     const initial = (username || email || 'U').charAt(0).toUpperCase()
     return { initial, username, email }

@@ -3,7 +3,7 @@ import type { SelectedDetail } from '../lib/useSelectedDetail'
 import { openExternal } from '../lib/openExternal'
 import { useT, type TFn } from '../i18n'
 
-const STORE_BASE = 'https://agent-store.panghuli.tech'
+const STORE_BASE = 'https://agent-store.tail1eafd1.ts.net'
 
 /** Real, openable links for a resource — only ones we actually have a URL for. */
 function resourceLinks(detail: SelectedDetail, t: TFn): { label: string; url: string }[] {

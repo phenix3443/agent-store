@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { authClient } from '@/lib/auth/client'
 import { getAuthToken } from '@/lib/auth/token'
 
-// Desktop (Tauri) OAuth relay. Neon Auth rejects custom-scheme callbacks, so the
-// desktop app opens the system browser here instead:
+// Desktop (Tauri) OAuth relay. The provider can only redirect to an https URL, so
+// the desktop app opens the system browser here instead:
 //   1. `/auth/desktop?provider=github` → start Better Auth social sign-in, with
 //      the callback pointing back at this same page.
-//   2. the provider round-trip returns to `/auth/desktop?neon_auth_session_verifier=…`
-//      → the client establishes the same-origin session, we mint a JWT, and hand
+//   2. the provider round-trip returns to `/auth/desktop` (no provider param) with
+//      the session cookie already set → we mint a JWT and hand
 //      it to the app via the `agent-store://auth-callback?token=…` deep link.
 // When the browser session is still valid, step 1 skips the provider consent, so
 // the app can silently refresh an expired token by reopening this page.
@@ -19,7 +19,6 @@ export default function DesktopAuthRelay() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const provider = params.get('provider')
-    const hasVerifier = params.has('neon_auth_session_verifier')
 
     // Which custom scheme to deep-link back to. The desktop passes ?scheme= on the
     // first hop (dev builds use agent-store-dev, release uses agent-store); the
@@ -35,8 +34,7 @@ export default function DesktopAuthRelay() {
 
     async function run() {
       // Returning from the provider (or already signed in): mint a JWT and deep-link back.
-      if (hasVerifier || !provider) {
-        await authClient.getSession().catch(() => undefined)
+      if (!provider) {
         const token = await getAuthToken()
         if (!token) {
           setStatus('未获取到登录令牌，请重试。')

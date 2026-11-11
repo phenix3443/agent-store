@@ -2,13 +2,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Entitlements } from '@as/types'
 import { openExternal } from '../lib/openExternal'
 import { onDeepLink } from '../lib/deepLink'
-import { getStoreBaseUrl, getAuthScheme, emailFromJwt } from '../lib/neonAuth'
+import { getStoreBaseUrl, getAuthScheme, emailFromJwt } from '../lib/storeAuth'
 import { callRpc } from '../lib/rpc'
 import { useEntitlement } from './Entitlement'
 
 export type AuthProviderName = 'github' | 'google'
 
-/** Desktop session: a Neon Auth JWT handed back by the store relay, plus its email claim. */
+/** Desktop session: a Better Auth JWT handed back by the store relay, plus its email claim. */
 interface DesktopSession {
   token: string
   email: string | null
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function signIn(provider: AuthProviderName) {
-    // Neon Auth rejects custom-scheme callbacks, so sign in through the web
+    // OAuth providers reject custom-scheme callbacks, so sign in through the web
     // store's relay page; it completes the OAuth round-trip in the system
     // browser and deep-links a JWT back to this build's scheme. Pass our scheme
     // so the relay bounces the token to the right build (dev vs release).

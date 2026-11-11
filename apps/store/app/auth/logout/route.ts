@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
-// Sign out via the same-origin Neon Auth proxy, then clear the session cookie by
-// forwarding the proxy's Set-Cookie to the browser and return home.
+// Sign out via this origin's /api/auth/sign-out, then clear the session cookie by
+// forwarding its Set-Cookie to the browser and return home.
 export async function GET(request: Request) {
   const origin = new URL(request.url).origin
 

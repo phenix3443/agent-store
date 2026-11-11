@@ -3,7 +3,7 @@ import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/re
 
 beforeEach(() => {
   localStorage.clear()
-  // Publish reads the signed-in user's GitHub login from the Neon Auth session proxy.
+  // Publish reads the signed-in user's GitHub login from the Better Auth session endpoint.
   globalThis.fetch = (async () => ({ ok: true, json: async () => ({ user: { name: 'tester' } }) })) as unknown as typeof fetch
 })
 afterEach(() => { cleanup() })

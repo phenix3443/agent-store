@@ -6,7 +6,7 @@ const openMock = mock(async () => {})
 mock.module('../../lib/openExternal', () => ({ openExternal: openMock }))
 mock.module('../../lib/deepLink', () => ({ onDeepLink: async () => () => {} }))
 
-mock.module('../../lib/neonAuth', () => ({
+mock.module('../../lib/storeAuth', () => ({
   getStoreBaseUrl: () => 'https://store.test',
   getAuthScheme: () => 'agent-store',
   emailFromJwt: () => 'dev@example.com',
