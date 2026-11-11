@@ -1,9 +1,8 @@
 import { EngineImpl } from '@as/client-core'
 
-// The catalog API is served by the standalone `apps/api` server. Point at it via
-// AS_STORE_URL (set in dev/Makefile and in production config); default to the
-// local api-server dev port.
-const DEFAULT_STORE_URL = 'http://127.0.0.1:3001'
+// The default must be the public store: the desktop client spawns this CLI as its
+// sidecar without AS_STORE_URL. Local dev and tests set AS_STORE_URL themselves.
+const DEFAULT_STORE_URL = 'https://agent-store-test.panghuli.tech'
 
 export function createEngine(): EngineImpl {
   const storeUrl = process.env['AS_STORE_URL'] ?? DEFAULT_STORE_URL

@@ -1,0 +1,15 @@
+**/node_modules
+.git
+test/provider
+test/desktop-linux/out
+keys
+**/.next
+**/.turbo
+**/target
+**/dist
+**/*.tsbuildinfo
+**/.review
+**/.impeccable
+apps/cli-gui/src-tauri/binaries
+bin
+**/*.log

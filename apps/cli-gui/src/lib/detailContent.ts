@@ -59,7 +59,7 @@ function defaultSteps(detail: SelectedDetail, t: TFn): string[] {
   ]
 }
 
-function typeFacts(detail: SelectedDetail, t: TFn): string[] {
+export function typeFacts(detail: SelectedDetail, t: TFn): string[] {
   if (detail.category === 'provider') {
     const models = 'supportedModels' in detail ? detail.supportedModels : undefined
     if (models && models.length > 0) return [`${t('readme.factModels')}${models.join('、')}`]
@@ -84,16 +84,21 @@ function typeFacts(detail: SelectedDetail, t: TFn): string[] {
   return []
 }
 
+/** What installing this package runs and writes, one line per step. */
+export function installStepsOf(detail: SelectedDetail, t: TFn): string[] {
+  return 'installHook' in detail && detail.installHook.steps.length > 0
+    ? detail.installHook.steps.map((s) => formatStep(s, t))
+    : defaultSteps(detail, t)
+}
+
 export function installCmdOf(slug: string): string {
-  return `agent-store add ${slug}`
+  return `aas install ${slug}`
 }
 
 /** Builds the overview tab content in section order:
  * overview → install → install steps → use cases → type-specific facts → footer lines. */
 export function buildReadme(detail: SelectedDetail, description: string, t: TFn): ReadmeBlock[] {
-  const steps = 'installHook' in detail && detail.installHook.steps.length > 0
-    ? detail.installHook.steps.map((s) => formatStep(s, t))
-    : defaultSteps(detail, t)
+  const steps = installStepsOf(detail, t)
   const tier = detail.publisher.tier
   const tierLabel = TIER_META[tier] ? t(`tier.${tier}`) : t('tier.community')
   const blocks: ReadmeBlock[] = [

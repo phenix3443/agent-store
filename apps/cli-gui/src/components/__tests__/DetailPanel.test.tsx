@@ -140,7 +140,7 @@ test('概览 tab renders overview, install command, install steps, use case, and
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
   expect(screen.getByText('概述')).toBeInTheDocument()
-  expect(screen.getAllByText('agent-store add filesystem').length).toBeGreaterThan(1)
+  expect(screen.getAllByText('aas install filesystem').length).toBeGreaterThan(1)
   expect(screen.getByText('安装步骤')).toBeInTheDocument()
   expect(screen.getByText('适用场景')).toBeInTheDocument()
   expect(screen.getByText(/传输方式：stdio/)).toBeInTheDocument()
@@ -261,7 +261,7 @@ test('clicking the copy button copies the install command to the clipboard', asy
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByLabelText('复制安装命令'))
   fireEvent.click(screen.getByLabelText('复制安装命令'))
-  expect(writeText).toHaveBeenCalledWith('agent-store add filesystem')
+  expect(writeText).toHaveBeenCalledWith('aas install filesystem')
 })
 
 test('shows a child-config count banner for a provider with duplicated configs', async () => {

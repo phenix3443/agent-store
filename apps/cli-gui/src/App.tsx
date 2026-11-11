@@ -8,6 +8,7 @@ import { IconRail } from './components/IconRail'
 import { ResourceList } from './components/ResourceList'
 import { DetailPanel } from './components/DetailPanel'
 import { Overview } from './components/Overview'
+import { InstallLinkDialog } from './components/InstallLinkDialog'
 
 function MainArea() {
   const { navView } = useAppState()
@@ -34,6 +35,7 @@ function AppShell() {
         <IconRail />
         <MainArea />
       </div>
+      <InstallLinkDialog />
     </div>
   )
 }

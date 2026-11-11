@@ -1,10 +1,17 @@
 import { test, expect, afterEach, mock, spyOn } from 'bun:test'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 
 const openMock = mock(async () => {})
 mock.module('../../lib/openExternal', () => ({ openExternal: openMock }))
-mock.module('../../lib/deepLink', () => ({ onDeepLink: async () => () => {} }))
+let deepLinkHandler: ((url: string) => void) | null = null
+mock.module('../../lib/deepLink', () => ({
+  onDeepLink: async (handler: (url: string) => void) => {
+    deepLinkHandler = handler
+    return () => {}
+  },
+  getLaunchDeepLinks: async () => [],
+}))
 // Pin the store base + email decode so the relay URL and session are deterministic.
 mock.module('../../lib/storeAuth', () => ({
   getStoreBaseUrl: () => 'https://store.test',
@@ -23,6 +30,7 @@ afterEach(() => {
   mock.restore()
   openMock.mockClear()
   syncedToken = null
+  deepLinkHandler = null
 })
 
 function Probe() {
@@ -73,4 +81,21 @@ test('completeSignIn stores the deep-linked token and syncs entitlements', async
   await waitFor(() => expect(screen.getByTestId('signedin')).toHaveTextContent('true'))
   expect(screen.getByTestId('email')).toHaveTextContent('dev@example.com')
   expect(syncedToken).toBe('tok123')
+})
+
+test('a deep-linked auth callback signs in', async () => {
+  renderProbe()
+  await waitFor(() => expect(deepLinkHandler).not.toBeNull())
+  act(() => deepLinkHandler!('agent-store://auth-callback?token=tok456'))
+  await waitFor(() => expect(screen.getByTestId('signedin')).toHaveTextContent('true'))
+  expect(syncedToken).toBe('tok456')
+})
+
+test('an install link never signs in, even when it carries a token', async () => {
+  renderProbe()
+  await waitFor(() => expect(deepLinkHandler).not.toBeNull())
+  act(() => deepLinkHandler!('agent-store://install?slug=filesystem&token=tok789'))
+  await new Promise((r) => setTimeout(r, 20))
+  expect(screen.getByTestId('signedin')).toHaveTextContent('false')
+  expect(syncedToken).toBeNull()
 })
