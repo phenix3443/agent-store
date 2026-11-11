@@ -21,8 +21,9 @@ const config: Config = {
         scrim: 'var(--scrim)',
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'PingFang SC', 'Noto Sans SC', 'ui-monospace', 'SF Mono', 'monospace'],
+        // --font-cjk is only defined on zh pages; the var() fallback keeps the stack valid elsewhere.
+        sans: ['var(--font-sans)', 'var(--font-cjk, "PingFang SC")', 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'var(--font-cjk, "PingFang SC")', 'PingFang SC', 'Noto Sans CJK SC', 'ui-monospace', 'SF Mono', 'monospace'],
       },
     },
   },

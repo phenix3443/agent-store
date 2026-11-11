@@ -53,7 +53,7 @@ export default function PricingPage() {
               type="button"
               aria-pressed={period === p}
               onClick={() => setPeriod(p)}
-              className="min-h-10 px-4 font-mono text-xs uppercase tracking-[0.14em] transition-colors hover:bg-sel aria-pressed:bg-ink aria-pressed:text-on-ink"
+              className="min-h-10 px-4 caps text-xs transition-colors hover:bg-sel aria-pressed:bg-ink aria-pressed:text-on-ink"
             >
               {t(p)}
             </button>
