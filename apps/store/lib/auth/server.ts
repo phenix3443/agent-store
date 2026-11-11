@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { jwt } from 'better-auth/plugins'
 import { nextCookies } from 'better-auth/next-js'
 import { Pool } from 'pg'
+import { syncGithubUsername } from './github-username'
 
 // Self-hosted Better Auth. Its tables (user, session, account, verification,
 // jwks) live in the same Postgres as the catalog and are created by the API's
@@ -13,10 +14,20 @@ import { Pool } from 'pg'
 // publishers are keyed by it.
 export function createAuth() {
   const baseURL = process.env.BETTER_AUTH_URL
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 })
   return betterAuth({
     baseURL,
     secret: process.env.BETTER_AUTH_SECRET,
-    database: new Pool({ connectionString: process.env.DATABASE_URL, max: 5 }),
+    database: pool,
+    databaseHooks: {
+      account: {
+        // create covers sign-up and linking GitHub to an existing user; update
+        // runs on every later GitHub sign-in, which backfills older users and
+        // follows a renamed login.
+        create: { after: (account) => syncGithubUsername(account, pool) },
+        update: { after: (account) => syncGithubUsername(account, pool) },
+      },
+    },
     user: {
       additionalFields: {
         username: { type: 'string', required: false, input: false },
@@ -26,7 +37,6 @@ export function createAuth() {
       github: {
         clientId: process.env.GITHUB_CLIENT_ID ?? '',
         clientSecret: process.env.GITHUB_CLIENT_SECRET ?? '',
-        mapProfileToUser: (profile) => ({ username: profile.login }),
       },
       // Enabled only when GOOGLE_CLIENT_ID is set; without it the modal's Google
       // button lands on /?error=auth_failed.

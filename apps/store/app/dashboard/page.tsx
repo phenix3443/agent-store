@@ -47,7 +47,7 @@ export default async function DashboardPage() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <h1 className="mb-4 text-2xl font-semibold text-store-text">我的仪表盘</h1>
         <div className="flex h-32 items-center justify-center rounded-xl border border-store-border bg-store-panel">
-          <p className="text-store-text-3">未在你的资料中找到 GitHub 用户名，请退出后重新登录。</p>
+          <p className="text-store-text-3">仪表盘按 GitHub 用户名统计你发布的内容。请用 GitHub 登录一次，账号会自动关联。</p>
         </div>
       </main>
     )
