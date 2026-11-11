@@ -1,4 +1,4 @@
-import type { Item, Publisher, Plan, UserReview, ItemVersion } from '@as/types'
+import type { Item, Publisher, Plan, UserReview, ItemVersion, Topic, TopicSummary } from '@as/types'
 
 export type Result<T> = { data: T; error: null } | { data: null; error: string }
 
@@ -157,6 +157,34 @@ export class StoreClient {
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
       if (!json.publisher) return { data: null, error: 'No publisher in response' }
       return { data: { publisher: json.publisher, items: json.items ?? [] }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** Curated topics, one entry per topic card. */
+  async getTopics(): Promise<Result<TopicSummary[]>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/topics`)
+      const json = await res.json() as { topics?: TopicSummary[]; error?: string }
+
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (json.topics == null) return { data: null, error: 'No topics in response' }
+      return { data: json.topics, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** A topic with its packages expanded, in the topic's order. */
+  async getTopic(slug: string): Promise<Result<Topic>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/topics/${encodeURIComponent(slug)}`)
+      const json = await res.json() as { topic?: Topic; error?: string }
+
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
+      if (!json.topic) return { data: null, error: 'No topic in response' }
+      return { data: json.topic, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }
