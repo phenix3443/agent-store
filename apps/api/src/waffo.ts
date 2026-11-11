@@ -24,6 +24,13 @@ function resolvePrivateKey(env?: WaffoEnv): string | undefined {
   return pickEnv(env, 'WAFFO_PRIVATE_KEY')
 }
 
+// The SDK calls fetch with no deadline; a stalled Waffo API would hold the request open.
+const WAFFO_TIMEOUT_MS = 10_000
+
+export function withTimeout(fetchImpl: typeof fetch, ms: number): typeof fetch {
+  return ((input, init) => fetchImpl(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(ms) })) as typeof fetch
+}
+
 /** Builds a Waffo client. Throws if the merchant id or private key is missing. */
 export function getWaffoClient(env?: WaffoEnv): WaffoPancake {
   const merchantId = pickEnv(env, 'WAFFO_MERCHANT_ID')
@@ -31,7 +38,7 @@ export function getWaffoClient(env?: WaffoEnv): WaffoPancake {
   if (!merchantId || !privateKey) {
     throw new Error('Missing Waffo config: set WAFFO_MERCHANT_ID and WAFFO_PRIVATE_KEY (or WAFFO_PRIVATE_KEY_BASE64).')
   }
-  return new WaffoPancake({ merchantId, privateKey })
+  return new WaffoPancake({ merchantId, privateKey, fetch: withTimeout(fetch, WAFFO_TIMEOUT_MS) })
 }
 
 /** The dashboard product id for a Pro plan, or undefined if unset. */

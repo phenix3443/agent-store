@@ -15,6 +15,7 @@
 
 - **开发**：基于 `main` 建功能分支 → 开 PR（e2e 门控）→ 合入 `main`。合入即部署**测试**环境
   （`e2e` 通过后触发 `deploy-*`，仅当 `apps/api` / `apps/store` / `packages` / lockfile 变更时才部署）。
+- **API 测试**：改到 `apps/api` / `packages/types` / lockfile 的 PR 跑 `api` 工作流：从 `agent-store-test` 的 `main` 开临时 Neon 分支，跑迁移和全部 API 测试（含连库测试，有跳过即失败），结束删分支（两小时后也会自动过期）。
 - **发布生产**：打并推送 `v*` tag（如 `git tag v0.1.0 && git push origin v0.1.0`）。tag 总是部署生产，
   同一个 tag 也驱动桌面端发布（`release.yml`）—— 一次 tag = 一次完整发布。
 - Store 的 `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SITE_URL` 在 CI 构建时按目标 env 注入（客户端 bundle 烘焙）；
@@ -83,7 +84,7 @@ Vercel 的 MCP 无"源码部署/建 git 项目"工具，CLI token 又已过期�
 | `WAFFO_MERCHANT_ID` | 商户 ID |
 | `WAFFO_PRIVATE_KEY` 或 `WAFFO_PRIVATE_KEY_BASE64` | RSA 私钥（CI/CD 建议用 base64 形式） |
 | `WAFFO_PRODUCT_ID_PRO_MONTHLY` / `WAFFO_PRODUCT_ID_PRO_YEARLY` | Pro 月/年订阅产品 ID |
-| `WAFFO_CHECKOUT_SUCCESS_URL` | 付款后跳转（可选，缺省用 store 设置） |
+| `WAFFO_CHECKOUT_SUCCESS_URL` | 付款后跳转（可选，缺省用 store 设置）。只认这个配置，请求体里的地址会被忽略 |
 
 webhook/entitlements 写读 `subscriptions` 走 Neon，用已注入的 `DATABASE_URL`（见顶部 Worker secret 表）。
 

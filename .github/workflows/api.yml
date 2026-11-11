@@ -1,0 +1,84 @@
+name: api
+
+# Type-check and test apps/api against a real Postgres: each run gets a throwaway
+# copy-on-write branch of the Neon test project (agent-store-test), applies the
+# migrations in this commit, runs every test including the DB-backed ones, and
+# deletes the branch. The branch also expires on its own in case cleanup is skipped.
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'packages/types/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/types/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/api.yml'
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The test project, not vars.NEON_PROJECT_ID (a different project).
+  NEON_PROJECT: late-sea-44274892
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter=@as/types run build
+      - run: pnpm --filter @as/api run type-check
+
+      - name: Branch expiry
+        id: expiry
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Create Neon branch
+        id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ env.NEON_PROJECT }}
+          parent_branch: main
+          branch_name: ci-api-${{ github.run_id }}-${{ github.run_attempt }}
+          expires_at: ${{ steps.expiry.outputs.at }}
+
+      - name: Apply migrations
+        working-directory: apps/api
+        run: pnpm exec drizzle-kit migrate
+        env:
+          DATABASE_URL: ${{ steps.branch.outputs.db_url }}
+
+      # The DB-backed tests skip when DATABASE_URL is missing; here a skip means the
+      # database was never reached, so it fails the job instead of passing quietly.
+      - name: Test
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ steps.branch.outputs.db_url_pooled }}
+        run: |
+          set -o pipefail
+          bun test 2>&1 | tee "$RUNNER_TEMP/bun-test.txt"
+          if grep -qE '^ *[1-9][0-9]* skip' "$RUNNER_TEMP/bun-test.txt"; then
+            echo "::error::Some tests were skipped; the DB-backed tests did not run"; exit 1
+          fi
+
+      - name: Delete Neon branch
+        if: always() && steps.branch.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ env.NEON_PROJECT }}
+          branch_id: ${{ steps.branch.outputs.branch_id }}

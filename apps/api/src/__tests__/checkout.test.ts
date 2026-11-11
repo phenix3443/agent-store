@@ -98,3 +98,9 @@ test('an authenticated lifetime purchase also omits withTrial', async () => {
   expect(lastCall?.args).not.toHaveProperty('withTrial')
   expect(lastCall?.args['productId']).toBe('prod_life')
 })
+
+test('a successUrl in the request body is ignored in favour of the configured one', async () => {
+  const res = await checkout({ period: 'monthly', successUrl: 'https://evil.example/phish' }, 'good-token')
+  expect(res.status).toBe(200)
+  expect(lastCall?.args['successUrl']).toBe('https://store.example/thanks')
+})

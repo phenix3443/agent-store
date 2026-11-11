@@ -15,14 +15,22 @@ export async function isWebhookProcessed(env: DbEnv | undefined, deliveryId: str
   return rows.length > 0
 }
 
-/** Records a webhook delivery id as processed. */
-export async function markWebhookProcessed(
+/**
+ * Applies a webhook's subscription change and marks the delivery processed in one
+ * batch (a single transaction): if either fails, neither is kept and Waffo's retry
+ * processes it again. The upsert is order-safe, so two concurrent deliveries of the
+ * same event both applying it is harmless; the second mark is a no-op.
+ */
+export async function recordWebhook(
   env: DbEnv | undefined,
   deliveryId: string,
-  eventType: string
+  eventType: string,
+  record: SubscriptionRecord | null
 ): Promise<void> {
   const db = getDb(env)
-  await db.insert(processedWebhooks).values({ deliveryId, eventType })
+  const mark = db.insert(processedWebhooks).values({ deliveryId, eventType }).onConflictDoNothing()
+  if (record) await db.batch([subscriptionUpsertQuery(db, record), mark])
+  else await mark
 }
 
 /**
@@ -64,11 +72,6 @@ export function subscriptionUpsertQuery(db: Database, record: SubscriptionRecord
       },
       setWhere: sql`${subscriptions.eventTimestamp} is null or excluded.event_timestamp >= ${subscriptions.eventTimestamp}`,
     })
-}
-
-/** Upserts a subscription row keyed by its Waffo order id. */
-export async function upsertSubscription(env: DbEnv | undefined, record: SubscriptionRecord): Promise<void> {
-  await subscriptionUpsertQuery(getDb(env), record)
 }
 
 /** Resolves the current entitlement plan for a buyer email from their most recent subscription row. */

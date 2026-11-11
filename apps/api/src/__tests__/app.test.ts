@@ -13,10 +13,10 @@ const mockItem: Item = {
 }
 const mockPublisher: Publisher = mockItem.publisher
 
-let lastGetItemsOptions: { sort?: string } | null = null
+let lastGetItemsOptions: { sort?: string; limit?: number; offset?: number } | null = null
 
 mock.module('../queries', () => ({
-  getItems: async (_env: unknown, options: { sort?: string }) => {
+  getItems: async (_env: unknown, options: { sort?: string; limit?: number; offset?: number }) => {
     lastGetItemsOptions = options
     return { data: [mockItem], error: null }
   },
@@ -141,4 +141,22 @@ test('GET /api/me/items returns 401 without a bearer token', async () => {
 test('GET /api/me/items returns 401 without a bearer token', async () => {
   const res = await app.fetch(new Request('http://localhost/api/me/items'))
   expect(res.status).toBe(401)
+})
+
+test('GET /api/items rejects a limit or offset that is not a non-negative integer', async () => {
+  for (const qs of ['limit=abc', 'limit=0', 'limit=-5', 'limit=1.5', 'offset=abc', 'offset=-1']) {
+    const res = await app.fetch(new Request(`http://localhost/api/items?${qs}`))
+    expect(res.status, qs).toBe(400)
+  }
+})
+
+test('GET /api/items caps limit at 100 and passes offset through', async () => {
+  await app.fetch(new Request('http://localhost/api/items?limit=500&offset=40'))
+  expect(lastGetItemsOptions?.limit).toBe(100)
+  expect(lastGetItemsOptions?.offset).toBe(40)
+})
+
+test('every response carries an X-Request-Id', async () => {
+  const res = await app.fetch(new Request('http://localhost/api/items'))
+  expect(res.headers.get('x-request-id')).toBeTruthy()
 })
