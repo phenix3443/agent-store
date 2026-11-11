@@ -1,5 +1,3 @@
-'use client'
-
 interface DocSection {
   num: string
   title: string
@@ -123,67 +121,71 @@ const DOCS: DocSection[] = [
 ]
 
 export default function DocsPage() {
-  function scrollTo(num: string) {
-    const container = document.getElementById('docs-scroll')
-    const el = document.getElementById(`docsec-${num}`)
-    if (container && el) {
-      container.scrollTop += el.getBoundingClientRect().top - container.getBoundingClientRect().top - 16
-    }
-  }
+  const toc = (
+    <ol className="flex flex-col">
+      {DOCS.map((s) => (
+        <li key={s.num}>
+          <a
+            href={`#docsec-${s.num}`}
+            className="flex items-baseline gap-3 py-1.5 text-sm text-store-text-2 hover:text-store-text"
+          >
+            <span className="w-5 shrink-0 font-mono text-xs text-store-text-3">{s.num}</span>
+            <span>{s.title}</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  )
 
   return (
-    <div className="flex h-[calc(100vh-61px)] min-h-0 bg-store-content">
-      {/* left nav */}
-      <div className="w-[236px] flex-shrink-0 overflow-y-auto border-r border-store-border px-3.5 py-7">
-        <div className="px-2.5 pb-3 text-[11px] font-bold uppercase tracking-wide text-store-text-3">指南</div>
-        <div className="flex flex-col gap-0.5">
-          {DOCS.map((s) => (
-            <button
-              key={s.num}
-              type="button"
-              onClick={() => scrollTo(s.num)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left hover:bg-store-panel-2"
-            >
-              <span className="shrink-0 font-mono text-[11px] font-bold text-store-accent">{s.num}</span>
-              <span className="truncate text-[13px] text-store-text-2">{s.title}</span>
-            </button>
-          ))}
+    <div className="mx-auto w-full max-w-[1120px] px-4 pb-24 pt-8 md:px-10 lg:grid lg:grid-cols-[208px_minmax(0,1fr)] lg:gap-16 lg:pt-12">
+      <nav aria-label="文档目录" className="hidden lg:block">
+        <div className="sticky top-[104px]">
+          <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-store-text-3">指南</p>
+          {toc}
         </div>
-      </div>
+      </nav>
 
-      {/* content */}
-      <div id="docs-scroll" className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[720px] px-10 pb-16 pt-10">
-          <div className="text-3xl font-extrabold tracking-tight text-store-text">开始使用 Agent Store</div>
-          <div className="mt-2.5 text-sm leading-relaxed text-store-text-2">
-            发现、安装并管理面向 Claude Code / Codex 的技能、MCP 与模型供应商。
-          </div>
-          {DOCS.map((s) => (
-            <div key={s.num} id={`docsec-${s.num}`} className="mt-[34px] border-t border-store-border pt-7">
-              <div className="mb-3 flex items-center gap-[11px]">
-                <span className="font-mono text-xs font-extrabold text-store-accent">{s.num}</span>
-                <span className="text-[19px] font-bold tracking-tight text-store-text">{s.title}</span>
-              </div>
-              <div className="text-sm leading-[1.75] text-store-text-2">{s.body}</div>
-              {s.bullets && (
-                <ul className="mt-3 flex flex-col gap-2">
-                  {s.bullets.map((b) => (
-                    <li key={b} className="flex gap-2.5 text-sm leading-[1.7] text-store-text-2">
-                      <span className="mt-[9px] h-1 w-1 flex-shrink-0 rounded-full bg-store-accent" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {s.code && (
-                <div className="mt-3.5 whitespace-pre-wrap rounded-[11px] border border-store-border bg-store-term-bg px-4 py-3.5 font-mono text-[12.5px] leading-[1.8] text-[#c7c7d0]">
-                  {s.code}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <article className="min-w-0 max-w-[760px]">
+        <h1 className="text-[32px] font-semibold leading-tight tracking-tight text-store-text md:text-[40px]">
+          开始使用 Agent Store
+        </h1>
+        <p className="mt-3 text-base leading-relaxed text-store-text-2">
+          发现、安装并管理面向 Claude Code / Codex 的技能、MCP 与模型供应商。
+        </p>
+
+        <details className="mt-6 border-y border-store-border lg:hidden">
+          <summary className="cursor-pointer py-3 font-mono text-xs uppercase tracking-[0.14em] text-store-text-2">
+            目录
+          </summary>
+          <div className="pb-3">{toc}</div>
+        </details>
+
+        {DOCS.map((s) => (
+          <section key={s.num} id={`docsec-${s.num}`} className="mt-10 scroll-mt-28 border-t border-store-border pt-8">
+            <h2 className="mb-4 flex items-baseline gap-3 text-[22px] font-semibold tracking-tight text-store-text">
+              <span className="font-mono text-xs font-normal text-store-text-3">{s.num}</span>
+              {s.title}
+            </h2>
+            <p className="text-[15px] leading-[1.8] text-store-text-2">{s.body}</p>
+            {s.bullets && (
+              <ul className="mt-4 flex flex-col gap-2">
+                {s.bullets.map((b) => (
+                  <li key={b} className="flex gap-3 text-[15px] leading-[1.75] text-store-text-2">
+                    <span aria-hidden="true" className="mt-[11px] h-px w-3 shrink-0 bg-store-text-3" />
+                    <span>{b}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {s.code && (
+              <pre className="mt-4 overflow-x-auto border border-store-border bg-store-term-bg px-5 py-4 font-mono text-[13px] leading-[1.8] text-[#e6e6e9]">
+                {s.code}
+              </pre>
+            )}
+          </section>
+        ))}
+      </article>
     </div>
   )
 }
