@@ -1,29 +1,29 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth/server'
 
 // Start a Better Auth social login. Kept as a GET route so the login
-// modal's plain <a href="/auth/login?provider=…"> links keep working. Forwards
-// to this origin's /api/auth/sign-in/social, then redirects the browser to the
-// provider, carrying the state cookie the proxy set.
+// modal's plain <a href="/auth/login?provider=…"> links keep working.
+//
+// Calls Better Auth in-process: fetching this site's own public URL from inside
+// the pod fails, because request.url there carries the container's plain-HTTP
+// address, not the public https origin.
 export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const provider = url.searchParams.get('provider') === 'google' ? 'google' : 'github'
-  const origin = url.origin
+  const provider = new URL(request.url).searchParams.get('provider') === 'google' ? 'google' : 'github'
 
-  const res = await fetch(`${origin}/api/auth/sign-in/social`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      origin,
-      cookie: request.headers.get('cookie') ?? '',
-    },
-    body: JSON.stringify({ provider, callbackURL: '/auth/callback' }),
-  })
+  const res = await auth()
+    .api.signInSocial({
+      body: { provider, callbackURL: '/auth/callback' },
+      headers: request.headers,
+      asResponse: true,
+    })
+    .catch(() => null)
 
-  const data = (await res.json().catch(() => ({}))) as { url?: string }
-  if (!data.url) return NextResponse.redirect(new URL('/?error=auth_failed', request.url))
+  const data = res?.ok ? ((await res.json().catch(() => ({}))) as { url?: string }) : {}
+  const failed = new URL('/?error=auth_failed', process.env.BETTER_AUTH_URL ?? request.url)
+  if (!res || !data.url) return NextResponse.redirect(failed)
 
   const redirect = NextResponse.redirect(data.url)
-  const setCookie = res.headers.get('set-cookie')
-  if (setCookie) redirect.headers.set('set-cookie', setCookie)
+  // The state cookie must reach the browser, or the callback rejects the login.
+  for (const cookie of res.headers.getSetCookie()) redirect.headers.append('set-cookie', cookie)
   return redirect
 }

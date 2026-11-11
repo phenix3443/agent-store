@@ -17,7 +17,7 @@ export const AUTH_REDIRECT_URL = `${getAuthScheme()}://auth-callback`
 /** Base URL of the web store, which hosts the OAuth relay page. Override for local dev with VITE_STORE_URL. */
 export function getStoreBaseUrl(): string {
   const env = (import.meta as { env?: Record<string, string | undefined> }).env
-  return env?.['VITE_STORE_URL'] || 'https://agent-store.tail1eafd1.ts.net'
+  return env?.['VITE_STORE_URL'] || 'https://agent-store-test.panghuli.tech'
 }
 
 /** Best-effort decode of the `email` claim from a Better Auth JWT. */

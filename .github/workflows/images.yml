@@ -68,7 +68,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # The store bakes these into its browser bundle; the API ignores them.
           build-args: |
-            NEXT_PUBLIC_API_URL=https://agent-store-api.tail1eafd1.ts.net
-            NEXT_PUBLIC_SITE_URL=https://agent-store.tail1eafd1.ts.net
+            NEXT_PUBLIC_API_URL=https://agent-store-test.panghuli.tech
+            NEXT_PUBLIC_SITE_URL=https://agent-store-test.panghuli.tech
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}

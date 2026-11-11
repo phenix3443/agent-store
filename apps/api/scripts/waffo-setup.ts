@@ -11,7 +11,7 @@ import { PRICING } from '@as/types'
 
 const merchantId = process.env['WAFFO_MERCHANT_ID']
 const keyPath = process.env['WAFFO_PRIVATE_KEY_PATH']
-const webhookUrl = process.env['WAFFO_WEBHOOK_URL'] ?? 'https://agent-store-api.tail1eafd1.ts.net/api/webhooks/waffo'
+const webhookUrl = process.env['WAFFO_WEBHOOK_URL'] ?? 'https://agent-store-test.panghuli.tech/api/webhooks/waffo'
 const testMode = process.env['WAFFO_TEST'] !== 'false'
 if (!merchantId || !keyPath) throw new Error('Set WAFFO_MERCHANT_ID and WAFFO_PRIVATE_KEY_PATH')
 
