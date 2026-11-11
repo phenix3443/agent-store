@@ -317,7 +317,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   <div className="mt-1.5 flex items-center gap-4.5">
                     <button
                       type="button"
-                      onClick={() => openExternal('https://agent-store.tail1eafd1.ts.net/docs')}
+                      onClick={() => openExternal('https://agent-store-test.panghuli.tech/docs')}
                       className="cursor-pointer text-xs font-semibold text-store-accent"
                     >
                       {t('settings.about.docs')}

@@ -1,23 +1,14 @@
 import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth/server'
 
-// Sign out via this origin's /api/auth/sign-out, then clear the session cookie by
-// forwarding its Set-Cookie to the browser and return home.
+// Sign out in-process (see auth/login/route.ts for why not over HTTP), forward
+// the cookie-clearing Set-Cookie headers to the browser and return home.
 export async function GET(request: Request) {
-  const origin = new URL(request.url).origin
+  const res = await auth()
+    .api.signOut({ headers: request.headers, asResponse: true })
+    .catch(() => null)
 
-  const res = await fetch(`${origin}/api/auth/sign-out`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      origin,
-      cookie: request.headers.get('cookie') ?? '',
-    },
-    // Better Auth's sign-out rejects an empty JSON body (FST_ERR_CTP_EMPTY_JSON_BODY).
-    body: '{}',
-  }).catch(() => null)
-
-  const redirect = NextResponse.redirect(new URL('/', request.url))
-  const setCookie = res?.headers.get('set-cookie')
-  if (setCookie) redirect.headers.set('set-cookie', setCookie)
+  const redirect = NextResponse.redirect(new URL('/', process.env.BETTER_AUTH_URL ?? request.url))
+  for (const cookie of res?.headers.getSetCookie() ?? []) redirect.headers.append('set-cookie', cookie)
   return redirect
 }

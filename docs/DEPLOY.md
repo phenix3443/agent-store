@@ -1,11 +1,11 @@
 # 部署
 
-只有一个测试环境，跑在 home-lab 的 k3s 集群上（节点 `vm-149`，美国），只在 tailnet 内可访问：
+只有一个测试环境，跑在 home-lab 的 k3s 集群上（节点 `vm-149`，美国），公网地址 `https://agent-store-test.panghuli.tech`，经 Cloudflare Tunnel 进集群。商店和 API 共用这个域名，ingress 按路径分流：`/api/auth/*` 给商店，其余 `/api/*` 给 API，其他路径给商店。
 
 | 组件 | 地址 | 镜像 |
 |---|---|---|
-| 网页商店（含登录） | `https://agent-store.tail1eafd1.ts.net` | `ghcr.io/phenix3443/agent-store-store` |
-| API | `https://agent-store-api.tail1eafd1.ts.net` | `ghcr.io/phenix3443/agent-store-api` |
+| 网页商店（含登录） | `https://agent-store-test.panghuli.tech` | `ghcr.io/phenix3443/agent-store-store` |
+| API | `https://agent-store-test.panghuli.tech/api/*` | `ghcr.io/phenix3443/agent-store-api` |
 | Postgres 18 | 集群内 `postgres:5432` | `postgres:18-alpine` |
 
 部署清单、密钥和入口配置在 home-lab 仓库的 `projects/agent-store/test/`，那里的 README 写了怎么排查。
@@ -26,7 +26,8 @@ Better Auth 跑在商店里（`apps/store/lib/auth/server.ts`），用户、会�
 - 浏览器和桌面端向商店的 `/api/auth/token` 换一个短期 JWT，调用 API 时放在 `Authorization: Bearer` 里。
 - API 用商店的 `/api/auth/jwks` 验签（`AUTH_JWKS_URL`，集群内直连 `http://store:3000`），并校验签发方 `AUTH_ISSUER`。
 - 令牌里的 `username` 是 GitHub 登录名，发布者按它对应。
-- GitHub OAuth App 的回调地址是 `https://agent-store.tail1eafd1.ts.net/api/auth/callback/github`。
+- GitHub OAuth App 的回调地址是 `https://agent-store-test.panghuli.tech/api/auth/callback/github`；Google OAuth 客户端的重定向 URI 是 `https://agent-store-test.panghuli.tech/api/auth/callback/google`。Google 只在配置了 `GOOGLE_CLIENT_ID` 时启用。
+- `/auth/login`、`/auth/logout` 在进程内调用 Better Auth，不经 HTTP 请求自己：Pod 里的 `request.url` 是容器的明文地址，拿它拼出来的地址访问不通。
 - 改了登录配置（加插件、加用户字段）后，用 Better Auth 的 `getMigrations` 对比一次表结构，再改 `apps/api/src/db/schema.ts` 并生成迁移。
 
 ## 支付（Waffo Pancake）
@@ -40,7 +41,7 @@ API 已接入：`POST /api/billing/checkout` 建订单，`POST /api/webhooks/waf
 | `WAFFO_PRODUCT_ID_PRO_MONTHLY` / `WAFFO_PRODUCT_ID_PRO_YEARLY` / `WAFFO_PRODUCT_ID_LIFETIME` | 产品 ID |
 | `WAFFO_CHECKOUT_SUCCESS_URL` | 付款后跳转。只认这个配置，请求体里的地址会被忽略 |
 
-**测试环境收不到 webhook**：API 只在 tailnet 内可访问，Waffo 的服务器连不进来。要测完整支付流程，得给 API 单独开一个公网入口（例如 Tailscale Funnel，只开放 `/api/webhooks/waffo`）。
+Waffo 的 webhook 地址是 `https://agent-store-test.panghuli.tech/api/webhooks/waffo`，`apps/api/scripts/waffo-setup.ts` 默认就配这个地址。
 
 ## 本地开发
 

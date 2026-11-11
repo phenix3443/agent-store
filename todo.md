@@ -41,7 +41,7 @@
 ## 3. 桌面 GitHub 登录端到端验证（代码已完成，只差你点一次授权）
 ```bash
 cd /Users/liushangliang/github/phenix3443/agent-store
-AS_STORE_URL=https://agent-store-api.tail1eafd1.ts.net make dev-gui
+AS_STORE_URL=https://agent-store-test.panghuli.tech make dev-gui
 ```
 - [ ] 设置 → 账户 → 「GitHub 登录」→ 浏览器授权 → 自动跳回 App
 - [ ] 账户显示邮箱 + 「已登录」（此时 plan 仍是 free）
