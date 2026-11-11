@@ -1,18 +1,18 @@
 ---
 name: Agent Store Web
-description: 商店列表与详情抽屉的视觉体系：设计年鉴的图版页，审查结论是一枚圆章
+description: Web 商店全站的视觉体系：设计年鉴的图版页，审查结论是一枚圆章
 colors:
   paper: "#F5F4F6"
   plate: "#FAF6F5"
   ink: "#16181A"
   ink-2: "#55585C"
-  ink-3: "#63666A"
   line: "#C9C7C4"
   line-strong: "#8E8C89"
   lilac: "#DCDDF3"
   sel: "#EAEAF4"
   fill: "#ECEAEC"
   red: "#B3261E"
+  scrim: "rgba(22, 24, 26, 0.4)"
   dark-paper: "#131517"
   dark-plate: "#1B1D20"
   dark-ink: "#F0EFF2"
@@ -20,6 +20,52 @@ colors:
   dark-line: "#3A3D41"
   dark-sel: "#262838"
 typography:
+  display-xl:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "88px"
+    fontWeight: 400
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  display-lg:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "72px"
+    fontWeight: 400
+    lineHeight: 1.02
+    letterSpacing: "-0.03em"
+  display-md:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "56px"
+    fontWeight: 400
+    lineHeight: 1.05
+    letterSpacing: "-0.03em"
+  display-sm:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "44px"
+    fontWeight: 400
+    lineHeight: 1.02
+    letterSpacing: "-0.03em"
+  headline:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "32px"
+    fontWeight: 400
+    lineHeight: 1.125
+    letterSpacing: "-0.015em"
+  headline-sm:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "28px"
+    fontWeight: 400
+    lineHeight: 1.25
+    letterSpacing: "-0.015em"
+  title-lg:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "22px"
+    fontWeight: 400
+    lineHeight: 1.27
+  reading:
+    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.75
   display:
     fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
     fontSize: "40px"
@@ -46,6 +92,12 @@ typography:
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.43
+  button:
+    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: 1
+    letterSpacing: "0.14em"
   label:
     fontFamily: "JetBrains Mono, ui-monospace, monospace"
     fontSize: "11px"
@@ -92,6 +144,17 @@ components:
   table-row-selected:
     backgroundColor: "{colors.sel}"
     height: "80px"
+  field:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    height: "40px"
+    padding: "0 12px"
+  dialog:
+    backgroundColor: "{colors.plate}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.none}"
+    width: "480px"
   review-stamp:
     backgroundColor: "{colors.lilac}"
     textColor: "{colors.ink}"
@@ -101,7 +164,7 @@ components:
 
 # Design System: Agent Store Web
 
-适用范围：`apps/store` 的商店列表（`/store`）、详情抽屉和它的整页形态，以及沿用同一套变量的页头、菜单、合集页。落地页、文档、定价等页面还没改到这套体系（见 GitHub Issue #58 的 Later）。方向契约在 `.impeccable/surfaces/app-store-page-tsx.md`，产品事实在 `PRODUCT.md`。
+适用范围：`apps/store` 全站。商店列表（`/store`）、详情抽屉和整页详情是这套体系的起点（#58），其余页面在 #66 里改到同一套体系：落地页、主题（`/topics`）、文档、定价、下载、发布者页、个人面板与发布弹层、登录弹层、隐私与条款、404 和错误页。商店的方向契约在 `.impeccable/surfaces/app-store-page-tsx.md`，产品事实在 `PRODUCT.md`。
 
 变量的唯一来源是 `app/globals.css` 的 `:root` 和 `[data-theme='dark']`，Tailwind 通过 `tailwind.config.ts` 引用这些变量（`bg-paper`、`text-ink-2`、`border-line` 等）。本文件的色值和那里一致，改色时两处一起改。
 
@@ -139,7 +202,7 @@ components:
 - **纸** (`#F5F4F6`，深色 `#131517`)：页面底色。
 - **图版** (`#FAF6F5`，深色 `#1B1D20`)：抽屉、整页详情、菜单的面。
 - **次墨** (`#55585C`，深色 `#AEB0B5`)：次要文字、栏目标签、发布者级别。在纸、图版、选区上都 ≥5.3:1。
-- **三墨** (`#63666A`，深色 `#9A9CA1`)：只给旧页面的 `--text-3` 用，新组件不再引用。
+- **遮罩** (`rgba(22,24,26,.4)`，深色 `rgba(0,0,0,.6)`)：弹层和窄屏抽屉下面的半透明底，Tailwind 写 `bg-scrim`。变量是十六进制色值，`bg-ink/40` 这类透明度写法不会生效，不要用。
 - **细线** (`#C9C7C4`，深色 `#3A3D41`)：行分隔、栏内分隔。
 - **强线** (`#8E8C89`，深色 `#6A6D72`)：链接下划线、滚动条。
 - **填充** (`#ECEAEC`，深色 `#24272B`)：代码底、少量占位面。
@@ -156,15 +219,19 @@ components:
 **Body / Display Font:** Schibsted Grotesk（`next/font` 自托管，中文回落到 PingFang SC / Noto Sans SC）
 **Mono Font:** JetBrains Mono（`next/font` 自托管）
 
-**Character:** 一种 grotesque 从 40px 包名用到 13px 说明，靠字号和字重分层；等宽只给真正的代码、命令、数字和栏目标签，不当「技术感」装饰。
+**Character:** 一种 grotesque 从 88px 页标题用到 13px 说明，靠字号和字重分层；等宽只给真正的代码、命令、数字和栏目标签，不当「技术感」装饰。
 
 ### Hierarchy
 
-- **Display**（400，抽屉和整页详情的包名 40px，手机 32px，行高 1.1，字距 -0.025em）：每屏只有一个。
+- **Page title**（400，字距 -0.03em）：每页一个 h1，按页面类型分三档。索引页（商店、主题、定价、下载）手机 44px、平板 56px、桌面 72–88px，右侧或下方放一句说明；文档类（文档、隐私、条款、主题详情、发布者、个人面板）手机 40px、桌面 56px（主题详情 72px）；落地页大标题用 `clamp(60px, 5.4vw, 88px)`，中文不在词内断行（`word-break: keep-all`）。
+- **Display**（400，抽屉、整页详情和落地页图版的包名 40px，手机 32px，行高 1.1，字距 -0.025em）。
+- **Headline**（400，28px，桌面 40px）：落地页各节标题；32px 用于下载页的平台名；28px 也用于弹层标题。
+- **Title large**（400，22px）：文档里的小节、主题行标题（桌面 28px）、方案名。
+- **Reading**（400，16px / 1.75，最长 68ch）：文档和法律页的正文栏（`.doc-body`）。
 - **Title**（500，15px）：选中的类别页签、页头当前导航。
 - **Body**（400，15px / 24px）：包简介，最长 62ch。
 - **Body small**（400，13–14px）：审查摘要、注释、表格次行。
-- **Mono**（400–500，13–14px）：包名（列表）、安装命令、「安装后会执行」原文、安装量、版本号。数字列右对齐。
+- **Mono**（400–500，13–14px）：包名（列表）、安装命令、「安装后会执行」原文、安装量、版本号。数字列右对齐。大号数字（价格 44px、个人面板统计 40px）同样用等宽。
 - **Label**（等宽 11px，大写，字距 0.14em，次墨）：栏目标签（审查结论、安装命令、规格）、表头、按钮文字（12–13px 同样大写加字距）。
 
 ### Named Rules
@@ -181,13 +248,19 @@ components:
 - **边距**：手机 16px，桌面 40px。
 - **断点**：`md` 768px（手机判定，与 `lib/use-phone.ts` 一致）、`lg` 1024px（抽屉并排）。触屏设备不论宽度都按手机处理。
 
+- **页面骨架**：所有页面左右边距一致（手机 16px、桌面 40px），不居中收窄成一栏；分区之间用一条墨线（`border-ink`）断开，分区内部用细线。
+- **索引页页首**：大号 h1 在左，一句说明在右下对齐（`lg` 起两栏），下接墨线。商店页的页首较矮（h1 72px，`pt-10 pb-6`），不把筛选条推出首屏。
+- **文档类页面**：桌面左侧 13rem 目录栏（sticky，右侧一条细线），右侧是 68ch 的阅读栏；1024px 以下目录收进正文顶部的 `<details>`。法律页只有阅读栏。
+- **落地页**：首屏左侧是大标题、简介、下载按钮，右侧是一张「概况」事实表（收录数、主题数、来源、审查、本地代理、客户端、价格，数字取自接口）；往下依次是「先从这几个包看起」（一张图版 + 商店表格）、本地代理、按主题找、收尾的下载区。
+- **页脚**：全站统一，上方一条墨线，左侧品牌与一句说明，右侧三组链接（产品、资源、条款）。
+
 ## Elevation & Depth
 
-平面体系，靠细线和面色区分层次，不用阴影表达层级。只有两处例外：弹出菜单和安装提示浮层有一道向下的柔和投影（`0 12px 28px -12px rgba(22,24,26,.35)`）表示浮在页面之上；圆章悬停时抬起并带 `drop-shadow(0 10px 10px rgba(22,24,26,.22))`。
+平面体系，靠细线和面色区分层次，不用阴影表达层级。只有三处例外：弹层（登录、发布）下面铺 `--scrim` 遮罩；弹出菜单和安装提示浮层有一道向下的柔和投影（`0 12px 28px -12px rgba(22,24,26,.35)`）表示浮在页面之上；圆章悬停时抬起并带 `drop-shadow(0 10px 10px rgba(22,24,26,.22))`。
 
 ### Named Rules
 
-**The Flat Plate Rule.** 底面是平涂色，不加纸纹、斜面、浮雕来模仿实物材质。
+**The Flat Plate Rule.** 底面是平涂色，不加纸纹、斜面、浮雕来模仿实物材质。（2026-11-11 #66 评审提过加纸张颗粒，没有采纳：颗粒会落在 13px 次墨文字下面，降低实际对比度，截图和压缩后变成噪点；淡到不影响可读性时，在多数屏幕上又看不出来。质感只留给圆章。）
 
 ## Shapes
 
@@ -203,6 +276,38 @@ components:
 - **Primary**（`.btn .btn-primary`）：墨底纸字，48px 高，直角，等宽 13px 大写加字距。悬停变次墨底。每屏只有一个（抽屉里的「在桌面客户端中安装」，手机上是「复制命令」）。
 - **Secondary**（`.btn`）：1px 墨线描边，透明底，32px（行内「安装」按钮）或 48px（「下载桌面客户端」）。悬停反色为墨底。
 - **Focus**：全局 `:focus-visible` 为 2px 墨色外框，偏移 2px。放在会裁切溢出的滚动容器里时（类别页签）改为内收 2px，并给元素留至少 8px 左右内边距，框不能压到文字。
+
+### Fields
+
+`.field`：40px 高，1px 强线描边，图版底，直角；悬停描边变次墨，聚焦变墨并带全局焦点框。标签放在上方，13px 次墨，不用占位文字代替标签。发布弹层里的链接、命令类字段用等宽。
+
+### Dialogs
+
+登录和发布用 Radix Dialog：图版底、1px 墨线框、四角套准十字、直角，标题 28px，下面一句 14px 次墨说明，底部操作区上方一条墨线、主按钮在右。遮罩用 `bg-scrim`。登录弹层里 GitHub 是主按钮，Google 是次按钮（保留 Google 标志的原色，这是品牌要求，不算新增颜色）；底部的服务条款和隐私政策是真链接。
+
+### Segmented toggle
+
+定价页的「按月 / 按年」：1px 墨线框里两段，选中段墨底纸字，用 `aria-pressed` 表达。类型切换（发布弹层）沿用类别页签的样式。
+
+### Fact list
+
+`<dl>` 两栏：左侧 Label 样式的栏名，右侧正文；第一行上方墨线，其余细线。用于落地页「概况」、本地代理的 Level 说明。值能跳转时整段是带下划线的链接。
+
+### Topic rows
+
+主题索引是整行可点的行，不是卡片：标题（22px，桌面 28px）、主题自己的说明、包数（等宽，右对齐），悬停底色变选区淡紫。主题里的文字只用接口返回的内容。主题详情复用商店表格（`ItemTable`），同样能打开详情抽屉。
+
+### Featured plate
+
+落地页上的单个包：和抽屉同一套图版（四角十字、图版底），包名 40px、发布者级别、简介、审查结论（审查通过时压一枚 124px 圆章）、第一条「安装后会执行」、安装命令与复制按钮。优先选审查通过的包；没有就用推荐的第一个，并如实显示「待审」。
+
+### Status marks
+
+个人面板的提交状态和发布者级别一样靠形状：已发布是实心小方块，审核中是虚线圆（次墨），未通过是叉。不用红绿色。
+
+### README
+
+第三方 README 经 `rehype-raw` 解析其中的 HTML，再由 `rehype-sanitize`（GitHub 的白名单）清理，所以 `<div align="center"><img>` 这类页首能正常显示，脚本、事件属性、`javascript:` 链接不会进页面。相对路径的图片无法解析，直接不显示。
 
 ### Category tabs
 
@@ -222,7 +327,7 @@ Radix Dialog。顶栏 56px：左侧面包屑（单行，超长截断），右侧
 
 ### Review stamp（签名组件）
 
-148px 淡紫圆章，内圈细线，中央是结论字（「已审」），外圈 `REVIEWED · AGENT STORE` 沿圆周缓慢转动（48 秒一圈）。悬停时抬起并略微转正；`prefers-reduced-motion` 下静止。只在审查通过（低风险且无提醒）时出现。
+148px 淡紫圆章，内圈细线，中央是结论字（「已审」），外圈 `REVIEWED · AGENT STORE` 沿圆周缓慢转动（48 秒一圈）。圆盘带油墨质感：SVG 噪声滤镜让底色在 87%–100% 之间不均匀，边缘有约 1px 的毛边；滤镜只作用在圆盘上，文字保持实色，对比度不变。列表里的 24px 小章不加质感，太小看不出来。悬停时抬起并略微转正；`prefers-reduced-motion` 下静止。只在审查通过（低风险且无提醒）时出现。
 
 ### Publisher tier
 
@@ -245,3 +350,5 @@ Radix Dialog。顶栏 56px：左侧面包屑（单行，超长截断），右侧
 - **Don't** 用横向滚动隐藏命令或包名的关键部分。
 - **Don't** 给控件加圆角或阴影层级。
 - **Don't** 用 `docs/ui/Agent Store.dc.html` 的旧外观约束网页商店；它只作为旧外观参考。
+- **Don't** 在页面里写死色值（分享图 `opengraph-image.tsx` 例外：Satori 读不到 CSS 变量，那里重复一份浅色主题的值）。
+- **Don't** 写没有依据的说法，例如「通常远超订阅费」；规划中的功能标「规划中」。

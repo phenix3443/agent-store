@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-11T12:00:00Z",
+  "generatedAt": "2026-11-11T18:00:00Z",
   "title": "Design System: Agent Store Web",
   "extensions": {
     "colorMeta": {
@@ -10,11 +10,19 @@
       "paper": { "role": "neutral", "displayName": "纸", "canonical": "#F5F4F6" },
       "plate": { "role": "neutral", "displayName": "图版", "canonical": "#FAF6F5" },
       "ink-2": { "role": "neutral", "displayName": "次墨", "canonical": "#55585C" },
-      "line": { "role": "neutral", "displayName": "细线", "canonical": "#C9C7C4" }
+      "line": { "role": "neutral", "displayName": "细线", "canonical": "#C9C7C4" },
+      "scrim": { "role": "neutral", "displayName": "遮罩", "canonical": "rgba(22,24,26,0.4)" }
     },
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "抽屉和整页详情的包名，每屏一个。" },
-      "label": { "displayName": "Label", "purpose": "栏目标签、表头、按钮文字：等宽大写加字距。" }
+      "label": { "displayName": "Label", "purpose": "栏目标签、表头、按钮文字：等宽大写加字距。" },
+      "display-xl": { "displayName": "Display XL", "purpose": "索引页标题（主题、定价）桌面 88px。" },
+      "display-lg": { "displayName": "Display L", "purpose": "商店、下载、主题详情的标题。" },
+      "display-md": { "displayName": "Display M", "purpose": "文档类页面标题、平板档索引页标题。" },
+      "display-sm": { "displayName": "Display S", "purpose": "手机档索引页标题、404。" },
+      "headline-sm": { "displayName": "Headline S", "purpose": "落地页节标题（手机）、弹层标题、文档小节。" },
+      "title-lg": { "displayName": "Title L", "purpose": "主题行、方案名、法律页小节。" },
+      "reading": { "displayName": "Reading", "purpose": "文档与法律页正文栏，最长 68ch。" }
     },
     "shadows": [
       { "name": "float", "value": "0 12px 28px -12px rgba(22,24,26,0.35)", "purpose": "弹出菜单和安装提示浮层。" },
