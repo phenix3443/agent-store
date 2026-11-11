@@ -12,6 +12,10 @@ mock.module('next/navigation', () => ({
   useRouter: () => ({ replace: () => {}, push: () => {}, back: () => {} }),
   usePathname: () => '/store',
   useSearchParams: () => new URLSearchParams(),
+  // bun shares module mocks between files, so every mock exposes what any page imports.
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND')
+  },
 }))
 mock.module('next-intl', () => intlMock)
 mock.module('../ReviewsSection', () => ({ ReviewsSection: () => <section data-testid="reviews" /> }))
@@ -88,7 +92,7 @@ test('the primary action is install in the desktop client, with copy and downloa
   renderPage()
   expect(screen.getByRole('button', { name: '在桌面客户端中安装' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '复制 OpenAI Provider 的安装命令' }).textContent).toBe('复制命令')
-  expect(screen.getByRole('link', { name: '下载桌面客户端' }).getAttribute('href')).toBe('/download/latest')
+  expect(screen.getByRole('link', { name: '下载桌面客户端' }).getAttribute('href')).toBe('/download')
   expect(screen.getByText('aas install openai-provider')).toBeInTheDocument()
 })
 

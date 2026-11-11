@@ -2,8 +2,8 @@
   "store": {
     "nav": {
       "store": "Store",
+      "topics": "Topics",
       "docs": "Docs",
-      "collections": "Collections",
       "pricing": "Pricing",
       "publish": "Publish",
       "login": "Sign in",
@@ -18,7 +18,8 @@
       "themeDark": "Dark",
       "themeSystem": "System",
       "language": "Language",
-      "logout": "Sign out"
+      "logout": "Sign out",
+      "download": "Download"
     },
     "categories": {
       "all": "All",
@@ -64,7 +65,8 @@
       "emptyTitle": "No packages match",
       "emptyBody": "Try another keyword, or clear the search and filters.",
       "colInstall": "Install",
-      "copyCommand": "Copy command"
+      "copyCommand": "Copy command",
+      "lede": "Every package states its review verdict and what runs when you install it."
     },
     "review": {
       "title": "Review verdict",
@@ -131,7 +133,8 @@
     "publisher": {
       "items": "{count, plural, one {# published package} other {# published packages}}",
       "empty": "No published packages yet.",
-      "close": "Close"
+      "close": "Close",
+      "breadcrumb": "Store"
     },
     "lang": {
       "zh": "中文",
@@ -159,6 +162,338 @@
       "download": "Get the desktop client",
       "downloadAlt": "Go to the download page for the desktop client",
       "close": "Dismiss"
+    }
+  },
+  "site": {
+    "footer": {
+      "label": "Footer",
+      "tagline": "A catalog of skills, MCP servers and providers for Claude Code / Codex. Every package states what runs when you install it.",
+      "product": "Product",
+      "resources": "Resources",
+      "legal": "Legal",
+      "store": "Store",
+      "topics": "Topics",
+      "docs": "Docs",
+      "pricing": "Pricing",
+      "download": "Download",
+      "registry": "Package registry",
+      "source": "Source code",
+      "releases": "Releases",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "copyright": "© 2026 Agent Store"
+    },
+    "home": {
+      "metaTitle": "Agent Store: skills, MCP servers and providers for Claude Code / Codex",
+      "titleA": "One place",
+      "titleB": "for every agent capability",
+      "lede": "Find and install skills, MCP servers and model providers for Claude Code / Codex. Every package states its review verdict and what runs after installation; a local relay forwards requests and falls back automatically on failure.",
+      "downloadMac": "Download for macOS",
+      "downloadWin": "Download for Windows",
+      "browse": "Browse the store",
+      "unsigned": "The installers are not signed yet, so the system blocks them on first launch.",
+      "unsignedLink": "See how to allow it",
+      "factsLabel": "Agent Store at a glance",
+      "factCatalog": "Catalog",
+      "factCatalogValue": "{total} packages: {skill} skills · {mcp} MCP · {provider} providers",
+      "factTopics": "Topics",
+      "factTopicsValue": "{count} topics",
+      "factSource": "Source",
+      "factSourceValue": "A public git registry; every package is added by PR, and CI checks the manifest and install URL",
+      "factReview": "Review",
+      "factReviewValue": "LLM quality and security review; the details state what runs after installation",
+      "factRelay": "Local relay",
+      "factRelayValue": "127.0.0.1:18780, forwards by Level, falls back automatically on failure",
+      "factClient": "Client",
+      "factClientValue": "macOS (Universal) and Windows, not signed yet",
+      "factPrice": "Price",
+      "factPriceValue": "Free to use; Pro from {monthly} / month",
+      "featuredTitle": "Start with these packages",
+      "featuredAll": "Browse all {count} packages",
+      "plateOpen": "View details",
+      "relayTitle": "Local relay: one address, multiple upstreams",
+      "relayBody": "Once enabled, the API address of Claude Code / Codex points to this machine. Requests go to the local relay first, which picks providers from the lowest Level up; on a network error, an upstream 5xx, or a model not in the allowlist, it switches to the next one. Tokens, cost, latency and status code for each request are recorded on this machine.",
+      "relayLevel1": "Level 1",
+      "relayLevel1Value": "Preferred provider, receives requests first",
+      "relayLevel2": "Level 2",
+      "relayLevel2Value": "Backup provider, takes over when the previous one fails",
+      "relayFallback": "Switch conditions",
+      "relayFallbackValue": "Network error · Upstream 5xx · Model not in allowlist",
+      "relayDocs": "Read the local relay docs",
+      "topicsTitle": "Find by task",
+      "topicsAll": "All topics",
+      "closeTitle": "Install the desktop client",
+      "closeBody": "The desktop client manages the skills, MCP servers and providers installed on this machine, runs the local relay and shows usage.",
+      "closePricing": "View pricing"
+    },
+    "topics": {
+      "metaTitle": "Topics",
+      "title": "Topics",
+      "lede": "Packages grouped by the task they help with. A topic can contain skills, MCP servers and providers together, in recommended order.",
+      "count": "{count} packages",
+      "listLabel": "All topics",
+      "empty": "No topics yet.",
+      "breadcrumb": "Topics",
+      "capabilitiesTitle": "Once installed, the agent can",
+      "packagesTitle": "Packages in this topic",
+      "packagesCount": "{count} packages",
+      "packagesEmpty": "None of the packages in this topic are listed yet.",
+      "relatedTitle": "Related topics"
+    },
+    "docs": {
+      "metaTitle": "Docs",
+      "metaDescription": "Agent Store guide: install the desktop client, browse and install, local relay, CLI and subscriptions.",
+      "title": "Get started with Agent Store",
+      "lede": "Find, install and manage skills, MCP servers and model providers for Claude Code / Codex.",
+      "toc": "Contents",
+      "sections": [
+        {
+          "id": "about",
+          "title": "What is Agent Store",
+          "body": "Agent Store is an \"app store + local management client\" for Claude Code / Codex. The web store in the browser is for discovering, searching and publishing; the desktop client on your machine manages installed resources, shows usage and runs the built-in local relay. You can install three kinds of resources:",
+          "bullets": [
+            "Skills: workflows and expertise added to Claude Code / Codex",
+            "MCP servers: external tools and data sources connected through the Model Context Protocol",
+            "Providers: model access configurations, including your own API key and upstream address"
+          ]
+        },
+        {
+          "id": "install",
+          "title": "Install the desktop client",
+          "body": "Get the macOS (Universal, works on Apple silicon and Intel) or Windows desktop client from the download page. The client manages installed resources on this machine, maintains provider configurations, runs the local relay and shows usage. After signing in, installed skills, MCP servers and providers sync across devices.",
+          "bullets": [
+            "The installers are currently unsigned, so the system blocks them on first launch. This is expected; the files are not damaged",
+            "If macOS says the app \"is damaged and can't be opened\": drag the app into \"Applications\", run xattr -cr \"/Applications/Agent Store CLI.app\" in Terminal, then double-click to open it",
+            "If Windows shows \"Unknown publisher\": click \"More info\", then \"Run anyway\"",
+            "These prompts will go away once Apple / Windows code signing is in place"
+          ]
+        },
+        {
+          "id": "browse",
+          "title": "Browse and install in the store",
+          "body": "The store page is a table with one package per row, showing category, review status, publisher and installs. At the top you can switch category, show only packages from verified publishers, and sort by installs / date added / rating; press / to search.",
+          "bullets": [
+            "Click a row to open details on the right: review verdict, what runs after installation, install command, specs, README, version history and reviews",
+            "\"Install\" first tries to open the desktop client; if no client is detected, it copies the install command and prompts you to download",
+            "Packages that passed review (low risk with no warnings) get a \"Reviewed\" stamp; those without a verdict yet show \"Pending\"",
+            "Topic pages group packages useful for the same kind of work; skills, MCP servers and providers can appear in the same topic"
+          ]
+        },
+        {
+          "id": "where",
+          "title": "Where the three resource types are installed",
+          "body": "Installing downloads the resource to the ~/.agents directory on your machine (with subdirectories for skills, MCP and providers), then connects it to the tools you choose by type. When enabling a resource, you specify which tool it applies to (Claude Code or Codex).",
+          "bullets": [
+            "Skills: written to the tool's skills directory, for example ~/.claude/skills/<name>.md",
+            "MCP: the server entry is written into the tool config: mcpServers in ~/.claude/settings.json for Claude Code, mcp_servers in ~/.codex/config.toml for Codex",
+            "Providers: registered as an editable access configuration (API key, upstream address, model mapping, etc.), which takes effect through the local relay once enabled"
+          ]
+        },
+        {
+          "id": "relay",
+          "title": "Local relay",
+          "body": "The local relay (local) is central to using providers. Once enabled, it points the API address of Claude Code / Codex to a loopback port on this machine (default http://127.0.0.1:18780, listening only on 127.0.0.1). Requests go to the local relay first and are then forwarded to the real upstream according to the provider configuration.",
+          "bullets": [
+            "No need to give the CLI your real API key: the relay gives the CLI a placeholder token, and the real credential stays only in the local provider configuration, attached by the relay when forwarding",
+            "Model mapping and allowlist: rewrite the model name in the request to one the upstream supports, or have a provider handle only models in its allowlist",
+            "Usage metering: input / output / cache tokens, cost, latency and status code are recorded for each request",
+            "You can have multiple listener configurations, each on its own port (starting at 18780 by default, adding 100 for each)"
+          ],
+          "code": "# Claude Code\nANTHROPIC_BASE_URL=http://127.0.0.1:18780\n\n# Codex\nmodel_providers.\"aas-relay\".base_url = \"http://127.0.0.1:18780\""
+        },
+        {
+          "id": "levels",
+          "title": "Level priority and fallback",
+          "body": "Each provider configuration has a Level (an integer; lower means higher priority; default 1). A request first selects candidate providers from the lowest Level up and tries the highest-priority one first; when a candidate fails, it moves to the next. It switches to the next candidate when:",
+          "bullets": [
+            "A network-level error occurs, such as connection refused or DNS failure",
+            "The upstream returns a 5xx",
+            "The requested model is not in this provider's allowlist"
+          ]
+        },
+        {
+          "id": "cli",
+          "title": "Command line",
+          "body": "You can install and manage resources without opening the desktop client: install a resource with install, apply it to a tool with enable, then write enabled resources into the tool config with sync.",
+          "code": "aas install <slug>              # Install a resource\naas list                        # List installed\naas search <query>              # Search the store\naas info <slug>                 # Show resource details\naas enable <slug> --for claude  # Enable for Claude Code\naas disable <slug> --for codex  # Disable for Codex\naas sync                        # Write enabled resources into tool config\naas relay start|stop|status     # Manage the local relay\naas usage --days 7              # Show usage and cost\naas update [slug]               # Update installed resources"
+        },
+        {
+          "id": "usage",
+          "title": "Usage dashboard",
+          "body": "The overview page of the desktop client summarizes the usage recorded by the local relay: consumption trend (today / last 7 days / last 30 days), total cost, total tokens, total requests and model distribution, plus the local relay's listening address, today's requests, success rate and on/off switch. Recent requests are listed one by one with app, model → provider, latency and status code. On the command line, aas usage shows the same summary and can filter by days, provider or tool."
+        },
+        {
+          "id": "publish",
+          "title": "Publish your resources",
+          "body": "After signing in, click \"Publish\" on the store page, choose a type (provider / skill / MCP) and fill in the details. Submitting opens a prefilled manifest file on GitHub, which you submit to the registry as a PR; CI checks the manifest and install URL, and after merging the package appears in the store."
+        },
+        {
+          "id": "pro",
+          "title": "Pro features",
+          "body": "A Pro subscription unlocks usage governance. Some features are live, others are planned:",
+          "bullets": [
+            "Budgets and overspend alerts: set a budget cap per provider and get alerted when nearing or exceeding it (live)",
+            "Usage analytics and export: more detailed cost / token analysis and data export (live)",
+            "Smart routing: automatically choose among multiple upstreams by cost, latency or success rate (planned)",
+            "Multi-key rotation: configure multiple API keys for one provider and rotate them automatically to avoid single-key rate limits (planned)"
+          ]
+        },
+        {
+          "id": "plans",
+          "title": "Subscriptions and lifetime purchase",
+          "body": "Browsing, installing, the local relay and the usage dashboard are free for everyone. If you need Pro, you can subscribe monthly or yearly, or make a one-time lifetime purchase:",
+          "bullets": [
+            "Free: browse and install resources, local relay forwarding, usage dashboard",
+            "Pro monthly: {monthly} / month",
+            "Pro yearly: {yearly} / year",
+            "Lifetime: {lifetime}, pay once, Pro forever"
+          ]
+        }
+      ]
+    },
+    "pricing": {
+      "metaTitle": "Pricing",
+      "title": "Pricing",
+      "lede": "Browsing, installing, the local relay and the usage dashboard are free. Pro is about usage: budget alerts and usage analytics are live; smart routing and multi-key rotation are planned.",
+      "period": "Billing period",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "yearlyNote": "About 2 months free",
+      "free": "Free",
+      "freeSub": "Free forever",
+      "pro": "Pro",
+      "perMonth": "/ month",
+      "perYear": "/ year",
+      "lifetime": "Lifetime",
+      "lifetimeSub": "One-time",
+      "freeFeatures": [
+        "Browse, search and install all resources",
+        "Local relay: forwards by Level, falls back automatically on failure",
+        "Usage dashboard"
+      ],
+      "proFeatures": [
+        "Everything in Free",
+        "Budgets and overspend alerts",
+        "Usage analytics and billing export",
+        "Smart routing (planned)",
+        "Multi-key rotation (planned)"
+      ],
+      "lifetimeFeatures": [
+        "All local Pro features",
+        "Pay once, use forever",
+        "No subscription or monthly fee"
+      ],
+      "startFree": "Start free",
+      "trial": "Try free for {days} days",
+      "upgrade": "Upgrade to Pro now",
+      "buy": "Buy lifetime",
+      "working": "Opening checkout…",
+      "trialNote": "After {days} days you'll be charged {price} {per}. Cancel anytime.",
+      "failed": "Couldn't open checkout. Please try again later.",
+      "merchant": "Payments are collected by Waffo (Merchant of Record); prices include tax. Lifetime covers all local Pro features."
+    },
+    "download": {
+      "metaTitle": "Download",
+      "title": "Download the desktop client",
+      "lede": "The desktop client manages the skills, MCP servers and providers installed on this machine, runs the local relay and shows usage. It also takes over when you click \"Install\" on the web.",
+      "platformsLabel": "Installers",
+      "mac": "macOS",
+      "macDetail": "Universal .dmg, works on Apple silicon and Intel",
+      "macAction": "Download .dmg",
+      "win": "Windows",
+      "winDetail": "Installer setup.exe",
+      "winAction": "Download .exe",
+      "allReleases": "All releases and release notes",
+      "unsignedTitle": "First launch",
+      "unsignedBody": "The installers are not signed yet, so the system will block them once. The files are not damaged; follow the steps below to allow them. This won't be needed once code signing is in place.",
+      "macSteps": "If macOS says the app \"is damaged and can't be opened\", drag the app into \"Applications\", run this command in Terminal, then double-click to open it:",
+      "winSteps": "If Windows shows \"Unknown publisher\", click \"More info\", then \"Run anyway\".",
+      "nextTitle": "After installing",
+      "nextBody": "Click \"Install\" in the store and the web page opens the desktop client; the local relay and provider configurations are set up in the client.",
+      "nextStore": "Go to the store",
+      "nextDocs": "Read the docs"
+    },
+    "dashboard": {
+      "metaTitle": "Dashboard",
+      "plan": "Current plan",
+      "planFree": "Free",
+      "planPro": "Pro",
+      "planTeam": "Team",
+      "upgrade": "Upgrade to Pro",
+      "upgradeNote": "Unlock budget alerts and usage analytics",
+      "proActive": "Pro is active",
+      "statsLabel": "Publishing overview",
+      "statItems": "My resources",
+      "statInstalls": "Total installs",
+      "statPending": "In review",
+      "statPublished": "Published",
+      "submissions": "My submissions",
+      "publish": "Publish a resource",
+      "colName": "Name",
+      "colCategory": "Category",
+      "colVersion": "Version",
+      "colInstalls": "Installs",
+      "colRating": "Rating",
+      "colStatus": "Status",
+      "statusPublished": "Published",
+      "statusPending": "In review",
+      "statusRejected": "Rejected",
+      "emptyTitle": "No submissions yet",
+      "emptyBody": "Publish your first provider, skill or MCP server so others can find and install it in Agent Store.",
+      "noUsernameTitle": "Dashboard",
+      "noUsernameBody": "The dashboard tracks what you publish by GitHub username. Sign in with GitHub once and your account will be linked automatically.",
+      "redirecting": "Redirecting…",
+      "loginFirst": "Please sign in first",
+      "checkoutFailed": "Couldn't open checkout"
+    },
+    "publish": {
+      "title": "Publish a resource",
+      "body": "Once you fill in the details, a prefilled manifest file opens on GitHub, which you submit to the registry as a PR. After CI passes and it is merged, the package appears in the store.",
+      "type": "Type",
+      "choose": "Select",
+      "cancel": "Cancel",
+      "submit": "Continue on GitHub",
+      "submitting": "Opening…",
+      "failed": "Publishing failed",
+      "fields": {
+        "name": "Name",
+        "homepage": "Homepage",
+        "baseUrl": "Base URL",
+        "supportedModels": "Supported models (comma-separated)",
+        "repo": "Repository URL",
+        "contentUrl": "SKILL.md raw URL",
+        "transport": "Transport",
+        "command": "Start command",
+        "url": "Remote URL",
+        "headers": "Headers (JSON)",
+        "env": "Environment variables (JSON)"
+      }
+    },
+    "login": {
+      "title": "Sign in to Agent Store",
+      "body": "After signing in you can publish resources, write reviews, and sync installed skills, MCP servers and providers across devices.",
+      "github": "Sign in with GitHub",
+      "google": "Sign in with Google",
+      "consent": "By continuing, you agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+      "close": "Close"
+    },
+    "legal": {
+      "updated": "Updated {date}",
+      "zhOnly": "This page is currently available in Chinese only.",
+      "contact": "Contact us"
+    },
+    "notFound": {
+      "metaTitle": "Page not found",
+      "title": "This page doesn't exist",
+      "body": "The address may be wrong, or the page has moved.",
+      "store": "Go to the store",
+      "home": "Back to home"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "There was a problem loading this page. Try again; if it still doesn't work, come back later.",
+      "retry": "Retry",
+      "home": "Back to home"
     }
   }
 }

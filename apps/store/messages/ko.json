@@ -2,8 +2,8 @@
   "store": {
     "nav": {
       "store": "스토어",
+      "topics": "주제",
       "docs": "문서",
-      "collections": "컬렉션",
       "pricing": "요금",
       "publish": "게시",
       "login": "로그인",
@@ -18,7 +18,8 @@
       "themeDark": "다크",
       "themeSystem": "시스템 설정",
       "language": "언어",
-      "logout": "로그아웃"
+      "logout": "로그아웃",
+      "download": "다운로드"
     },
     "categories": {
       "all": "전체",
@@ -64,7 +65,8 @@
       "emptyTitle": "조건에 맞는 패키지가 없습니다",
       "emptyBody": "다른 키워드를 쓰거나 검색과 필터를 지워 보세요.",
       "colInstall": "설치",
-      "copyCommand": "명령 복사"
+      "copyCommand": "명령 복사",
+      "lede": "모든 패키지에 검토 결과와 설치할 때 실행되는 내용을 적어 두었습니다."
     },
     "review": {
       "title": "심사 결과",
@@ -131,7 +133,8 @@
     "publisher": {
       "items": "게시한 패키지 {count}개",
       "empty": "게시한 패키지가 아직 없습니다.",
-      "close": "닫기"
+      "close": "닫기",
+      "breadcrumb": "스토어"
     },
     "lang": {
       "zh": "中文",
@@ -159,6 +162,338 @@
       "download": "데스크톱 클라이언트 받기",
       "downloadAlt": "다운로드 페이지에서 데스크톱 클라이언트 받기",
       "close": "알림 닫기"
+    }
+  },
+  "site": {
+    "footer": {
+      "label": "푸터",
+      "tagline": "Claude Code / Codex용 스킬, MCP, 프로바이더 카탈로그. 모든 패키지에 설치할 때 실행되는 내용을 적어 두었습니다.",
+      "product": "제품",
+      "resources": "리소스",
+      "legal": "약관",
+      "store": "스토어",
+      "topics": "주제",
+      "docs": "문서",
+      "pricing": "요금",
+      "download": "다운로드",
+      "registry": "패키지 레지스트리(registry)",
+      "source": "소스 코드",
+      "releases": "릴리스",
+      "privacy": "개인정보 처리방침",
+      "terms": "서비스 약관",
+      "copyright": "© 2026 Agent Store"
+    },
+    "home": {
+      "metaTitle": "Agent Store: Claude Code / Codex용 스킬, MCP, 프로바이더",
+      "titleA": "하나의 입구에서",
+      "titleB": "모든 Agent 기능을 갖추세요",
+      "lede": "Claude Code / Codex용 스킬, MCP 서버, 모델 프로바이더를 찾아 설치하세요. 모든 패키지에 리뷰 결과와 설치 후 실행되는 내용이 적혀 있습니다. 로컬 릴레이가 요청을 전달하고, 실패하면 자동으로 폴백합니다.",
+      "downloadMac": "macOS용 다운로드",
+      "downloadWin": "Windows용 다운로드",
+      "browse": "스토어 둘러보기",
+      "unsigned": "설치 파일이 아직 서명되지 않아 처음 열 때 시스템이 차단합니다.",
+      "unsignedLink": "허용하는 방법 보기",
+      "factsLabel": "Agent Store 개요",
+      "factCatalog": "수록",
+      "factCatalogValue": "패키지 {total}개: 스킬 {skill} · MCP {mcp} · 프로바이더 {provider}",
+      "factTopics": "주제",
+      "factTopicsValue": "주제 {count}개",
+      "factSource": "출처",
+      "factSourceValue": "공개 git registry. 모든 패키지는 PR로 추가되며, CI가 매니페스트와 설치 주소를 검증",
+      "factReview": "리뷰",
+      "factReviewValue": "LLM 품질 및 보안 리뷰. 상세 정보에 설치 후 실행되는 내용을 기재",
+      "factRelay": "로컬 릴레이",
+      "factRelayValue": "127.0.0.1:18780, Level 순으로 전달, 실패 시 자동 폴백",
+      "factClient": "클라이언트",
+      "factClientValue": "macOS(유니버설)와 Windows, 아직 서명되지 않음",
+      "factPrice": "가격",
+      "factPriceValue": "무료로 사용 가능. Pro는 월 {monthly}부터",
+      "featuredTitle": "이 패키지부터 살펴보세요",
+      "featuredAll": "패키지 {count}개 모두 보기",
+      "plateOpen": "상세 보기",
+      "relayTitle": "로컬 릴레이: 하나의 주소, 여러 업스트림",
+      "relayBody": "활성화하면 Claude Code / Codex의 API 주소가 이 컴퓨터를 가리킵니다. 요청은 먼저 로컬 릴레이로 가고, Level이 낮은 순서대로 프로바이더를 고릅니다. 네트워크 오류, 업스트림 5xx, 또는 모델이 허용 목록에 없으면 자동으로 다음 프로바이더로 전환합니다. 요청마다 토큰, 비용, 소요 시간, 상태 코드가 이 컴퓨터에 기록됩니다.",
+      "relayLevel1": "Level 1",
+      "relayLevel1Value": "우선 프로바이더, 요청을 먼저 받음",
+      "relayLevel2": "Level 2",
+      "relayLevel2Value": "예비 프로바이더, 앞의 프로바이더가 실패하면 이어받음",
+      "relayFallback": "전환 조건",
+      "relayFallbackValue": "네트워크 오류 · 업스트림 5xx · 모델이 허용 목록에 없음",
+      "relayDocs": "로컬 릴레이 문서 읽기",
+      "topicsTitle": "할 일로 찾기",
+      "topicsAll": "모든 주제",
+      "closeTitle": "데스크톱 클라이언트 설치",
+      "closeBody": "데스크톱 클라이언트는 이 컴퓨터에 설치된 스킬, MCP, 프로바이더를 관리하고, 로컬 릴레이를 실행하며 사용량을 보여줍니다.",
+      "closePricing": "요금 보기"
+    },
+    "topics": {
+      "metaTitle": "주제",
+      "title": "주제",
+      "lede": "할 일별로 패키지를 모았습니다. 한 주제에 스킬, MCP, 프로바이더가 함께 들어갈 수 있으며, 추천 순서대로 정렬됩니다.",
+      "count": "패키지 {count}개",
+      "listLabel": "모든 주제",
+      "empty": "아직 주제가 없습니다.",
+      "breadcrumb": "주제",
+      "capabilitiesTitle": "설치하면 agent가 할 수 있는 일",
+      "packagesTitle": "이 주제의 패키지",
+      "packagesCount": "패키지 {count}개",
+      "packagesEmpty": "이 주제의 패키지는 아직 등록되지 않았습니다.",
+      "relatedTitle": "관련 주제"
+    },
+    "docs": {
+      "metaTitle": "문서",
+      "metaDescription": "Agent Store 사용 안내: 데스크톱 클라이언트 설치, 둘러보기와 설치, 로컬 릴레이, CLI와 구독.",
+      "title": "Agent Store 시작하기",
+      "lede": "Claude Code / Codex용 스킬, MCP, 모델 프로바이더를 찾고, 설치하고, 관리하세요.",
+      "toc": "목차",
+      "sections": [
+        {
+          "id": "about",
+          "title": "Agent Store란",
+          "body": "Agent Store는 Claude Code / Codex용 '앱 스토어 + 로컬 관리 클라이언트'입니다. 브라우저의 웹 스토어에서는 찾기, 검색, 게시를 하고, 이 컴퓨터의 데스크톱 클라이언트에서는 설치된 리소스를 관리하고 사용량을 보여주며 내장 로컬 릴레이를 실행합니다. 설치할 수 있는 리소스는 세 가지입니다:",
+          "bullets": [
+            "스킬(skill): Claude Code / Codex에 더하는 워크플로와 전문 지식",
+            "MCP 서버: Model Context Protocol로 연결하는 외부 도구와 데이터 소스",
+            "프로바이더(provider): 모델 연결 설정. 자신의 API 키와 업스트림 주소 포함"
+          ]
+        },
+        {
+          "id": "install",
+          "title": "데스크톱 클라이언트 설치",
+          "body": "다운로드 페이지에서 macOS(유니버설, Apple 실리콘과 Intel 모두 지원) 또는 Windows 데스크톱 클라이언트를 받으세요. 클라이언트는 이 컴퓨터에 설치된 리소스를 관리하고, 프로바이더 설정을 유지하며, 로컬 릴레이를 실행하고 사용량을 보여줍니다. 로그인하면 설치된 스킬, MCP, 프로바이더를 기기 간에 동기화할 수 있습니다.",
+          "bullets": [
+            "현재 설치 파일은 서명되지 않아 처음 열 때 시스템이 차단합니다. 정상적인 현상이며 파일은 손상되지 않았습니다",
+            "macOS에서 '손상되었기 때문에 열 수 없습니다'라고 표시되면: 앱을 '응용 프로그램'으로 드래그하고, 터미널에서 xattr -cr \"/Applications/Agent Store CLI.app\"를 실행한 다음 더블클릭해서 엽니다",
+            "Windows에서 '알 수 없는 게시자'라고 표시되면: '추가 정보'를 클릭한 다음 '실행'을 클릭합니다",
+            "Apple / Windows 코드 서명을 적용하면 이 안내는 더 이상 나타나지 않습니다"
+          ]
+        },
+        {
+          "id": "browse",
+          "title": "스토어에서 둘러보고 설치하기",
+          "body": "스토어 페이지는 한 행에 패키지 하나씩 있는 표로, 카테고리, 리뷰 상태, 게시자, 설치 수를 보여줍니다. 상단에서 카테고리를 바꾸고, 인증된 게시자의 패키지만 보거나, 설치 수 / 추가일 / 평점으로 정렬할 수 있습니다. / 키를 누르면 바로 검색합니다.",
+          "bullets": [
+            "행을 클릭하면 오른쪽에 상세 정보가 열립니다: 리뷰 결과, 설치 후 실행되는 내용, 설치 명령어, 사양, README, 버전 기록, 평가",
+            "'설치'는 먼저 데스크톱 클라이언트를 열려고 시도합니다. 클라이언트가 감지되지 않으면 설치 명령어를 복사하고 다운로드를 안내합니다",
+            "리뷰를 통과한(위험도가 낮고 주의 사항이 없는) 패키지에는 '리뷰 완료' 도장이 찍힙니다. 아직 리뷰 결과가 없으면 '리뷰 대기'로 표시됩니다",
+            "주제 페이지는 같은 종류의 작업에 쓸 수 있는 패키지를 모아 두며, 스킬, MCP, 프로바이더가 같은 주제에 함께 나올 수 있습니다"
+          ]
+        },
+        {
+          "id": "where",
+          "title": "세 가지 리소스가 설치되는 위치",
+          "body": "설치하면 리소스가 이 컴퓨터의 ~/.agents 디렉터리(스킬, MCP, 프로바이더별 하위 디렉터리)에 다운로드되고, 유형에 따라 선택한 도구에 연결됩니다. 리소스를 활성화할 때는 어느 도구(Claude Code 또는 Codex)에 적용할지 지정합니다.",
+          "bullets": [
+            "스킬: 해당 도구의 skills 디렉터리에 기록됩니다. 예: ~/.claude/skills/<이름>.md",
+            "MCP: 서버 항목을 도구 설정에 기록합니다. Claude Code는 ~/.claude/settings.json의 mcpServers, Codex는 ~/.codex/config.toml의 mcp_servers",
+            "프로바이더: 편집 가능한 연결 설정(API 키, 업스트림 주소, 모델 매핑 등)으로 등록되며, 활성화하면 로컬 릴레이를 통해 적용됩니다"
+          ]
+        },
+        {
+          "id": "relay",
+          "title": "로컬 릴레이",
+          "body": "로컬 릴레이(local)는 프로바이더 사용의 핵심입니다. 활성화하면 Claude Code / Codex의 API 주소를 이 컴퓨터의 루프백 포트(기본값 http://127.0.0.1:18780, 127.0.0.1에서만 수신)로 지정합니다. 요청은 먼저 로컬 릴레이로 가고, 프로바이더 설정에 따라 실제 업스트림으로 전달됩니다.",
+          "bullets": [
+            "실제 API 키를 CLI에 넘길 필요가 없습니다: 릴레이는 CLI에 자리표시자 토큰을 주고, 실제 자격 증명은 로컬 프로바이더 설정에만 저장되어 전달 시 릴레이가 붙입니다",
+            "모델 매핑과 허용 목록: 요청의 모델 이름을 업스트림이 지원하는 모델로 바꾸거나, 특정 프로바이더가 허용 목록의 모델만 처리하게 할 수 있습니다",
+            "사용량 측정: 요청마다 입력 / 출력 / 캐시 토큰, 비용, 소요 시간, 상태 코드가 기록됩니다",
+            "수신 설정을 여러 개 둘 수 있으며, 각각 다른 포트를 사용합니다(기본값은 18780부터 시작해 하나마다 100씩 증가)"
+          ],
+          "code": "# Claude Code\nANTHROPIC_BASE_URL=http://127.0.0.1:18780\n\n# Codex\nmodel_providers.\"aas-relay\".base_url = \"http://127.0.0.1:18780\""
+        },
+        {
+          "id": "levels",
+          "title": "Level 우선순위와 실패 시 폴백",
+          "body": "프로바이더 설정마다 Level(정수, 작을수록 우선, 기본값 1)이 있습니다. 요청은 먼저 Level이 낮은 순서대로 후보 프로바이더를 고르고, 가장 우선순위가 높은 것부터 시도합니다. 후보가 실패하면 자동으로 다음 후보로 넘어갑니다. 다음과 같은 경우 다음 후보로 전환합니다:",
+          "bullets": [
+            "연결 거부, DNS 실패 같은 네트워크 계층 오류",
+            "업스트림이 5xx를 반환",
+            "요청한 모델이 이 프로바이더의 허용 목록에 없음"
+          ]
+        },
+        {
+          "id": "cli",
+          "title": "명령줄",
+          "body": "데스크톱 클라이언트를 열지 않고도 설치와 관리를 할 수 있습니다. install로 리소스를 설치하고, enable로 지정한 도구에 적용한 다음, sync로 활성화된 리소스를 도구 설정에 기록합니다.",
+          "code": "aas install <slug>              # 리소스 설치\naas list                        # 설치된 항목 보기\naas search <query>              # 스토어 검색\naas info <slug>                 # 리소스 상세 보기\naas enable <slug> --for claude  # Claude Code에 활성화\naas disable <slug> --for codex  # Codex에서 비활성화\naas sync                        # 활성화된 리소스를 도구 설정에 기록\naas relay start|stop|status     # 로컬 릴레이 관리\naas usage --days 7              # 사용량과 비용 보기\naas update [slug]               # 설치된 리소스 업데이트"
+        },
+        {
+          "id": "usage",
+          "title": "사용량 대시보드",
+          "body": "데스크톱 클라이언트의 개요 페이지는 로컬 릴레이가 기록한 사용량을 요약합니다: 소비 추이(오늘 / 최근 7일 / 최근 30일), 총비용, 총 토큰, 총 요청 수와 모델 분포, 그리고 로컬 릴레이의 수신 주소, 오늘 요청 수, 성공률, 켜기/끄기 스위치. 최근 요청은 앱, 모델 → 프로바이더, 소요 시간, 상태 코드별로 하나씩 나열됩니다. 명령줄에서는 aas usage로 같은 요약을 볼 수 있으며, 일수, 프로바이더, 도구로 필터링할 수 있습니다."
+        },
+        {
+          "id": "publish",
+          "title": "리소스 게시하기",
+          "body": "로그인한 뒤 스토어 페이지에서 '게시'를 클릭하고, 유형(프로바이더 / 스킬 / MCP)을 선택해 정보를 입력합니다. 제출하면 GitHub에서 미리 채워진 매니페스트 파일이 열리고, 이를 registry에 PR로 제출합니다. CI가 매니페스트와 설치 주소를 검증하고, 병합되면 패키지가 스토어에 나타납니다."
+        },
+        {
+          "id": "pro",
+          "title": "Pro 기능",
+          "body": "Pro를 구독하면 사용량 관리 기능을 쓸 수 있습니다. 일부는 이미 제공되고, 일부는 계획 중입니다:",
+          "bullets": [
+            "예산과 초과 알림: 프로바이더별 예산 한도를 설정하고, 한도에 가까워지거나 넘으면 알림(제공 중)",
+            "사용량 분석과 내보내기: 더 자세한 비용 / 토큰 분석과 데이터 내보내기(제공 중)",
+            "스마트 라우팅: 비용, 지연 시간, 성공률에 따라 여러 업스트림 중에서 자동 선택(계획 중)",
+            "다중 키 순환: 한 프로바이더에 API 키를 여러 개 설정하고 자동으로 순환해 단일 키 속도 제한을 피함(계획 중)"
+          ]
+        },
+        {
+          "id": "plans",
+          "title": "구독과 평생 구매",
+          "body": "둘러보기, 설치, 로컬 릴레이, 사용량 대시보드는 누구나 무료입니다. Pro가 필요하면 월간 또는 연간 구독, 또는 일회성 평생 구매를 선택할 수 있습니다:",
+          "bullets": [
+            "Free: 리소스 둘러보기와 설치, 로컬 릴레이 전달, 사용량 대시보드",
+            "Pro 월간: {monthly} / 월",
+            "Pro 연간: {yearly} / 년",
+            "평생 구매: {lifetime}, 한 번 결제로 영구 Pro"
+          ]
+        }
+      ]
+    },
+    "pricing": {
+      "metaTitle": "요금",
+      "title": "요금",
+      "lede": "둘러보기, 설치, 로컬 릴레이, 사용량 대시보드는 무료입니다. Pro는 사용량 관리를 위한 것입니다. 예산 알림과 사용량 분석은 제공 중이며, 스마트 라우팅과 다중 키 순환은 계획 중입니다.",
+      "period": "결제 주기",
+      "monthly": "월간",
+      "yearly": "연간",
+      "yearlyNote": "2개월분 절약",
+      "free": "Free",
+      "freeSub": "영구 무료",
+      "pro": "Pro",
+      "perMonth": "/ 월",
+      "perYear": "/ 년",
+      "lifetime": "평생 구매",
+      "lifetimeSub": "일회성",
+      "freeFeatures": [
+        "모든 리소스 둘러보기, 검색, 설치",
+        "로컬 릴레이: Level 순으로 전달, 실패 시 자동 폴백",
+        "사용량 대시보드"
+      ],
+      "proFeatures": [
+        "Free의 모든 기능",
+        "예산과 초과 알림",
+        "사용량 분석과 청구 내역 내보내기",
+        "스마트 라우팅(계획 중)",
+        "다중 키 순환(계획 중)"
+      ],
+      "lifetimeFeatures": [
+        "Pro의 모든 로컬 기능",
+        "한 번 결제로 영구 사용",
+        "구독료나 월 요금 없음"
+      ],
+      "startFree": "무료로 시작",
+      "trial": "{days}일 무료 체험",
+      "upgrade": "바로 Pro로 업그레이드",
+      "buy": "평생 구매",
+      "working": "결제 페이지를 여는 중…",
+      "trialNote": "{days}일 후 {price} {per} 요금이 청구되며, 언제든지 취소할 수 있습니다.",
+      "failed": "결제 페이지를 열지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      "merchant": "결제는 Waffo(Merchant of Record)가 대행하며, 가격은 세금 포함입니다. 평생 구매에는 모든 로컬 Pro 기능이 포함됩니다."
+    },
+    "download": {
+      "metaTitle": "다운로드",
+      "title": "데스크톱 클라이언트 다운로드",
+      "lede": "데스크톱 클라이언트는 이 컴퓨터에 설치된 스킬, MCP, 프로바이더를 관리하고, 로컬 릴레이를 실행하며 사용량을 보여줍니다. 웹에서 '설치'를 클릭할 때도 이 클라이언트가 이어받습니다.",
+      "platformsLabel": "설치 파일",
+      "mac": "macOS",
+      "macDetail": "유니버설 .dmg, Apple 실리콘과 Intel 모두 지원",
+      "macAction": ".dmg 다운로드",
+      "win": "Windows",
+      "winDetail": "설치 프로그램 setup.exe",
+      "winAction": ".exe 다운로드",
+      "allReleases": "모든 버전과 릴리스 노트",
+      "unsignedTitle": "처음 열기",
+      "unsignedBody": "설치 파일이 아직 서명되지 않아 시스템이 한 번 차단합니다. 파일은 손상되지 않았으니 아래 단계에 따라 허용하세요. 코드 서명을 적용한 뒤에는 필요하지 않습니다.",
+      "macSteps": "macOS에서 '손상되었기 때문에 열 수 없습니다'라고 표시되면, 앱을 '응용 프로그램'으로 드래그하고 터미널에서 이 명령어를 실행한 다음 더블클릭해서 엽니다:",
+      "winSteps": "Windows에서 '알 수 없는 게시자'라고 표시되면, '추가 정보'를 클릭한 다음 '실행'을 클릭합니다.",
+      "nextTitle": "설치 후",
+      "nextBody": "스토어에서 '설치'를 클릭하면 웹 페이지가 데스크톱 클라이언트를 엽니다. 로컬 릴레이와 프로바이더 설정은 클라이언트에서 합니다.",
+      "nextStore": "스토어로 가기",
+      "nextDocs": "문서 읽기"
+    },
+    "dashboard": {
+      "metaTitle": "개인 대시보드",
+      "plan": "현재 요금제",
+      "planFree": "Free",
+      "planPro": "Pro",
+      "planTeam": "Team",
+      "upgrade": "Pro로 업그레이드",
+      "upgradeNote": "예산 알림과 사용량 분석 사용",
+      "proActive": "Pro 혜택이 적용되었습니다",
+      "statsLabel": "게시 개요",
+      "statItems": "내 리소스",
+      "statInstalls": "총 설치 수",
+      "statPending": "심사 중",
+      "statPublished": "게시됨",
+      "submissions": "내 제출",
+      "publish": "리소스 게시",
+      "colName": "이름",
+      "colCategory": "카테고리",
+      "colVersion": "버전",
+      "colInstalls": "설치 수",
+      "colRating": "평점",
+      "colStatus": "상태",
+      "statusPublished": "게시됨",
+      "statusPending": "심사 중",
+      "statusRejected": "반려됨",
+      "emptyTitle": "아직 제출한 항목이 없습니다",
+      "emptyBody": "첫 프로바이더, 스킬 또는 MCP를 게시해서 다른 사람들이 Agent Store에서 찾아 설치할 수 있게 하세요.",
+      "noUsernameTitle": "개인 대시보드",
+      "noUsernameBody": "개인 대시보드는 GitHub 사용자 이름으로 게시한 내용을 집계합니다. GitHub로 한 번 로그인하면 계정이 자동으로 연결됩니다.",
+      "redirecting": "이동하는 중…",
+      "loginFirst": "먼저 로그인해 주세요",
+      "checkoutFailed": "결제 페이지를 열지 못했습니다"
+    },
+    "publish": {
+      "title": "리소스 게시",
+      "body": "정보를 입력하면 GitHub에서 미리 채워진 매니페스트 파일이 열리고, 이를 registry에 PR로 제출합니다. CI 검증을 통과해 병합되면 패키지가 스토어에 나타납니다.",
+      "type": "유형",
+      "choose": "선택하세요",
+      "cancel": "취소",
+      "submit": "GitHub에서 계속",
+      "submitting": "여는 중…",
+      "failed": "게시에 실패했습니다",
+      "fields": {
+        "name": "이름",
+        "homepage": "홈페이지",
+        "baseUrl": "Base URL",
+        "supportedModels": "지원 모델(쉼표로 구분)",
+        "repo": "저장소 주소",
+        "contentUrl": "SKILL.md 원본 링크",
+        "transport": "전송 방식",
+        "command": "시작 명령어",
+        "url": "원격 주소",
+        "headers": "Headers (JSON)",
+        "env": "환경 변수(JSON)"
+      }
+    },
+    "login": {
+      "title": "Agent Store 로그인",
+      "body": "로그인하면 리소스를 게시하고, 평가를 남기고, 설치된 스킬, MCP, 프로바이더를 기기 간에 동기화할 수 있습니다.",
+      "github": "GitHub로 로그인",
+      "google": "Google로 로그인",
+      "consent": "계속하면 <terms>서비스 약관</terms> 및 <privacy>개인정보 처리방침</privacy>에 동의하는 것으로 간주됩니다.",
+      "close": "닫기"
+    },
+    "legal": {
+      "updated": "{date} 업데이트",
+      "zhOnly": "이 페이지는 현재 중국어로만 제공됩니다.",
+      "contact": "문의하기"
+    },
+    "notFound": {
+      "metaTitle": "페이지를 찾을 수 없음",
+      "title": "이 페이지는 없습니다",
+      "body": "주소가 잘못되었거나 페이지가 이동되었을 수 있습니다.",
+      "store": "스토어로 가기",
+      "home": "홈으로 돌아가기"
+    },
+    "error": {
+      "title": "페이지에 오류가 발생했습니다",
+      "body": "이 페이지를 불러오는 중 문제가 생겼습니다. 다시 시도해 보시고, 그래도 안 되면 잠시 후 다시 방문해 주세요.",
+      "retry": "다시 시도",
+      "home": "홈으로 돌아가기"
     }
   }
 }

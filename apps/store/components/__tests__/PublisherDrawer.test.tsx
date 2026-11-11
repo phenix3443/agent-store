@@ -13,6 +13,10 @@ mock.module('next/navigation', () => ({
   useRouter: () => ({ replace: () => {}, push: () => {} }),
   usePathname: () => '/store',
   useSearchParams: () => new URLSearchParams(),
+  // bun shares module mocks between files, so every mock exposes what any page imports.
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND')
+  },
 }))
 mock.module('next-intl', () => intlMock)
 

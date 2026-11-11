@@ -68,7 +68,7 @@ test('when nothing takes the link, the command is copied and a notice offers the
   await waitFor(() => expect(screen.getByText('没有检测到桌面客户端')).toBeInTheDocument(), { timeout: 3000 })
   expect(writeText).toHaveBeenCalledWith('aas install anki-mcp')
   expect(screen.getByText('安装命令已复制，可以在终端里运行，或先下载桌面客户端。')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '下载桌面客户端' }).getAttribute('href')).toBe('/download/latest')
+  expect(screen.getByRole('link', { name: '下载桌面客户端' }).getAttribute('href')).toBe('/download')
   await waitFor(() =>
     expect(document.querySelector('[role="status"][aria-live="assertive"]')?.textContent).toContain('没有检测到桌面客户端')
   )

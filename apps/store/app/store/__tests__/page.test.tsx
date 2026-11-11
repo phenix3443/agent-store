@@ -13,6 +13,10 @@ mock.module('next/navigation', () => ({
   useRouter: () => ({ push: () => {}, replace: () => {} }),
   usePathname: () => '/store',
   useSearchParams: () => new URLSearchParams(),
+  // bun shares module mocks between files, so every mock exposes what any page imports.
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND')
+  },
 }))
 mock.module('next-intl', () => intlMock)
 
@@ -22,6 +26,9 @@ mock.module('next-intl', () => intlMock)
 const { getItems: mockGetItems } = await import('../../../lib/mock/items')
 mock.module('@/lib/catalog', () => ({
   getItems: async (opts: Parameters<typeof mockGetItems>[0]) => mockGetItems(opts),
+  // bun shares module mocks across test files; keep the same exports as the topics test.
+  getTopics: async () => [],
+  getTopic: async () => null,
 }))
 
 const { default: StorePage } = await import('../page')

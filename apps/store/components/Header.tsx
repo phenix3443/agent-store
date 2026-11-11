@@ -18,6 +18,7 @@ interface HeaderProps {
 
 const NAV = [
   { href: '/store', key: 'store' },
+  { href: '/topics', key: 'topics' },
   { href: '/docs', key: 'docs' },
   { href: '/pricing', key: 'pricing' },
 ] as const

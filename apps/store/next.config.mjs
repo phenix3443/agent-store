@@ -10,6 +10,11 @@ const nextConfig = {
   output: 'standalone',
   // Trace workspace packages (@as/sdk, @as/types) from the monorepo root.
   outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '../..'),
+  async redirects() {
+    // Topics (#61) replaced the collections page.
+    return [{ source: '/collections', destination: '/topics', permanent: true }]
+  },
 }
 
+export { nextConfig }
 export default withNextIntl(nextConfig)
