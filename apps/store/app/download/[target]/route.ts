@@ -14,6 +14,8 @@ const MATCHERS: Record<string, (name: string) => boolean> = {
   'mac-arm': matchMac,
   'mac-intel': matchMac,
   win: (n) => n.endsWith('-setup.exe'),
+  'linux-deb': (n) => n.endsWith('.deb'),
+  'linux-rpm': (n) => n.endsWith('.rpm'),
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ target: string }> }) {

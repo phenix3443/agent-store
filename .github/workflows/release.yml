@@ -1,6 +1,6 @@
 name: Release desktop app
 
-# Build the Tauri desktop app for macOS (Apple Silicon + Intel) and Windows,
+# Build the Tauri desktop app for macOS (Apple Silicon + Intel), Windows and Linux,
 # then publish the installers to a GitHub Release. Triggered by pushing a
 # version tag (e.g. `v0.1.0`), or manually via the Actions tab.
 on:
@@ -28,11 +28,24 @@ jobs:
             rust-targets: ''
             sidecar-targets: ''
             tauri-args: ''
+          # 22.04 keeps the glibc floor low enough for older distros. No AppImage:
+          # linuxdeploy patchelfs every executable in usr/bin, which corrupts the
+          # bun-compiled sidecar (its script is appended to the ELF).
+          - host: ubuntu-22.04
+            rust-targets: ''
+            sidecar-targets: ''
+            tauri-args: --bundles deb,rpm
 
     runs-on: ${{ matrix.host }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
 
       - uses: pnpm/action-setup@v4
 
@@ -59,7 +72,7 @@ jobs:
       - name: Build workspace libraries
         run: pnpm exec turbo build --filter=@as/client-core
 
-      # Compile the `as` CLI into the sidecar binary Tauri bundles (binaries/as-<triple>).
+      # Compile the `aas` CLI into the sidecar binary Tauri bundles (binaries/aas-<triple>).
       # On macOS this builds both arch slices for the universal bundle.
       - name: Build sidecar
         shell: bash
@@ -97,6 +110,7 @@ jobs:
 
             - macOS: `.dmg`（universal，同时支持 Apple 芯片与 Intel）
             - Windows: `.msi` / `-setup.exe`
+            - Linux (x86_64): `.deb`（Debian / Ubuntu）/ `.rpm`（Fedora / openSUSE）
 
             当前为**未签名**构建，首次打开会被系统拦截 —— 属正常现象，**并非文件损坏**：
 

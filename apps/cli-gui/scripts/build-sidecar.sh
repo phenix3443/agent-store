@@ -30,7 +30,8 @@ bun_target_for() {
 mkdir -p "$GUI_DIR/src-tauri/binaries"
 
 for TRIPLE in $TARGETS; do
-  OUT="$GUI_DIR/src-tauri/binaries/as-$TRIPLE"
+  # Not "as": Linux packages install sidecars to /usr/bin, where binutils already owns as.
+  OUT="$GUI_DIR/src-tauri/binaries/aas-$TRIPLE"
 
   if [[ "$TRIPLE" == "$HOST_TRIPLE" ]]; then
     # Native compile for the host (unchanged behavior for local dev and same-arch CI).
@@ -52,17 +53,17 @@ for TRIPLE in $TARGETS; do
     codesign --force -s - "$OUT"
   fi
 
-  echo "Built sidecar: src-tauri/binaries/as-$TRIPLE"
+  echo "Built sidecar: src-tauri/binaries/aas-$TRIPLE"
 done
 
 # For a macOS universal bundle, Tauri expects a single fat sidecar named
 # as-universal-apple-darwin. Combine the two arch slices with lipo when present.
-ARM_SLICE="$GUI_DIR/src-tauri/binaries/as-aarch64-apple-darwin"
-X64_SLICE="$GUI_DIR/src-tauri/binaries/as-x86_64-apple-darwin"
-UNIVERSAL="$GUI_DIR/src-tauri/binaries/as-universal-apple-darwin"
+ARM_SLICE="$GUI_DIR/src-tauri/binaries/aas-aarch64-apple-darwin"
+X64_SLICE="$GUI_DIR/src-tauri/binaries/aas-x86_64-apple-darwin"
+UNIVERSAL="$GUI_DIR/src-tauri/binaries/aas-universal-apple-darwin"
 if [[ -f "$ARM_SLICE" && -f "$X64_SLICE" ]]; then
   lipo -create -output "$UNIVERSAL" "$ARM_SLICE" "$X64_SLICE"
   codesign --remove-signature "$UNIVERSAL" 2>/dev/null || true
   codesign --force -s - "$UNIVERSAL"
-  echo "Built sidecar: src-tauri/binaries/as-universal-apple-darwin (lipo)"
+  echo "Built sidecar: src-tauri/binaries/aas-universal-apple-darwin (lipo)"
 fi
