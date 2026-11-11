@@ -317,3 +317,45 @@ INSERT INTO items (
   '{"steps":[{"type":"file","url":"https://raw.githubusercontent.com/anthropics/skills/main/skills/canvas-design/SKILL.md","dest":"skill.md"}]}'::jsonb, '{"contentUrl":"https://raw.githubusercontent.com/anthropics/skills/main/skills/canvas-design/SKILL.md","source":{"repo":"anthropics/skills","ref":"main","path":"skills/canvas-design/SKILL.md"}}'::jsonb
 );
 
+-- ── Topics (copied from the registry's topic/) ─────────────────────────────
+INSERT INTO topics (slug, title, description, intro, capabilities, packages, related) VALUES (
+  'agent-workflow', 'Agent 工作流',
+  '让 agent 先想清楚再动手：头脑风暴、按计划执行、并行分派、分步推理和跨会话记忆。',
+  '这组包管的是 agent 怎么干活，而不是干什么活。brainstorming 要求在写功能、改行为之前先弄清意图、需求和设计；executing-plans 按写好的实施计划分段执行并设置检查点；dispatching-parallel-agents 用在两个以上互不依赖的任务上；Sequential Thinking 把复杂问题拆成可修正的思考步骤；Knowledge Graph Memory 用知识图谱让 agent 跨会话记住实体与关系；agent-introspection-debugging 在 agent 自己出错时按记录、诊断、受控恢复、出报告的流程排查。',
+  ARRAY['在动手实现之前先梳理用户意图、需求和设计','在单独的会话里按书面计划执行，并在检查点停下来复核','把互不依赖、不共享状态的任务分派给多个 agent 并行处理','把复杂问题拆成可修正的分步思考','用知识图谱跨会话记住实体和它们之间的关系','agent 自身出错时，按记录、诊断、受控恢复的流程排查并写出复盘报告'],
+  ARRAY['superpowers-brainstorming','superpowers-executing-plans','superpowers-dispatching-parallel-agents','sequential-thinking','memory','ecc-agent-introspection-debugging'],
+  ARRAY['coding-practices','docs-and-knowledge']
+);
+INSERT INTO topics (slug, title, description, intro, capabilities, packages, related) VALUES (
+  'browser-automation', '浏览器自动化与调试',
+  '让 agent 打开真实网页：点击、填表、抓取，再用 DevTools 看网络请求和性能。',
+  '这组 MCP 服务器给 agent 一个能操作的浏览器。Playwright（微软出品）负责打开网页、点击、填表和抓取内容；Chrome DevTools（Chrome 团队出品）通过 Chrome DevTools 协议调试页面，查看网络请求和性能。两者都通过 npx 在本地启动。',
+  ARRAY['打开网页、点击、填写表单、抓取页面内容','通过 Chrome DevTools 协议调试页面','查看页面的网络请求和性能'],
+  ARRAY['playwright-mcp','chrome-devtools'],
+  ARRAY['coding-practices']
+);
+INSERT INTO topics (slug, title, description, intro, capabilities, packages, related) VALUES (
+  'coding-practices', '编码规范与 API 设计',
+  '约束 agent 写代码的方式：少过度设计、只做必要改动，按生产级规范设计 REST API。',
+  '这组技能在 agent 写代码、审代码时提供规范。karpathy-guidelines 是一套减少 LLM 常见编码错误的行为准则，要求避免过度复杂、只做有针对性的改动、把假设说出来、定义可验证的完成标准；api-design 覆盖 REST API 的资源命名、状态码、分页、过滤、错误响应、版本和限流。',
+  ARRAY['写代码、审代码、重构时避免过度复杂，只做有针对性的改动','先说明假设，并定义可验证的完成标准','按资源命名、状态码、分页、过滤、错误响应、版本、限流的规范设计 REST API'],
+  ARRAY['andrej-karpathy-skills-karpathy-guidelines','ecc-api-design'],
+  ARRAY['agent-workflow','browser-automation']
+);
+INSERT INTO topics (slug, title, description, intro, capabilities, packages, related) VALUES (
+  'design-and-visual', '设计与视觉',
+  '用代码生成视觉作品：海报和静态设计、p5.js 生成艺术、套用品牌配色与字体。',
+  '这组技能让 agent 产出看得见的东西。canvas-design 依据一套设计理念生成 .png 和 .pdf 的海报、艺术作品等静态设计；algorithmic-art 用 p5.js 写带随机种子、可交互调参的生成艺术，例如流场和粒子系统；brand-guidelines 把 Anthropic 官方的品牌色和字体套用到各类产出物上。前两个都要求做原创作品，不复制现有艺术家的作品。',
+  ARRAY['生成海报、艺术作品等静态设计，输出 .png 或 .pdf','用 p5.js 写带随机种子、可交互调参的生成艺术，如流场、粒子系统','按 Anthropic 官方品牌色和字体规范给产出物定样式'],
+  ARRAY['skills-canvas-design','skills-algorithmic-art','skills-brand-guidelines'],
+  '{}'
+);
+INSERT INTO topics (slug, title, description, intro, capabilities, packages, related) VALUES (
+  'docs-and-knowledge', '文档与知识检索',
+  '让 agent 查最新的库文档和产品文档，少写过时的 API。',
+  '这组 MCP 服务器让 agent 在回答前先查文档。Context7 为任意库拉取最新文档与代码示例，减少过时 API 造成的幻觉；Biel.ai 查询你自己已建索引的产品文档，回答附带出处；docs-mcp 是 Tandem 的远程文档服务，覆盖安装指南、SDK、工作流和 agent 配置。',
+  ARRAY['为任意库拉取最新文档和代码示例','查询自己已建索引的产品文档，得到带出处的回答','查阅 Tandem 的文档、安装指南、SDK 和工作流'],
+  ARRAY['context7','biel-ai','docs-mcp'],
+  ARRAY['agent-workflow']
+);
+
