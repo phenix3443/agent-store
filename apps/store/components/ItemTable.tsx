@@ -13,7 +13,7 @@ import { TierLabel } from './TierLabel'
 
 const COLS = 'md:grid-cols-[64px_minmax(0,1fr)_104px_148px_72px_92px]'
 
-function ItemRow({ item }: { item: Item }) {
+function ItemRow({ item, wrap }: { item: Item; wrap: boolean }) {
   const t = useTranslations('store')
   const pathname = usePathname()
   const href = itemHref(item)
@@ -23,7 +23,7 @@ function ItemRow({ item }: { item: Item }) {
     <div
       role="row"
       data-current={current ? '' : undefined}
-      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-3.5 transition-colors hover:bg-sel data-[current]:border-ink data-[current]:bg-sel data-[current]:shadow-[0_-1px_0_var(--ink)] md:h-20 md:py-0 ${COLS}`}
+      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-3.5 transition-colors hover:bg-sel data-[current]:border-ink data-[current]:bg-sel data-[current]:shadow-[0_-1px_0_var(--ink)] ${wrap ? 'md:min-h-20 md:py-3' : 'md:h-20 md:py-0'} ${COLS}`}
     >
       <span role="cell" className="label col-span-2 md:col-span-1 group-data-[current]:text-ink">
         {t(`category.${item.category}`)}
@@ -41,7 +41,7 @@ function ItemRow({ item }: { item: Item }) {
         >
           {item.name}
         </Link>
-        <p className="mt-0.5 truncate text-[13px] leading-5 text-ink-2">{item.description}</p>
+        <p className={`mt-0.5 text-[13px] leading-5 text-ink-2 ${wrap ? '' : 'truncate'}`}>{item.description}</p>
       </div>
 
       <div role="cell" className="order-last col-span-2 md:order-none md:col-span-1">
@@ -65,7 +65,16 @@ function ItemRow({ item }: { item: Item }) {
   )
 }
 
-export function ItemTable({ items, emptyAction }: { items: Item[]; emptyAction?: React.ReactNode }) {
+export function ItemTable({
+  items,
+  emptyAction,
+  wrapDescriptions = false,
+}: {
+  items: Item[]
+  emptyAction?: React.ReactNode
+  /** Short descriptions shown whole (the landing page); the store list keeps one truncated line. */
+  wrapDescriptions?: boolean
+}) {
   const t = useTranslations('store.list')
 
   if (items.length === 0) {
@@ -96,7 +105,7 @@ export function ItemTable({ items, emptyAction }: { items: Item[]; emptyAction?:
       </div>
       <div role="rowgroup">
         {items.map((item) => (
-          <ItemRow key={item.id} item={item} />
+          <ItemRow key={item.id} item={item} wrap={wrapDescriptions} />
         ))}
       </div>
     </div>

@@ -31,6 +31,14 @@ test('renders name, description and publisher', () => {
   expect(screen.getByText('官方')).toBeInTheDocument()
 })
 
+test('the store list truncates descriptions; the landing page shows them whole', () => {
+  const { unmount } = render(<ItemTable items={[providerItem]} />)
+  expect(screen.getByText('OpenAI API provider with GPT-4o support')).toHaveClass('truncate')
+  unmount()
+  render(<ItemTable items={[providerItem]} wrapDescriptions />)
+  expect(screen.getByText('OpenAI API provider with GPT-4o support')).not.toHaveClass('truncate')
+})
+
 test('formats install counts: 1.2M, 999, 1.5K', () => {
   render(
     <ItemTable
