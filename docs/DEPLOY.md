@@ -41,7 +41,12 @@ API 已接入：`POST /api/billing/checkout` 建订单，`POST /api/webhooks/waf
 | `WAFFO_PRODUCT_ID_PRO_MONTHLY` / `WAFFO_PRODUCT_ID_PRO_YEARLY` / `WAFFO_PRODUCT_ID_LIFETIME` | 产品 ID |
 | `WAFFO_CHECKOUT_SUCCESS_URL` | 付款后跳转。只认这个配置，请求体里的地址会被忽略 |
 
-Waffo 的 webhook 地址是 `https://agent-store-test.panghuli.tech/api/webhooks/waffo`，`apps/api/scripts/waffo-setup.ts` 默认就配这个地址。
+Waffo 的 webhook 地址是 `https://agent-store-test.panghuli.tech/api/webhooks/waffo`，`apps/api/scripts/waffo-setup.ts` 默认就配这个地址。脚本按名称找 `AgentStore` 店铺（同一商户下还有其他项目的店铺），已有的订阅商品直接沿用，已有的 webhook 只改地址，可以重复执行。先加 `--dry-run` 看它会改什么：
+
+```sh
+pnpm --filter @as/types build
+cd apps/api && WAFFO_MERCHANT_ID=… WAFFO_PRIVATE_KEY_BASE64=… bun run scripts/waffo-setup.ts --dry-run
+```
 
 ## 本地开发
 

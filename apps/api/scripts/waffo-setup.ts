@@ -1,53 +1,75 @@
 /**
- * One-off Waffo Pancake setup: ensures Pro subscription products exist in the
- * merchant's store and registers the webhook. Credentials come from env so no
- * secret is hardcoded:
- *   WAFFO_MERCHANT_ID=... WAFFO_PRIVATE_KEY_PATH=/abs/key.pem \
- *   [WAFFO_WEBHOOK_URL=...] [WAFFO_TEST=true] bun run scripts/waffo-setup.ts
+ * Waffo Pancake setup for the AgentStore store: creates the Pro subscription
+ * products if they are missing and points the webhook at this deployment.
+ * Safe to re-run; existing products are reused and an existing webhook is updated.
+ *   pnpm --filter @as/types build
+ *   WAFFO_MERCHANT_ID=... WAFFO_PRIVATE_KEY_BASE64=... \
+ *   [WAFFO_STORE_NAME=AgentStore] [WAFFO_WEBHOOK_URL=...] [WAFFO_TEST=true] \
+ *   bun run scripts/waffo-setup.ts [--dry-run]
  */
-import { readFileSync } from 'fs'
-import { WaffoPancake } from '@waffo/pancake-ts'
 import { PRICING } from '@as/types'
+import { getWaffoClient } from '../src/waffo'
 
-const merchantId = process.env['WAFFO_MERCHANT_ID']
-const keyPath = process.env['WAFFO_PRIVATE_KEY_PATH']
+const storeName = process.env['WAFFO_STORE_NAME'] ?? 'AgentStore'
 const webhookUrl = process.env['WAFFO_WEBHOOK_URL'] ?? 'https://agent-store-test.panghuli.tech/api/webhooks/waffo'
 const testMode = process.env['WAFFO_TEST'] !== 'false'
-if (!merchantId || !keyPath) throw new Error('Set WAFFO_MERCHANT_ID and WAFFO_PRIVATE_KEY_PATH')
+const dryRun = process.argv.includes('--dry-run')
+const events = [
+  'order.completed', 'subscription.activated', 'subscription.payment_succeeded',
+  'subscription.canceling', 'subscription.uncanceled', 'subscription.updated',
+  'subscription.canceled', 'subscription.past_due',
+]
 
-const client = new WaffoPancake({ merchantId, privateKey: readFileSync(keyPath, 'utf-8') })
+type Webhook = { id: string; channel: string; url: string; testMode: boolean; events: string[] }
+type Store = { id: string; name: string; storeWebhooks: Webhook[] }
 
-const res = await client.graphql.query<{ stores: Array<{ id: string; name: string; status: string }> }>({
-  query: `query { stores { id name status } }`,
+const client = getWaffoClient()
+
+const res = await client.graphql.query<{ stores: Store[] }>({
+  query: `query { stores { id name storeWebhooks { id channel url testMode events } } }`,
 })
 const stores = res.data?.stores ?? []
-console.log('stores:', JSON.stringify(stores))
-const store = stores[0]
-if (!store) throw new Error('No store found for this merchant')
-console.log('using store:', store.id, store.name)
+// The merchant owns stores for other projects too, so never fall back to the first one.
+const store = stores.find((s) => s.name === storeName)
+if (!store) throw new Error(`No store named ${storeName}; found: ${stores.map((s) => s.name).join(', ')}`)
+console.log('store:', store.id, store.name, dryRun ? '(dry run)' : '')
 
-const monthly = await client.subscriptionProducts.create({
-  storeId: store.id, name: 'Pro Monthly', billingPeriod: 'monthly' as never,
-  prices: { USD: { amount: PRICING.monthly.amount, taxIncluded: true, taxCategory: PRICING.monthly.taxCategory } },
-  metadata: { trialDays: PRICING.trialDays },
+const existing = await client.graphql.query<{ subscriptionProducts: Array<{ id: string; name: string }> }>({
+  query: `query ($storeId: String!) { subscriptionProducts(storeId: $storeId) { id name } }`,
+  variables: { storeId: store.id },
 })
-const yearly = await client.subscriptionProducts.create({
-  storeId: store.id, name: 'Pro Yearly', billingPeriod: 'yearly' as never,
-  prices: { USD: { amount: PRICING.yearly.amount, taxIncluded: true, taxCategory: PRICING.yearly.taxCategory } },
-  metadata: { trialDays: PRICING.trialDays },
-})
+const products = existing.data?.subscriptionProducts ?? []
 
-await client.webhooks.add({
-  storeId: store.id, channel: 'http', url: webhookUrl, testMode,
-  events: [
-    'order.completed', 'subscription.activated', 'subscription.payment_succeeded',
-    'subscription.canceling', 'subscription.uncanceled', 'subscription.updated',
-    'subscription.canceled', 'subscription.past_due',
-  ] as never,
-})
+async function ensureProduct(storeId: string, name: string, period: 'monthly' | 'yearly'): Promise<string> {
+  const found = products.find((p) => p.name === name)
+  if (found) return found.id
+  if (dryRun) return `(would create ${name})`
+  const price = PRICING[period]
+  const created = await client.subscriptionProducts.create({
+    storeId, name, billingPeriod: period as never,
+    prices: { USD: { amount: price.amount, taxIncluded: true, taxCategory: price.taxCategory } },
+    metadata: { trialDays: PRICING.trialDays },
+  })
+  return created.product.id
+}
+
+const monthlyId = await ensureProduct(store.id, 'Pro Monthly', 'monthly')
+const yearlyId = await ensureProduct(store.id, 'Pro Yearly', 'yearly')
+
+const hook = store.storeWebhooks.find((w) => w.channel === 'http' && w.testMode === testMode)
+const sameEvents = hook !== undefined && [...hook.events].sort().join() === [...events].sort().join()
+if (hook && hook.url === webhookUrl && sameEvents) {
+  console.log('webhook unchanged:', hook.id)
+} else if (hook) {
+  console.log(`webhook ${hook.id}: ${hook.url} -> ${webhookUrl}`)
+  if (!dryRun) await client.webhooks.update({ id: hook.id, url: webhookUrl, events: events as never })
+} else {
+  console.log('webhook: add', webhookUrl)
+  if (!dryRun) await client.webhooks.add({ storeId: store.id, channel: 'http', url: webhookUrl, testMode, events: events as never })
+}
 
 console.log('---RESULT---')
 console.log('STORE_ID=' + store.id)
-console.log('MONTHLY_PRODUCT_ID=' + monthly.product.id)
-console.log('YEARLY_PRODUCT_ID=' + yearly.product.id)
+console.log('MONTHLY_PRODUCT_ID=' + monthlyId)
+console.log('YEARLY_PRODUCT_ID=' + yearlyId)
 console.log('WEBHOOK=' + webhookUrl + ' (test=' + testMode + ')')
