@@ -1,6 +1,7 @@
 'use client'
 
 import type { Item } from '@as/types'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { installCommand } from '@/lib/review'
 import { usePhone } from '@/lib/use-phone'
@@ -24,13 +25,9 @@ export function InstallPanel({ item }: { item: Pick<Item, 'slug' | 'category' | 
       <div className="mt-2.5 flex flex-col gap-2.5">
         <InstallButton item={item} variant="primary" />
         {!phone && (
-          <>
-            {/* A route handler that redirects to the release assets, not a page. */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a href="/download/latest" className="btn min-h-12 px-5">
-              {t('download')}
-            </a>
-          </>
+          <Link href="/download" className="btn min-h-12 px-5">
+            {t('download')}
+          </Link>
         )}
       </div>
       <p className="mt-2 max-w-[62ch] text-[13px] leading-5 text-ink-2">{phone ? t('phoneNote') : t('fallbackNote')}</p>

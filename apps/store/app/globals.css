@@ -3,7 +3,6 @@
   --plate: #faf6f5;
   --ink: #16181a;
   --ink-2: #55585c;
-  --ink-3: #63666a;
   --on-ink: #f5f4f6;
   --line: #c9c7c4;
   --line-strong: #8e8c89;
@@ -16,32 +15,8 @@
   --stamp-bg: #dcddf3;
   --stamp-ink: #16181a;
   --stamp-blend: multiply;
-
-  --green: #1d6b45;
-  --green-soft: rgba(29, 107, 69, 0.1);
-  --amber: #8a5300;
-  --amber-soft: rgba(138, 83, 0, 0.1);
-  --star: #8a5300;
   --red: #b3261e;
-
-  /* Legacy names, still used by the pages that have not been redesigned. */
-  --wall: var(--paper);
-  --win: var(--plate);
-  --sidebar: var(--fill);
-  --content: var(--paper);
-  --chrome: var(--fill);
-  --panel: var(--plate);
-  --panel-2: var(--fill);
-  --border: var(--line);
-  --border-strong: var(--line-strong);
-  --text: var(--ink);
-  --text-2: var(--ink-2);
-  --text-3: var(--ink-3);
-  --accent: var(--ink);
-  --on-accent: var(--on-ink);
-  --accent-soft: var(--sel);
-  --code-bg: var(--fill);
-  --term-bg: #16181a;
+  --scrim: rgba(22, 24, 26, 0.4);
 
   color-scheme: light;
 }
@@ -51,7 +26,6 @@
   --plate: #1b1d20;
   --ink: #f0eff2;
   --ink-2: #aeb0b5;
-  --ink-3: #9a9ca1;
   --on-ink: #131517;
   --line: #3a3d41;
   --line-strong: #6a6d72;
@@ -61,14 +35,8 @@
   --selection-fg: #f0eff2;
   /* multiply would dissolve the pale seal into a dark ground */
   --stamp-blend: normal;
-
-  --green: #7ad3a6;
-  --green-soft: rgba(122, 211, 166, 0.14);
-  --amber: #e9b45c;
-  --amber-soft: rgba(233, 180, 92, 0.14);
-  --star: #e9b45c;
   --red: #f28b82;
-  --term-bg: #0c0d0e;
+  --scrim: rgba(0, 0, 0, 0.6);
 
   color-scheme: dark;
 }
@@ -157,6 +125,62 @@
 
   .btn-primary:hover {
     background: var(--ink-2);
+  }
+
+.field {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--line-strong);
+    background: var(--plate);
+    padding: 0 12px;
+    color: var(--ink);
+    font-size: 14px;
+    border-radius: 0;
+    transition: border-color 150ms;
+  }
+
+  .field:hover {
+    border-color: var(--ink-2);
+  }
+
+  .field:focus {
+    border-color: var(--ink);
+    outline: none;
+  }
+
+  .field:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  .field::placeholder {
+    color: var(--ink-2);
+  }
+
+  .link {
+    text-decoration-line: underline;
+    text-decoration-color: var(--line-strong);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 150ms;
+  }
+
+  .link:hover {
+    text-decoration-color: var(--ink);
+  }
+
+  /* The reading column of documents (docs, legal). */
+  .doc-body {
+    max-width: 68ch;
+    font-size: 16px;
+    line-height: 1.75;
+  }
+
+  .doc-body :not(pre) > code {
+    background: var(--fill);
+    padding: 1px 4px;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.875em;
   }
 
   .menu {

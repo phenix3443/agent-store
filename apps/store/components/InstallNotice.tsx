@@ -2,6 +2,7 @@
 
 import * as Toast from '@radix-ui/react-toast'
 import { createContext, useCallback, useContext, useState } from 'react'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
 interface Notice {
@@ -67,11 +68,9 @@ export function InstallNoticeProvider({ children }: { children: React.ReactNode 
               {notice.command}
             </code>
             <Toast.Action altText={t('downloadAlt')} asChild>
-              {/* A route handler that redirects to the release assets, not a page. */}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-              <a href="/download/latest" className="btn mt-3 min-h-9">
+              <Link href="/download" className="btn mt-3 min-h-9">
                 {t('download')}
-              </a>
+              </Link>
             </Toast.Action>
           </Toast.Root>
         )}

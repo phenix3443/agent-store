@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { StoreClient } from '@as/sdk'
 import { getAuthToken } from '@/lib/auth/token'
 
@@ -12,9 +13,9 @@ interface UpgradeProButtonProps {
 }
 
 // Starts a Pro checkout (monthly) via the API server, binding the subscription
-// to the signed-in user with their Supabase session token — mirrors the token
-// pattern used by PublishModal. On success redirects to the hosted checkout page.
+// to the signed-in user with their session token. On success redirects to the hosted checkout page.
 export function UpgradeProButton({ className, children }: UpgradeProButtonProps) {
+  const t = useTranslations('site.dashboard')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,7 +26,7 @@ export function UpgradeProButton({ className, children }: UpgradeProButtonProps)
     try {
       const token = await getAuthToken()
       if (!token) {
-        setError('请先登录')
+        setError(t('loginFirst'))
         return
       }
       const result = await new StoreClient(API_URL).createCheckout(
@@ -33,12 +34,12 @@ export function UpgradeProButton({ className, children }: UpgradeProButtonProps)
         { token },
       )
       if (result.error || !result.data) {
-        setError(result.error ?? '发起结算失败')
+        setError(result.error ?? t('checkoutFailed'))
         return
       }
       window.location.href = result.data.checkoutUrl
     } catch (err) {
-      setError(err instanceof Error ? err.message : '发起结算失败')
+      setError(err instanceof Error ? err.message : t('checkoutFailed'))
     } finally {
       setBusy(false)
     }
@@ -50,14 +51,11 @@ export function UpgradeProButton({ className, children }: UpgradeProButtonProps)
         type="button"
         onClick={handleClick}
         disabled={busy}
-        className={
-          className ??
-          'flex h-9 items-center rounded-[10px] bg-store-accent px-[15px] text-[12.5px] font-semibold text-store-on-accent shadow-[0_4px_14px_var(--accent-soft)] hover:brightness-110 disabled:opacity-60'
-        }
+        className={className ?? 'btn min-h-12 px-5'}
       >
-        {busy ? '跳转中…' : (children ?? '升级 Pro')}
+        {busy ? t('redirecting') : (children ?? t('upgrade'))}
       </button>
-      {error && <span className="text-[11px] text-store-red">{error}</span>}
+      {error && <span role="alert" className="text-[13px] text-danger">{error}</span>}
     </div>
   )
 }

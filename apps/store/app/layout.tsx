@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import { ClientStateProvider } from '@/components/ClientStateProvider'
 import { Header } from '@/components/Header'
+import { SiteFooter } from '@/components/SiteFooter'
 import { InstallNoticeProvider } from '@/components/InstallNotice'
 import { SkipLink } from '@/components/SkipLink'
 import { ThemeProvider } from '@/components/ThemeProvider'
@@ -68,6 +69,7 @@ export default async function RootLayout({
                 <main id="main" tabIndex={-1} className="flex-1 outline-none">
                   {children}
                 </main>
+                <SiteFooter />
               </div>
               {drawer}
               </InstallNoticeProvider>

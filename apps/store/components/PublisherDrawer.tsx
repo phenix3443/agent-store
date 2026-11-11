@@ -4,7 +4,7 @@ import type { Publisher, Item } from '@as/types'
 import * as Dialog from '@radix-ui/react-dialog'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { itemHref } from './ItemTable'
+import { itemHref } from '@/lib/item-href'
 import { TierLabel } from './TierLabel'
 
 interface PublisherDrawerProps {
@@ -20,7 +20,7 @@ export function PublisherDrawer({ publisher, items, open, onOpenChange }: Publis
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[45] bg-ink/40" />
+        <Dialog.Overlay className="fixed inset-0 z-[45] bg-scrim" />
         <Dialog.Content
           aria-describedby={undefined}
           className="fixed inset-y-0 right-0 z-[45] flex w-full flex-col overflow-y-auto border-ink bg-plate p-6 sm:max-w-[520px] sm:border-l"

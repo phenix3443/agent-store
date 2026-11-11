@@ -1,19 +1,15 @@
 import type { Metadata } from 'next'
+import { LegalPage, type LegalSection } from '@/components/LegalPage'
 
 export const metadata: Metadata = {
   title: '服务条款',
   description: 'Agent Store 服务条款：使用本服务的规则、账号、订阅与免责声明。',
 }
 
-const UPDATED = '2026 年 7 月 13 日'
+const UPDATED = '2026-07-13'
 
-interface Section {
-  title: string
-  body?: string
-  bullets?: string[]
-}
 
-const SECTIONS: Section[] = [
+const SECTIONS: LegalSection[] = [
   {
     title: '接受条款',
     body: '欢迎使用 Agent Store。访问 agent-store.panghuli.tech 网站或使用桌面客户端，即表示你同意受本服务条款约束。若你不同意，请勿使用本服务。',
@@ -74,28 +70,5 @@ const SECTIONS: Section[] = [
 ]
 
 export default function TermsPage() {
-  return (
-    <div className="bg-store-content">
-      <div className="mx-auto max-w-[720px] px-6 pb-20 pt-12 sm:px-10">
-        <h1 className="text-3xl font-extrabold tracking-tight text-store-text">服务条款</h1>
-        <div className="mt-2.5 text-sm text-store-text-3">最后更新：{UPDATED}</div>
-        {SECTIONS.map((s) => (
-          <section key={s.title} className="mt-[34px] border-t border-store-border pt-7">
-            <h2 className="mb-3 text-[19px] font-bold tracking-tight text-store-text">{s.title}</h2>
-            {s.body && <p className="text-sm leading-[1.75] text-store-text-2">{s.body}</p>}
-            {s.bullets && (
-              <ul className="mt-3 flex flex-col gap-2">
-                {s.bullets.map((b) => (
-                  <li key={b} className="flex gap-2.5 text-sm leading-[1.7] text-store-text-2">
-                    <span className="mt-[9px] h-1 w-1 flex-shrink-0 rounded-full bg-store-accent" />
-                    <span>{b}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        ))}
-      </div>
-    </div>
-  )
+  return <LegalPage title="服务条款" updated={UPDATED} sections={SECTIONS} />
 }

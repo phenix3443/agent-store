@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Check } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { StoreClient } from '@as/sdk'
 import { PRICING, formatPrice } from '@as/types'
 import { getAuthToken } from '@/lib/auth/token'
@@ -10,140 +11,133 @@ import { getAuthToken } from '@/lib/auth/token'
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
 type Period = 'monthly' | 'yearly'
-
-const FREE_FEATURES = ['浏览、搜索、安装全部资源', '基础用量统计', '本地代理（单 / 双上游 + 失败降级）']
-const PRO_FEATURES = [
-  'Free 的全部功能',
-  '预算与超支告警',
-  '高级用量分析 + 账单导出',
-  '智能路由：多上游故障转移 + 健康感知避让',
-  '多 Key 轮换：跨多把密钥自动分摊限流',
-]
-const LIFETIME_FEATURES = ['Pro 的全部本地功能', '一次付清、永久使用', '无订阅、无月费']
+type Plan = Period | 'lifetime'
 
 export default function PricingPage() {
+  const t = useTranslations('site.pricing')
   const [period, setPeriod] = useState<Period>('yearly')
   const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(false)
 
-  async function upgrade(plan: 'monthly' | 'yearly' | 'lifetime', trial = false) {
+  async function checkout(plan: Plan, trial = false) {
     const key = trial ? `${plan}-trial` : plan
     if (busy) return
     setBusy(key)
-    setError(null)
+    setError(false)
     try {
       const token = await getAuthToken()
       const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token: token ?? undefined })
       if (result.data?.checkoutUrl) window.open(result.data.checkoutUrl, '_blank', 'noopener,noreferrer')
-      else setError(result.error ?? '发起支付失败')
+      else setError(true)
     } catch {
-      setError('发起支付失败')
+      setError(true)
     } finally {
       setBusy(null)
     }
   }
 
+  const per = period === 'monthly' ? t('perMonth') : t('perYear')
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-store-text">简单透明的定价</h1>
-        <p className="mx-auto mt-3 max-w-xl text-sm text-store-text-2">
-          Pro 每月帮你省下的 API 花费，通常远超订阅费本身。先免费用，随时升级。
+    <div className="px-4 pb-20 pt-10 lg:px-10 lg:pt-14">
+      <header className="grid gap-x-10 gap-y-5 pb-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,46ch)] lg:items-end">
+        <h1 className="text-[44px] leading-none tracking-[-0.03em] sm:text-[56px] lg:text-[88px]">{t('title')}</h1>
+        <p className="max-w-[52ch] text-[15px] leading-6 text-ink-2">{t('lede')}</p>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-4">
+        <div role="group" aria-label={t('period')} className="inline-flex border border-ink">
+          {(['monthly', 'yearly'] as Period[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={period === p}
+              onClick={() => setPeriod(p)}
+              className="min-h-10 px-4 font-mono text-xs uppercase tracking-[0.14em] transition-colors hover:bg-sel aria-pressed:bg-ink aria-pressed:text-on-ink"
+            >
+              {t(p)}
+            </button>
+          ))}
+        </div>
+        {period === 'yearly' && <span className="text-sm text-ink-2">{t('yearlyNote')}</span>}
+      </div>
+
+      {error && (
+        <p role="alert" className="mb-4 text-sm text-danger">
+          {t('failed')}
         </p>
-      </div>
+      )}
 
-      {/* 月 / 年 切换 */}
-      <div className="mt-8 flex items-center justify-center gap-1 rounded-full border border-store-border bg-store-panel p-1 text-sm mx-auto w-fit">
-        {(['monthly', 'yearly'] as Period[]).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
-            className={`rounded-full px-4 py-1.5 font-medium ${period === p ? 'bg-store-accent text-store-on-accent' : 'text-store-text-2'}`}
-          >
-            {p === 'monthly' ? '按月' : '按年（省 2 个月）'}
-          </button>
-        ))}
-      </div>
-
-      {error && <p className="mt-4 text-center text-xs text-store-red">{error}</p>}
-
-      <div className="mt-10 grid gap-5 md:grid-cols-3">
-        {/* Free */}
-        <Card title="Free" price="$0" sub="永久免费">
-          <FeatureList items={FREE_FEATURES} />
-          <Link href="/store" className="mt-6 block rounded-lg border border-store-border-strong px-4 py-2.5 text-center text-sm font-semibold text-store-text hover:border-store-accent">
-            免费开始
+      <div className="grid border-t border-ink md:grid-cols-3">
+        <Plan name={t('free')} price="$0" sub={t('freeSub')} features={t.raw('freeFeatures') as string[]}>
+          <Link href="/store" className="btn min-h-12 w-full px-5">
+            {t('startFree')}
           </Link>
-        </Card>
+        </Plan>
 
-        {/* Pro */}
-        <Card title="Pro" price={formatPrice(period)} sub={period === 'monthly' ? '/ 月' : '/ 年'} highlighted>
-          <FeatureList items={PRO_FEATURES} />
+        <Plan name={t('pro')} price={formatPrice(period)} sub={per} features={t.raw('proFeatures') as string[]} emphasis>
           <button
             type="button"
-            onClick={() => upgrade(period, true)}
+            onClick={() => checkout(period, true)}
             disabled={busy != null}
-            className="mt-6 w-full rounded-lg bg-store-accent px-4 py-2.5 text-center text-sm font-semibold text-store-on-accent hover:opacity-90 disabled:opacity-50"
+            className="btn btn-primary w-full"
           >
-            {busy === `${period}-trial` ? '发起中…' : `开始 ${PRICING.trialDays} 天免费试用`}
+            {busy === `${period}-trial` ? t('working') : t('trial', { days: PRICING.trialDays })}
           </button>
-          <button
-            type="button"
-            onClick={() => upgrade(period)}
-            disabled={busy != null}
-            className="mt-2 w-full rounded-lg border border-store-border-strong px-4 py-2 text-center text-sm font-medium text-store-text-2 hover:border-store-accent disabled:opacity-50"
-          >
-            {busy === period ? '发起中…' : '直接升级 Pro'}
+          <button type="button" onClick={() => checkout(period)} disabled={busy != null} className="btn mt-2.5 min-h-10 w-full">
+            {busy === period ? t('working') : t('upgrade')}
           </button>
-          <p className="mt-2 text-center text-[11px] text-store-text-3">
-            {PRICING.trialDays} 天免费，之后 {formatPrice(period)}{period === 'monthly' ? ' / 月' : ' / 年'}，随时取消
+          <p className="mt-3 text-[13px] leading-5 text-ink-2">
+            {t('trialNote', { days: PRICING.trialDays, price: formatPrice(period), per })}
           </p>
-        </Card>
+        </Plan>
 
-        {/* Lifetime */}
-        <Card title="终身买断" price={formatPrice('lifetime')} sub="一次性">
-          <FeatureList items={LIFETIME_FEATURES} />
-          <button
-            type="button"
-            onClick={() => upgrade('lifetime')}
-            disabled={busy != null}
-            className="mt-6 w-full rounded-lg border border-store-border-strong px-4 py-2.5 text-center text-sm font-semibold text-store-text hover:border-store-accent disabled:opacity-50"
-          >
-            {busy === 'lifetime' ? '发起中…' : '买断'}
+        <Plan name={t('lifetime')} price={formatPrice('lifetime')} sub={t('lifetimeSub')} features={t.raw('lifetimeFeatures') as string[]}>
+          <button type="button" onClick={() => checkout('lifetime')} disabled={busy != null} className="btn min-h-12 w-full px-5">
+            {busy === 'lifetime' ? t('working') : t('buy')}
           </button>
-        </Card>
+        </Plan>
       </div>
 
-      <p className="mt-8 text-center text-xs text-store-text-3">
-        由 Waffo（Merchant of Record）代收，价格含税。终身买断覆盖全部本地 Pro 功能。
+      <p className="mt-8 max-w-[70ch] text-[13px] leading-5 text-ink-2">{t('merchant')}</p>
+    </div>
+  )
+}
+
+function Plan({
+  name,
+  price,
+  sub,
+  features,
+  emphasis,
+  children,
+}: {
+  name: string
+  price: string
+  sub: string
+  features: string[]
+  emphasis?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      aria-label={name}
+      className={`flex flex-col border-b border-line py-8 md:border-b-0 md:px-6 md:first:pl-0 md:last:pr-0 md:[&:not(:first-child)]:border-l ${emphasis ? 'bg-plate md:!px-6' : ''} ${emphasis ? 'px-4 md:px-6' : ''}`}
+    >
+      <h2 className={`text-[22px] leading-7 ${emphasis ? 'font-medium' : ''}`}>{name}</h2>
+      <p className="mt-4 flex items-baseline gap-2">
+        <span className="font-mono text-[44px] leading-none tracking-[-0.02em]">{price}</span>
+        <span className="text-sm text-ink-2">{sub}</span>
       </p>
-    </div>
-  )
-}
-
-function Card({ title, price, sub, highlighted, children }: { title: string; price: string; sub: string; highlighted?: boolean; children: React.ReactNode }) {
-  return (
-    <div className={`flex flex-col rounded-2xl border bg-store-panel p-6 ${highlighted ? 'border-store-accent' : 'border-store-border'}`}>
-      <div className="text-sm font-semibold text-store-text-2">{title}</div>
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-3xl font-bold text-store-text">{price}</span>
-        <span className="text-sm text-store-text-3">{sub}</span>
-      </div>
-      <div className="mt-5 flex flex-1 flex-col">{children}</div>
-    </div>
-  )
-}
-
-function FeatureList({ items }: { items: string[] }) {
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {items.map((f) => (
-        <li key={f} className="flex items-start gap-2 text-[13px] text-store-text-2">
-          <Check size={15} className="mt-0.5 shrink-0 text-store-accent" />
-          <span>{f}</span>
-        </li>
-      ))}
-    </ul>
+      <ul className="mb-8 mt-7 flex-1">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2.5 border-t border-line py-2.5 text-sm leading-[22px] last:border-b">
+            <Check size={15} aria-hidden className="mt-[3px] shrink-0" />
+            {f}
+          </li>
+        ))}
+      </ul>
+      {children}
+    </section>
   )
 }

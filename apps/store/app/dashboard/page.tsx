@@ -1,38 +1,46 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { X } from 'lucide-react'
+import { getTranslations } from 'next-intl/server'
 import { auth } from '@/lib/auth/server'
 import { StoreClient } from '@as/sdk'
 import type { Item, Plan } from '@as/types'
-import { CATEGORY_META, formatDownloads } from '@/lib/item-meta'
+import { formatDownloads } from '@/lib/item-meta'
+import { PendingIcon } from '@/components/ReviewStatus'
 import { UpgradeProButton } from '@/components/UpgradeProButton'
 
 // All catalog/publisher data goes through the standalone API server.
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
-const STATUS_META: Record<Item['status'], { label: string; color: string; soft: string }> = {
-  published: { label: '已发布', color: 'var(--green)', soft: 'var(--green-soft)' },
-  pending: { label: '审核中', color: 'var(--amber)', soft: 'rgba(240, 179, 74, 0.14)' },
-  rejected: { label: '未通过', color: 'var(--red)', soft: 'rgba(243, 103, 95, 0.14)' },
+const STATUS_KEY: Record<Item['status'], string> = {
+  published: 'statusPublished',
+  pending: 'statusPending',
+  rejected: 'statusRejected',
 }
 
-const PLAN_META: Record<Plan, { label: string; premium: boolean }> = {
-  free: { label: 'Free', premium: false },
-  pro: { label: 'Pro', premium: true },
-  team: { label: 'Team', premium: true },
-}
+const PLAN_KEY: Record<Plan, string> = { free: 'planFree', pro: 'planPro', team: 'planTeam' }
 
-function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+/** Shape, not colour: a filled square for published, a dashed ring while in review, a cross when rejected. */
+function StatusMark({ status, label }: { status: Item['status']; label: string }) {
   return (
-    <div
-      className="rounded-2xl border border-store-border p-[18px]"
-      style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.028), transparent 42%), var(--panel)' }}
-    >
-      <div className="text-[11.5px] font-medium uppercase tracking-wider text-store-text-3">{label}</div>
-      <div className="mt-2 font-mono text-[26px] font-bold leading-none tracking-tight text-store-text">{value}</div>
-      {hint && <div className="mt-1.5 text-[11.5px] text-store-text-3">{hint}</div>}
-    </div>
+    <span className="inline-flex items-center gap-2 whitespace-nowrap" data-status={status}>
+      {status === 'published' && (
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+          <rect x="2" y="2" width="8" height="8" fill="currentColor" />
+        </svg>
+      )}
+      {status === 'pending' && <PendingIcon size={16} />}
+      {status === 'rejected' && <X size={14} aria-hidden />}
+      <span className={status === 'pending' ? 'text-ink-2' : ''}>{label}</span>
+    </span>
   )
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('site.dashboard')
+  return { title: t('metaTitle'), robots: { index: false } }
 }
 
 export default async function DashboardPage() {
@@ -41,21 +49,21 @@ export default async function DashboardPage() {
   const user = session?.user
   if (!user) redirect('/')
 
+  const t = await getTranslations('site.dashboard')
+  const tc = await getTranslations('store.category')
+
   const githubUsername = user.username ?? undefined
   if (!githubUsername) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="mb-4 text-2xl font-semibold text-store-text">我的仪表盘</h1>
-        <div className="flex h-32 items-center justify-center rounded-xl border border-store-border bg-store-panel">
-          <p className="text-store-text-3">仪表盘按 GitHub 用户名统计你发布的内容。请用 GitHub 登录一次，账号会自动关联。</p>
-        </div>
+      <div className="px-4 pb-20 pt-10 lg:px-10 lg:pt-14">
+        <h1 className="text-[40px] leading-[1.05] tracking-[-0.03em] sm:text-[56px]">{t('noUsernameTitle')}</h1>
+        <p className="mt-6 max-w-[56ch] border-t border-ink pt-6 text-[15px] leading-6 text-ink-2">{t('noUsernameBody')}</p>
       </div>
     )
   }
 
   const avatarUrl = user.image ?? undefined
   const email = user.email ?? ''
-  const initial = (githubUsername || email || 'U').charAt(0).toUpperCase()
 
   // Fetch this publisher's submissions and plan via the API server, authenticated
   // with a Better Auth JWT (the API resolves the publisher from its username
@@ -74,153 +82,115 @@ export default async function DashboardPage() {
 
   const items: Item[] = itemsResult.data ?? []
   const plan: Plan = entResult.data?.plan ?? 'free'
-  const planMeta = PLAN_META[plan]
 
   const totalItems = items.length
   const totalDownloads = items.reduce((sum, it) => sum + it.downloads, 0)
   const pendingCount = items.filter((it) => it.status === 'pending').length
   const publishedCount = items.filter((it) => it.status === 'published').length
 
+  const stats = [
+    { label: t('statItems'), value: String(totalItems) },
+    { label: t('statInstalls'), value: formatDownloads(totalDownloads) },
+    { label: t('statPending'), value: String(pendingCount) },
+    { label: t('statPublished'), value: String(publishedCount) },
+  ]
+  const head = 'label px-3 py-0 text-left font-normal'
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Account + subscription header */}
-      <section
-        className="mb-6 flex flex-col gap-4 rounded-2xl border border-store-border p-5 sm:flex-row sm:items-center"
-        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.028), transparent 42%), var(--panel)' }}
-      >
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt={githubUsername}
-            className="h-14 w-14 shrink-0 rounded-full border border-store-border object-cover"
-          />
-        ) : (
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[18px] font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, #7c82ff, #b06ad9)' }}
-          >
-            {initial}
+    <div className="px-4 pb-20 pt-10 lg:px-10 lg:pt-14">
+      <header className="grid gap-x-10 gap-y-6 border-b border-ink pb-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <div className="flex min-w-0 items-center gap-5">
+          {avatarUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="h-16 w-16 shrink-0 border border-line object-cover sm:h-20 sm:w-20" />
+          )}
+          <div className="min-w-0">
+            <h1 className="truncate text-[40px] leading-[1.1] tracking-[-0.03em] sm:text-[56px]">{githubUsername}</h1>
+            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-2">
+              <span>
+                {t('plan')} <b className="font-mono font-medium text-ink">{t(PLAN_KEY[plan])}</b>
+              </span>
+              {email && <span className="truncate">{email}</span>}
+            </p>
           </div>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate font-mono text-[18px] font-bold tracking-tight text-store-text">
-              {githubUsername}
-            </h1>
-            <span
-              className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-bold"
-              style={
-                planMeta.premium
-                  ? { background: 'var(--accent-soft)', color: 'var(--accent)', borderColor: 'var(--accent)' }
-                  : { background: 'var(--panel-2)', color: 'var(--text-2)', borderColor: 'var(--border-strong)' }
-              }
-            >
-              {planMeta.label}
-            </span>
-          </div>
-          {email && <p className="mt-0.5 truncate text-[12.5px] text-store-text-3">{email}</p>}
         </div>
-
-        {plan === 'free' ? (
-          <div className="flex flex-col items-start gap-1 sm:items-end">
-            <UpgradeProButton />
-            <span className="text-[11px] text-store-text-3">解锁高级用量分析、智能路由与多密钥轮换</span>
-          </div>
-        ) : (
-          <span className="text-[12px] font-medium text-store-green">Pro 权益已生效</span>
-        )}
-      </section>
-
-      {/* Overview stat tiles */}
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="我的资源" value={String(totalItems)} hint="全部提交" />
-        <StatTile label="总下载量" value={formatDownloads(totalDownloads)} hint="所有已发布资源" />
-        <StatTile label="待审核" value={String(pendingCount)} hint="等待人工审核" />
-        <StatTile label="已发布" value={String(publishedCount)} hint="正在商店展示" />
-      </div>
-
-      {/* My submissions */}
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium uppercase tracking-wider text-store-text-2">我的提交</h2>
-        <Link
-          href="/store?publish=1"
-          className="rounded-lg bg-store-accent px-4 py-2 text-[12.5px] font-semibold text-store-on-accent hover:brightness-110"
-        >
-          发布资源
-        </Link>
-      </div>
-
-      {items.length > 0 ? (
-        <div className="overflow-x-auto rounded-xl border border-store-border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-store-border bg-store-panel">
-                <th className="px-4 py-3 text-left font-medium text-store-text-2">名称</th>
-                <th className="px-4 py-3 text-left font-medium text-store-text-2">类型</th>
-                <th className="px-4 py-3 text-left font-medium text-store-text-2">版本</th>
-                <th className="px-4 py-3 text-right font-medium text-store-text-2">下载量</th>
-                <th className="px-4 py-3 text-right font-medium text-store-text-2">评分</th>
-                <th className="px-4 py-3 text-left font-medium text-store-text-2">状态</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const cat = CATEGORY_META[item.category]
-                const status = STATUS_META[item.status] ?? STATUS_META.pending
-                return (
-                  <tr key={item.id} className="border-b border-store-border bg-store-panel-2 last:border-0">
-                    <td className="px-4 py-3 font-mono font-medium text-store-text">{item.name}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="inline-flex items-center rounded-md px-2 py-[3px] text-[10.5px] font-bold"
-                        style={{ background: cat.soft, color: cat.color }}
-                      >
-                        {cat.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-store-text-2">{item.version}</td>
-                    <td className="px-4 py-3 text-right font-mono text-store-text-2">
-                      ↓ {formatDownloads(item.downloads)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-store-text-2">
-                      {item.rating > 0 ? <span className="text-store-star">★ {item.rating.toFixed(1)}</span> : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium"
-                        style={{ background: status.soft, color: status.color, borderColor: status.color }}
-                      >
-                        {status.label}
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-store-border-strong bg-store-panel px-6 py-14 text-center">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-2xl text-[22px]"
-            style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
-          >
-            +
-          </div>
-          <p className="text-[14px] font-medium text-store-text">还没有任何提交</p>
-          <p className="max-w-sm text-[12.5px] text-store-text-3">
-            发布你的第一个供应商、技能或 MCP，让社区在 Agent Store 中发现并安装它。
-          </p>
-          <Link
-            href="/store?publish=1"
-            className="mt-1 rounded-lg bg-store-accent px-4 py-2 text-[12.5px] font-semibold text-store-on-accent hover:brightness-110"
-          >
-            发布第一个资源
+        <div className="flex flex-wrap items-center gap-3 md:justify-end">
+          {plan === 'free' ? (
+            <UpgradeProButton className="btn min-h-12 px-5">{t('upgrade')}</UpgradeProButton>
+          ) : (
+            <span className="text-sm text-ink-2">{t('proActive')}</span>
+          )}
+          <Link href="/store?publish=1" className="btn btn-primary">
+            {t('publish')}
           </Link>
         </div>
-      )}
+      </header>
+
+      <dl aria-label={t('statsLabel')} className="grid grid-cols-2 border-b border-line lg:grid-cols-4">
+        {stats.map((stat, i) => (
+          <div key={stat.label} className={`py-6 ${i % 2 === 1 ? 'border-l border-line pl-5' : ''} ${i >= 2 ? 'border-t border-line lg:border-t-0' : ''} lg:border-l lg:pl-6 lg:first:border-l-0 lg:first:pl-0`}>
+            <dt className="label">{stat.label}</dt>
+            <dd className="mt-3 font-mono text-[40px] leading-none tracking-[-0.02em]">{stat.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <section aria-labelledby="submissions" className="mt-14">
+        <h2 id="submissions" className="border-b border-ink pb-3 text-[22px] leading-7">
+          {t('submissions')}
+        </h2>
+        {items.length > 0 ? (
+          <>
+          <ul className="md:hidden">
+            {items.map((item) => (
+              <li key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-b border-line py-4 text-sm">
+                <span className="break-all font-mono font-medium">{item.name}</span>
+                <span className="text-right font-mono">{formatDownloads(item.downloads)}</span>
+                <span className="text-[13px] text-ink-2">
+                  {tc(item.category)} · v{item.version}
+                </span>
+                <span className="justify-self-end">
+                  <StatusMark status={item.status} label={t(STATUS_KEY[item.status] ?? 'statusPending')} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="h-9 border-b border-line">
+                  <th className={head}>{t('colName')}</th>
+                  <th className={head}>{t('colCategory')}</th>
+                  <th className={head}>{t('colVersion')}</th>
+                  <th className={`${head} text-right`}>{t('colInstalls')}</th>
+                  <th className={`${head} text-right`}>{t('colRating')}</th>
+                  <th className={head}>{t('colStatus')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className="h-16 border-b border-line">
+                    <td className="px-3 font-mono font-medium">{item.name}</td>
+                    <td className="label px-3">{tc(item.category)}</td>
+                    <td className="px-3 font-mono text-ink-2">v{item.version}</td>
+                    <td className="px-3 text-right font-mono">{formatDownloads(item.downloads)}</td>
+                    <td className="px-3 text-right font-mono">{(item.reviewCount ?? 0) > 0 ? item.rating.toFixed(1) : '–'}</td>
+                    <td className="px-3">
+                      <StatusMark status={item.status} label={t(STATUS_KEY[item.status] ?? 'statusPending')} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          </>
+        ) : (
+          <div className="border-b border-line py-14">
+            <p className="text-lg font-medium">{t('emptyTitle')}</p>
+            <p className="mt-1.5 max-w-[56ch] text-sm leading-[22px] text-ink-2">{t('emptyBody')}</p>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useTranslations } from 'next-intl'
 import { FavoriteButton } from './FavoriteButton'
 import { noticeInUse } from './InstallNotice'
-import { itemHref } from './ItemTable'
+import { itemHref } from '@/lib/item-href'
 
 interface DetailDrawerProps {
   item: Item
@@ -21,7 +21,7 @@ export function DetailDrawer({ item, open, onOpenChange, children }: DetailDrawe
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         {/* From lg up the list stays readable beside the drawer, so the overlay only catches clicks. */}
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/40 lg:bg-transparent" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-scrim lg:bg-transparent" />
         <Dialog.Content
           data-item-drawer
           aria-describedby={undefined}

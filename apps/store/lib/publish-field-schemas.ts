@@ -1,10 +1,8 @@
 export interface FieldSchema {
+  /** Also the message key for its label (`site.publish.fields.<key>`). */
   key: string
-  label: string
   type: 'text' | 'url' | 'select'
   options?: string[]
-  /** 'pills' renders options as a clickable pill row instead of a native <select> */
-  widget?: 'pills'
   when?: (vals: Record<string, string>) => boolean
 }
 
@@ -12,41 +10,41 @@ export type PublishType = 'provider' | 'skill' | 'mcp'
 
 export const FIELD_SCHEMAS: Record<PublishType, FieldSchema[]> = {
   provider: [
-    { key: 'name', label: '名称', type: 'text' },
-    { key: 'homepage', label: '主页', type: 'url' },
-    { key: 'baseUrl', label: 'Base URL', type: 'url' },
-    { key: 'supportedModels', label: '支持的模型（逗号分隔）', type: 'text' },
+    { key: 'name', type: 'text' },
+    { key: 'homepage', type: 'url' },
+    { key: 'baseUrl', type: 'url' },
+    { key: 'supportedModels', type: 'text' },
   ],
   skill: [
-    { key: 'name', label: '名称', type: 'text' },
-    { key: 'repo', label: '仓库地址', type: 'url' },
-    { key: 'contentUrl', label: 'SKILL.md 原始链接', type: 'url' },
+    { key: 'name', type: 'text' },
+    { key: 'repo', type: 'url' },
+    { key: 'contentUrl', type: 'url' },
   ],
   mcp: [
-    { key: 'name', label: '名称', type: 'text' },
-    { key: 'homepage', label: '主页', type: 'url' },
-    { key: 'transport', label: '传输方式', type: 'select', options: ['stdio', 'sse', 'http'] },
+    { key: 'name', type: 'text' },
+    { key: 'homepage', type: 'url' },
+    { key: 'transport', type: 'select', options: ['stdio', 'sse', 'http'] },
     {
       key: 'command',
-      label: '启动命令',
+     
       type: 'text',
       when: (vals) => vals.transport === 'stdio',
     },
     {
       key: 'url',
-      label: '远程地址',
+     
       type: 'url',
       when: (vals) => vals.transport === 'sse' || vals.transport === 'http',
     },
     {
       key: 'headers',
-      label: 'Headers（JSON）',
+     
       type: 'text',
       when: (vals) => vals.transport === 'sse' || vals.transport === 'http',
     },
     {
       key: 'env',
-      label: '环境变量（JSON）',
+     
       type: 'text',
       when: (vals) => vals.transport === 'stdio',
     },
