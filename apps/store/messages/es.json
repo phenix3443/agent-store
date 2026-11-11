@@ -56,15 +56,15 @@
       "colReview": "Revisión",
       "colPublisher": "Editor",
       "colInstalls": "Instalaciones",
-      "colCopy": "Copiar comando de instalación",
-      "copy": "Copiar",
       "copied": "Copiado",
       "copyFailed": "Error al copiar",
       "copyLabel": "Copiar el comando de instalación de {name}",
       "copiedAnnounce": "Comando de instalación copiado: {command}",
       "copyFailedAnnounce": "No se pudo copiar. Selecciona el comando y cópialo a mano: {command}",
       "emptyTitle": "Ningún paquete coincide",
-      "emptyBody": "Prueba otra palabra o borra la búsqueda y los filtros."
+      "emptyBody": "Prueba otra palabra o borra la búsqueda y los filtros.",
+      "colInstall": "Instalar",
+      "copyCommand": "Copiar comando"
     },
     "review": {
       "title": "Resultado de la revisión",
@@ -88,10 +88,8 @@
     },
     "detail": {
       "breadcrumb": "Tienda",
-      "back": "Volver a la tienda",
       "expand": "Abrir en página completa",
       "close": "Cerrar detalles",
-      "drawerLabel": "Detalles de {name}",
       "installs": "{count} instalaciones",
       "rating": "{rating} de valoración ({count} reseñas)",
       "favorite": "Guardar",
@@ -106,9 +104,6 @@
       "providerNote": "Escribe el endpoint al instalar. Solo añades la clave de API.",
       "downloadTo": "{url} → {dest}",
       "installTitle": "Comando de instalación",
-      "copyInstall": "Copiar comando de instalación",
-      "download": "Descargar el cliente de escritorio",
-      "installNote": "Esta página aún no puede pasar la instalación al cliente de escritorio. Ejecuta el comando copiado en una terminal o busca este paquete en la tienda del cliente.",
       "specsTitle": "Especificaciones",
       "version": "Versión",
       "compatible": "Compatible con",
@@ -144,6 +139,26 @@
       "ja": "日本語",
       "ko": "한국어",
       "es": "Español"
+    },
+    "install": {
+      "action": "Instalar",
+      "label": "Instalar {name} en el cliente de escritorio",
+      "desktop": "Instalar en el cliente de escritorio",
+      "opening": "Abriendo…",
+      "opened": "Abierto en el cliente",
+      "openedShort": "Abierto",
+      "download": "Descargar el cliente de escritorio",
+      "fallbackNote": "Si el cliente no se abre, se copia el comando de instalación y se te indica la descarga.",
+      "phoneNote": "Ejecuta este comando en tu ordenador o instala con el cliente de escritorio."
+    },
+    "notice": {
+      "label": "Aviso",
+      "missingTitle": "No se detectó el cliente de escritorio",
+      "missingBody": "El comando de instalación está copiado. Ejecútalo en una terminal o descarga primero el cliente de escritorio.",
+      "copyFailedBody": "No se pudo copiar el comando de instalación. Copia a mano la línea de abajo y ejecútala en una terminal, o descarga primero el cliente de escritorio.",
+      "download": "Descargar el cliente de escritorio",
+      "downloadAlt": "Ir a la página de descarga del cliente de escritorio",
+      "close": "Cerrar aviso"
     }
   }
 }

@@ -56,15 +56,15 @@
       "colReview": "审查",
       "colPublisher": "发布者",
       "colInstalls": "安装量",
-      "colCopy": "复制安装命令",
-      "copy": "复制",
       "copied": "已复制",
       "copyFailed": "复制失败",
       "copyLabel": "复制 {name} 的安装命令",
       "copiedAnnounce": "已复制安装命令：{command}",
       "copyFailedAnnounce": "复制失败，请手动选中命令复制：{command}",
       "emptyTitle": "没有符合条件的包",
-      "emptyBody": "换个关键词，或清除搜索和筛选后再看。"
+      "emptyBody": "换个关键词，或清除搜索和筛选后再看。",
+      "colInstall": "安装",
+      "copyCommand": "复制命令"
     },
     "review": {
       "title": "审查结论",
@@ -88,10 +88,8 @@
     },
     "detail": {
       "breadcrumb": "商店",
-      "back": "返回商店",
       "expand": "展开为整页",
       "close": "关闭详情",
-      "drawerLabel": "{name} 详情",
       "installs": "{count} 次安装",
       "rating": "{rating} 分（{count} 条评价）",
       "favorite": "收藏",
@@ -106,9 +104,6 @@
       "providerNote": "安装时写入接入地址，你只需补充 API Key。",
       "downloadTo": "{url} → {dest}",
       "installTitle": "安装命令",
-      "copyInstall": "复制安装命令",
-      "download": "下载桌面客户端",
-      "installNote": "网页暂时不能直接唤起桌面客户端安装。复制命令后在终端运行，或在客户端的商店里找到这个包。",
       "specsTitle": "规格",
       "version": "版本",
       "compatible": "兼容",
@@ -144,6 +139,26 @@
       "ja": "日本語",
       "ko": "한국어",
       "es": "Español"
+    },
+    "install": {
+      "action": "安装",
+      "label": "在桌面客户端中安装 {name}",
+      "desktop": "在桌面客户端中安装",
+      "opening": "正在唤起…",
+      "opened": "已在客户端中打开",
+      "openedShort": "已打开",
+      "download": "下载桌面客户端",
+      "fallbackNote": "唤不起客户端时会复制安装命令，并提示下载客户端。",
+      "phoneNote": "在电脑上运行这条命令，或用桌面客户端安装。"
+    },
+    "notice": {
+      "label": "提示",
+      "missingTitle": "没有检测到桌面客户端",
+      "missingBody": "安装命令已复制，可以在终端里运行，或先下载桌面客户端。",
+      "copyFailedBody": "安装命令没能自动复制，请手动复制下面这条，在终端里运行，或先下载桌面客户端。",
+      "download": "下载桌面客户端",
+      "downloadAlt": "前往下载页获取桌面客户端",
+      "close": "关闭提示"
     }
   }
 }

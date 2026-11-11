@@ -1,5 +1,5 @@
 import { test, expect, mock, afterEach } from 'bun:test'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import { intlMock } from '../../test-intl'
 import { cleanReview, flaggedReview, mcpItem, providerItem } from './fixtures'
 
@@ -46,20 +46,16 @@ test('the package name links to its detail page and marks the open one', () => {
   expect(screen.getByRole('link', { name: 'Anki MCP' }).getAttribute('aria-current')).toBe('true')
 })
 
-test('the copy button is its own control, outside the link', () => {
+test('the install button is its own control, outside the link', () => {
   render(<ItemTable items={[providerItem]} />)
-  const button = screen.getByRole('button', { name: '复制 OpenAI Provider 的安装命令' })
+  const button = screen.getByRole('button', { name: '在桌面客户端中安装 OpenAI Provider' })
+  expect(button.textContent).toBe('安装')
   expect(button.closest('a')).toBeNull()
 })
 
-test('copying gives visible and announced feedback', async () => {
-  const writeText = mock(async () => {})
-  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+test('the install column has a visible header', () => {
   render(<ItemTable items={[providerItem]} />)
-  fireEvent.click(screen.getByRole('button', { name: '复制 OpenAI Provider 的安装命令' }))
-  await waitFor(() => expect(screen.getByText('已复制')).toBeInTheDocument())
-  expect(writeText).toHaveBeenCalledWith('aas install openai-provider')
-  expect(screen.getByRole('status').textContent).toBe('已复制安装命令：aas install openai-provider')
+  expect(screen.getByRole('columnheader', { name: '安装' })).toBeInTheDocument()
 })
 
 test('review column: no data is pending without a seal', () => {

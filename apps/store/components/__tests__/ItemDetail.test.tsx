@@ -84,27 +84,28 @@ test('a package without ratings shows no score', () => {
   expect(container.textContent).not.toContain('0.0')
 })
 
-test('the primary action copies the install command and confirms it', async () => {
+test('the primary action is install in the desktop client, with copy and download beside it', () => {
+  renderPage()
+  expect(screen.getByRole('button', { name: '在桌面客户端中安装' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '复制 OpenAI Provider 的安装命令' }).textContent).toBe('复制命令')
+  expect(screen.getByRole('link', { name: '下载桌面客户端' }).getAttribute('href')).toBe('/download/latest')
+  expect(screen.getByText('aas install openai-provider')).toBeInTheDocument()
+})
+
+test('the copy button beside the command confirms the copy', async () => {
   const writeText = mock(async () => {})
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
   renderPage()
-  fireEvent.click(screen.getByRole('button', { name: '复制安装命令' }))
+  fireEvent.click(screen.getByRole('button', { name: '复制 OpenAI Provider 的安装命令' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '已复制' })).toBeInTheDocument())
   expect(writeText).toHaveBeenCalledWith('aas install openai-provider')
-  expect(screen.getByRole('status').textContent).toContain('已复制安装命令')
+  expect(screen.getAllByRole('status').some((el) => el.textContent?.includes('已复制安装命令'))).toBe(true)
 })
 
-test('there is no "installed" state the web cannot confirm', async () => {
+test('there is no "installed" state the web cannot confirm', () => {
   const { container } = renderPage()
-  fireEvent.click(screen.getByRole('button', { name: '复制安装命令' }))
-  await waitFor(() => expect(screen.getByRole('status').textContent).not.toBe(''))
   expect(container.textContent).not.toContain('已安装')
   expect(container.textContent).not.toContain('已装')
-})
-
-test('offers the desktop client download next to the copy action', () => {
-  renderPage()
-  expect(screen.getByRole('link', { name: '下载桌面客户端' }).getAttribute('href')).toBe('/download/latest')
 })
 
 test('the drawer links to the full page and closes through onOpenChange', () => {

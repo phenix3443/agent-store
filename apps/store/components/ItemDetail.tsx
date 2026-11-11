@@ -2,8 +2,8 @@ import type { Item, ItemVersion } from '@as/types'
 import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatDownloads } from '@/lib/item-meta'
-import { installCommand, reviewVerdict, runEntries, type RunEntry } from '@/lib/review'
-import { CopyCommandButton } from './CopyCommandButton'
+import { reviewVerdict, runEntries, type RunEntry } from '@/lib/review'
+import { InstallPanel } from './InstallPanel'
 import { ReviewStamp } from './ReviewStamp'
 import { PendingIcon, WarnIcon } from './ReviewStatus'
 import { ReviewsSection } from './ReviewsSection'
@@ -37,7 +37,6 @@ export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
   const verdict = reviewVerdict(item)
   const review = item.review
   const runs = runEntries(item)
-  const command = installCommand(item)
   const reviewCount = item.reviewCount ?? 0
   const dateFormat = new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
 
@@ -137,19 +136,7 @@ export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
 
       <section className="mt-6">
         <h2 className="label mb-2">{t('detail.installTitle')}</h2>
-        <div className="flex min-h-12 items-center overflow-x-auto border border-ink bg-paper px-3.5 font-mono text-sm">
-          <span aria-hidden className="mr-2.5 select-none text-ink-2">$</span>
-          <code className="whitespace-nowrap">{command}</code>
-        </div>
-        <div className="mt-2.5 flex flex-col gap-2.5">
-          <CopyCommandButton command={command} name={item.name} variant="primary" />
-          {/* A route handler that redirects to the release assets, not a page. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/download/latest" className="btn min-h-12 px-5">
-            {t('detail.download')}
-          </a>
-        </div>
-        <p className="mt-2 max-w-[62ch] text-[13px] leading-5 text-ink-2">{t('detail.installNote')}</p>
+        <InstallPanel item={item} />
       </section>
 
       <section className="mt-7">

@@ -56,15 +56,15 @@
       "colReview": "심사",
       "colPublisher": "게시자",
       "colInstalls": "설치 수",
-      "colCopy": "설치 명령 복사",
-      "copy": "복사",
       "copied": "복사됨",
       "copyFailed": "복사 실패",
       "copyLabel": "{name} 설치 명령 복사",
       "copiedAnnounce": "설치 명령을 복사했습니다: {command}",
       "copyFailedAnnounce": "복사하지 못했습니다. 명령을 직접 선택해 복사하세요: {command}",
       "emptyTitle": "조건에 맞는 패키지가 없습니다",
-      "emptyBody": "다른 키워드를 쓰거나 검색과 필터를 지워 보세요."
+      "emptyBody": "다른 키워드를 쓰거나 검색과 필터를 지워 보세요.",
+      "colInstall": "설치",
+      "copyCommand": "명령 복사"
     },
     "review": {
       "title": "심사 결과",
@@ -88,10 +88,8 @@
     },
     "detail": {
       "breadcrumb": "스토어",
-      "back": "스토어로 돌아가기",
       "expand": "전체 페이지로 열기",
       "close": "상세 닫기",
-      "drawerLabel": "{name} 상세",
       "installs": "설치 {count}회",
       "rating": "평점 {rating} ({count}개)",
       "favorite": "즐겨찾기",
@@ -106,9 +104,6 @@
       "providerNote": "설치할 때 엔드포인트를 기록합니다. API 키만 입력하면 됩니다.",
       "downloadTo": "{url} → {dest}",
       "installTitle": "설치 명령",
-      "copyInstall": "설치 명령 복사",
-      "download": "데스크톱 클라이언트 받기",
-      "installNote": "이 페이지에서 데스크톱 클라이언트로 설치를 바로 넘길 수는 아직 없습니다. 복사한 명령을 터미널에서 실행하거나 클라이언트의 스토어에서 이 패키지를 찾으세요.",
       "specsTitle": "사양",
       "version": "버전",
       "compatible": "호환",
@@ -144,6 +139,26 @@
       "ja": "日本語",
       "ko": "한국어",
       "es": "Español"
+    },
+    "install": {
+      "action": "설치",
+      "label": "데스크톱 클라이언트에서 {name} 설치",
+      "desktop": "데스크톱 클라이언트에서 설치",
+      "opening": "여는 중…",
+      "opened": "클라이언트에서 열었습니다",
+      "openedShort": "열림",
+      "download": "데스크톱 클라이언트 받기",
+      "fallbackNote": "클라이언트가 열리지 않으면 설치 명령을 복사하고 다운로드를 안내합니다.",
+      "phoneNote": "컴퓨터에서 이 명령을 실행하거나 데스크톱 클라이언트로 설치하세요."
+    },
+    "notice": {
+      "label": "알림",
+      "missingTitle": "데스크톱 클라이언트를 찾지 못했습니다",
+      "missingBody": "설치 명령을 복사했습니다. 터미널에서 실행하거나 먼저 데스크톱 클라이언트를 받으세요.",
+      "copyFailedBody": "설치 명령을 복사하지 못했습니다. 아래 줄을 직접 복사해 터미널에서 실행하거나 먼저 데스크톱 클라이언트를 받으세요.",
+      "download": "데스크톱 클라이언트 받기",
+      "downloadAlt": "다운로드 페이지에서 데스크톱 클라이언트 받기",
+      "close": "알림 닫기"
     }
   }
 }

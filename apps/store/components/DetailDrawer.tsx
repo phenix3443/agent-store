@@ -4,6 +4,7 @@ import type { Item } from '@as/types'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useTranslations } from 'next-intl'
 import { FavoriteButton } from './FavoriteButton'
+import { noticeInUse } from './InstallNotice'
 import { itemHref } from './ItemTable'
 
 interface DetailDrawerProps {
@@ -24,6 +25,10 @@ export function DetailDrawer({ item, open, onOpenChange, children }: DetailDrawe
         <Dialog.Content
           data-item-drawer
           aria-describedby={undefined}
+          onInteractOutside={(event) => {
+            // The install notice is a toast outside the drawer; using it must not close the drawer.
+            if (noticeInUse()) event.preventDefault()
+          }}
           onCloseAutoFocus={(event) => {
             // Radix would hand focus back to whatever was focused when the drawer
             // mounted; after an intercepted navigation that is not reliably the row.

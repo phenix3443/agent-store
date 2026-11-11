@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import { ClientStateProvider } from '@/components/ClientStateProvider'
 import { Header } from '@/components/Header'
+import { InstallNoticeProvider } from '@/components/InstallNotice'
 import { SkipLink } from '@/components/SkipLink'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { getCurrentUser } from '@/lib/auth'
@@ -60,6 +61,7 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider>
             <ClientStateProvider>
+              <InstallNoticeProvider>
               <SkipLink />
               <div className="flex min-h-screen flex-col">
                 <Header user={user} />
@@ -68,6 +70,7 @@ export default async function RootLayout({
                 </main>
               </div>
               {drawer}
+              </InstallNoticeProvider>
             </ClientStateProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

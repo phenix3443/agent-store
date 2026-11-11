@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { formatDownloads } from '@/lib/item-meta'
-import { installCommand, reviewVerdict } from '@/lib/review'
-import { CopyCommandButton } from './CopyCommandButton'
+import { reviewVerdict } from '@/lib/review'
+import { InstallButton } from './InstallButton'
 import { ReviewStatus } from './ReviewStatus'
 import { TierLabel } from './TierLabel'
 
-const COLS = 'md:grid-cols-[64px_minmax(0,1fr)_104px_148px_72px_76px]'
+const COLS = 'md:grid-cols-[64px_minmax(0,1fr)_104px_148px_72px_92px]'
 
 export function itemHref(item: Pick<Item, 'category' | 'slug'>): string {
   return `/store/${item.category}/${item.slug}`
@@ -62,7 +62,7 @@ function ItemRow({ item }: { item: Item }) {
       </span>
 
       <div role="cell" className="relative z-[1] col-start-2 row-start-2 self-start justify-self-end md:col-start-auto md:row-start-auto md:self-center">
-        <CopyCommandButton command={installCommand(item)} name={item.name} />
+        <InstallButton item={item} />
       </div>
     </div>
   )
@@ -92,8 +92,8 @@ export function ItemTable({ items, emptyAction }: { items: Item[]; emptyAction?:
           <span role="columnheader" className="text-right">
             {t('colInstalls')}
           </span>
-          <span role="columnheader">
-            <span className="sr-only">{t('colCopy')}</span>
+          <span role="columnheader" className="text-right">
+            {t('colInstall')}
           </span>
         </div>
       </div>

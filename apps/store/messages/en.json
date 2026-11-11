@@ -56,15 +56,15 @@
       "colReview": "Review",
       "colPublisher": "Publisher",
       "colInstalls": "Installs",
-      "colCopy": "Copy install command",
-      "copy": "Copy",
       "copied": "Copied",
       "copyFailed": "Copy failed",
       "copyLabel": "Copy the install command for {name}",
       "copiedAnnounce": "Copied install command: {command}",
       "copyFailedAnnounce": "Copy failed. Select the command and copy it by hand: {command}",
       "emptyTitle": "No packages match",
-      "emptyBody": "Try another keyword, or clear the search and filters."
+      "emptyBody": "Try another keyword, or clear the search and filters.",
+      "colInstall": "Install",
+      "copyCommand": "Copy command"
     },
     "review": {
       "title": "Review verdict",
@@ -88,10 +88,8 @@
     },
     "detail": {
       "breadcrumb": "Store",
-      "back": "Back to the store",
       "expand": "Open as full page",
       "close": "Close details",
-      "drawerLabel": "{name} details",
       "installs": "{count} installs",
       "rating": "{rating} rating ({count} reviews)",
       "favorite": "Save",
@@ -106,9 +104,6 @@
       "providerNote": "Writes the endpoint at install time. You only add the API key.",
       "downloadTo": "{url} → {dest}",
       "installTitle": "Install command",
-      "copyInstall": "Copy install command",
-      "download": "Get the desktop client",
-      "installNote": "This page cannot hand the install to the desktop client yet. Run the copied command in a terminal, or find this package in the client's store.",
       "specsTitle": "Specs",
       "version": "Version",
       "compatible": "Works with",
@@ -144,6 +139,26 @@
       "ja": "日本語",
       "ko": "한국어",
       "es": "Español"
+    },
+    "install": {
+      "action": "Install",
+      "label": "Install {name} in the desktop client",
+      "desktop": "Install in the desktop client",
+      "opening": "Opening…",
+      "opened": "Opened in the client",
+      "openedShort": "Opened",
+      "download": "Get the desktop client",
+      "fallbackNote": "If the client does not open, the install command is copied and you are pointed to the download.",
+      "phoneNote": "Run this command on your computer, or install with the desktop client."
+    },
+    "notice": {
+      "label": "Notification",
+      "missingTitle": "Desktop client not detected",
+      "missingBody": "The install command is copied. Run it in a terminal, or get the desktop client first.",
+      "copyFailedBody": "The install command could not be copied. Copy the line below by hand and run it in a terminal, or get the desktop client first.",
+      "download": "Get the desktop client",
+      "downloadAlt": "Go to the download page for the desktop client",
+      "close": "Dismiss"
     }
   }
 }
