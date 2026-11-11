@@ -1,16 +1,11 @@
 import { auth } from '@/lib/auth/server'
 
-// Same-domain proxy for the Neon Auth (Better Auth) server. All client auth
-// calls go to /api/auth/* on this origin; the handler forwards them to the
-// remote Neon Auth endpoint and manages the session cookie on our domain.
-// auth() is lazy (see lib/auth/server.ts), so the handler is resolved per
-// request rather than at build/import time.
-type Ctx = { params: Promise<{ path: string[] }> }
-
-export function GET(request: Request, ctx: Ctx): Promise<Response> {
-  return auth().handler().GET(request, ctx)
+// Better Auth's own endpoints (/api/auth/*). auth() is lazy (see
+// lib/auth/server.ts), so nothing is constructed at build time.
+export function GET(request: Request): Promise<Response> {
+  return auth().handler(request)
 }
 
-export function POST(request: Request, ctx: Ctx): Promise<Response> {
-  return auth().handler().POST(request, ctx)
+export function POST(request: Request): Promise<Response> {
+  return auth().handler(request)
 }

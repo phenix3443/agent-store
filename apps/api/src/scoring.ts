@@ -50,8 +50,8 @@ const TIER_DEFAULT = 0.3
 // top-N is picked in the database (getItems LIMITs, so ranking must be in SQL).
 // rating is numeric and review_count is int — Postgres handles the arithmetic.
 //
-// Every constant is cast `::numeric`: the Neon HTTP driver sends interpolated
-// values as bound parameters, which arrive at Postgres as untyped `unknown`.
+// Every constant is cast `::numeric`: interpolated values are sent as bound
+// parameters, which Postgres can type as `unknown`.
 // Multiplying two of them (`RATING_PRIOR_COUNT * RATING_PRIOR_MEAN`, or
 // `WEIGHT_TIER * CASE(...)` whose all-param branches also type as unknown) then
 // fails to plan ("operator is not unique: unknown * unknown"). The casts pin the

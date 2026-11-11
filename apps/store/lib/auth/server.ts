@@ -1,16 +1,63 @@
-import { createNeonAuth } from '@neondatabase/auth/next/server'
-import { neonAuthConfig } from './config'
+import { betterAuth } from 'better-auth'
+import { jwt } from 'better-auth/plugins'
+import { nextCookies } from 'better-auth/next-js'
+import { Pool } from 'pg'
 
-type NeonAuthServer = ReturnType<typeof createNeonAuth>
+// Self-hosted Better Auth. Its tables (user, session, account, verification,
+// jwks) live in the same Postgres as the catalog and are created by the API's
+// drizzle migrations, not by Better Auth's own migrator: one migration source.
+//
+// The API never sees the session cookie. Browsers and the desktop app call
+// /api/auth/token for a short-lived JWT (EdDSA), and the API verifies it against
+// /api/auth/jwks. `username` is the GitHub login, carried in the token because
+// publishers are keyed by it.
+export function createAuth() {
+  const baseURL = process.env.BETTER_AUTH_URL
+  return betterAuth({
+    baseURL,
+    secret: process.env.BETTER_AUTH_SECRET,
+    database: new Pool({ connectionString: process.env.DATABASE_URL, max: 5 }),
+    user: {
+      additionalFields: {
+        username: { type: 'string', required: false, input: false },
+      },
+    },
+    socialProviders: {
+      github: {
+        clientId: process.env.GITHUB_CLIENT_ID ?? '',
+        clientSecret: process.env.GITHUB_CLIENT_SECRET ?? '',
+        mapProfileToUser: (profile) => ({ username: profile.login }),
+      },
+      // Enabled only when GOOGLE_CLIENT_ID is set; without it the modal's Google
+      // button lands on /?error=auth_failed.
+      ...(process.env.GOOGLE_CLIENT_ID
+        ? { google: { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '' } }
+        : {}),
+    },
+    plugins: [
+      jwt({
+        jwt: {
+          issuer: baseURL,
+          audience: baseURL,
+          definePayload: ({ user }) => ({
+            email: user.email,
+            username: (user as { username?: string | null }).username ?? undefined,
+          }),
+        },
+      }),
+      // Must stay last: lets server actions set cookies through next/headers.
+      nextCookies(),
+    ],
+  })
+}
 
-let instance: NeonAuthServer | undefined
+type Auth = ReturnType<typeof createAuth>
 
-// Lazily instantiate the Neon Auth (managed Better Auth) server instance.
-// Deferred rather than created at import time because createNeonAuth throws
-// without the cookie secret, which is a runtime-only env var — evaluating it at
-// build/prerender time (e.g. collecting the /api/auth route) would crash the
-// build. Callers use auth() so it's only created on the first request.
-export function auth(): NeonAuthServer {
-  if (!instance) instance = createNeonAuth(neonAuthConfig)
+let instance: Auth | undefined
+
+// Created on first use, not at import: `next build` imports this module while
+// collecting routes, and the secret and database URL only exist at runtime.
+export function auth(): Auth {
+  if (!instance) instance = createAuth()
   return instance
 }

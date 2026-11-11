@@ -3,7 +3,6 @@ name: e2e
 # Real-agent end-to-end tests. The GitHub runner is already an isolated VM, so
 # these run directly (no Docker): install packages through the `as` CLI, then
 # drive real Claude Code and Codex and assert they actually use the skill + MCP.
-# deploy-store is gated on this workflow succeeding (see deploy-store.yml).
 on:
   push:
     branches: [main]

@@ -40,8 +40,6 @@ const SECTIONS: Section[] = [
     title: '第三方服务',
     body: '我们依赖以下服务商处理部分数据，各自遵循其隐私政策：',
     bullets: [
-      'Neon —— 数据库与身份认证（Neon Auth）。',
-      'Cloudflare —— 网站与 API 的托管、加速与安全防护。',
       'GitHub、Google —— 第三方登录（OAuth），仅在你选择用其登录时获取上述基本资料。',
       'Waffo —— 订阅支付处理（Merchant of Record）。',
     ],

@@ -9,7 +9,7 @@ import type {
 } from '@as/types'
 import type { items, publishers } from './db/schema'
 
-// ── Raw DB row shapes (Drizzle-inferred from the Neon schema) ─────────────────
+// ── Raw DB row shapes (Drizzle-inferred from the schema) ──────────────────────
 // Drizzle returns numeric columns as strings and timestamptz as Date objects;
 // the mappers below normalize those to the numbers / ISO strings the API emits.
 

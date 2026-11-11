@@ -1,0 +1,18 @@
+# Local Postgres for `make dev-env`, `make e2e` and the API's DB-backed tests.
+# Same major version as the k3s test deployment (home-lab projects/agent-store).
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: agent_store
+    ports:
+      - '127.0.0.1:${DEV_DB_PORT:-55432}:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+      interval: 2s
+      retries: 30
+volumes:
+  db:

@@ -47,7 +47,8 @@ export async function getItems(
       .from(items)
       .innerJoin(publishers, eq(items.publisherId, publishers.id))
       .where(and(...filters))
-      .orderBy(orderBy)
+      // items.id breaks ties so offset pages neither repeat nor skip equal-scored rows.
+      .orderBy(orderBy, items.id)
       .limit(limit)
       .offset(offset)
 

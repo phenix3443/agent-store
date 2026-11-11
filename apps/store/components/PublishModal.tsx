@@ -74,8 +74,10 @@ export function PublishModal({ open, onOpenChange }: PublishModalProps) {
       // Open GitHub's prefilled "new file" page: the user's own browser session
       // forks the registry and opens a PR when they commit — no bot token needed.
       const sessRes = await fetch('/api/auth/get-session', { credentials: 'same-origin' })
-      const sess = sessRes.ok ? ((await sessRes.json()) as { user?: { name?: string } } | null) : null
-      const username = sess?.user?.name || 'community'
+      const sess = sessRes.ok
+        ? ((await sessRes.json()) as { user?: { username?: string | null; name?: string } } | null)
+        : null
+      const username = sess?.user?.username || sess?.user?.name || 'community'
       const manifest = {
         $schema: '../schema/package.schema.json',
         ...buildManifest(type, vals),

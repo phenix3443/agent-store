@@ -1,0 +1,71 @@
+name: api
+
+# Type-check and test apps/api. Unit tests run first without a database; the
+# DB-backed tests then run in their own process (bun's mock.module leaks across
+# files, so in a shared run the catalog queries would hit a mock) against a
+# Postgres service container with the migrations and seed applied.
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'packages/types/**'
+      - 'db/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/types/**'
+      - 'db/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/api.yml'
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: agent_store
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:test@localhost:5432/agent_store
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter=@as/types run build
+      - run: pnpm --filter @as/api run type-check
+
+      - name: Unit tests
+        working-directory: apps/api
+        run: DATABASE_URL= pnpm test
+
+      - name: Migrate and seed
+        working-directory: apps/api
+        run: bun src/migrate.ts && bun src/seed.ts
+
+      # The DB-backed tests skip when DATABASE_URL is missing; here a skip means the
+      # database was never reached, so it fails the job instead of passing quietly.
+      - name: DB-backed tests
+        working-directory: apps/api
+        run: |
+          set -o pipefail
+          bun test integration 2>&1 | tee "$RUNNER_TEMP/bun-test.txt"
+          if grep -qE '^ *[1-9][0-9]* skip' "$RUNNER_TEMP/bun-test.txt"; then
+            echo "::error::Some DB-backed tests were skipped"; exit 1
+          fi

@@ -1,31 +1,71 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { cors } from 'hono/cors'
+import { requestId, type RequestIdVariables } from 'hono/request-id'
+import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { desc, eq, sql } from 'drizzle-orm'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
 import { getDb, type DbEnv } from './db/client'
 import { itemVersions, items, reviews } from './db/schema'
-import type { NeonAuthEnv } from './neon-auth'
+import type { AuthEnv } from './auth-token'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { getMyItems } from './publisher-items'
+import { submitReview } from './review-queries'
 import {
   isWebhookProcessed,
-  markWebhookProcessed,
-  upsertSubscription,
+  recordWebhook,
   getPlanByEmail,
   getPlanByUserId,
 } from './subscription-queries'
 
-// On Cloudflare Workers, secrets arrive as the fetch handler's `env` (Hono c.env).
-// On local Bun (Bun.serve), c.env is the Bun server object with no such keys, so
-// getDb()/getWaffoClient() fall back to process.env.
-export const app = new Hono<{ Bindings: WaffoEnv & DbEnv & NeonAuthEnv }>()
+// Under Bun.serve, c.env is the Bun server object with none of these keys, so
+// getDb()/getWaffoClient()/getAuthUser() read process.env. Tests pass them in.
+type Env = { Bindings: WaffoEnv & DbEnv & AuthEnv; Variables: RequestIdVariables }
 
+export const app = new Hono<Env>()
+
+app.use('*', requestId())
 app.use('/api/*', cors())
 
+// One JSON line per failure so Workers logs can be searched by requestId, which is
+// also returned to the caller.
+function fail(c: Context<Env>, status: ContentfulStatusCode, message: string, cause: unknown) {
+  const id = c.get('requestId')
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      requestId: id,
+      method: c.req.method,
+      path: c.req.path,
+      message,
+      cause: cause instanceof Error ? cause.message : String(cause),
+    })
+  )
+  return c.json({ error: message, requestId: id }, status)
+}
+
+// Absent → fallback; present but not a non-negative integer → null (caller returns 400).
+function intQuery(raw: string | undefined, fallback: number): number | null {
+  if (raw === undefined || raw === '') return fallback
+  return /^\d+$/.test(raw) ? Number(raw) : null
+}
+
 app.get('/', (c) => c.json({ ok: true, service: 'as-api' }))
+
+// Liveness: the process answers. Readiness: it can also reach Postgres. Kept
+// apart so a database outage takes the pod out of the Service instead of
+// restarting it in a loop.
+app.get('/healthz', (c) => c.json({ ok: true }))
+app.get('/readyz', async (c) => {
+  try {
+    await getDb(c.env).execute(sql`select 1`)
+    return c.json({ ok: true })
+  } catch (e) {
+    return fail(c, 503, 'Database unavailable', e)
+  }
+})
 
 app.get('/api/items', async (c) => {
   const rawCategory = c.req.query('category')
@@ -37,21 +77,26 @@ app.get('/api/items', async (c) => {
   const rawSort = c.req.query('sort')
   const sort = rawSort === 'downloads' || rawSort === 'created' ? rawSort : 'recommended'
 
+  const limit = intQuery(c.req.query('limit'), 20)
+  const offset = intQuery(c.req.query('offset'), 0)
+  if (limit === null || limit < 1) return c.json({ error: 'limit must be a positive integer' }, 400)
+  if (offset === null) return c.json({ error: 'offset must be a non-negative integer' }, 400)
+
   const { data, error } = await getItems(c.env, {
     category,
     q: c.req.query('q') ?? undefined,
-    limit: Math.min(Number(c.req.query('limit') ?? '20'), 100),
-    offset: Number(c.req.query('offset') ?? '0'),
+    limit: Math.min(limit, 100),
+    offset,
     sort,
   })
 
-  if (error) return c.json({ error: 'Failed to fetch items' }, 500)
+  if (error) return fail(c, 500, 'Failed to fetch items', error)
   return c.json({ items: data })
 })
 
 app.get('/api/items/:slug', async (c) => {
   const { data, error } = await getItemBySlug(c.env, c.req.param('slug'))
-  if (error) return c.json({ error: 'Failed to fetch item' }, 500)
+  if (error) return fail(c, 500, 'Failed to fetch item', error)
   if (!data) return c.json({ error: 'Not found' }, 404)
   return c.json({ item: data })
 })
@@ -68,8 +113,8 @@ app.post('/api/items/:slug/install', async (c) => {
       .returning({ downloads: items.downloads })
     if (updated.length === 0) return c.json({ error: 'Not found' }, 404)
     return c.json({ ok: true })
-  } catch {
-    return c.json({ error: 'Failed to record install' }, 500)
+  } catch (e) {
+    return fail(c, 500, 'Failed to record install', e)
   }
 })
 
@@ -92,8 +137,8 @@ app.get('/api/items/:slug/reviews', async (c) => {
       .orderBy(desc(reviews.updatedAt))
       .limit(50)
     return c.json({ reviews: data })
-  } catch {
-    return c.json({ error: 'Failed to load reviews' }, 500)
+  } catch (e) {
+    return fail(c, 500, 'Failed to load reviews', e)
   }
 })
 
@@ -107,36 +152,17 @@ app.post('/api/items/:slug/reviews', async (c) => {
   const rating = Math.round(Number(body.rating))
   if (!(rating >= 1 && rating <= 5)) return c.json({ error: 'rating must be an integer 1-5' }, 400)
   try {
-    const db = getDb(c.env)
-    // reviews has no updated_at trigger (only items/subscriptions do), so set it
-    // explicitly on the conflict-update path; fresh inserts default it to now().
-    const reviewBody = typeof body.body === 'string' ? body.body.slice(0, 2000) : null
-    await db
-      .insert(reviews)
-      .values({
-        itemSlug: slug,
-        userId: user.id,
-        authorName: user.username ?? null,
-        rating,
-        body: reviewBody,
-      })
-      .onConflictDoUpdate({
-        target: [reviews.itemSlug, reviews.userId],
-        set: {
-          authorName: user.username ?? null,
-          rating,
-          body: reviewBody,
-          updatedAt: sql`now()`,
-        },
-      })
-    const rows = await db.select({ rating: reviews.rating }).from(reviews).where(eq(reviews.itemSlug, slug))
-    const count = rows.length
-    const avg = count > 0 ? rows.reduce((s, r) => s + r.rating, 0) / count : 0
-    const rounded = Math.round(avg * 10) / 10
-    await db.update(items).set({ rating: String(rounded), reviewCount: count }).where(eq(items.slug, slug))
-    return c.json({ ok: true, rating: rounded, reviewCount: count })
-  } catch {
-    return c.json({ error: 'Failed to submit review' }, 500)
+    const result = await submitReview(c.env, {
+      slug,
+      userId: user.id,
+      authorName: user.username ?? null,
+      rating,
+      body: typeof body.body === 'string' ? body.body.slice(0, 2000) : null,
+    })
+    if (!result) return c.json({ error: 'Not found' }, 404)
+    return c.json({ ok: true, ...result })
+  } catch (e) {
+    return fail(c, 500, 'Failed to submit review', e)
   }
 })
 
@@ -152,8 +178,8 @@ app.get('/api/items/:slug/versions', async (c) => {
       .orderBy(desc(itemVersions.publishedAt))
       .limit(50)
     return c.json({ versions: data })
-  } catch {
-    return c.json({ error: 'Failed to load versions' }, 500)
+  } catch (e) {
+    return fail(c, 500, 'Failed to load versions', e)
   }
 })
 
@@ -164,7 +190,7 @@ app.get('/api/publishers/:slug', async (c) => {
     getPublisherItems(c.env, slug),
   ])
 
-  if (publisherResult.error) return c.json({ error: 'Failed to fetch publisher' }, 500)
+  if (publisherResult.error) return fail(c, 500, 'Failed to fetch publisher', publisherResult.error)
   if (!publisherResult.data) return c.json({ error: 'Not found' }, 404)
   return c.json({ publisher: publisherResult.data, items: itemsResult.data })
 })
@@ -177,19 +203,20 @@ app.get('/api/me/items', async (c) => {
   if (!user) return c.json({ error: 'Unauthorized' }, 401)
   if (!user.username) return c.json({ error: 'GitHub username not found' }, 422)
   const { data, error } = await getMyItems(c.env, user.username)
-  if (error) return c.json({ error: 'Failed to fetch items' }, 500)
+  if (error) return fail(c, 500, 'Failed to fetch items', error)
   return c.json({ items: data })
 })
 
 // ── Billing (Waffo Pancake, Merchant of Record) ──────────────────────────────
 
 // Create a Pro checkout session and return its hosted checkout URL.
-// Body: { period?: 'monthly' | 'yearly', email?: string, successUrl?: string }
+// Body: { period?: 'monthly' | 'yearly' | 'lifetime', email?: string, trial?: boolean }
+// The post-payment redirect comes only from WAFFO_CHECKOUT_SUCCESS_URL: a URL taken
+// from the request body would let anyone send buyers to their own site.
 app.post('/api/billing/checkout', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     period?: BillingPlan
     email?: string
-    successUrl?: string
     trial?: boolean
   }
   const period: BillingPlan =
@@ -220,7 +247,7 @@ app.post('/api/billing/checkout', async (c) => {
   if (user) metadata['userId'] = user.id
   if (buyerEmail) metadata['buyerEmail'] = buyerEmail
 
-  const successUrl = body.successUrl ?? checkoutSuccessUrl(c.env)
+  const successUrl = checkoutSuccessUrl(c.env)
   // Echoed back on webhooks (event.data.orderMetadata) to bind the subscription.
   const orderMetadata = Object.keys(metadata).length > 0 ? metadata : undefined
 
@@ -254,8 +281,8 @@ app.post('/api/billing/checkout', async (c) => {
       ...(withTrial !== undefined ? { withTrial: false } : {}),
     })
     return c.json({ checkoutUrl: session.checkoutUrl, sessionId: session.sessionId })
-  } catch {
-    return c.json({ error: 'Failed to create checkout session' }, 502)
+  } catch (e) {
+    return fail(c, 502, 'Failed to create checkout session', e)
   }
 })
 
@@ -274,11 +301,9 @@ app.post('/api/webhooks/waffo', async (c) => {
 
   try {
     if (await isWebhookProcessed(c.env, event.id)) return c.text('OK')
-    const record = subscriptionRecordFromEvent(event)
-    if (record) await upsertSubscription(c.env, record)
-    await markWebhookProcessed(c.env, event.id, event.eventType)
-  } catch {
-    return c.json({ error: 'Webhook processing failed' }, 500)
+    await recordWebhook(c.env, event.id, event.eventType, subscriptionRecordFromEvent(event))
+  } catch (e) {
+    return fail(c, 500, 'Webhook processing failed', e)
   }
   return c.text('OK')
 })
@@ -291,8 +316,8 @@ app.get('/api/me/entitlements', async (c) => {
   try {
     const plan = await getPlanByUserId(c.env, user.id)
     return c.json({ plan })
-  } catch {
-    return c.json({ error: 'Failed to resolve entitlements' }, 500)
+  } catch (e) {
+    return fail(c, 500, 'Failed to resolve entitlements', e)
   }
 })
 
@@ -303,7 +328,7 @@ app.get('/api/entitlements', async (c) => {
   try {
     const plan = await getPlanByEmail(c.env, email)
     return c.json({ plan })
-  } catch {
-    return c.json({ error: 'Failed to resolve entitlements' }, 500)
+  } catch (e) {
+    return fail(c, 500, 'Failed to resolve entitlements', e)
   }
 })

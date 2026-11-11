@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
-// Start a Neon Auth (Better Auth) social login. Kept as a GET route so the login
+// Start a Better Auth social login. Kept as a GET route so the login
 // modal's plain <a href="/auth/login?provider=…"> links keep working. Forwards
-// to the same-origin proxy's sign-in/social, then redirects the browser to the
+// to this origin's /api/auth/sign-in/social, then redirects the browser to the
 // provider, carrying the state cookie the proxy set.
 export async function GET(request: Request) {
   const url = new URL(request.url)
