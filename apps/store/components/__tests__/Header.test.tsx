@@ -40,7 +40,7 @@ test('renders nav links and marks the current section', () => {
   const nav = screen.getByRole('navigation', { name: '主导航' })
   expect(nav.textContent).toContain('商店')
   expect(nav.textContent).toContain('文档')
-  expect(nav.textContent).toContain('合集')
+  expect(nav.textContent).not.toContain('合集')
   expect(nav.textContent).toContain('定价')
   expect(screen.getByRole('link', { name: '商店' }).getAttribute('aria-current')).toBe('page')
 })

@@ -4,7 +4,7 @@ import { ReviewChop } from './ReviewStamp'
 
 export function WarnIcon({ size = 24 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden className="shrink-0 text-warn">
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden className="shrink-0 text-ink">
       <path d="M12 3.5 21.5 20h-19z" fill="none" stroke="currentColor" strokeWidth="1.3" />
       <path d="M12 10v5M12 17v1.4" stroke="currentColor" strokeWidth="1.4" />
     </svg>

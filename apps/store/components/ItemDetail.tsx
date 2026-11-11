@@ -29,7 +29,7 @@ const RUN_LABEL: Record<RunEntry['kind'], string> = {
 
 const RISK_LABEL: Record<string, string> = { low: 'riskLow', medium: 'riskMedium', high: 'riskHigh' }
 
-export const TITLE_CLASS = 'mt-2.5 break-words text-[32px] leading-[1.1] tracking-[-0.025em] sm:text-[40px]'
+export const TITLE_CLASS = 'break-words text-[32px] leading-[1.1] tracking-[-0.025em] sm:text-[40px]'
 
 export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
   const t = useTranslations('store')
@@ -57,7 +57,6 @@ export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
       <i className="plate-mark -bottom-2 -right-2" />
 
       <header>
-        <p className="label">{t(`category.${item.category}`)}</p>
         {title}
         <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
           <Link href={`/publisher/${item.publisher.slug}`} className="font-medium text-ink underline decoration-line-strong hover:decoration-ink">

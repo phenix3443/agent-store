@@ -15,8 +15,9 @@ export function InstallPanel({ item }: { item: Pick<Item, 'slug' | 'category' | 
   return (
     <>
       <div className="flex min-h-12 items-center gap-2 border border-ink bg-paper pl-3.5 pr-2 font-mono text-sm">
-        <span aria-hidden className="select-none text-ink-2">$</span>
-        <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap py-3">{command}</code>
+        <span aria-hidden className="select-none self-start py-3 leading-6 text-ink-2">$</span>
+        {/* Wraps rather than scrolls: a hidden scrollbar cut the slug off mid-word. */}
+        <code className="min-w-0 flex-1 py-3 leading-6 [overflow-wrap:anywhere]">{command}</code>
         {/* On a phone the primary button below is already the copy action. */}
         {!phone && <CopyCommandButton command={command} name={item.name} className="shrink-0" />}
       </div>

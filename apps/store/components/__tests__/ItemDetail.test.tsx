@@ -115,3 +115,9 @@ test('the drawer links to the full page and closes through onOpenChange', () => 
   fireEvent.click(screen.getByLabelText('关闭详情'))
   expect(onOpenChange).toHaveBeenCalledWith(false)
 })
+
+test('the package name opens the header, with no category label above it', () => {
+  renderPage(mcpItem)
+  const heading = screen.getByRole('heading', { level: 1 })
+  expect(heading.parentElement?.firstElementChild).toBe(heading)
+})

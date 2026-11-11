@@ -17,7 +17,6 @@ const config: Config = {
         lilac: 'var(--lilac)',
         sel: 'var(--sel)',
         fill: 'var(--fill)',
-        warn: 'var(--amber)',
         danger: 'var(--red)',
         store: {
           wall: 'var(--wall)',
