@@ -3,8 +3,8 @@ import { getDb } from '../db/client'
 import { subscriptionUpsertQuery } from '../subscription-queries'
 import type { SubscriptionRecord } from '../billing'
 
-// A fake connection string is enough: neon()'s handle is lazy and .toSQL() only
-// compiles the query — it never opens a connection.
+// A fake connection string is enough: postgres() connects on the first query,
+// and .toSQL() only compiles the query.
 const db = getDb({ DATABASE_URL: 'postgresql://user:pass@localhost:5432/db' })
 
 function record(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRecord {

@@ -5,7 +5,7 @@ import { items, processedWebhooks, publishers, subscriptions } from '../db/schem
 import { submitReview } from '../review-queries'
 import { recordWebhook } from '../subscription-queries'
 
-// Runs against a real Postgres (a throwaway Neon branch in CI). Every row uses a
+// Runs against a real Postgres (a Postgres service container in CI). Every row uses a
 // random suffix so runs never collide; nothing depends on cleanup.
 const DB_URL = process.env['DATABASE_URL']
 const maybe = DB_URL ? test : test.skip

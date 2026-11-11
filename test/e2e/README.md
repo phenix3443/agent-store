@@ -57,6 +57,3 @@ Docker — the runner is already isolated). It needs two repo secrets holding th
 
 - `E2E_PROVIDER_CLAUDE` — Anthropic-style endpoint + a claude model
 - `E2E_PROVIDER_CODEX` — the `…/codex` endpoint + a `gpt-*` model
-
-`deploy-store` is gated on this workflow: the store only deploys after e2e passes
-on `main`.
