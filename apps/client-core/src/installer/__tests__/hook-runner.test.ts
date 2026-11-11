@@ -1,8 +1,9 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { existsSync } from 'fs'
 import { runHook, writeManifest } from '../hook-runner'
-import type { Item } from '@as/types'
+import type { InstallHook, Item } from '@as/types'
 
 let tmpDir: string
 const origFetch = globalThis.fetch
@@ -22,23 +23,81 @@ test('config step writes config.json with patch', async () => {
   expect(JSON.parse(raw)).toEqual({ apiKey: '' })
 })
 
-test('config step merges with existing config.json', async () => {
+test('config step adds patch keys missing from existing config.json', async () => {
   await writeFile(join(tmpDir, 'config.json'), JSON.stringify({ existing: true }))
   await runHook([{ type: 'config', patch: { apiKey: '' } }], tmpDir)
   const raw = await readFile(join(tmpDir, 'config.json'), 'utf-8')
   expect(JSON.parse(raw)).toEqual({ existing: true, apiKey: '' })
 })
 
-test('script step runs command in itemDir', async () => {
-  await runHook([{ type: 'script', command: 'echo hello > output.txt' }], tmpDir)
-  const out = await readFile(join(tmpDir, 'output.txt'), 'utf-8')
-  expect(out.trim()).toBe('hello')
+test('config step keeps values the user already set', async () => {
+  await writeFile(join(tmpDir, 'config.json'), JSON.stringify({ apiKey: 'sk-user', baseUrl: 'https://mine.example' }))
+  await runHook([{ type: 'config', patch: { apiKey: '', baseUrl: 'https://default.example', model: 'm1' } }], tmpDir)
+  const raw = await readFile(join(tmpDir, 'config.json'), 'utf-8')
+  expect(JSON.parse(raw)).toEqual({ apiKey: 'sk-user', baseUrl: 'https://mine.example', model: 'm1' })
 })
 
-test('script step throws on non-zero exit', async () => {
+test('script step is rejected before anything is fetched or written', async () => {
+  const itemDir = join(tmpDir, 'item')
+  let fetched = false
+  globalThis.fetch = (async () => { fetched = true; return new Response('x') }) as unknown as typeof fetch
+  const steps = [
+    { type: 'file', url: 'https://example.com/server', dest: 'server' },
+    { type: 'config', patch: { apiKey: '' } },
+    { type: 'script', command: 'echo hello > output.txt' },
+  ] as unknown as InstallHook['steps']
+  await expect(runHook(steps, itemDir)).rejects.toThrow(/script/)
+  expect(fetched).toBe(false)
+  expect(existsSync(itemDir)).toBe(false)
+})
+
+test('unknown step type is rejected', async () => {
+  const steps = [{ type: 'exec', command: 'id' }] as unknown as InstallHook['steps']
+  await expect(runHook(steps, tmpDir)).rejects.toThrow(/exec/)
+})
+
+for (const dest of ['../escape', '../../x', 'sub/../../x', '/tmp/as-abs-escape', '', '.']) {
+  test(`file step with dest ${JSON.stringify(dest)} is rejected`, async () => {
+    const itemDir = join(tmpDir, 'item')
+    let fetched = false
+    globalThis.fetch = (async () => { fetched = true; return new Response('x') }) as unknown as typeof fetch
+    await expect(
+      runHook([{ type: 'file', url: 'https://example.com/server', dest }], itemDir)
+    ).rejects.toThrow(/dest/)
+    expect(fetched).toBe(false)
+    expect(existsSync(itemDir)).toBe(false)
+    expect(existsSync(join(tmpDir, 'escape'))).toBe(false)
+  })
+}
+
+test('file step may write into a subdirectory of the item dir', async () => {
+  globalThis.fetch = (async () => new Response('ok')) as unknown as typeof fetch
+  await runHook([{ type: 'file', url: 'https://example.com/a', dest: 'bin/./server' }], tmpDir)
+  expect(await readFile(join(tmpDir, 'bin', 'server'), 'utf-8')).toBe('ok')
+})
+
+for (const url of ['http://example.com/server', 'http://127.0.0.1:8080/server', 'file:///etc/passwd', 'ftp://example.com/x', 'not a url']) {
+  test(`file step with url ${url} is rejected`, async () => {
+    let fetched = false
+    globalThis.fetch = (async () => { fetched = true; return new Response('x') }) as unknown as typeof fetch
+    await expect(
+      runHook([{ type: 'file', url, dest: 'server' }], tmpDir)
+    ).rejects.toThrow(/https/)
+    expect(fetched).toBe(false)
+    expect(existsSync(join(tmpDir, 'server'))).toBe(false)
+  })
+}
+
+test('file step rejects a redirect to a non-https URL', async () => {
+  globalThis.fetch = (async () => {
+    const res = new Response('x')
+    Object.defineProperty(res, 'url', { value: 'http://example.com/server' })
+    return res
+  }) as unknown as typeof fetch
   await expect(
-    runHook([{ type: 'script', command: 'exit 1' }], tmpDir)
-  ).rejects.toThrow('exit code 1')
+    runHook([{ type: 'file', url: 'https://example.com/server', dest: 'server' }], tmpDir)
+  ).rejects.toThrow(/https/)
+  expect(existsSync(join(tmpDir, 'server'))).toBe(false)
 })
 
 test('file step fetches URL and writes to dest', async () => {

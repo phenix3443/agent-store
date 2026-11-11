@@ -5,7 +5,6 @@ export type JsonSchema = Record<string, unknown>
 
 export interface InstallHook {
   steps: Array<
-    | { type: 'script'; command: string }
     | { type: 'config'; patch: Record<string, unknown> }
     | { type: 'file'; url: string; dest: string }
   >

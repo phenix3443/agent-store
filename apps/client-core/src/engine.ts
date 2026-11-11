@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from 'fs/promises'
+import { readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
@@ -84,7 +84,6 @@ export class EngineImpl implements Engine {
     const item = itemResult.data
     if (item.category === 'skill') return this._installSkill(item, options)
     const dir = itemDir(this.paths.aasHome, item.category, slug)
-    await mkdir(dir, { recursive: true })
     await runHook(item.installHook.steps, dir)
     if (item.category === 'provider') await providerPostInstall(dir)
     else if (item.category === 'mcp') await mcpPostInstall(dir)
