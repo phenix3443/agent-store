@@ -1,2 +1,5 @@
 .vercel
 .env*
+
+# Local screenshots from visual review
+.impeccable/review/

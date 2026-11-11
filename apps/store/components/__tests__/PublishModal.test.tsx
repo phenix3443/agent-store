@@ -1,5 +1,8 @@
 import { test, expect, afterEach, beforeEach, mock } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { intlMock } from '../../test-intl'
+
+mock.module('next-intl', () => intlMock)
 
 beforeEach(() => {
   localStorage.clear()
@@ -47,7 +50,7 @@ test('submitting opens a GitHub prefilled new-file page for the registry', async
   const onOpenChange = mock(() => {})
   renderModal(onOpenChange)
   fireEvent.change(screen.getByLabelText('名称'), { target: { value: 'My Provider' } })
-  fireEvent.click(screen.getByText('发布'))
+  fireEvent.click(screen.getByText('在 GitHub 上继续'))
 
   await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
   expect(opened[0]).toContain('github.com/awesome-agent-store/registry/new/main')
@@ -66,7 +69,7 @@ test('mcp http encodes parsed headers into the prefilled manifest', async () => 
   fireEvent.change(screen.getByLabelText('传输方式'), { target: { value: 'http' } })
   fireEvent.change(screen.getByLabelText('远程地址'), { target: { value: 'https://example.com/mcp' } })
   fireEvent.change(screen.getByLabelText('Headers（JSON）'), { target: { value: '{"Authorization": "Bearer xyz"}' } })
-  fireEvent.click(screen.getByText('发布'))
+  fireEvent.click(screen.getByText('在 GitHub 上继续'))
 
   await waitFor(() => expect(opened.length).toBe(1))
   expect(decodeURIComponent(opened[0])).toContain('"Authorization": "Bearer xyz"')

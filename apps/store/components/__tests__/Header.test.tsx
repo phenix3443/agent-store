@@ -13,6 +13,10 @@ mock.module('next/navigation', () => ({
   usePathname: () => '/store',
   useRouter: () => ({ refresh, replace: () => {}, push: () => {} }),
   useSearchParams: () => new URLSearchParams(),
+  // bun shares module mocks between files, so every mock exposes what any page imports.
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND')
+  },
 }))
 mock.module('next-intl', () => intlMock)
 mock.module('next-themes', () => ({ useTheme: () => ({ theme: 'system', setTheme }) }))
@@ -71,7 +75,7 @@ test('opening the menu reveals theme and language choices (logged out)', () => {
   render(<Header user={null} />)
   openMenu('菜单')
   expect(screen.getByRole('menu')).toBeInTheDocument()
-  expect(screen.getByText('主题')).toBeInTheDocument()
+  expect(screen.getByText('外观')).toBeInTheDocument()
   expect(screen.getByText('界面语言')).toBeInTheDocument()
   expect(screen.getByRole('menuitemradio', { name: '跟随系统' }).getAttribute('aria-checked')).toBe('true')
   expect(screen.getByRole('menuitemradio', { name: '中文' }).getAttribute('aria-checked')).toBe('true')

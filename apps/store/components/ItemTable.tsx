@@ -4,6 +4,7 @@ import type { Item } from '@as/types'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { itemHref } from '@/lib/item-href'
 import { formatDownloads } from '@/lib/item-meta'
 import { reviewVerdict } from '@/lib/review'
 import { InstallButton } from './InstallButton'
@@ -11,10 +12,6 @@ import { ReviewStatus } from './ReviewStatus'
 import { TierLabel } from './TierLabel'
 
 const COLS = 'md:grid-cols-[64px_minmax(0,1fr)_104px_148px_72px_92px]'
-
-export function itemHref(item: Pick<Item, 'category' | 'slug'>): string {
-  return `/store/${item.category}/${item.slug}`
-}
 
 function ItemRow({ item }: { item: Item }) {
   const t = useTranslations('store')
@@ -26,7 +23,7 @@ function ItemRow({ item }: { item: Item }) {
     <div
       role="row"
       data-current={current ? '' : undefined}
-      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-3.5 transition-colors hover:bg-sel/60 data-[current]:border-ink data-[current]:bg-sel data-[current]:shadow-[0_-1px_0_var(--ink)] md:h-20 md:py-0 ${COLS}`}
+      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-3.5 transition-colors hover:bg-sel data-[current]:border-ink data-[current]:bg-sel data-[current]:shadow-[0_-1px_0_var(--ink)] md:h-20 md:py-0 ${COLS}`}
     >
       <span role="cell" className="label col-span-2 md:col-span-1 group-data-[current]:text-ink">
         {t(`category.${item.category}`)}
@@ -85,14 +82,14 @@ export function ItemTable({ items, emptyAction }: { items: Item[]; emptyAction?:
     <div role="table" aria-label={t('title')} className="store-results">
       <div role="rowgroup">
         <div role="row" className={`label hidden h-9 items-center gap-x-4 border-b border-line px-3 md:grid ${COLS}`}>
-          <span role="columnheader">{t('colCategory')}</span>
-          <span role="columnheader">{t('colPackage')}</span>
-          <span role="columnheader">{t('colReview')}</span>
-          <span role="columnheader">{t('colPublisher')}</span>
-          <span role="columnheader" className="text-right">
+          <span role="columnheader" className="truncate">{t('colCategory')}</span>
+          <span role="columnheader" className="truncate">{t('colPackage')}</span>
+          <span role="columnheader" className="truncate">{t('colReview')}</span>
+          <span role="columnheader" className="truncate">{t('colPublisher')}</span>
+          <span role="columnheader" className="truncate text-right">
             {t('colInstalls')}
           </span>
-          <span role="columnheader" className="text-right">
+          <span role="columnheader" className="truncate text-right">
             {t('colInstall')}
           </span>
         </div>

@@ -11,12 +11,21 @@ const RING_TEXT = 'REVIEWED · AGENT STORE · REVIEWED · AGENT STORE · '
 
 export function ReviewStamp({ label, word, className = '' }: ReviewStampProps) {
   const ringId = useId()
+  const inkId = useId()
   return (
     <svg viewBox="0 0 148 148" role="img" aria-label={label} className={`stamp ${className}`}>
       <defs>
         <path id={ringId} d="M74 74m-56 0a56 56 0 1 1 112 0a56 56 0 1 1-112 0" />
+        {/* Uneven ink and a slightly ragged rim. Only the disc takes it: the
+            lettering stays solid so its contrast does not drop. */}
+        <filter id={inkId} x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="grain" />
+          <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.2" result="rim" />
+          <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0.72" result="cover" />
+          <feComposite in="rim" in2="cover" operator="in" />
+        </filter>
       </defs>
-      <circle cx="74" cy="74" r="74" fill="var(--stamp-bg)" />
+      <circle cx="74" cy="74" r="73" fill="var(--stamp-bg)" filter={`url(#${inkId})`} />
       <circle cx="74" cy="74" r="42" fill="none" stroke="var(--stamp-ink)" strokeWidth=".8" />
       <g className="stamp-ring">
         <text fontFamily="var(--font-mono), monospace" fontSize="10" fill="var(--stamp-ink)">

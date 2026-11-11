@@ -1,4 +1,4 @@
-import type { Item, Publisher } from '@as/types'
+import type { Item, Publisher, Topic, TopicSummary } from '@as/types'
 import { StoreClient } from '@as/sdk'
 
 // Web store and CLI share one catalog source: the standalone apps/api server.
@@ -69,4 +69,14 @@ export async function getPublisherWithItems(
   const { data } = await client.getPublisher(slug)
   if (!data?.publisher) return null
   return { publisher: data.publisher, items: data.items ?? [] }
+}
+
+export async function getTopics(): Promise<TopicSummary[]> {
+  const { data } = await client.getTopics()
+  return data ?? []
+}
+
+export async function getTopic(slug: string): Promise<Topic | null> {
+  const { data } = await client.getTopic(slug)
+  return data ?? null
 }

@@ -26,9 +26,8 @@ Before implementing or reviewing any web store screen, read `apps/store/DESIGN.m
 facts). The direction contract for the store list and detail drawer is in
 `apps/store/.impeccable/surfaces/`. Tokens live in `apps/store/app/globals.css`; change
 them there and in `DESIGN.md` together. `docs/ui/Agent Store.dc.html` is only a record of
-the old look for the web store and no longer constrains it. Pages not yet moved to the
-new system (landing, docs, pricing, dashboard, login) keep their current look until their
-follow-up PRs; do not restyle them back toward the old mockup.
+the old look for the web store and no longer constrains it. Since #66 every web store
+page uses the new system; do not restyle any of them back toward the old mockup.
 
 **Desktop client.** `docs/ui/Agent Store.dc.html` is still the single source of truth for
 the desktop client's UI structure, layout, and behavior. Whether the desktop client moves

@@ -4,66 +4,61 @@ export const alt = 'Agent Store — skills, MCP servers & providers for Claude C
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-// Branded social preview card, generated at build/request time (no static asset).
+// Satori cannot read CSS variables, so the light-theme tokens from globals.css are repeated here.
+const PAPER = '#f5f4f6'
+const PLATE = '#faf6f5'
+const INK = '#16181a'
+const INK_2 = '#55585c'
+const LINE = '#c9c7c4'
+const LILAC = '#dcddf3'
+
+function Mark({ style }: { style: React.CSSProperties }) {
+  return (
+    <div style={{ position: 'absolute', width: 15, height: 15, display: 'flex', ...style }}>
+      <div style={{ position: 'absolute', left: 7, top: 0, width: 1, height: 15, background: INK }} />
+      <div style={{ position: 'absolute', top: 7, left: 0, width: 15, height: 1, background: INK }} />
+    </div>
+  )
+}
+
 export default function Image() {
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '80px',
-          background: 'radial-gradient(120% 120% at 50% -10%, #191430 0%, #0c0b13 55%, #08070c 100%)',
-          color: 'white',
-          fontFamily: 'sans-serif',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div style={{ width: '100%', height: '100%', display: 'flex', padding: 56, background: PAPER, color: INK, fontFamily: 'sans-serif' }}>
+        <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', background: PLATE, padding: '56px 64px' }}>
+          <Mark style={{ left: -8, top: -8 }} />
+          <Mark style={{ right: -8, top: -8 }} />
+          <Mark style={{ left: -8, bottom: -8 }} />
+          <Mark style={{ right: -8, bottom: -8 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 22, height: 22, borderRadius: 999, background: INK }} />
+            <div style={{ fontSize: 34, fontWeight: 600 }}>Agent Store</div>
+          </div>
+          <div style={{ marginTop: 44, fontSize: 72, lineHeight: 1.04, letterSpacing: -2, maxWidth: 820 }}>
+            One entry, every agent capability.
+          </div>
+          <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${LINE}`, fontSize: 28, color: INK_2, maxWidth: 820 }}>
+            Skills, MCP servers and providers for Claude Code / Codex. Every package lists what runs on install.
+          </div>
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
-              background: '#7c82ff',
+              position: 'absolute',
+              right: 64,
+              bottom: 56,
+              width: 150,
+              height: 150,
+              borderRadius: 999,
+              background: LILAC,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 38,
-              fontWeight: 800,
+              transform: 'rotate(-13deg)',
+              fontSize: 26,
+              letterSpacing: 3,
             }}
           >
-            A
+            REVIEWED
           </div>
-          <div style={{ fontSize: 40, fontWeight: 800, letterSpacing: -1 }}>Agent Store</div>
-        </div>
-
-        <div style={{ marginTop: 40, fontSize: 68, fontWeight: 800, lineHeight: 1.05, letterSpacing: -2, maxWidth: 900 }}>
-          One entry, every agent capability.
-        </div>
-
-        <div style={{ marginTop: 28, fontSize: 30, color: '#a9a9bd', maxWidth: 880 }}>
-          Discover & install skills, MCP servers, and providers for Claude Code / Codex.
-        </div>
-
-        <div style={{ marginTop: 44, display: 'flex', gap: 16 }}>
-          {['Skills', 'MCP servers', 'Providers'].map((chip) => (
-            <div
-              key={chip}
-              style={{
-                fontSize: 26,
-                padding: '10px 22px',
-                borderRadius: 999,
-                border: '1px solid rgba(124,130,255,0.4)',
-                background: 'rgba(124,130,255,0.12)',
-                color: '#c9ccff',
-              }}
-            >
-              {chip}
-            </div>
-          ))}
         </div>
       </div>
     ),

@@ -2,8 +2,8 @@
   "store": {
     "nav": {
       "store": "商店",
+      "topics": "主题",
       "docs": "文档",
-      "collections": "合集",
       "pricing": "定价",
       "publish": "发布",
       "login": "登录",
@@ -13,12 +13,13 @@
       "account": "账号菜单",
       "main": "主导航",
       "skip": "跳到正文",
-      "theme": "主题",
+      "theme": "外观",
       "themeLight": "浅色",
       "themeDark": "深色",
       "themeSystem": "跟随系统",
       "language": "界面语言",
-      "logout": "退出登录"
+      "logout": "退出登录",
+      "download": "下载"
     },
     "categories": {
       "all": "全部",
@@ -64,7 +65,8 @@
       "emptyTitle": "没有符合条件的包",
       "emptyBody": "换个关键词，或清除搜索和筛选后再看。",
       "colInstall": "安装",
-      "copyCommand": "复制命令"
+      "copyCommand": "复制命令",
+      "lede": "每个包都写明审查结论和安装后会执行的内容。"
     },
     "review": {
       "title": "审查结论",
@@ -131,7 +133,8 @@
     "publisher": {
       "items": "{count} 个已发布的包",
       "empty": "还没有发布任何包。",
-      "close": "关闭"
+      "close": "关闭",
+      "breadcrumb": "商店"
     },
     "lang": {
       "zh": "中文",
@@ -159,6 +162,338 @@
       "download": "下载桌面客户端",
       "downloadAlt": "前往下载页获取桌面客户端",
       "close": "关闭提示"
+    }
+  },
+  "site": {
+    "footer": {
+      "label": "页脚",
+      "tagline": "Claude Code / Codex 的技能、MCP 与供应商目录，每个包写明安装后会执行什么。",
+      "product": "产品",
+      "resources": "资源",
+      "legal": "条款",
+      "store": "商店",
+      "topics": "主题",
+      "docs": "文档",
+      "pricing": "定价",
+      "download": "下载",
+      "registry": "包目录（registry）",
+      "source": "源代码",
+      "releases": "版本发布",
+      "privacy": "隐私政策",
+      "terms": "服务条款",
+      "copyright": "© 2026 Agent Store"
+    },
+    "home": {
+      "metaTitle": "Agent Store：Claude Code / Codex 的技能、MCP 与供应商",
+      "titleA": "一个入口，",
+      "titleB": "装齐所有 Agent 能力",
+      "lede": "发现并安装 Claude Code / Codex 的技能、MCP 服务与模型供应商。每个包都写明审查结论和安装后会执行的内容；本地代理统一转发，失败自动降级。",
+      "downloadMac": "下载 macOS 版",
+      "downloadWin": "下载 Windows 版",
+      "browse": "浏览商店",
+      "unsigned": "安装包暂未签名，首次打开会被系统拦截。",
+      "unsignedLink": "查看放行步骤",
+      "factsLabel": "Agent Store 概况",
+      "factCatalog": "收录",
+      "factCatalogValue": "{total} 个包：技能 {skill} · MCP {mcp} · 供应商 {provider}",
+      "factTopics": "主题",
+      "factTopicsValue": "{count} 个主题",
+      "factSource": "来源",
+      "factSourceValue": "公开的 git registry，每个包经 PR 加入，CI 校验清单和安装地址",
+      "factReview": "审查",
+      "factReviewValue": "LLM 质量与安全审查，详情里写明安装后会运行什么",
+      "factRelay": "本地代理",
+      "factRelayValue": "127.0.0.1:18780，按 Level 转发，失败自动降级",
+      "factClient": "客户端",
+      "factClientValue": "macOS（通用版）与 Windows，暂未签名",
+      "factPrice": "价格",
+      "factPriceValue": "免费使用；Pro {monthly} / 月起",
+      "featuredTitle": "先从这几个包看起",
+      "featuredAll": "浏览全部 {count} 个包",
+      "plateOpen": "查看详情",
+      "relayTitle": "本地代理：一个地址，多家上游",
+      "relayBody": "启用后，Claude Code / Codex 的 API 地址指向本机。请求先到本地代理，再按 Level 从小到大挑选供应商；遇到网络错误、上游 5xx 或模型不在白名单时，自动切到下一家。每次请求的 Token、费用、耗时和状态码都记在本机。",
+      "relayLevel1": "Level 1",
+      "relayLevel1Value": "首选供应商，先收到请求",
+      "relayLevel2": "Level 2",
+      "relayLevel2Value": "备用供应商，上一家失败时接手",
+      "relayFallback": "切换条件",
+      "relayFallbackValue": "网络错误 · 上游 5xx · 模型不在白名单",
+      "relayDocs": "阅读本地代理文档",
+      "topicsTitle": "按要做的事找",
+      "topicsAll": "全部主题",
+      "closeTitle": "装上桌面客户端",
+      "closeBody": "桌面客户端管理本机已安装的技能、MCP 与供应商，运行本地代理并显示用量。",
+      "closePricing": "查看定价"
+    },
+    "topics": {
+      "metaTitle": "主题",
+      "title": "主题",
+      "lede": "按要做的事把包放在一起。一个主题里可以同时有技能、MCP 和供应商，按推荐的顺序排列。",
+      "count": "{count} 个包",
+      "listLabel": "全部主题",
+      "empty": "还没有主题。",
+      "breadcrumb": "主题",
+      "capabilitiesTitle": "装上之后，agent 可以",
+      "packagesTitle": "这个主题里的包",
+      "packagesCount": "{count} 个包",
+      "packagesEmpty": "这个主题里的包暂时都没有上架。",
+      "relatedTitle": "相关主题"
+    },
+    "docs": {
+      "metaTitle": "文档",
+      "metaDescription": "Agent Store 使用指南：安装桌面客户端、浏览与安装、本地代理、CLI 与订阅。",
+      "title": "开始使用 Agent Store",
+      "lede": "发现、安装并管理 Claude Code / Codex 的技能、MCP 与模型供应商。",
+      "toc": "目录",
+      "sections": [
+        {
+          "id": "about",
+          "title": "什么是 Agent Store",
+          "body": "Agent Store 是 Claude Code / Codex 的「应用商店 + 本地管理客户端」。浏览器里的 Web 商店用于发现、搜索和发布；本机的桌面客户端统一管理已安装的资源、显示用量，并运行内置的本地代理。这里可以安装三类资源：",
+          "bullets": [
+            "技能（skill）：为 Claude Code / Codex 补充的工作流与专长",
+            "MCP 服务：通过 Model Context Protocol 接入的外部工具与数据源",
+            "供应商（provider）：模型接入配置，包括你自己的 API Key 与上游地址"
+          ]
+        },
+        {
+          "id": "install",
+          "title": "安装桌面客户端",
+          "body": "在下载页获取 macOS（通用版，Apple 芯片与 Intel 都能用）或 Windows 桌面客户端。客户端管理本机已安装的资源、维护供应商配置、运行本地代理，并显示用量。登录后可跨设备同步已安装的技能、MCP 和供应商。",
+          "bullets": [
+            "当前安装包未签名，首次打开会被系统拦截，这是正常现象，文件没有损坏",
+            "macOS 提示「已损坏，无法打开」时：把 App 拖进「应用程序」，在终端运行 xattr -cr \"/Applications/Agent Store CLI.app\"，再双击打开",
+            "Windows 提示「未知发布者」时：点「更多信息」，再点「仍要运行」",
+            "接入 Apple / Windows 代码签名之后，这些提示会消失"
+          ]
+        },
+        {
+          "id": "browse",
+          "title": "在商店里浏览与安装",
+          "body": "商店页是一张表，每行一个包，列出类别、审查状态、发布者和安装量。顶部可以按类别切换、只看已验证发布者的包、按安装量 / 新增时间 / 评分排序；按 / 键直接搜索。",
+          "bullets": [
+            "点一行，右侧打开详情：审查结论、安装后会执行的内容、安装命令、规格、README、版本历史和评价",
+            "「安装」先尝试唤起桌面客户端；没有检测到客户端时，复制安装命令并提示下载",
+            "审查通过（低风险且没有提醒）的包盖一枚「已审」章；还没有审查结论的显示「待审」",
+            "主题页把同一类工作用得上的包放在一起，技能、MCP 和供应商可以出现在同一个主题里"
+          ]
+        },
+        {
+          "id": "where",
+          "title": "三类资源装到哪里",
+          "body": "安装会把资源下载到本机的 ~/.agents 目录（技能、MCP、供应商各有子目录），再按类型接入你选择的工具。启用资源时要指定它对哪个工具生效（Claude Code 或 Codex）。",
+          "bullets": [
+            "技能：写入对应工具的 skills 目录，例如 ~/.claude/skills/<名称>.md",
+            "MCP：把服务条目写进工具配置，Claude Code 写入 ~/.claude/settings.json 的 mcpServers，Codex 写入 ~/.codex/config.toml 的 mcp_servers",
+            "供应商：登记为一份可编辑的接入配置（API Key、上游地址、模型映射等），启用后经本地代理生效"
+          ]
+        },
+        {
+          "id": "relay",
+          "title": "本地代理",
+          "body": "本地代理（local）是使用供应商的核心。启用后，它把 Claude Code / Codex 的 API 地址指向本机回环端口（默认 http://127.0.0.1:18780，只监听 127.0.0.1）。请求先到本地代理，再按供应商配置转发到真正的上游。",
+          "bullets": [
+            "不用把真实 API Key 交给 CLI：代理给 CLI 的是占位令牌，真实凭证只存在本地供应商配置里，转发时由代理附加",
+            "模型映射与白名单：把请求里的模型名改写成上游支持的型号，或让某个供应商只处理白名单里的模型",
+            "用量计量：每次请求的输入 / 输出 / 缓存 Token、费用、耗时和状态码都会记下来",
+            "可以有多份监听配置，各用各的端口（默认从 18780 起，每份加 100）"
+          ],
+          "code": "# Claude Code\nANTHROPIC_BASE_URL=http://127.0.0.1:18780\n\n# Codex\nmodel_providers.\"aas-relay\".base_url = \"http://127.0.0.1:18780\""
+        },
+        {
+          "id": "levels",
+          "title": "Level 优先级与失败降级",
+          "body": "每个供应商配置有一个 Level（整数，越小越优先，默认 1）。一次请求先按 Level 从小到大挑选候选供应商，从最优先的开始尝试；某个候选失败时自动换下一个。以下情况会切到下一个候选：",
+          "bullets": [
+            "网络层错误，例如连接被拒绝、DNS 失败",
+            "上游返回 5xx",
+            "请求的模型不在这个供应商的白名单里"
+          ]
+        },
+        {
+          "id": "cli",
+          "title": "命令行",
+          "body": "不打开桌面客户端也能安装和管理：用 install 安装资源，用 enable 让它对指定工具生效，再用 sync 把已启用的资源写入工具配置。",
+          "code": "aas install <slug>              # 安装资源\naas list                        # 查看已安装\naas search <query>              # 搜索商店\naas info <slug>                 # 查看资源详情\naas enable <slug> --for claude  # 对 Claude Code 启用\naas disable <slug> --for codex  # 对 Codex 停用\naas sync                        # 把已启用资源写入工具配置\naas relay start|stop|status     # 管理本地代理\naas usage --days 7              # 查看用量与费用\naas update [slug]               # 更新已安装资源"
+        },
+        {
+          "id": "usage",
+          "title": "用量仪表盘",
+          "body": "桌面客户端的概览页汇总本地代理记下的用量：消耗趋势（今日 / 近 7 天 / 近 30 天）、总费用、总 Token、总请求数与模型分布，以及本地代理的监听地址、今日请求、成功率和开关。最近的请求按应用、模型 → 供应商、耗时和状态码逐条列出。命令行用 aas usage 查看同样的汇总，可以按天数、供应商或工具过滤。"
+        },
+        {
+          "id": "publish",
+          "title": "发布你的资源",
+          "body": "登录后在商店页点「发布」，选择类型（供应商 / 技能 / MCP）并填写信息。提交会在 GitHub 上打开一份预填好的清单文件，由你向 registry 提交 PR；CI 校验清单和安装地址，合并后包出现在商店里。"
+        },
+        {
+          "id": "pro",
+          "title": "Pro 功能",
+          "body": "订阅 Pro 解锁用量治理。部分已经上线，部分在规划中：",
+          "bullets": [
+            "预算与超支告警：给供应商设预算上限，接近或超出时提醒（已上线）",
+            "用量分析与导出：更细的费用 / Token 分析与数据导出（已上线）",
+            "智能路由：按成本、延迟或成功率在多家上游之间自动挑选（规划中）",
+            "多 Key 轮换：同一供应商配置多把 API Key 并自动轮换，避开单 Key 限流（规划中）"
+          ]
+        },
+        {
+          "id": "plans",
+          "title": "订阅与买断",
+          "body": "浏览、安装、本地代理和用量仪表盘对所有人免费。需要 Pro 时可以按月、按年订阅，或一次性买断：",
+          "bullets": [
+            "Free：浏览与安装资源、本地代理转发、用量仪表盘",
+            "Pro 月付：{monthly} / 月",
+            "Pro 年付：{yearly} / 年",
+            "终身买断：{lifetime}，一次付费，永久 Pro"
+          ]
+        }
+      ]
+    },
+    "pricing": {
+      "metaTitle": "定价",
+      "title": "定价",
+      "lede": "浏览、安装、本地代理和用量仪表盘免费。Pro 管的是用量：预算告警和用量分析已经上线，智能路由与多 Key 轮换在规划中。",
+      "period": "计费周期",
+      "monthly": "按月",
+      "yearly": "按年",
+      "yearlyNote": "相当于少付 2 个月",
+      "free": "Free",
+      "freeSub": "永久免费",
+      "pro": "Pro",
+      "perMonth": "/ 月",
+      "perYear": "/ 年",
+      "lifetime": "终身买断",
+      "lifetimeSub": "一次性",
+      "freeFeatures": [
+        "浏览、搜索、安装全部资源",
+        "本地代理：按 Level 转发、失败自动降级",
+        "用量仪表盘"
+      ],
+      "proFeatures": [
+        "Free 的全部功能",
+        "预算与超支告警",
+        "用量分析与账单导出",
+        "智能路由（规划中）",
+        "多 Key 轮换（规划中）"
+      ],
+      "lifetimeFeatures": [
+        "Pro 的全部本地功能",
+        "一次付清，永久使用",
+        "没有订阅和月费"
+      ],
+      "startFree": "免费开始",
+      "trial": "免费试用 {days} 天",
+      "upgrade": "直接升级 Pro",
+      "buy": "买断",
+      "working": "正在打开支付页…",
+      "trialNote": "{days} 天后按 {price} {per} 收费，可随时取消。",
+      "failed": "没能打开支付页，请稍后再试。",
+      "merchant": "由 Waffo（Merchant of Record）代收，价格含税。终身买断覆盖全部本地 Pro 功能。"
+    },
+    "download": {
+      "metaTitle": "下载",
+      "title": "下载桌面客户端",
+      "lede": "桌面客户端管理本机已安装的技能、MCP 与供应商，运行本地代理并显示用量。网页上点「安装」时，也是它接手。",
+      "platformsLabel": "安装包",
+      "mac": "macOS",
+      "macDetail": "通用版 .dmg，Apple 芯片与 Intel 都能用",
+      "macAction": "下载 .dmg",
+      "win": "Windows",
+      "winDetail": "安装程序 setup.exe",
+      "winAction": "下载 .exe",
+      "allReleases": "所有版本与更新说明",
+      "unsignedTitle": "首次打开",
+      "unsignedBody": "安装包暂未签名，系统会拦一次。文件没有损坏，按下面的步骤放行；接入代码签名之后就不再需要。",
+      "macSteps": "macOS 提示「已损坏，无法打开」时，把 App 拖进「应用程序」，在终端运行这条命令，再双击打开：",
+      "winSteps": "Windows 提示「未知发布者」时，点「更多信息」，再点「仍要运行」。",
+      "nextTitle": "装好之后",
+      "nextBody": "在商店里点「安装」，网页会唤起桌面客户端；本地代理和供应商配置在客户端里设置。",
+      "nextStore": "去商店",
+      "nextDocs": "阅读文档"
+    },
+    "dashboard": {
+      "metaTitle": "个人面板",
+      "plan": "当前方案",
+      "planFree": "Free",
+      "planPro": "Pro",
+      "planTeam": "Team",
+      "upgrade": "升级 Pro",
+      "upgradeNote": "解锁预算告警与用量分析",
+      "proActive": "Pro 权益已生效",
+      "statsLabel": "发布概况",
+      "statItems": "我的资源",
+      "statInstalls": "总安装量",
+      "statPending": "审核中",
+      "statPublished": "已发布",
+      "submissions": "我的提交",
+      "publish": "发布资源",
+      "colName": "名称",
+      "colCategory": "类别",
+      "colVersion": "版本",
+      "colInstalls": "安装量",
+      "colRating": "评分",
+      "colStatus": "状态",
+      "statusPublished": "已发布",
+      "statusPending": "审核中",
+      "statusRejected": "未通过",
+      "emptyTitle": "还没有提交",
+      "emptyBody": "发布第一个供应商、技能或 MCP，让别人在 Agent Store 里找到并安装它。",
+      "noUsernameTitle": "个人面板",
+      "noUsernameBody": "个人面板按 GitHub 用户名统计你发布的内容。请用 GitHub 登录一次，账号会自动关联。",
+      "redirecting": "正在跳转…",
+      "loginFirst": "请先登录",
+      "checkoutFailed": "没能打开支付页"
+    },
+    "publish": {
+      "title": "发布资源",
+      "body": "填好信息后，会在 GitHub 上打开一份预填的清单文件，由你向 registry 提交 PR。CI 校验通过并合并后，包出现在商店里。",
+      "type": "类型",
+      "choose": "请选择",
+      "cancel": "取消",
+      "submit": "在 GitHub 上继续",
+      "submitting": "正在打开…",
+      "failed": "发布失败",
+      "fields": {
+        "name": "名称",
+        "homepage": "主页",
+        "baseUrl": "Base URL",
+        "supportedModels": "支持的模型（逗号分隔）",
+        "repo": "仓库地址",
+        "contentUrl": "SKILL.md 原始链接",
+        "transport": "传输方式",
+        "command": "启动命令",
+        "url": "远程地址",
+        "headers": "Headers（JSON）",
+        "env": "环境变量（JSON）"
+      }
+    },
+    "login": {
+      "title": "登录 Agent Store",
+      "body": "登录后可以发布资源、发表评价，并在不同设备间同步已安装的技能、MCP 和供应商。",
+      "github": "使用 GitHub 登录",
+      "google": "使用 Google 登录",
+      "consent": "继续即表示同意<terms>服务条款</terms>和<privacy>隐私政策</privacy>。",
+      "close": "关闭"
+    },
+    "legal": {
+      "updated": "最后更新：{date}",
+      "zhOnly": "本页目前只有中文版本。",
+      "contact": "联系我们"
+    },
+    "notFound": {
+      "metaTitle": "页面不存在",
+      "title": "没有这一页",
+      "body": "地址可能写错了，或者这个页面已经移走。",
+      "store": "去商店",
+      "home": "回到首页"
+    },
+    "error": {
+      "title": "页面出错了",
+      "body": "加载这一页时出了问题。可以重试一次；如果还不行，稍后再来。",
+      "retry": "重试",
+      "home": "回到首页"
     }
   }
 }
