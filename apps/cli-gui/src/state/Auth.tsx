@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Entitlements } from '@as/types'
 import { openExternal } from '../lib/openExternal'
 import { onDeepLink } from '../lib/deepLink'
+import { routeDeepLink } from '../lib/deepLinkRoute'
 import { getStoreBaseUrl, getAuthScheme, emailFromJwt } from '../lib/storeAuth'
 import { callRpc } from '../lib/rpc'
 import { useEntitlement } from './Entitlement'
@@ -50,7 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true
     // The OAuth browser flow deep-links back to agent-store://auth-callback?token=…; complete it here.
     let unlistenDeepLink = () => {}
-    void onDeepLink((url) => void completeSignIn(url)).then((u) => {
+    void onDeepLink((url) => {
+      if (routeDeepLink(url).kind === 'auth-callback') void completeSignIn(url)
+    }).then((u) => {
       if (active) unlistenDeepLink = u
       else u()
     })
