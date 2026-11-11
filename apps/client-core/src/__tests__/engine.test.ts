@@ -1,6 +1,7 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { chmod, mkdtemp, rm, readFile, mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { existsSync } from 'fs'
 import { EngineImpl } from '../engine'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
@@ -689,4 +690,53 @@ test.skipIf(process.getuid?.() === 0)('a setConfig that fails while writing the 
   expect(await readFile(codexPath, 'utf-8')).toBe(codexBefore)
   const saved = JSON.parse(await readFile(join(aasHome, 'mcps', 'test-mcp', 'config.json'), 'utf-8'))
   expect(saved).toEqual({ token: 'old' })
+})
+
+const hookedProvider: ProviderItem = {
+  ...providerItem,
+  installHook: { steps: [{ type: 'config', patch: { apiKey: '', baseUrl: 'https://api.default.example/v1' } }] },
+}
+
+async function providerConfig(): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(join(aasHome, 'providers', 'test-provider', 'config.json'), 'utf-8'))
+}
+
+test('first install writes the config step patch as the initial config', async () => {
+  mockFetch({ '/api/items/test-provider': { item: hookedProvider } })
+  await engine.install('test-provider')
+  expect(await providerConfig()).toEqual({ apiKey: '', baseUrl: 'https://api.default.example/v1' })
+})
+
+test('reinstall keeps an apiKey the user already configured', async () => {
+  mockFetch({ '/api/items/test-provider': { item: hookedProvider } })
+  await engine.install('test-provider')
+  await engine.setConfig('test-provider', { apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1' })
+  await engine.install('test-provider')
+  expect(await providerConfig()).toEqual({ apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1' })
+})
+
+test('update keeps an apiKey the user already configured and adds new default keys', async () => {
+  mockFetch({ '/api/items/test-provider': { item: hookedProvider } })
+  await engine.install('test-provider')
+  await engine.setConfig('test-provider', { apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1' })
+  const newer: ProviderItem = {
+    ...hookedProvider,
+    version: '1.1.0',
+    installHook: { steps: [{ type: 'config', patch: { apiKey: '', baseUrl: 'https://api.default.example/v2', model: 'm2' } }] },
+  }
+  mockFetch({ '/api/items/test-provider': { item: newer } })
+  const results = await engine.update('test-provider')
+  expect(results).toEqual([{ slug: 'test-provider', fromVersion: '1.0.0', toVersion: '1.1.0' }])
+  expect(await providerConfig()).toEqual({ apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1', model: 'm2' })
+})
+
+test('install of an item with a script step fails and writes nothing', async () => {
+  const scripted = {
+    ...mcpItem,
+    installHook: { steps: [{ type: 'script', command: 'touch pwned' }] },
+  } as unknown as MCPItem
+  mockFetch({ '/api/items/test-mcp': { item: scripted } })
+  await expect(engine.install('test-mcp')).rejects.toThrow(/script/)
+  expect(existsSync(join(aasHome, 'mcps', 'test-mcp'))).toBe(false)
+  await expect(readFile(join(aasHome, 'registry.json'))).rejects.toThrow()
 })

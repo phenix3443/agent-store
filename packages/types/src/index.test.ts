@@ -50,13 +50,17 @@ describe('InstallHook', () => {
       steps: [
         { type: 'file', url: 'https://example.com/server', dest: 'server' },
         { type: 'config', patch: { transport: 'stdio', serverCommand: './server' } },
-        { type: 'script', command: 'chmod +x server' },
       ],
     }
-    expect(hook.steps).toHaveLength(3)
+    expect(hook.steps).toHaveLength(2)
     expect(hook.steps[0].type).toBe('file')
     expect(hook.steps[1].type).toBe('config')
-    expect(hook.steps[2].type).toBe('script')
+  })
+
+  test('script steps are not part of the type', () => {
+    // @ts-expect-error script steps were removed (#77)
+    const hook: InstallHook = { steps: [{ type: 'script', command: 'id' }] }
+    expect(hook.steps).toHaveLength(1)
   })
 
   test('empty steps is valid', () => {

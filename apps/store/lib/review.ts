@@ -39,8 +39,7 @@ export function runEntries(item: Item): RunEntry[] {
     entries.push({ kind: 'provider' })
   }
   for (const step of steps) {
-    if (step.type === 'script') entries.push({ kind: 'command', value: step.command })
-    else if (step.type === 'file') entries.push({ kind: 'download', value: step.url, dest: step.dest })
+    if (step.type === 'file') entries.push({ kind: 'download', value: step.url, dest: step.dest })
     else entries.push({ kind: 'config', value: Object.keys(step.patch).join(', ') })
   }
   return entries.filter((e, i, all) => all.findIndex((o) => o.kind === e.kind && o.value === e.value) === i)
