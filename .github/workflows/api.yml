@@ -53,7 +53,7 @@ jobs:
 
       - name: Unit tests
         working-directory: apps/api
-        run: DATABASE_URL= bun test
+        run: DATABASE_URL= pnpm test
 
       - name: Migrate and seed
         working-directory: apps/api

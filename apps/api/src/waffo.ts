@@ -1,4 +1,5 @@
 import { WaffoPancake } from '@waffo/pancake-ts'
+import { withTimeout } from './fetch-timeout'
 
 /** Waffo Pancake config, supplied via Cloudflare Workers secrets or local process.env. */
 export type WaffoEnv = {
@@ -26,10 +27,6 @@ function resolvePrivateKey(env?: WaffoEnv): string | undefined {
 
 // The SDK calls fetch with no deadline; a stalled Waffo API would hold the request open.
 const WAFFO_TIMEOUT_MS = 10_000
-
-export function withTimeout(fetchImpl: typeof fetch, ms: number): typeof fetch {
-  return ((input, init) => fetchImpl(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(ms) })) as typeof fetch
-}
 
 /** Builds a Waffo client. Throws if the merchant id or private key is missing. */
 export function getWaffoClient(env?: WaffoEnv): WaffoPancake {

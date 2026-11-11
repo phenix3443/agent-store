@@ -7,7 +7,7 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "type-check": "tsc --noEmit",
-    "test": "bun test",
+    "test": "for f in src/__tests__/*.test.ts; do bun test \"$f\" || exit 1; done",
     "clean": "rm -rf dist *.tsbuildinfo",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun src/migrate.ts",

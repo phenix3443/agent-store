@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { withTimeout } from '../waffo'
+import { withTimeout } from '../fetch-timeout'
 
 // A fetch that never answers unless its signal aborts — stands in for a stalled API.
 const hanging: typeof fetch = ((_input: unknown, init?: RequestInit) =>
