@@ -1,33 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
+import { Star } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import { StoreClient } from '@as/sdk'
 import type { UserReview } from '@as/types'
 import { getAuthToken } from '@/lib/auth/token'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
-function Stars({ value, onChange }: { value: number; onChange?: (n: number) => void }) {
+function Stars({ value }: { value: number }) {
   return (
-    <div className="flex gap-0.5">
+    <span className="flex gap-0.5" aria-hidden>
       {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          disabled={!onChange}
-          onClick={() => onChange?.(n)}
-          aria-label={`${n} 星`}
-          className={`text-lg ${n <= value ? 'text-store-amber' : 'text-store-text-3'} ${onChange ? 'cursor-pointer' : 'cursor-default'}`}
-        >
-          ★
-        </button>
+        <Star key={n} size={14} className={n <= value ? 'fill-current' : 'text-line-strong'} />
       ))}
-    </div>
+    </span>
   )
 }
 
 export function ReviewsSection({ slug, rating, reviewCount }: { slug: string; rating: number; reviewCount: number }) {
-  const client = new StoreClient(API_URL)
+  const t = useTranslations('store.reviews')
+  const locale = useLocale()
+  const bodyId = useId()
   const [reviews, setReviews] = useState<UserReview[]>([])
   const [token, setToken] = useState<string | null>(null)
   const [myRating, setMyRating] = useState(0)
@@ -35,77 +30,100 @@ export function ReviewsSection({ slug, rating, reviewCount }: { slug: string; ra
   const [busy, setBusy] = useState(false)
   const [agg, setAgg] = useState({ rating, reviewCount })
 
-  async function load() {
-    const r = await client.getReviews(slug)
-    if (r.data) setReviews(r.data)
-  }
-
   useEffect(() => {
-    void load()
-    void getAuthToken().then(setToken)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let active = true
+    const client = new StoreClient(API_URL)
+    void client.getReviews(slug).then((r) => {
+      if (active && r.data) setReviews(r.data)
+    })
+    void getAuthToken().then((next) => {
+      if (active) setToken(next)
+    })
+    return () => {
+      active = false
+    }
   }, [slug])
 
-  async function submit() {
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
     if (!token || myRating < 1) return
     setBusy(true)
+    const client = new StoreClient(API_URL)
     const res = await client.submitReview(slug, token, myRating, myBody.trim() || undefined)
     setBusy(false)
     if (res.data) {
       setAgg(res.data)
       setMyBody('')
-      await load()
+      const next = await client.getReviews(slug)
+      if (next.data) setReviews(next.data)
     }
   }
 
+  const dateFormat = new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
+
   return (
-    <div className="mt-6 rounded-xl border border-store-border bg-store-panel p-4">
-      <div className="mb-3 flex items-center gap-3">
-        <p className="text-sm font-medium text-store-text">用户评价</p>
-        {agg.reviewCount > 0 ? (
-          <span className="text-xs text-store-text-2">
-            ★ {agg.rating.toFixed(1)} · {agg.reviewCount} 条
-          </span>
-        ) : (
-          <span className="text-xs text-store-text-3">暂无评价</span>
-        )}
+    <section className="mt-9">
+      <div className="mb-2 flex items-baseline gap-3">
+        <h2 className="label">{t('title')}</h2>
+        <span className="text-[13px] text-ink-2">
+          {agg.reviewCount > 0 ? t('summary', { rating: agg.rating.toFixed(1), count: agg.reviewCount }) : t('none')}
+        </span>
       </div>
 
       {token ? (
-        <div className="mb-4 flex flex-col gap-2 rounded-lg border border-store-border-strong p-3">
-          <Stars value={myRating} onChange={setMyRating} />
-          <textarea
-            value={myBody}
-            onChange={(e) => setMyBody(e.target.value)}
-            placeholder="说说你的使用体验（可选）"
-            rows={2}
-            className="w-full resize-none rounded-lg border border-store-border bg-store-panel-2 px-3 py-2 text-sm text-store-text outline-none focus:border-store-accent"
-          />
-          <button
-            type="button"
-            onClick={submit}
-            disabled={busy || myRating < 1}
-            className="self-start rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? '提交中…' : '发表评价'}
+        <form onSubmit={submit} className="flex flex-col gap-3 border-t border-line py-4">
+          <fieldset>
+            <legend className="mb-1.5 text-[13px] text-ink-2">{t('yourRating')}</legend>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  aria-label={t('stars', { n })}
+                  aria-pressed={myRating === n}
+                  onClick={() => setMyRating(n)}
+                  className="grid h-8 w-8 place-items-center hover:bg-sel"
+                >
+                  <Star size={18} aria-hidden className={n <= myRating ? 'fill-current' : 'text-line-strong'} />
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <div>
+            <label htmlFor={bodyId} className="mb-1.5 block text-[13px] text-ink-2">
+              {t('bodyLabel')}
+            </label>
+            <textarea
+              id={bodyId}
+              value={myBody}
+              onChange={(e) => setMyBody(e.target.value)}
+              rows={3}
+              className="w-full resize-y border border-line bg-paper px-3 py-2 text-sm focus:border-ink"
+            />
+          </div>
+          <button type="submit" disabled={busy || myRating < 1} className="btn self-start">
+            {busy ? t('submitting') : t('submit')}
           </button>
-        </div>
+        </form>
       ) : (
-        <p className="mb-4 text-xs text-store-text-3">登录后可发表评价。</p>
+        <p className="border-t border-line py-3 text-sm text-ink-2">{t('loginHint')}</p>
       )}
 
-      <div className="flex flex-col gap-3">
+      <ul>
         {reviews.map((r, i) => (
-          <div key={i} className="rounded-lg border border-store-border px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-store-text">{r.authorName ?? '匿名'}</span>
-              <span className="text-xs text-store-amber">{'★'.repeat(r.rating)}</span>
-              <span className="ml-auto text-[11px] text-store-text-3">{new Date(r.updatedAt).toLocaleDateString()}</span>
+          <li key={i} className="border-t border-line py-3 last:border-b">
+            <div className="flex items-center gap-2.5 text-sm">
+              <span className="font-medium">{r.authorName ?? t('anonymous')}</span>
+              <Stars value={r.rating} />
+              <span className="sr-only">{t('stars', { n: r.rating })}</span>
+              <time dateTime={r.updatedAt} className="ml-auto font-mono text-[13px] text-ink-2">
+                {dateFormat.format(new Date(r.updatedAt))}
+              </time>
             </div>
-            {r.body && <p className="mt-1.5 text-[13px] text-store-text-2">{r.body}</p>}
-          </div>
+            {r.body && <p className="mt-1.5 max-w-[62ch] text-sm leading-[22px]">{r.body}</p>}
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   )
 }

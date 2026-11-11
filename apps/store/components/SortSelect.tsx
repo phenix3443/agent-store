@@ -1,50 +1,42 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useId } from 'react'
 import { useTranslations } from 'next-intl'
+import { useStoreQuery } from '@/lib/use-store-query'
 
-type Sort = 'downloads' | 'created' | 'rating'
+export type Sort = 'downloads' | 'created' | 'rating'
 
-interface SortSelectProps {
-  active: Sort
-}
-
-const OPTIONS: { value: Sort; key: 'all' | 'new' | 'popular' | 'rating' }[] = [
-  { value: 'downloads', key: 'all' },
-  { value: 'created', key: 'new' },
+const OPTIONS: { value: Sort; key: 'popular' | 'new' | 'rating' }[] = [
   { value: 'downloads', key: 'popular' },
+  { value: 'created', key: 'new' },
   { value: 'rating', key: 'rating' },
 ]
 
-export function SortSelect({ active }: SortSelectProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+export function SortSelect({ active }: { active: Sort }) {
   const t = useTranslations('store.sort')
-
-  function handleSelect(value: Sort) {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('sort', value)
-    router.push(`${pathname}?${params.toString()}`)
-  }
+  const { setParams } = useStoreQuery()
+  const id = useId()
 
   return (
-    <div className="flex gap-0.5 rounded-[10px] border border-store-border bg-store-panel p-[3px]">
-      {OPTIONS.map((opt) => (
-        <button
-          key={opt.key}
-          type="button"
-          onClick={() => handleSelect(opt.value)}
-          aria-pressed={active === opt.value}
-          className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-            active === opt.value
-              ? 'bg-store-accent text-white'
-              : 'text-store-text-2 hover:text-store-text'
-          }`}
-        >
-          {t(opt.key)}
-        </button>
-      ))}
+    <div className="relative flex h-8 items-center border border-line bg-transparent focus-within:border-ink hover:border-ink">
+      <label htmlFor={id} className="label pointer-events-none pl-3 pr-2">
+        {t('label')}
+      </label>
+      <select
+        id={id}
+        value={active}
+        onChange={(e) => setParams({ sort: e.target.value === 'downloads' ? null : e.target.value })}
+        className="h-full cursor-pointer appearance-none bg-transparent pl-1 pr-8 text-sm text-ink outline-offset-4"
+      >
+        {OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value} className="bg-plate text-ink">
+            {t(opt.key)}
+          </option>
+        ))}
+      </select>
+      <svg width="10" height="6" viewBox="0 0 10 6" aria-hidden className="pointer-events-none absolute right-3">
+        <path d="m1 1 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      </svg>
     </div>
   )
 }

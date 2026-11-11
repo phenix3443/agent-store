@@ -9,6 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        paper: 'var(--paper)',
+        plate: 'var(--plate)',
+        ink: { DEFAULT: 'var(--ink)', 2: 'var(--ink-2)', 3: 'var(--ink-3)' },
+        'on-ink': 'var(--on-ink)',
+        line: { DEFAULT: 'var(--line)', strong: 'var(--line-strong)' },
+        lilac: 'var(--lilac)',
+        sel: 'var(--sel)',
+        fill: 'var(--fill)',
+        danger: 'var(--red)',
         store: {
           wall: 'var(--wall)',
           win: 'var(--win)',
@@ -23,6 +32,7 @@ const config: Config = {
           'text-2': 'var(--text-2)',
           'text-3': 'var(--text-3)',
           accent: 'var(--accent)',
+          'on-accent': 'var(--on-accent)',
           'accent-soft': 'var(--accent-soft)',
           green: 'var(--green)',
           'green-soft': 'var(--green-soft)',
@@ -34,8 +44,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'SF Mono', 'monospace'],
+        sans: ['var(--font-sans)', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'PingFang SC', 'Noto Sans SC', 'ui-monospace', 'SF Mono', 'monospace'],
       },
     },
   },

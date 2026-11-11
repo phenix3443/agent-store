@@ -1,162 +1,186 @@
 'use client'
 
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { Box, Settings } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { useTheme } from 'next-themes'
+import { Check, Menu, Settings } from 'lucide-react'
 import type { CurrentUser } from '@/lib/auth'
-import { ThemeToggle } from './ThemeToggle'
-import { LangSwitcher } from './LangSwitcher'
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@/i18n/config'
 import { LoginModal } from './LoginModal'
+import { SearchInput } from './SearchInput'
 
 interface HeaderProps {
   user: CurrentUser | null
 }
 
+const NAV = [
+  { href: '/store', key: 'store' },
+  { href: '/docs', key: 'docs' },
+  { href: '/pricing', key: 'pricing' },
+] as const
+
+const THEMES = [
+  { value: 'light', key: 'themeLight' },
+  { value: 'dark', key: 'themeDark' },
+  { value: 'system', key: 'themeSystem' },
+] as const
+
+function RadioItem({ value, children }: { value: string; children: React.ReactNode }) {
+  return (
+    <DropdownMenu.RadioItem value={value} className="menu-item">
+      <span className="grid w-4 place-items-center">
+        <DropdownMenu.ItemIndicator>
+          <Check size={14} aria-hidden />
+        </DropdownMenu.ItemIndicator>
+      </span>
+      {children}
+    </DropdownMenu.RadioItem>
+  )
+}
+
 export function Header({ user }: HeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const locale = useLocale()
   const t = useTranslations('store.nav')
+  const tl = useTranslations('store.lang')
+  const { theme, setTheme } = useTheme()
   const [loginOpen, setLoginOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const settingsRef = useRef<HTMLDivElement>(null)
 
   const isStore = pathname.startsWith('/store')
-  const isDocs = pathname.startsWith('/docs')
-  const isPricing = pathname.startsWith('/pricing')
-  const isCollections = pathname.startsWith('/collections')
 
-  useEffect(() => {
-    if (!menuOpen) return
-    function onClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [menuOpen])
-
-  useEffect(() => {
-    if (!settingsOpen) return
-    function onClick(e: MouseEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setSettingsOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [settingsOpen])
-
-  const navItemCls = (active: boolean) =>
-    `text-[13.5px] transition-colors ${
-      active ? 'font-bold text-store-accent' : 'font-medium text-store-text-2 hover:text-store-text'
-    }`
+  function selectLocale(next: string) {
+    document.cookie = `locale=${next as SupportedLocale}; path=/; max-age=31536000`
+    router.refresh()
+  }
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-[60px] flex-shrink-0 items-center gap-[18px] border-b border-store-border bg-store-win px-6">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-store-accent text-white">
-            <Box size={16} />
-          </div>
-          <span className="text-[15px] font-bold tracking-tight text-store-text">Agent Store</span>
+      <header className="sticky top-0 z-30 flex flex-wrap items-center gap-x-3 border-b border-line bg-paper px-4 lg:h-[72px] lg:flex-nowrap lg:px-10">
+        <Link href="/" className="flex h-14 items-center gap-2.5 text-lg font-semibold tracking-[-0.01em] lg:h-full">
+          <span aria-hidden className="h-3.5 w-3.5 rounded-full bg-ink" />
+          Agent Store
         </Link>
 
-        <nav className="flex flex-1 items-center justify-center gap-[26px]">
-          <Link href="/store" className={navItemCls(isStore)}>
-            {t('store')}
-          </Link>
-          <Link href="/docs" className={navItemCls(isDocs)}>
-            {t('docs')}
-          </Link>
-          <Link href="/collections" className={navItemCls(isCollections)}>
-            合集
-          </Link>
-          <Link href="/pricing" className={navItemCls(isPricing)}>
-            {t('pricing')}
-          </Link>
+        <nav
+          aria-label={t('main')}
+          className="hidden h-14 gap-7 md:ml-8 md:flex lg:ml-0 lg:h-[72px] lg:flex-1 lg:justify-center lg:gap-5 xl:gap-9"
+        >
+          {NAV.map((item) => {
+            const active = pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className="-mb-px flex items-center whitespace-nowrap border-b-2 border-transparent text-[15px] text-ink-2 transition-colors hover:text-ink aria-[current=page]:border-ink aria-[current=page]:font-medium aria-[current=page]:text-ink"
+              >
+                {t(item.key)}
+              </Link>
+            )
+          })}
         </nav>
 
+        <span className="flex-1 lg:hidden" />
+
+        <Suspense>
+          <SearchInput className="order-last mb-3 w-full lg:order-none lg:mb-0 lg:w-44 xl:w-72" />
+        </Suspense>
+
         {isStore && (
-          <Link
-            href="/store?publish=1"
-            className="flex h-9 items-center rounded-[10px] bg-store-accent px-[15px] text-[12.5px] font-semibold text-white shadow-[0_4px_14px_var(--accent-soft)] hover:brightness-110"
-          >
+          <Link href="/store?publish=1" className="btn hidden h-9 px-4 md:inline-flex">
             {t('publish')}
           </Link>
         )}
 
-        <div className="relative" ref={settingsRef}>
-          <button
-            type="button"
-            aria-label={t('settings')}
-            aria-expanded={settingsOpen}
-            onClick={() => setSettingsOpen((v) => !v)}
-            className="flex h-[34px] w-[34px] items-center justify-center rounded-lg border border-store-border bg-store-panel text-store-text-2 hover:text-store-text"
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger
+            aria-label={t('menu')}
+            className="grid h-9 w-9 place-items-center border border-line text-ink transition-colors hover:border-ink data-[state=open]:border-ink data-[state=open]:bg-sel"
           >
-            <Settings size={17} />
-          </button>
-          {settingsOpen && (
-            <div className="absolute right-0 top-[42px] z-40 w-[230px] overflow-hidden rounded-xl border border-store-border-strong bg-store-win p-3.5 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-[12.5px] font-medium text-store-text-2">{t('theme')}</span>
-                <ThemeToggle />
+            <Menu size={18} aria-hidden className="md:hidden" />
+            <Settings size={17} aria-hidden className="hidden md:block" />
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content align="end" sideOffset={8} collisionPadding={8} className="menu">
+              <div className="md:hidden">
+                {NAV.map((item) => (
+                  <DropdownMenu.Item key={item.href} asChild className="menu-item">
+                    <Link
+                      href={item.href}
+                      aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
+                      className="group menu-item aria-[current=page]:font-medium"
+                    >
+                      <span className="grid w-4 place-items-center">
+                        <span className="hidden h-1.5 w-1.5 rounded-full bg-ink group-aria-[current=page]:block" />
+                      </span>
+                      {t(item.key)}
+                    </Link>
+                  </DropdownMenu.Item>
+                ))}
+                {isStore && (
+                  <DropdownMenu.Item asChild className="menu-item">
+                    <Link href="/store?publish=1">
+                      <span className="w-4" />
+                      {t('publish')}
+                    </Link>
+                  </DropdownMenu.Item>
+                )}
+                <DropdownMenu.Separator className="menu-separator" />
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[12.5px] font-medium text-store-text-2">{t('language')}</span>
-                <LangSwitcher />
-              </div>
-            </div>
-          )}
-        </div>
+              <DropdownMenu.Label className="label menu-label">{t('theme')}</DropdownMenu.Label>
+              <DropdownMenu.RadioGroup value={theme ?? 'system'} onValueChange={setTheme}>
+                {THEMES.map((option) => (
+                  <RadioItem key={option.value} value={option.value}>
+                    {t(option.key)}
+                  </RadioItem>
+                ))}
+              </DropdownMenu.RadioGroup>
+              <DropdownMenu.Separator className="menu-separator" />
+              <DropdownMenu.Label className="label menu-label">{t('language')}</DropdownMenu.Label>
+              <DropdownMenu.RadioGroup value={locale} onValueChange={selectLocale}>
+                {SUPPORTED_LOCALES.map((code) => (
+                  <RadioItem key={code} value={code}>
+                    <span lang={code}>{tl(code)}</span>
+                  </RadioItem>
+                ))}
+              </DropdownMenu.RadioGroup>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
 
         {user ? (
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              aria-label={t('myHome')}
-              onClick={() => setMenuOpen((v) => !v)}
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-[13px] font-bold text-white"
-              style={{ background: 'linear-gradient(135deg, #7c82ff, #b06ad9)' }}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger
+              aria-label={t('account')}
+              className="grid h-9 w-9 place-items-center bg-ink font-mono text-sm font-medium text-on-ink"
             >
               {user.initial}
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-[42px] z-40 w-[190px] overflow-hidden rounded-xl border border-store-border-strong bg-store-win shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
-                <div className="border-b border-store-border px-3.5 py-3">
-                  <div className="truncate font-mono text-[12.5px] font-bold text-store-text">
-                    {user.username || user.email || 'you'}
-                  </div>
-                  {user.email && <div className="mt-0.5 truncate text-[11px] text-store-text-3">{user.email}</div>}
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content align="end" sideOffset={8} collisionPadding={8} className="menu">
+                <div className="border-b border-line px-2.5 pb-2.5 pt-1.5">
+                  <div className="truncate font-mono text-sm font-medium">{user.username || user.email || 'you'}</div>
+                  {user.email && <div className="mt-0.5 truncate text-xs text-ink-2">{user.email}</div>}
                 </div>
-                <Link
-                  href={user.username ? `/publisher/${user.username}` : '/dashboard'}
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-3.5 py-2.5 text-[12.5px] text-store-text-2 hover:bg-store-panel-2 hover:text-store-text"
-                >
-                  {t('myHome')}
-                </Link>
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-3.5 py-2.5 text-[12.5px] text-store-text-2 hover:bg-store-panel-2 hover:text-store-text"
-                >
-                  {t('settings')}
-                </Link>
-                <a
-                  href="/auth/logout"
-                  className="block border-t border-store-border px-3.5 py-2.5 text-[12.5px] text-store-red hover:bg-store-panel-2"
-                >
-                  {t('logout')}
-                </a>
-              </div>
-            )}
-          </div>
+                <DropdownMenu.Item asChild className="menu-item mt-1.5">
+                  <Link href={user.username ? `/publisher/${user.username}` : '/dashboard'}>{t('myHome')}</Link>
+                </DropdownMenu.Item>
+                <DropdownMenu.Item asChild className="menu-item">
+                  <Link href="/dashboard">{t('settings')}</Link>
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator className="menu-separator" />
+                <DropdownMenu.Item asChild className="menu-item text-danger">
+                  <a href="/auth/logout">{t('logout')}</a>
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         ) : (
-          <button
-            type="button"
-            onClick={() => setLoginOpen(true)}
-            className="flex h-9 items-center rounded-[10px] border border-store-border-strong bg-store-panel px-4 text-[12.5px] font-semibold text-store-text hover:border-store-accent"
-          >
+          <button type="button" onClick={() => setLoginOpen(true)} className="btn h-9 px-4">
             {t('login')}
           </button>
         )}

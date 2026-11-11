@@ -1,46 +1,76 @@
 :root {
-  --wall: radial-gradient(130% 120% at 26% -12%, #2c2647 0%, #16161c 52%, #0b0b0f 100%);
-  --win: #17171b;
-  --sidebar: #1e1e24;
-  --content: #141417;
-  --chrome: #1e1e24;
-  --panel: #23232a;
-  --panel-2: #2b2b32;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.15);
-  --text: #edeef1;
-  --text-2: #9a9aa6;
-  --text-3: #64646e;
-  --accent: #7c82ff;
-  --accent-soft: rgba(124, 130, 255, 0.16);
-  --green: #3ad29f;
-  --green-soft: rgba(58, 210, 159, 0.15);
-  --amber: #f0b34a;
-  --star: #f0b34a;
-  --red: #f3675f;
-  --code-bg: rgba(255, 255, 255, 0.055);
-  --term-bg: #0c0c10;
+  --paper: #f5f4f6;
+  --plate: #faf6f5;
+  --ink: #16181a;
+  --ink-2: #55585c;
+  --ink-3: #63666a;
+  --on-ink: #f5f4f6;
+  --line: #c9c7c4;
+  --line-strong: #8e8c89;
+  --lilac: #dcddf3;
+  --sel: #eaeaf4;
+  --fill: #eceaec;
+  --selection-bg: #dcddf3;
+  --selection-fg: #16181a;
+  /* The stamp is a pale seal with ink lettering in both themes. */
+  --stamp-bg: #dcddf3;
+  --stamp-ink: #16181a;
+  --stamp-blend: multiply;
+
+  --green: #1d6b45;
+  --green-soft: rgba(29, 107, 69, 0.1);
+  --amber: #8a5300;
+  --amber-soft: rgba(138, 83, 0, 0.1);
+  --star: #8a5300;
+  --red: #b3261e;
+
+  /* Legacy names, still used by the pages that have not been redesigned. */
+  --wall: var(--paper);
+  --win: var(--plate);
+  --sidebar: var(--fill);
+  --content: var(--paper);
+  --chrome: var(--fill);
+  --panel: var(--plate);
+  --panel-2: var(--fill);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --text: var(--ink);
+  --text-2: var(--ink-2);
+  --text-3: var(--ink-3);
+  --accent: var(--ink);
+  --on-accent: var(--on-ink);
+  --accent-soft: var(--sel);
+  --code-bg: var(--fill);
+  --term-bg: #16181a;
+
+  color-scheme: light;
 }
 
-[data-theme='light'] {
-  --win: #ffffff;
-  --sidebar: #f4f4f7;
-  --content: #fbfbfc;
-  --chrome: #ececf0;
-  --panel: #ffffff;
-  --panel-2: #f5f5f8;
-  --border: rgba(0, 0, 0, 0.09);
-  --border-strong: rgba(0, 0, 0, 0.18);
-  --text: #191920;
-  --text-2: #5d5d68;
-  --text-3: #9797a2;
-  --accent: #5b54e8;
-  --green: #16a06a;
-  --green-soft: rgba(22, 160, 106, 0.12);
-  --star: #e0a020;
-  --red: #e0483f;
-  --code-bg: rgba(0, 0, 0, 0.045);
-  --term-bg: #17171d;
+[data-theme='dark'] {
+  --paper: #131517;
+  --plate: #1b1d20;
+  --ink: #f0eff2;
+  --ink-2: #aeb0b5;
+  --ink-3: #9a9ca1;
+  --on-ink: #131517;
+  --line: #3a3d41;
+  --line-strong: #6a6d72;
+  --sel: #262838;
+  --fill: #24272b;
+  --selection-bg: #3d4070;
+  --selection-fg: #f0eff2;
+  /* multiply would dissolve the pale seal into a dark ground */
+  --stamp-blend: normal;
+
+  --green: #7ad3a6;
+  --green-soft: rgba(122, 211, 166, 0.14);
+  --amber: #e9b45c;
+  --amber-soft: rgba(233, 180, 92, 0.14);
+  --star: #e9b45c;
+  --red: #f28b82;
+  --term-bg: #0c0d0e;
+
+  color-scheme: dark;
 }
 
 @tailwind base;
@@ -49,20 +79,223 @@
 
 @layer base {
   html {
-    font-feature-settings: 'ss03' on;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scrollbar-color: var(--line-strong) transparent;
   }
 
   body {
-    @apply bg-store-content text-store-text;
+    @apply bg-paper text-ink;
+    caret-color: var(--ink);
+  }
+
+  ::selection {
+    background: var(--selection-bg);
+    color: var(--selection-fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@layer components {
+  .label {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 150ms,
+      color 150ms;
+  }
+
+  .btn:hover {
+    background: var(--ink);
+    color: var(--on-ink);
+  }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .btn-primary {
+    min-height: 48px;
+    padding: 0 20px;
+    background: var(--ink);
+    color: var(--on-ink);
+    font-size: 13px;
+  }
+
+  .btn-primary:hover {
+    background: var(--ink-2);
+  }
+
+  .menu {
+    z-index: 60;
+    min-width: 220px;
+    border: 1px solid var(--ink);
+    background: var(--plate);
+    padding: 6px;
+    box-shadow: 0 12px 28px -12px rgba(22, 24, 26, 0.35);
+  }
+
+  .menu-item {
+    display: flex;
+    min-height: 36px;
+    cursor: pointer;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+  }
+
+  .menu-item[data-highlighted] {
+    background: var(--sel);
+  }
+
+  .menu-label {
+    padding: 8px 10px 4px;
+  }
+
+  .menu-separator {
+    height: 1px;
+    margin: 6px 0;
+    background: var(--line);
+  }
+
+  /* Crop marks at the four corners of a plate. */
+  .plate {
+    position: relative;
+  }
+
+  .plate-mark {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+  }
+
+  .plate-mark::before,
+  .plate-mark::after {
+    content: '';
+    position: absolute;
+    background: var(--ink);
+  }
+
+  .plate-mark::before {
+    left: 7px;
+    top: 0;
+    width: 1px;
+    height: 15px;
+  }
+
+  .plate-mark::after {
+    top: 7px;
+    left: 0;
+    height: 1px;
+    width: 15px;
+  }
+
+  .chop {
+    background: var(--stamp-bg);
+    color: var(--stamp-ink);
+    mix-blend-mode: var(--stamp-blend);
+  }
+
+  .stamp {
+    mix-blend-mode: var(--stamp-blend);
+    transform: rotate(-13deg);
+    transition:
+      transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .stamp:hover {
+    transform: rotate(-9deg) translateY(-5px) scale(1.03);
+    filter: drop-shadow(0 10px 10px rgba(22, 24, 26, 0.22));
+  }
+
+  .stamp-ring {
+    transform-origin: 74px 74px;
+    animation: stamp-turn 48s linear infinite;
+  }
+
+  /* While a filter or search navigation is in flight (set by useStoreQuery). */
+  [data-store-pending] .store-results {
+    opacity: 0.55;
+    transition: opacity 150ms 120ms;
+  }
+}
+
+@keyframes stamp-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (min-width: 1024px) {
+  /* The drawer takes the right 520px, so the list keeps its own column
+     instead of running underneath it. */
+  body:has([data-item-drawer]) .store-shell {
+    padding-right: calc(520px + 2.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp,
+  .stamp:hover {
+    transition: none;
+    transform: rotate(-13deg);
+    filter: none;
+  }
+
+  .stamp-ring {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #242728 transparent;
+    scrollbar-color: var(--line-strong) transparent;
   }
 
   .line-clamp-2 {

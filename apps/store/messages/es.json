@@ -3,20 +3,162 @@
     "nav": {
       "store": "Tienda",
       "docs": "Documentación",
+      "collections": "Colecciones",
       "pricing": "Precios",
       "publish": "Publicar",
       "login": "Iniciar sesión",
-      "myHome": "Mi perfil",
+      "myHome": "Mi página",
       "settings": "Ajustes",
+      "menu": "Menú",
+      "account": "Menú de la cuenta",
+      "main": "Navegación principal",
+      "skip": "Saltar al contenido",
       "theme": "Tema",
+      "themeLight": "Claro",
+      "themeDark": "Oscuro",
+      "themeSystem": "Sistema",
       "language": "Idioma",
       "logout": "Cerrar sesión"
     },
-    "categories": { "all": "Todos", "provider": "Proveedores", "skill": "Habilidades", "mcp": "MCP" },
-    "sort": { "all": "Todos", "new": "Más recientes", "popular": "Populares", "rating": "Mejor valorados" },
-    "search": { "placeholder": "Buscar recursos, etiquetas o descripciones…" },
-    "filters": { "verifiedOnly": "Solo verificados" },
-    "card": { "install": "Instalar", "installed": "Instalado" },
-    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+    "categories": {
+      "all": "Todo",
+      "provider": "Proveedores",
+      "skill": "Skills",
+      "mcp": "MCP"
+    },
+    "category": {
+      "provider": "Proveedor",
+      "skill": "Skill",
+      "mcp": "MCP"
+    },
+    "sort": {
+      "label": "Orden",
+      "popular": "Más instalados",
+      "new": "Más recientes",
+      "rating": "Mejor valorados"
+    },
+    "search": {
+      "placeholder": "Buscar skills, MCP, proveedores",
+      "label": "Buscar",
+      "loading": "Buscando",
+      "shortcut": "Pulsa / para ir a la búsqueda"
+    },
+    "filters": {
+      "category": "Categoría",
+      "verifiedOnly": "Solo verificados",
+      "results": "{count, plural, one {# paquete} other {# paquetes}}",
+      "clear": "Borrar búsqueda y filtros"
+    },
+    "list": {
+      "title": "Tienda",
+      "colCategory": "Tipo",
+      "colPackage": "Paquete",
+      "colReview": "Revisión",
+      "colPublisher": "Editor",
+      "colInstalls": "Instalaciones",
+      "copied": "Copiado",
+      "copyFailed": "Error al copiar",
+      "copyLabel": "Copiar el comando de instalación de {name}",
+      "copiedAnnounce": "Comando de instalación copiado: {command}",
+      "copyFailedAnnounce": "No se pudo copiar. Selecciona el comando y cópialo a mano: {command}",
+      "emptyTitle": "Ningún paquete coincide",
+      "emptyBody": "Prueba otra palabra o borra la búsqueda y los filtros.",
+      "colInstall": "Instalar",
+      "copyCommand": "Copiar comando"
+    },
+    "review": {
+      "title": "Resultado de la revisión",
+      "passed": "Revisado",
+      "flagged": "Con avisos",
+      "pending": "Pendiente",
+      "pendingBody": "Este paquete aún no se ha revisado. Antes de instalarlo, comprueba lo que ejecuta, indicado abajo.",
+      "automated": "Revisión automática",
+      "quality": "Calidad {score}/5",
+      "riskLow": "Riesgo bajo",
+      "riskMedium": "Riesgo medio",
+      "riskHigh": "Riesgo alto",
+      "concerns": "Avisos",
+      "stampLabel": "Sello de revisión: revisado por Agent Store",
+      "chop": "R"
+    },
+    "tier": {
+      "official": "Oficial",
+      "verified": "Verificado",
+      "community": "Comunidad"
+    },
+    "detail": {
+      "breadcrumb": "Tienda",
+      "expand": "Abrir en página completa",
+      "close": "Cerrar detalles",
+      "installs": "{count} instalaciones",
+      "rating": "{rating} de valoración ({count} reseñas)",
+      "favorite": "Guardar",
+      "unfavorite": "Guardado",
+      "runsTitle": "Qué ejecuta tras la instalación",
+      "runCommand": "Ejecuta",
+      "runConnect": "Conecta",
+      "runFile": "Instala",
+      "runDownload": "Descarga",
+      "runConfig": "Escribe",
+      "runProvider": "Rellena",
+      "providerNote": "Escribe el endpoint al instalar. Solo añades la clave de API.",
+      "downloadTo": "{url} → {dest}",
+      "installTitle": "Comando de instalación",
+      "specsTitle": "Especificaciones",
+      "version": "Versión",
+      "compatible": "Compatible con",
+      "transport": "Transporte",
+      "models": "Modelos",
+      "tags": "Etiquetas",
+      "readme": "README",
+      "content": "Contenido de la skill",
+      "versionsTitle": "Historial de versiones",
+      "latest": "Última",
+      "notFound": "Paquete no encontrado"
+    },
+    "reviews": {
+      "title": "Reseñas de usuarios",
+      "none": "Aún no hay reseñas",
+      "summary": "{rating} · {count} reseñas",
+      "loginHint": "Inicia sesión para dejar una reseña.",
+      "yourRating": "Tu valoración",
+      "stars": "{n} estrellas",
+      "bodyLabel": "Tu experiencia (opcional)",
+      "submit": "Publicar reseña",
+      "submitting": "Publicando…",
+      "anonymous": "Anónimo"
+    },
+    "publisher": {
+      "items": "{count, plural, one {# paquete publicado} other {# paquetes publicados}}",
+      "empty": "Aún no hay paquetes publicados.",
+      "close": "Cerrar"
+    },
+    "lang": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "es": "Español"
+    },
+    "install": {
+      "action": "Instalar",
+      "label": "Instalar {name} en el cliente de escritorio",
+      "desktop": "Instalar en el cliente de escritorio",
+      "opening": "Abriendo…",
+      "opened": "Abierto en el cliente",
+      "openedShort": "Abierto",
+      "download": "Descargar el cliente de escritorio",
+      "fallbackNote": "Si el cliente no se abre, se copia el comando de instalación y se te indica la descarga.",
+      "phoneNote": "Ejecuta este comando en tu ordenador o instala con el cliente de escritorio."
+    },
+    "notice": {
+      "label": "Aviso",
+      "missingTitle": "No se detectó el cliente de escritorio",
+      "missingBody": "El comando de instalación está copiado. Ejecútalo en una terminal o descarga primero el cliente de escritorio.",
+      "copyFailedBody": "No se pudo copiar el comando de instalación. Copia a mano la línea de abajo y ejecútala en una terminal, o descarga primero el cliente de escritorio.",
+      "download": "Descargar el cliente de escritorio",
+      "downloadAlt": "Ir a la página de descarga del cliente de escritorio",
+      "close": "Cerrar aviso"
+    }
   }
 }

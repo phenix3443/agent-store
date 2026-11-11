@@ -5,24 +5,24 @@ import remarkGfm from 'remark-gfm'
 // react-markdown escapes raw HTML by default, so this is XSS-safe.
 export function MarkdownContent({ children }: { children: string }) {
   return (
-    <div className="text-[13.5px] leading-relaxed text-store-text-2">
+    <div className="max-w-[70ch] text-sm leading-[22px] text-ink [overflow-wrap:anywhere]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          h1: (p) => <h2 className="mb-2 mt-6 text-lg font-semibold text-store-text" {...p} />,
-          h2: (p) => <h3 className="mb-2 mt-5 text-base font-semibold text-store-text" {...p} />,
-          h3: (p) => <h4 className="mb-1.5 mt-4 text-sm font-semibold text-store-text-2" {...p} />,
+          h1: (p) => <h3 className="mb-1.5 mt-6 text-[17px] font-medium leading-6 first:mt-0" {...p} />,
+          h2: (p) => <h4 className="mb-1.5 mt-6 text-base font-medium leading-6" {...p} />,
+          h3: (p) => <h5 className="mb-1 mt-5 text-sm font-semibold" {...p} />,
           p: (p) => <p className="my-2" {...p} />,
           ul: (p) => <ul className="my-2 list-disc pl-5" {...p} />,
           ol: (p) => <ol className="my-2 list-decimal pl-5" {...p} />,
           li: (p) => <li className="my-1" {...p} />,
-          a: (p) => <a className="text-store-accent underline-offset-2 hover:underline" {...p} />,
-          strong: (p) => <strong className="font-semibold text-store-text" {...p} />,
-          code: (p) => <code className="rounded bg-store-panel-2 px-1 py-0.5 font-mono text-[12px] text-store-text" {...p} />,
+          a: (p) => <a className="underline decoration-line-strong hover:decoration-ink" {...p} />,
+          strong: (p) => <strong className="font-semibold" {...p} />,
+          code: (p) => <code className="bg-fill px-1 py-0.5 font-mono text-[13px]" {...p} />,
           pre: (p) => (
-            <pre className="my-3 overflow-x-auto rounded-lg border border-store-border bg-store-content p-3 text-[12px]" {...p} />
+            <pre className="my-3 overflow-x-auto border border-line bg-paper p-3 text-[13px] [&_code]:bg-transparent [&_code]:p-0" {...p} />
           ),
-          blockquote: (p) => <blockquote className="my-2 border-l-2 border-store-border-strong pl-3 text-store-text-3" {...p} />,
+          blockquote: (p) => <blockquote className="my-3 pl-4 text-ink-2" {...p} />,
         }}
       >
         {children}

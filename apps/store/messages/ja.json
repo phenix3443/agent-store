@@ -3,20 +3,162 @@
     "nav": {
       "store": "ストア",
       "docs": "ドキュメント",
+      "collections": "コレクション",
       "pricing": "料金",
       "publish": "公開",
       "login": "ログイン",
       "myHome": "マイページ",
       "settings": "設定",
+      "menu": "メニュー",
+      "account": "アカウントメニュー",
+      "main": "メインナビゲーション",
+      "skip": "本文へスキップ",
       "theme": "テーマ",
-      "language": "言語",
+      "themeLight": "ライト",
+      "themeDark": "ダーク",
+      "themeSystem": "システムに合わせる",
+      "language": "表示言語",
       "logout": "ログアウト"
     },
-    "categories": { "all": "すべて", "provider": "プロバイダー", "skill": "スキル", "mcp": "MCP" },
-    "sort": { "all": "すべて", "new": "新着", "popular": "人気", "rating": "高評価" },
-    "search": { "placeholder": "リソース、タグ、説明を検索…" },
-    "filters": { "verifiedOnly": "認証済みのみ" },
-    "card": { "install": "インストール", "installed": "インストール済み" },
-    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+    "categories": {
+      "all": "すべて",
+      "provider": "プロバイダー",
+      "skill": "スキル",
+      "mcp": "MCP"
+    },
+    "category": {
+      "provider": "プロバイダー",
+      "skill": "スキル",
+      "mcp": "MCP"
+    },
+    "sort": {
+      "label": "並び順",
+      "popular": "インストール数順",
+      "new": "新着順",
+      "rating": "評価の高い順"
+    },
+    "search": {
+      "placeholder": "スキル、MCP、プロバイダーを検索",
+      "label": "検索",
+      "loading": "検索中",
+      "shortcut": "/ キーで検索にフォーカス"
+    },
+    "filters": {
+      "category": "カテゴリ",
+      "verifiedOnly": "認証済みのみ",
+      "results": "{count} 件",
+      "clear": "検索と絞り込みをクリア"
+    },
+    "list": {
+      "title": "ストア",
+      "colCategory": "種類",
+      "colPackage": "パッケージ",
+      "colReview": "審査",
+      "colPublisher": "公開者",
+      "colInstalls": "インストール数",
+      "copied": "コピー済み",
+      "copyFailed": "コピー失敗",
+      "copyLabel": "{name} のインストールコマンドをコピー",
+      "copiedAnnounce": "インストールコマンドをコピーしました：{command}",
+      "copyFailedAnnounce": "コピーできませんでした。コマンドを選択して手動でコピーしてください：{command}",
+      "emptyTitle": "条件に合うパッケージがありません",
+      "emptyBody": "別のキーワードを試すか、検索と絞り込みをクリアしてください。",
+      "colInstall": "インストール",
+      "copyCommand": "コマンドをコピー"
+    },
+    "review": {
+      "title": "審査結果",
+      "passed": "審査済み",
+      "flagged": "注意あり",
+      "pending": "審査待ち",
+      "pendingBody": "このパッケージはまだ審査されていません。インストール前に、下記の実行内容を確認してください。",
+      "automated": "自動審査",
+      "quality": "品質 {score}/5",
+      "riskLow": "低リスク",
+      "riskMedium": "中リスク",
+      "riskHigh": "高リスク",
+      "concerns": "注意点",
+      "stampLabel": "審査印：Agent Store 審査済み",
+      "chop": "審"
+    },
+    "tier": {
+      "official": "公式",
+      "verified": "認証済み",
+      "community": "コミュニティ"
+    },
+    "detail": {
+      "breadcrumb": "ストア",
+      "expand": "ページ全体で開く",
+      "close": "詳細を閉じる",
+      "installs": "{count} 回インストール",
+      "rating": "評価 {rating}（{count} 件）",
+      "favorite": "お気に入り",
+      "unfavorite": "お気に入り済み",
+      "runsTitle": "インストール後に実行される内容",
+      "runCommand": "実行",
+      "runConnect": "接続",
+      "runFile": "ファイル",
+      "runDownload": "ダウンロード",
+      "runConfig": "設定の書き込み",
+      "runProvider": "接続の入力",
+      "providerNote": "インストール時に接続先を書き込みます。API キーだけ追加してください。",
+      "downloadTo": "{url} → {dest}",
+      "installTitle": "インストールコマンド",
+      "specsTitle": "仕様",
+      "version": "バージョン",
+      "compatible": "対応",
+      "transport": "トランスポート",
+      "models": "対応モデル",
+      "tags": "タグ",
+      "readme": "README",
+      "content": "スキルの内容",
+      "versionsTitle": "バージョン履歴",
+      "latest": "最新",
+      "notFound": "パッケージが見つかりません"
+    },
+    "reviews": {
+      "title": "ユーザーレビュー",
+      "none": "レビューはまだありません",
+      "summary": "{rating} · {count} 件",
+      "loginHint": "レビューを書くにはログインしてください。",
+      "yourRating": "あなたの評価",
+      "stars": "星 {n}",
+      "bodyLabel": "使用感（任意）",
+      "submit": "レビューを投稿",
+      "submitting": "投稿中…",
+      "anonymous": "匿名"
+    },
+    "publisher": {
+      "items": "公開中のパッケージ {count} 件",
+      "empty": "公開中のパッケージはまだありません。",
+      "close": "閉じる"
+    },
+    "lang": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "es": "Español"
+    },
+    "install": {
+      "action": "インストール",
+      "label": "{name} をデスクトップクライアントでインストール",
+      "desktop": "デスクトップクライアントでインストール",
+      "opening": "起動中…",
+      "opened": "クライアントで開きました",
+      "openedShort": "起動済み",
+      "download": "デスクトップクライアントを入手",
+      "fallbackNote": "クライアントが起動しない場合は、インストールコマンドをコピーしてダウンロードを案内します。",
+      "phoneNote": "パソコンでこのコマンドを実行するか、デスクトップクライアントでインストールしてください。"
+    },
+    "notice": {
+      "label": "通知",
+      "missingTitle": "デスクトップクライアントが見つかりません",
+      "missingBody": "インストールコマンドをコピーしました。ターミナルで実行するか、先にデスクトップクライアントを入手してください。",
+      "copyFailedBody": "インストールコマンドをコピーできませんでした。下の行を手動でコピーしてターミナルで実行するか、先にデスクトップクライアントを入手してください。",
+      "download": "デスクトップクライアントを入手",
+      "downloadAlt": "ダウンロードページでデスクトップクライアントを入手",
+      "close": "通知を閉じる"
+    }
   }
 }

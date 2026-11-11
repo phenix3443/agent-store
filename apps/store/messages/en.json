@@ -3,20 +3,162 @@
     "nav": {
       "store": "Store",
       "docs": "Docs",
+      "collections": "Collections",
       "pricing": "Pricing",
       "publish": "Publish",
-      "login": "Log in",
-      "myHome": "My profile",
+      "login": "Sign in",
+      "myHome": "My page",
       "settings": "Settings",
+      "menu": "Menu",
+      "account": "Account menu",
+      "main": "Main navigation",
+      "skip": "Skip to content",
       "theme": "Theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System",
       "language": "Language",
-      "logout": "Log out"
+      "logout": "Sign out"
     },
-    "categories": { "all": "All", "provider": "Providers", "skill": "Skills", "mcp": "MCP" },
-    "sort": { "all": "All", "new": "Newest", "popular": "Popular", "rating": "Top rated" },
-    "search": { "placeholder": "Search items, tags, or descriptions…" },
-    "filters": { "verifiedOnly": "Verified only" },
-    "card": { "install": "Install", "installed": "Installed" },
-    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+    "categories": {
+      "all": "All",
+      "provider": "Providers",
+      "skill": "Skills",
+      "mcp": "MCP"
+    },
+    "category": {
+      "provider": "Provider",
+      "skill": "Skill",
+      "mcp": "MCP"
+    },
+    "sort": {
+      "label": "Sort",
+      "popular": "Most installed",
+      "new": "Newest",
+      "rating": "Top rated"
+    },
+    "search": {
+      "placeholder": "Search skills, MCP, providers",
+      "label": "Search",
+      "loading": "Searching",
+      "shortcut": "Press / to focus search"
+    },
+    "filters": {
+      "category": "Category",
+      "verifiedOnly": "Verified only",
+      "results": "{count, plural, one {# package} other {# packages}}",
+      "clear": "Clear search and filters"
+    },
+    "list": {
+      "title": "Store",
+      "colCategory": "Type",
+      "colPackage": "Package",
+      "colReview": "Review",
+      "colPublisher": "Publisher",
+      "colInstalls": "Installs",
+      "copied": "Copied",
+      "copyFailed": "Copy failed",
+      "copyLabel": "Copy the install command for {name}",
+      "copiedAnnounce": "Copied install command: {command}",
+      "copyFailedAnnounce": "Copy failed. Select the command and copy it by hand: {command}",
+      "emptyTitle": "No packages match",
+      "emptyBody": "Try another keyword, or clear the search and filters.",
+      "colInstall": "Install",
+      "copyCommand": "Copy command"
+    },
+    "review": {
+      "title": "Review verdict",
+      "passed": "Reviewed",
+      "flagged": "Flagged",
+      "pending": "Pending",
+      "pendingBody": "This package has not been reviewed yet. Check what it runs, listed below, before installing.",
+      "automated": "Automated review",
+      "quality": "Quality {score}/5",
+      "riskLow": "Low risk",
+      "riskMedium": "Medium risk",
+      "riskHigh": "High risk",
+      "concerns": "Concerns",
+      "stampLabel": "Review stamp: reviewed by Agent Store",
+      "chop": "R"
+    },
+    "tier": {
+      "official": "Official",
+      "verified": "Verified",
+      "community": "Community"
+    },
+    "detail": {
+      "breadcrumb": "Store",
+      "expand": "Open as full page",
+      "close": "Close details",
+      "installs": "{count} installs",
+      "rating": "{rating} rating ({count} reviews)",
+      "favorite": "Save",
+      "unfavorite": "Saved",
+      "runsTitle": "What it runs after install",
+      "runCommand": "Runs",
+      "runConnect": "Connects",
+      "runFile": "Installs",
+      "runDownload": "Downloads",
+      "runConfig": "Writes",
+      "runProvider": "Prefills",
+      "providerNote": "Writes the endpoint at install time. You only add the API key.",
+      "downloadTo": "{url} → {dest}",
+      "installTitle": "Install command",
+      "specsTitle": "Specs",
+      "version": "Version",
+      "compatible": "Works with",
+      "transport": "Transport",
+      "models": "Models",
+      "tags": "Tags",
+      "readme": "README",
+      "content": "Skill content",
+      "versionsTitle": "Version history",
+      "latest": "Latest",
+      "notFound": "Package not found"
+    },
+    "reviews": {
+      "title": "User reviews",
+      "none": "No reviews yet",
+      "summary": "{rating} · {count} reviews",
+      "loginHint": "Sign in to leave a review.",
+      "yourRating": "Your rating",
+      "stars": "{n} stars",
+      "bodyLabel": "Your experience (optional)",
+      "submit": "Post review",
+      "submitting": "Posting…",
+      "anonymous": "Anonymous"
+    },
+    "publisher": {
+      "items": "{count, plural, one {# published package} other {# published packages}}",
+      "empty": "No published packages yet.",
+      "close": "Close"
+    },
+    "lang": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "es": "Español"
+    },
+    "install": {
+      "action": "Install",
+      "label": "Install {name} in the desktop client",
+      "desktop": "Install in the desktop client",
+      "opening": "Opening…",
+      "opened": "Opened in the client",
+      "openedShort": "Opened",
+      "download": "Get the desktop client",
+      "fallbackNote": "If the client does not open, the install command is copied and you are pointed to the download.",
+      "phoneNote": "Run this command on your computer, or install with the desktop client."
+    },
+    "notice": {
+      "label": "Notification",
+      "missingTitle": "Desktop client not detected",
+      "missingBody": "The install command is copied. Run it in a terminal, or get the desktop client first.",
+      "copyFailedBody": "The install command could not be copied. Copy the line below by hand and run it in a terminal, or get the desktop client first.",
+      "download": "Get the desktop client",
+      "downloadAlt": "Go to the download page for the desktop client",
+      "close": "Dismiss"
+    }
   }
 }

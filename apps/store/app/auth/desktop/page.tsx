@@ -58,5 +58,5 @@ export default function DesktopAuthRelay() {
     void run()
   }, [])
 
-  return <main style={{ padding: 40, fontFamily: 'system-ui', color: 'var(--text-2, #888)' }}>{status}</main>
+  return <div style={{ padding: 40, fontFamily: 'system-ui', color: 'var(--text-2, #888)' }}>{status}</div>
 }

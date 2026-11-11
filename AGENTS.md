@@ -16,15 +16,29 @@ before proposing a new design. Prefer adapting their proven approach over invent
 from scratch — only deviate where this repo's stack or scope genuinely requires it, and
 say so explicitly.
 
-## UI implementation must follow the design file
+## UI source of truth
 
-`docs/ui/Agent Store.dc.html` is the single source of truth for UI structure, layout, and
-behavior. Read its actual HTML/JS template source directly before implementing or
-reviewing any screen — do not rely on `docs/ui/README.md` prose or `docs/ui/screens/*.png`
-reference screenshots, both of which have been found stale/inaccurate relative to the live
-mockup source. When the mockup changes, re-read the relevant section of the `.dc.html`
-file and update the implementation to match — do not implement from memory of an earlier
-version. When implementation and the design file conflict, the design file wins.
+The web store (`apps/store`) and the desktop client follow different design sources.
+
+**Web store.** Since 2026-11-11 (issue #58) the web store has its own visual system.
+Before implementing or reviewing any web store screen, read `apps/store/DESIGN.md`
+(tokens, layout, components, do's and don'ts) and `apps/store/PRODUCT.md` (product
+facts). The direction contract for the store list and detail drawer is in
+`apps/store/.impeccable/surfaces/`. Tokens live in `apps/store/app/globals.css`; change
+them there and in `DESIGN.md` together. `docs/ui/Agent Store.dc.html` is only a record of
+the old look for the web store and no longer constrains it. Pages not yet moved to the
+new system (landing, docs, pricing, dashboard, login) keep their current look until their
+follow-up PRs; do not restyle them back toward the old mockup.
+
+**Desktop client.** `docs/ui/Agent Store.dc.html` is still the single source of truth for
+the desktop client's UI structure, layout, and behavior. Whether the desktop client moves
+to the web store's new system is undecided. Read the mockup's actual HTML/JS template
+source directly before implementing or reviewing any desktop screen — do not rely on
+`docs/ui/README.md` prose or `docs/ui/screens/*.png` reference screenshots, both of which
+have been found stale/inaccurate relative to the live mockup source. When the mockup
+changes, re-read the relevant section of the `.dc.html` file and update the
+implementation to match — do not implement from memory of an earlier version. When the
+desktop implementation and the design file conflict, the design file wins.
 
 ## UI implementation sign-off
 
@@ -38,8 +52,10 @@ placeholder states that don't match the mockup).
 Required steps before calling UI work complete:
 1. Actually run the app (`pnpm dev` for the web store; `make dev-gui` for the desktop
    client) with real or realistically seeded data — not just the empty state.
-2. Compare rendered screens against the design reference (`docs/ui/Agent Store.dc.html`)
-   side by side, screen by screen.
+2. Compare rendered screens against the design reference side by side, screen by screen:
+   `apps/store/DESIGN.md` for the web store, `docs/ui/Agent Store.dc.html` for the
+   desktop client. For the web store, check every changed screen at 390px, 820px and
+   1440px, in light and dark, and with a long locale (e.g. `es`).
 3. For the desktop client specifically, take a real screenshot of the native window
    (e.g. via `screencapture` on macOS) rather than only checking the underlying dev-server
    page in a browser — a plain browser tab has no Tauri IPC bridge, so RPC-backed data and

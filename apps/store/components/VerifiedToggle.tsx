@@ -1,49 +1,28 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import * as Switch from '@radix-ui/react-switch'
+import { useId } from 'react'
 import { useTranslations } from 'next-intl'
+import { useStoreQuery } from '@/lib/use-store-query'
 
-interface VerifiedToggleProps {
-  active: boolean
-}
-
-export function VerifiedToggle({ active }: VerifiedToggleProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+export function VerifiedToggle({ active }: { active: boolean }) {
   const t = useTranslations('store.filters')
-
-  function handleToggle() {
-    const params = new URLSearchParams(searchParams.toString())
-    if (active) {
-      params.delete('verified')
-    } else {
-      params.set('verified', '1')
-    }
-    router.push(`${pathname}?${params.toString()}`)
-  }
+  const { setParams } = useStoreQuery()
+  const id = useId()
 
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={active}
-      aria-label={t('verifiedOnly')}
-      onClick={handleToggle}
-      className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors ${
-        active ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
-      }`}
-    >
-      <span
-        className={`flex h-[18px] w-[30px] items-center rounded-full p-0.5 transition-colors ${
-          active ? 'justify-end bg-store-accent' : 'justify-start bg-store-border-strong'
-        }`}
+    <div className="flex min-h-8 items-center gap-2">
+      <Switch.Root
+        id={id}
+        checked={active}
+        onCheckedChange={(next) => setParams({ verified: next ? '1' : null })}
+        className="relative h-6 w-10 shrink-0 rounded-full border border-ink transition-colors data-[state=checked]:bg-ink"
       >
-        <span className="h-3.5 w-3.5 rounded-full bg-white shadow" />
-      </span>
-      <span className={`text-xs font-medium ${active ? 'text-store-text' : 'text-store-text-2'}`}>
+        <Switch.Thumb className="block h-3.5 w-3.5 translate-x-[4px] rounded-full bg-ink transition-transform data-[state=checked]:translate-x-[20px] data-[state=checked]:bg-on-ink" />
+      </Switch.Root>
+      <label htmlFor={id} className="cursor-pointer whitespace-nowrap text-sm">
         {t('verifiedOnly')}
-      </span>
-    </button>
+      </label>
+    </div>
   )
 }
