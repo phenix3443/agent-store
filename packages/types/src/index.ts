@@ -1,4 +1,5 @@
 export type { Publisher } from './publisher'
+export type { Topic, TopicSummary, TopicRef } from './topic'
 export type { JsonSchema, InstallHook, ItemVersion, UserReview, PackageReview, BaseItem, ProviderItem, SkillItem, SkillSource, MCPItem, Item } from './items'
 export type {
   ToolTarget,

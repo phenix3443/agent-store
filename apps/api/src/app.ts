@@ -5,6 +5,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { desc, eq, sql } from 'drizzle-orm'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
 import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
+import { getTopics, getTopicBySlug } from './topic-queries'
 import { getDb, type DbEnv } from './db/client'
 import { itemVersions, items, reviews } from './db/schema'
 import type { AuthEnv } from './auth-token'
@@ -193,6 +194,21 @@ app.get('/api/publishers/:slug', async (c) => {
   if (publisherResult.error) return fail(c, 500, 'Failed to fetch publisher', publisherResult.error)
   if (!publisherResult.data) return c.json({ error: 'Not found' }, 404)
   return c.json({ publisher: publisherResult.data, items: itemsResult.data })
+})
+
+// ── Topics (curated in the registry, written by its sync) ────────────────────
+
+app.get('/api/topics', async (c) => {
+  const { data, error } = await getTopics(c.env)
+  if (error) return fail(c, 500, 'Failed to fetch topics', error)
+  return c.json({ topics: data })
+})
+
+app.get('/api/topics/:slug', async (c) => {
+  const { data, error } = await getTopicBySlug(c.env, c.req.param('slug'))
+  if (error) return fail(c, 500, 'Failed to fetch topic', error)
+  if (!data) return c.json({ error: 'Not found' }, 404)
+  return c.json({ topic: data })
 })
 
 // ── Publisher (authenticated) ────────────────────────────────────────────────
