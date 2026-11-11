@@ -75,18 +75,18 @@ const DOCS: DocSection[] = [
   {
     num: '07',
     title: 'CLI 使用',
-    body: '除了桌面客户端，命令行也能完成安装与管理。用 add 安装资源，用 enable 让它对指定工具生效，再用 sync 把已启用的资源写入工具配置。常用命令：',
+    body: '除了桌面客户端，命令行也能完成安装与管理。用 install 安装资源，用 enable 让它对指定工具生效，再用 sync 把已启用的资源写入工具配置。常用命令：',
     code:
-      '$ agent-store add <slug>            # 安装资源\n' +
-      '$ agent-store list                 # 查看已安装\n' +
-      '$ agent-store search <query>       # 搜索市场\n' +
-      '$ agent-store info <slug>          # 查看资源详情\n' +
-      '$ agent-store enable <slug> --for claude   # 对 Claude Code 启用\n' +
-      '$ agent-store disable <slug> --for codex   # 对 Codex 停用\n' +
-      '$ agent-store sync                 # 同步已启用资源到工具配置\n' +
-      '$ agent-store relay start|stop|status      # 管理本地代理\n' +
-      '$ agent-store usage --days 7       # 查看用量与费用\n' +
-      '$ agent-store update [slug]        # 更新已安装资源',
+      '$ aas install <slug>                 # 安装资源\n' +
+      '$ aas list                 # 查看已安装\n' +
+      '$ aas search <query>       # 搜索市场\n' +
+      '$ aas info <slug>          # 查看资源详情\n' +
+      '$ aas enable <slug> --for claude   # 对 Claude Code 启用\n' +
+      '$ aas disable <slug> --for codex   # 对 Codex 停用\n' +
+      '$ aas sync                 # 同步已启用资源到工具配置\n' +
+      '$ aas relay start|stop|status      # 管理本地代理\n' +
+      '$ aas usage --days 7       # 查看用量与费用\n' +
+      '$ aas update [slug]        # 更新已安装资源',
   },
   {
     num: '08',

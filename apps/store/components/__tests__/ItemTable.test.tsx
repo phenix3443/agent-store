@@ -58,8 +58,8 @@ test('copying gives visible and announced feedback', async () => {
   render(<ItemTable items={[providerItem]} />)
   fireEvent.click(screen.getByRole('button', { name: '复制 OpenAI Provider 的安装命令' }))
   await waitFor(() => expect(screen.getByText('已复制')).toBeInTheDocument())
-  expect(writeText).toHaveBeenCalledWith('agent-store add openai-provider')
-  expect(screen.getByRole('status').textContent).toBe('已复制安装命令：agent-store add openai-provider')
+  expect(writeText).toHaveBeenCalledWith('aas install openai-provider')
+  expect(screen.getByRole('status').textContent).toBe('已复制安装命令：aas install openai-provider')
 })
 
 test('review column: no data is pending without a seal', () => {

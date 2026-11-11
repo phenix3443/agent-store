@@ -11,7 +11,7 @@ export function reviewVerdict(item: Pick<Item, 'review'>): ReviewVerdict {
 }
 
 export function installCommand(item: Pick<Item, 'slug'>): string {
-  return `agent-store add ${item.slug}`
+  return `aas install ${item.slug}`
 }
 
 export type RunKind = 'command' | 'connect' | 'file' | 'download' | 'config' | 'provider'

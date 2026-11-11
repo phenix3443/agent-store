@@ -90,7 +90,7 @@ test('the primary action copies the install command and confirms it', async () =
   renderPage()
   fireEvent.click(screen.getByRole('button', { name: '复制安装命令' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '已复制' })).toBeInTheDocument())
-  expect(writeText).toHaveBeenCalledWith('agent-store add openai-provider')
+  expect(writeText).toHaveBeenCalledWith('aas install openai-provider')
   expect(screen.getByRole('status').textContent).toContain('已复制安装命令')
 })
 

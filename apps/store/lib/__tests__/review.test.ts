@@ -14,7 +14,7 @@ test('only a low-risk review without concerns passes', () => {
 })
 
 test('install command uses the slug', () => {
-  expect(installCommand(mcpItem)).toBe('agent-store add anki-mcp')
+  expect(installCommand(mcpItem)).toBe('aas install anki-mcp')
 })
 
 test('run entries disclose the stdio command and the install hook steps', () => {
