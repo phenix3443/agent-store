@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Schibsted_Grotesk, JetBrains_Mono } from 'next/font/google'
+import { Schibsted_Grotesk, JetBrains_Mono, Noto_Sans_SC } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -23,6 +23,16 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
+})
+
+// Only zh pages carry the class that defines --font-cjk: Simplified Chinese glyph
+// shapes are wrong for ja/ko, which keep the system CJK font. preload is off because
+// the font ships as unicode-range slices that load only for characters on the page.
+const notoSansSC = Noto_Sans_SC({
+  weight: ['400', '500'],
+  variable: '--font-cjk',
+  display: 'swap',
+  preload: false,
 })
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://agent-store-alpha.vercel.app'
@@ -57,7 +67,11 @@ export default async function RootLayout({
   const user = await getCurrentUser()
 
   return (
-    <html lang={locale} className={`${grotesk.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={`${grotesk.variable} ${jetbrainsMono.variable} ${locale.startsWith('zh') ? notoSansSC.variable : ''}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-screen bg-paper font-sans text-ink antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider>

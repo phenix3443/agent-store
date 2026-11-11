@@ -82,6 +82,12 @@
     color: var(--ink-2);
   }
 
+  .caps {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
   .btn {
     display: inline-flex;
     align-items: center;
@@ -125,6 +131,22 @@
 
   .btn-primary:hover {
     background: var(--ink-2);
+  }
+
+  /* CJK glyphs are already square: tracked, uppercase mono labels split words into
+     single characters, and tracking tuned for Latin display type crams them. */
+  :is(.label, .btn, .caps):is(:lang(zh), :lang(ja), :lang(ko)) {
+    font-family: theme('fontFamily.sans');
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .label:is(:lang(zh), :lang(ja), :lang(ko)) {
+    font-size: 12px;
+  }
+
+  .btn:is(:lang(zh), :lang(ja), :lang(ko)) {
+    font-size: 14px;
   }
 
 .field {
@@ -328,4 +350,15 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
+
+/* Unlayered so it wins over the tracking utilities. Negative tracking is tuned for
+   Latin display type and crams CJK; display-size CJK at 400 also reads thinner than the
+   Latin beside it, so it steps up to 500. */
+[class*='tracking-[-']:is(:lang(zh), :lang(ja), :lang(ko)) {
+  letter-spacing: 0;
+}
+
+[class*='tracking-[-']:not(.font-semibold):is(:lang(zh), :lang(ja), :lang(ko)) {
+  font-weight: 500;
 }

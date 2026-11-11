@@ -21,69 +21,69 @@ colors:
   dark-sel: "#262838"
 typography:
   display-xl:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "88px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "-0.03em"
   display-lg:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "72px"
     fontWeight: 400
     lineHeight: 1.02
     letterSpacing: "-0.03em"
   display-md:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "56px"
     fontWeight: 400
     lineHeight: 1.05
     letterSpacing: "-0.03em"
   display-sm:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "44px"
     fontWeight: 400
     lineHeight: 1.02
     letterSpacing: "-0.03em"
   headline:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "32px"
     fontWeight: 400
     lineHeight: 1.125
     letterSpacing: "-0.015em"
   headline-sm:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "28px"
     fontWeight: 400
     lineHeight: 1.25
     letterSpacing: "-0.015em"
   title-lg:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "22px"
     fontWeight: 400
     lineHeight: 1.27
   reading:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.75
   display:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "40px"
     fontWeight: 400
     lineHeight: 1.1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "15px"
     fontWeight: 500
     lineHeight: 1.6
   body:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.6
   body-sm:
-    fontFamily: "Schibsted Grotesk, PingFang SC, Noto Sans SC, sans-serif"
+    fontFamily: "Schibsted Grotesk, Noto Sans SC, PingFang SC, sans-serif"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.54
@@ -216,7 +216,7 @@ components:
 
 ## Typography
 
-**Body / Display Font:** Schibsted Grotesk（`next/font` 自托管，中文回落到 PingFang SC / Noto Sans SC）
+**Body / Display Font:** Schibsted Grotesk（`next/font` 自托管）。中文页用思源黑体简体 Noto Sans SC（`next/font` 自托管，按 unicode-range 切片按需加载，变量 `--font-cjk` 只挂在 zh 页上）；日文、韩文页不加载它，回落到系统字体，避免汉字显示成简体字形。
 **Mono Font:** JetBrains Mono（`next/font` 自托管）
 
 **Character:** 一种 grotesque 从 88px 页标题用到 13px 说明，靠字号和字重分层；等宽只给真正的代码、命令、数字和栏目标签，不当「技术感」装饰。
@@ -235,6 +235,8 @@ components:
 - **Label**（等宽 11px，大写，字距 0.14em，次墨）：栏目标签（审查结论、安装命令、规格）、表头、按钮文字（12–13px 同样大写加字距）。
 
 ### Named Rules
+
+**The CJK Typesetting Rule.** 上面的字距、大写和等宽标签都是按拉丁字母定的。中、日、韩页面（`:lang(zh|ja|ko)`）上：负字距一律归零，带负字距的标题字重从 400 提到 500；`.label`、`.btn`、`.caps` 改用正文字体、不加字距、不转大写，标签 12px、按钮 14px。规则写在 `globals.css`，新增大号标题照常写 `tracking-[-…]` 就会自动套上；要做等宽大写的小字，用 `.caps`，不要手写 `font-mono uppercase tracking-[0.14em]`。
 
 **The No Eyebrow Rule.** 标题上方不放类别小标签或 kicker。类别已在面包屑「商店 / 技能」里出现，标题自己承担层级。
 
@@ -273,7 +275,7 @@ components:
 
 ### Buttons
 
-- **Primary**（`.btn .btn-primary`）：墨底纸字，48px 高，直角，等宽 13px 大写加字距。悬停变次墨底。每屏只有一个（抽屉里的「在桌面客户端中安装」，手机上是「复制命令」）。
+- **Primary**（`.btn .btn-primary`）：墨底纸字，48px 高，直角，等宽 13px 大写加字距（中日韩页面见 CJK Typesetting Rule）。悬停变次墨底。每屏只有一个（抽屉里的「在桌面客户端中安装」，手机上是「复制命令」）。
 - **Secondary**（`.btn`）：1px 墨线描边，透明底，32px（行内「安装」按钮）或 48px（「下载桌面客户端」）。悬停反色为墨底。
 - **Focus**：全局 `:focus-visible` 为 2px 墨色外框，偏移 2px。放在会裁切溢出的滚动容器里时（类别页签）改为内收 2px，并给元素留至少 8px 左右内边距，框不能压到文字。
 
@@ -349,6 +351,7 @@ Radix Dialog。顶栏 56px：左侧面包屑（单行，超长截断），右侧
 - **Don't** 在没有审查数据时显示圆章或「已审」，也不显示「已安装」。
 - **Don't** 用横向滚动隐藏命令或包名的关键部分。
 - **Don't** 给控件加圆角或阴影层级。
+- **Don't** 给中文加负字距或大写加宽字距的等宽样式。
 - **Don't** 用 `docs/ui/Agent Store.dc.html` 的旧外观约束网页商店；它只作为旧外观参考。
 - **Don't** 在页面里写死色值（分享图 `opengraph-image.tsx` 例外：Satori 读不到 CSS 变量，那里重复一份浅色主题的值）。
 - **Don't** 写没有依据的说法，例如「通常远超订阅费」；规划中的功能标「规划中」。
