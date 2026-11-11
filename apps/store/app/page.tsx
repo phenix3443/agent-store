@@ -41,6 +41,8 @@ export default async function LandingPage() {
 
   return (
     <div
+      // This page is still drawn on a hard-coded dark ground, so its tokens stay dark in both themes.
+      data-theme="dark"
       className="relative overflow-hidden"
       style={{ background: 'radial-gradient(150% 100% at 50% -12%, #191430 0%, #0c0b13 48%, #08070c 100%)' }}
     >
@@ -247,7 +249,7 @@ export default async function LandingPage() {
         <div className="mx-auto flex max-w-[1000px] flex-wrap gap-10 px-8 py-11">
           <div className="min-w-[200px] flex-1">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-store-accent text-white">
+              <div className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-store-accent text-store-on-accent">
                 <svg width="15" height="15" viewBox="0 0 18 18" fill="none" aria-hidden>
                   <path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
                   <path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />

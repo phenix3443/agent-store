@@ -44,12 +44,12 @@ export default async function DashboardPage() {
   const githubUsername = user.username ?? undefined
   if (!githubUsername) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <h1 className="mb-4 text-2xl font-semibold text-store-text">我的仪表盘</h1>
         <div className="flex h-32 items-center justify-center rounded-xl border border-store-border bg-store-panel">
           <p className="text-store-text-3">仪表盘按 GitHub 用户名统计你发布的内容。请用 GitHub 登录一次，账号会自动关联。</p>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
   const publishedCount = items.filter((it) => it.status === 'published').length
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Account + subscription header */}
       <section
         className="mb-6 flex flex-col gap-4 rounded-2xl border border-store-border p-5 sm:flex-row sm:items-center"
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-medium uppercase tracking-wider text-store-text-2">我的提交</h2>
         <Link
           href="/store?publish=1"
-          className="rounded-lg bg-store-accent px-4 py-2 text-[12.5px] font-semibold text-white hover:brightness-110"
+          className="rounded-lg bg-store-accent px-4 py-2 text-[12.5px] font-semibold text-store-on-accent hover:brightness-110"
         >
           发布资源
         </Link>
@@ -215,12 +215,12 @@ export default async function DashboardPage() {
           </p>
           <Link
             href="/store?publish=1"
-            className="mt-1 rounded-lg bg-store-accent px-4 py-2 text-[12.5px] font-semibold text-white hover:brightness-110"
+            className="mt-1 rounded-lg bg-store-accent px-4 py-2 text-[12.5px] font-semibold text-store-on-accent hover:brightness-110"
           >
             发布第一个资源
           </Link>
         </div>
       )}
-    </main>
+    </div>
   )
 }

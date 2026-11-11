@@ -1,12 +1,20 @@
 import { test, expect, afterEach, mock } from 'bun:test'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import type { Publisher, Item } from '@as/types'
+import { intlMock } from '../../test-intl'
 
 afterEach(() => { cleanup() })
 
 mock.module('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
 }))
+
+mock.module('next/navigation', () => ({
+  useRouter: () => ({ replace: () => {}, push: () => {} }),
+  usePathname: () => '/store',
+  useSearchParams: () => new URLSearchParams(),
+}))
+mock.module('next-intl', () => intlMock)
 
 const publisher: Publisher = {
   id: 'p1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official', bio: 'Official provider',

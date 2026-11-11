@@ -2,18 +2,26 @@
 
 import type { Item } from '@as/types'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { DetailDrawer } from './DetailDrawer'
 
-export function InterceptedDetail({ item }: { item: Item }) {
+export function InterceptedDetail({ item, children }: { item: Item; children: React.ReactNode }) {
   const router = useRouter()
+  // Closing through state (not just unmounting on navigation) lets Radix run
+  // its close sequence, which is what returns focus to the row.
+  const [open, setOpen] = useState(true)
 
   return (
     <DetailDrawer
       item={item}
-      open
-      onOpenChange={(open) => {
-        if (!open) router.back()
+      open={open}
+      onOpenChange={(next) => {
+        if (next) return
+        setOpen(false)
+        router.back()
       }}
-    />
+    >
+      {children}
+    </DetailDrawer>
   )
 }

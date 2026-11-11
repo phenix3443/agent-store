@@ -6,13 +6,12 @@ beforeEach(() => { localStorage.clear() })
 afterEach(() => { cleanup() })
 
 function Probe() {
-  const { favorites, toggleFavorite, installed, toggleInstalled } = useClientState()
+  const state = useClientState()
   return (
     <div>
-      <button onClick={() => toggleFavorite('item-1')}>fav</button>
-      <button onClick={() => toggleInstalled('item-1')}>install</button>
-      <span data-testid="fav-state">{String(!!favorites['item-1'])}</span>
-      <span data-testid="install-state">{String(!!installed['item-1'])}</span>
+      <button onClick={() => state.toggleFavorite('item-1')}>fav</button>
+      <span data-testid="fav-state">{String(!!state.favorites['item-1'])}</span>
+      <span data-testid="keys">{Object.keys(state).sort().join(',')}</span>
     </div>
   )
 }
@@ -24,10 +23,10 @@ test('toggleFavorite flips favorite state', () => {
   expect(screen.getByTestId('fav-state').textContent).toBe('true')
 })
 
-test('toggleInstalled flips installed state', () => {
+test('the web store keeps no "installed" state, even when an old one is in storage', () => {
+  localStorage.setItem('aas-store-client-state', JSON.stringify({ favorites: {}, installed: { 'item-1': true }, userItems: [] }))
   render(<ClientStateProvider><Probe /></ClientStateProvider>)
-  fireEvent.click(screen.getByText('install'))
-  expect(screen.getByTestId('install-state').textContent).toBe('true')
+  expect(screen.getByTestId('keys').textContent).toBe('addUserItem,favorites,toggleFavorite,userItems')
 })
 
 test('state persists to localStorage and rehydrates on remount', () => {

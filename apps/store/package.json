@@ -14,17 +14,21 @@
     "@as/sdk": "workspace:*",
     "@as/types": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-dropdown-menu": "2.2.1",
+    "@radix-ui/react-switch": "1.4.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "better-auth": "1.7.18",
     "lucide-react": "^0.400.0",
     "next": "15.5.20",
     "next-intl": "^3.19.1",
+    "next-themes": "0.4.6",
     "pg": "8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^9.0.1",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "use-debounce": "10.1.1"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.10.5",

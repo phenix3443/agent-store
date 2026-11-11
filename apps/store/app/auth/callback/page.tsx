@@ -18,6 +18,6 @@ export default function AuthCallback() {
   }, [])
 
   return (
-    <main style={{ padding: 40, fontFamily: 'system-ui', color: 'var(--text-2, #888)' }}>正在登录…</main>
+    <div style={{ padding: 40, fontFamily: 'system-ui', color: 'var(--text-2, #888)' }}>正在登录…</div>
   )
 }

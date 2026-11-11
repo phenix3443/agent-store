@@ -7,18 +7,18 @@ const STORAGE_KEY = 'aas-store-client-state'
 
 interface StoredState {
   favorites: Record<string, boolean>
-  installed: Record<string, boolean>
   userItems: Item[]
 }
 
-const EMPTY_STATE: StoredState = { favorites: {}, installed: {}, userItems: [] }
+const EMPTY_STATE: StoredState = { favorites: {}, userItems: [] }
 
 function readStorage(): StoredState {
   if (typeof window === 'undefined') return EMPTY_STATE
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return EMPTY_STATE
-    return { ...EMPTY_STATE, ...(JSON.parse(raw) as Partial<StoredState>) }
+    const stored = JSON.parse(raw) as Partial<StoredState>
+    return { favorites: stored.favorites ?? {}, userItems: stored.userItems ?? [] }
   } catch {
     return EMPTY_STATE
   }
@@ -31,7 +31,6 @@ function writeStorage(state: StoredState): void {
 
 interface ClientStateValue extends StoredState {
   toggleFavorite: (id: string) => void
-  toggleInstalled: (id: string) => void
   addUserItem: (item: Item) => void
 }
 
@@ -56,8 +55,6 @@ export function ClientStateProvider({ children }: { children: ReactNode }) {
     ...state,
     toggleFavorite: (id) =>
       update((prev) => ({ ...prev, favorites: { ...prev.favorites, [id]: !prev.favorites[id] } })),
-    toggleInstalled: (id) =>
-      update((prev) => ({ ...prev, installed: { ...prev.installed, [id]: !prev.installed[id] } })),
     addUserItem: (item) => update((prev) => ({ ...prev, userItems: [item, ...prev.userItems] })),
   }
 

@@ -44,7 +44,7 @@ export default function PricingPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight text-store-text">简单透明的定价</h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-store-text-2">
@@ -59,7 +59,7 @@ export default function PricingPage() {
             key={p}
             type="button"
             onClick={() => setPeriod(p)}
-            className={`rounded-full px-4 py-1.5 font-medium ${period === p ? 'bg-store-accent text-white' : 'text-store-text-2'}`}
+            className={`rounded-full px-4 py-1.5 font-medium ${period === p ? 'bg-store-accent text-store-on-accent' : 'text-store-text-2'}`}
           >
             {p === 'monthly' ? '按月' : '按年（省 2 个月）'}
           </button>
@@ -84,7 +84,7 @@ export default function PricingPage() {
             type="button"
             onClick={() => upgrade(period, true)}
             disabled={busy != null}
-            className="mt-6 w-full rounded-lg bg-store-accent px-4 py-2.5 text-center text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            className="mt-6 w-full rounded-lg bg-store-accent px-4 py-2.5 text-center text-sm font-semibold text-store-on-accent hover:opacity-90 disabled:opacity-50"
           >
             {busy === `${period}-trial` ? '发起中…' : `开始 ${PRICING.trialDays} 天免费试用`}
           </button>
@@ -118,7 +118,7 @@ export default function PricingPage() {
       <p className="mt-8 text-center text-xs text-store-text-3">
         由 Waffo（Merchant of Record）代收，价格含税。终身买断覆盖全部本地 Pro 功能。
       </p>
-    </main>
+    </div>
   )
 }
 

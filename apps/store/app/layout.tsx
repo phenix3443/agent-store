@@ -1,17 +1,19 @@
 import type { Metadata } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Schibsted_Grotesk, JetBrains_Mono } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import { ClientStateProvider } from '@/components/ClientStateProvider'
 import { Header } from '@/components/Header'
+import { SkipLink } from '@/components/SkipLink'
+import { ThemeProvider } from '@/components/ThemeProvider'
 import { getCurrentUser } from '@/lib/auth'
 import './globals.css'
 
-const inter = Inter({
+const grotesk = Schibsted_Grotesk({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-sans',
   display: 'swap',
 })
 
@@ -53,16 +55,21 @@ export default async function RootLayout({
   const user = await getCurrentUser()
 
   return (
-    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable}`} data-theme="dark" suppressHydrationWarning>
-      <body className="min-h-screen bg-store-content text-store-text antialiased">
+    <html lang={locale} className={`${grotesk.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <body className="min-h-screen bg-paper font-sans text-ink antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ClientStateProvider>
-            <div className="flex min-h-screen flex-col">
-              <Header user={user} />
-              <div className="flex-1">{children}</div>
-            </div>
-            {drawer}
-          </ClientStateProvider>
+          <ThemeProvider>
+            <ClientStateProvider>
+              <SkipLink />
+              <div className="flex min-h-screen flex-col">
+                <Header user={user} />
+                <main id="main" tabIndex={-1} className="flex-1 outline-none">
+                  {children}
+                </main>
+              </div>
+              {drawer}
+            </ClientStateProvider>
+          </ThemeProvider>
         </NextIntlClientProvider>
         <SpeedInsights />
         <Analytics />

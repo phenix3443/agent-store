@@ -201,7 +201,7 @@ export function PublishModal({ open, onOpenChange }: PublishModalProps) {
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-lg bg-store-accent px-5 py-2 text-sm font-semibold text-white hover:brightness-110 disabled:opacity-50"
+                className="rounded-lg bg-store-accent px-5 py-2 text-sm font-semibold text-store-on-accent hover:brightness-110 disabled:opacity-50"
               >
                 {busy ? '发布中…' : '发布'}
               </button>

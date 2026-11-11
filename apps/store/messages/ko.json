@@ -3,20 +3,147 @@
     "nav": {
       "store": "스토어",
       "docs": "문서",
-      "pricing": "가격",
+      "collections": "컬렉션",
+      "pricing": "요금",
       "publish": "게시",
       "login": "로그인",
-      "myHome": "내 프로필",
+      "myHome": "내 페이지",
       "settings": "설정",
+      "menu": "메뉴",
+      "account": "계정 메뉴",
+      "main": "주요 탐색",
+      "skip": "본문으로 건너뛰기",
       "theme": "테마",
+      "themeLight": "라이트",
+      "themeDark": "다크",
+      "themeSystem": "시스템 설정",
       "language": "언어",
       "logout": "로그아웃"
     },
-    "categories": { "all": "전체", "provider": "제공자", "skill": "스킬", "mcp": "MCP" },
-    "sort": { "all": "전체", "new": "최신", "popular": "인기", "rating": "평점순" },
-    "search": { "placeholder": "리소스, 태그 또는 설명 검색…" },
-    "filters": { "verifiedOnly": "인증됨만" },
-    "card": { "install": "설치", "installed": "설치됨" },
-    "lang": { "zh": "中文", "en": "English", "ja": "日本語", "ko": "한국어", "es": "Español" }
+    "categories": {
+      "all": "전체",
+      "provider": "공급자",
+      "skill": "스킬",
+      "mcp": "MCP"
+    },
+    "category": {
+      "provider": "공급자",
+      "skill": "스킬",
+      "mcp": "MCP"
+    },
+    "sort": {
+      "label": "정렬",
+      "popular": "설치 많은 순",
+      "new": "최신순",
+      "rating": "평점 높은 순"
+    },
+    "search": {
+      "placeholder": "스킬, MCP, 공급자 검색",
+      "label": "검색",
+      "loading": "검색 중",
+      "shortcut": "/ 키로 검색에 포커스"
+    },
+    "filters": {
+      "category": "카테고리",
+      "verifiedOnly": "인증된 항목만",
+      "results": "{count}개",
+      "clear": "검색과 필터 지우기"
+    },
+    "list": {
+      "title": "스토어",
+      "colCategory": "유형",
+      "colPackage": "패키지",
+      "colReview": "심사",
+      "colPublisher": "게시자",
+      "colInstalls": "설치 수",
+      "colCopy": "설치 명령 복사",
+      "copy": "복사",
+      "copied": "복사됨",
+      "copyFailed": "복사 실패",
+      "copyLabel": "{name} 설치 명령 복사",
+      "copiedAnnounce": "설치 명령을 복사했습니다: {command}",
+      "copyFailedAnnounce": "복사하지 못했습니다. 명령을 직접 선택해 복사하세요: {command}",
+      "emptyTitle": "조건에 맞는 패키지가 없습니다",
+      "emptyBody": "다른 키워드를 쓰거나 검색과 필터를 지워 보세요."
+    },
+    "review": {
+      "title": "심사 결과",
+      "passed": "심사 완료",
+      "flagged": "주의 있음",
+      "pending": "심사 대기",
+      "pendingBody": "이 패키지는 아직 심사되지 않았습니다. 설치 전에 아래 실행 내용을 확인하세요.",
+      "automated": "자동 심사",
+      "quality": "품질 {score}/5",
+      "riskLow": "낮은 위험",
+      "riskMedium": "중간 위험",
+      "riskHigh": "높은 위험",
+      "concerns": "주의 사항",
+      "stampLabel": "심사 도장: Agent Store 심사 완료",
+      "chop": "심"
+    },
+    "tier": {
+      "official": "공식",
+      "verified": "인증됨",
+      "community": "커뮤니티"
+    },
+    "detail": {
+      "breadcrumb": "스토어",
+      "back": "스토어로 돌아가기",
+      "expand": "전체 페이지로 열기",
+      "close": "상세 닫기",
+      "drawerLabel": "{name} 상세",
+      "installs": "설치 {count}회",
+      "rating": "평점 {rating} ({count}개)",
+      "favorite": "즐겨찾기",
+      "unfavorite": "즐겨찾기됨",
+      "runsTitle": "설치 후 실행되는 내용",
+      "runCommand": "실행",
+      "runConnect": "연결",
+      "runFile": "파일 설치",
+      "runDownload": "다운로드",
+      "runConfig": "설정 기록",
+      "runProvider": "연결 입력",
+      "providerNote": "설치할 때 엔드포인트를 기록합니다. API 키만 입력하면 됩니다.",
+      "downloadTo": "{url} → {dest}",
+      "installTitle": "설치 명령",
+      "copyInstall": "설치 명령 복사",
+      "download": "데스크톱 클라이언트 받기",
+      "installNote": "이 페이지에서 데스크톱 클라이언트로 설치를 바로 넘길 수는 아직 없습니다. 복사한 명령을 터미널에서 실행하거나 클라이언트의 스토어에서 이 패키지를 찾으세요.",
+      "specsTitle": "사양",
+      "version": "버전",
+      "compatible": "호환",
+      "transport": "전송 방식",
+      "models": "지원 모델",
+      "tags": "태그",
+      "readme": "README",
+      "content": "스킬 내용",
+      "versionsTitle": "버전 기록",
+      "latest": "최신",
+      "notFound": "패키지를 찾을 수 없습니다"
+    },
+    "reviews": {
+      "title": "사용자 리뷰",
+      "none": "아직 리뷰가 없습니다",
+      "summary": "{rating} · {count}개",
+      "loginHint": "리뷰를 남기려면 로그인하세요.",
+      "yourRating": "내 평점",
+      "stars": "별 {n}개",
+      "bodyLabel": "사용 경험 (선택)",
+      "submit": "리뷰 등록",
+      "submitting": "등록 중…",
+      "anonymous": "익명"
+    },
+    "publisher": {
+      "items": "게시한 패키지 {count}개",
+      "empty": "게시한 패키지가 아직 없습니다.",
+      "close": "닫기"
+    },
+    "lang": {
+      "zh": "中文",
+      "en": "English",
+      "ja": "日本語",
+      "ko": "한국어",
+      "es": "Español"
+    }
   }
 }

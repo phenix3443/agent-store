@@ -52,7 +52,7 @@ export function UpgradeProButton({ className, children }: UpgradeProButtonProps)
         disabled={busy}
         className={
           className ??
-          'flex h-9 items-center rounded-[10px] bg-store-accent px-[15px] text-[12.5px] font-semibold text-white shadow-[0_4px_14px_var(--accent-soft)] hover:brightness-110 disabled:opacity-60'
+          'flex h-9 items-center rounded-[10px] bg-store-accent px-[15px] text-[12.5px] font-semibold text-store-on-accent shadow-[0_4px_14px_var(--accent-soft)] hover:brightness-110 disabled:opacity-60'
         }
       >
         {busy ? '跳转中…' : (children ?? '升级 Pro')}

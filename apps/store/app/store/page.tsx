@@ -1,11 +1,9 @@
-import { getItems, getFeaturedItems } from '@/lib/catalog'
-import { FeaturedCarousel } from '@/components/FeaturedCarousel'
-import { CategoryTabs } from '@/components/CategoryTabs'
-import { SortSelect } from '@/components/SortSelect'
-import { SearchInput } from '@/components/SearchInput'
-import { VerifiedToggle } from '@/components/VerifiedToggle'
-import { ItemGrid } from '@/components/ItemGrid'
+import { Suspense } from 'react'
+import { getItems } from '@/lib/catalog'
+import type { CategoryCounts } from '@/components/CategoryFilter'
+import { ItemTable } from '@/components/ItemTable'
 import { PublishModalTrigger } from '@/components/PublishModalTrigger'
+import { ClearFiltersLink, StoreHeading, StoreToolbar } from '@/components/StoreToolbar'
 
 interface StorePageProps {
   searchParams: Promise<{
@@ -20,38 +18,37 @@ export default async function StorePage({ searchParams }: StorePageProps) {
   const sp = await searchParams
   const rawCategory = sp.category
   const category =
-    rawCategory === 'provider' || rawCategory === 'skill' || rawCategory === 'mcp'
-      ? rawCategory
-      : null
+    rawCategory === 'provider' || rawCategory === 'skill' || rawCategory === 'mcp' ? rawCategory : 'all'
 
-  const sort =
-    sp.sort === 'created' || sp.sort === 'rating'
-      ? sp.sort
-      : 'downloads'
-
+  const sort = sp.sort === 'created' || sp.sort === 'rating' ? sp.sort : 'downloads'
   const verifiedOnly = sp.verified === '1'
+  const q = sp.q?.trim() || undefined
 
-  const allItems = await getItems({ category, q: sp.q, sort })
-  const items = verifiedOnly
-    ? allItems.filter((item) => item.publisher.tier !== 'community')
-    : allItems
-  const featured = await getFeaturedItems()
+  // One request for every category, so the tabs can show how many packages
+  // each one holds under the current search and verified filter.
+  const matching = (await getItems({ q, sort })).filter(
+    (item) => !verifiedOnly || item.publisher.tier !== 'community'
+  )
+  const counts: CategoryCounts = { all: matching.length, skill: 0, mcp: 0, provider: 0 }
+  for (const item of matching) counts[item.category] += 1
+  const items = category === 'all' ? matching : matching.filter((item) => item.category === category)
+  const filtered = Boolean(q) || verifiedOnly || category !== 'all'
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-      <PublishModalTrigger />
-      <FeaturedCarousel items={featured} />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SortSelect active={sort} />
-        <div className="flex flex-wrap items-center gap-2.5">
-          <CategoryTabs active={category ?? 'all'} />
-          <VerifiedToggle active={verifiedOnly} />
-          <SearchInput defaultValue={sp.q} />
-        </div>
-      </div>
-
-      <ItemGrid items={items} />
+    <div className="store-shell px-4 pb-16 lg:px-10">
+      <Suspense>
+        <PublishModalTrigger />
+      </Suspense>
+      <StoreHeading />
+      <StoreToolbar
+        category={category}
+        counts={counts}
+        sort={sort}
+        verifiedOnly={verifiedOnly}
+        total={items.length}
+        filtered={filtered}
+      />
+      <ItemTable items={items} emptyAction={<ClearFiltersLink />} />
     </div>
   )
 }

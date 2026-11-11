@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { getCollections } from '@/lib/collections'
-import { ItemGrid } from '@/components/ItemGrid'
+import { ItemTable } from '@/components/ItemTable'
 
 export const metadata: Metadata = {
   title: '合集',
@@ -23,7 +23,7 @@ export default async function CollectionsPage() {
               <h2 className="text-lg font-semibold text-store-text">{collection.title}</h2>
               <p className="text-sm text-store-text-3">{collection.description}</p>
             </div>
-            <ItemGrid items={items} />
+            <ItemTable items={items} />
           </section>
         ))}
       </div>

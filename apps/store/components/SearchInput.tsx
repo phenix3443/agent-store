@@ -1,51 +1,94 @@
 'use client'
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search } from 'lucide-react'
+import { Loader2, Search } from 'lucide-react'
+import { useDebouncedCallback } from 'use-debounce'
+import { useStoreQuery } from '@/lib/use-store-query'
 
-interface SearchInputProps {
-  defaultValue?: string
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
 }
 
-export function SearchInput({ defaultValue = '' }: SearchInputProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+export function SearchInput({ className = '' }: { className?: string }) {
   const t = useTranslations('store.search')
+  const { setParams, isPending, searchParams, onStore } = useStoreQuery()
+  const urlQuery = onStore ? (searchParams.get('q') ?? '') : ''
+  const [value, setValue] = useState(urlQuery)
+  const inputRef = useRef<HTMLInputElement>(null)
+  // What this input last wrote to the URL, so an outside change (back button,
+  // "clear filters") can be told apart from the echo of our own typing.
+  const written = useRef(urlQuery)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value.trim()
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set('q', value)
-    } else {
-      params.delete('q')
+  useEffect(() => {
+    if (urlQuery !== written.current) {
+      written.current = urlQuery
+      setValue(urlQuery)
     }
-    startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`)
-    })
-  }
+  }, [urlQuery])
 
-  const placeholder = t('placeholder')
+  const commit = useDebouncedCallback((next: string) => {
+    written.current = next
+    setParams({ q: next || null })
+  }, 250)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const slash = e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTypingTarget(e.target)
+      const cmdK = e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)
+      if (!slash && !cmdK) return
+      // A modal dialog owns the keyboard while it is open.
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return
+      e.preventDefault()
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
-    <div className="flex h-[34px] items-center gap-2 rounded-[10px] border border-store-border bg-store-panel px-3 focus-within:border-store-accent">
-      <Search size={14} className="shrink-0 text-store-text-3" />
+    <form
+      role="search"
+      action="/store"
+      onSubmit={(e) => {
+        e.preventDefault()
+        commit(value.trim())
+        commit.flush()
+      }}
+      className={`flex h-9 items-center gap-2 border border-line bg-plate px-3 focus-within:border-ink ${className}`}
+    >
+      {isPending ? (
+        <Loader2 size={15} aria-hidden className="shrink-0 animate-spin motion-reduce:animate-none" />
+      ) : (
+        <Search size={15} aria-hidden className="shrink-0" />
+      )}
       <input
+        ref={inputRef}
         type="search"
-        defaultValue={defaultValue}
-        onChange={handleChange}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        data-pending={isPending ? '' : undefined}
-        className="min-w-0 flex-1 bg-transparent text-sm text-store-text placeholder:text-store-text-3 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
+        name="q"
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value)
+          // Elsewhere on the site the search only runs on Enter, so typing does not yank the page away.
+          if (onStore) commit(e.target.value.trim())
+        }}
+        placeholder={t('placeholder')}
+        aria-label={t('label')}
+        aria-keyshortcuts="/ Meta+K Control+K"
+        autoComplete="off"
+        className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-2 [&::-webkit-search-cancel-button]:appearance-none"
       />
-      <span className="shrink-0 rounded bg-store-code-bg px-1.5 py-0.5 font-mono text-[10px] text-store-text-3">
-        ⌘K
+      <kbd
+        title={t('shortcut')}
+        className="hidden h-5 min-w-5 shrink-0 place-items-center border border-line px-1 font-mono text-xs text-ink-2 sm:grid"
+      >
+        /
+      </kbd>
+      <span role="status" aria-live="polite" className="sr-only">
+        {isPending ? t('loading') : ''}
       </span>
-    </div>
+    </form>
   )
 }
