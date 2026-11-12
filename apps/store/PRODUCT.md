@@ -31,7 +31,7 @@ Web 端的浏览动线是：落地页讲清价值 → 商店浏览与搜索 → 
 ## Capabilities and Constraints
 
 - 技术栈：Next.js 15（App Router）、React 18、Tailwind CSS 3、Radix Dialog、lucide-react、next-intl。
-- 界面语言：中文、英文、日文、韩文、西班牙文（`messages/`）。
+- 界面语言：中文、英文（`messages/`）。之前选过日文、韩文、西班牙文的访客改为显示英文。
 - 支持深色与浅色主题切换。
 - 定价分 Free 与 Pro，价格和权益以 `@as/types` 的 `PRICING` 和定价页为准。
 - 术语：技能（skill）、MCP、供应商（provider）、本地代理（local relay）、发布者（publisher）、已验证（verified）。

@@ -216,7 +216,7 @@ components:
 
 ## Typography
 
-**Body / Display Font:** Schibsted Grotesk（`next/font` 自托管）。中文页用思源黑体简体 Noto Sans SC（`next/font` 自托管，按 unicode-range 切片按需加载，变量 `--font-cjk` 只挂在 zh 页上）；日文、韩文页不加载它，回落到系统字体，避免汉字显示成简体字形。
+**Body / Display Font:** Schibsted Grotesk（`next/font` 自托管）。中文页用思源黑体简体 Noto Sans SC（`next/font` 自托管，按 unicode-range 切片按需加载，变量 `--font-cjk` 只挂在 zh 页上）。
 **Mono Font:** JetBrains Mono（`next/font` 自托管）
 
 **Character:** 一种 grotesque 从 88px 页标题用到 13px 说明，靠字号和字重分层；等宽只给真正的代码、命令、数字和栏目标签，不当「技术感」装饰。
@@ -342,7 +342,7 @@ Radix Dialog。顶栏 56px：左侧面包屑（单行，超长截断），右侧
 ### Do:
 
 - **Do** 新增颜色前先问能不能用形状或文字表达；确实要加，先在方向契约里写明理由。
-- **Do** 每个界面在 390px、820px、1440px 三个宽度下用真实文案（含西班牙文这类长文案）检查一遍。
+- **Do** 每个界面在 390px、820px、1440px 三个宽度下用真实的中文和英文文案各检查一遍。
 - **Do** 数字列用等宽、右对齐。
 - **Do** 把浏览器自带部分（选中色、焦点框、滚动条、链接下划线偏移）都按本文件的变量设置。
 
