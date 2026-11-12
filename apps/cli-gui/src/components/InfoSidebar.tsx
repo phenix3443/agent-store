@@ -53,6 +53,7 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
   const createdAt = 'createdAt' in detail ? detail.createdAt : undefined
   const categories = [t(`categories.${detail.category}`), ...detail.tags.slice(0, 3)]
   const links = resourceLinks(detail, t)
+  const site = detail.resource?.origin.site ?? detail.resourceId?.split(':')[0]
 
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-6 overflow-y-auto border-l border-store-border bg-store-sidebar p-4">
@@ -68,6 +69,7 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
       <div>
         <SectionHeading>{t('info.market')}</SectionHeading>
         <dl>
+          {site && <Row label={t('catalog.sourceLabel')} value={t(`catalog.source.${site}`)} />}
           <Row label={t('info.published')} value={formatDate(createdAt)} />
           <Row label={t('info.lastPublished')} value={formatDate(detail.updatedAt)} />
         </dl>

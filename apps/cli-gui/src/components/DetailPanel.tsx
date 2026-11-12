@@ -122,6 +122,7 @@ export function DetailPanel() {
               <span className="font-semibold">{detail.publisher.name}</span>
               <span className="text-store-border-strong">|</span>
               <span className="text-store-text-3">↓ {detail.installed ? detail.downloads || '—' : formatInstalls(detail.resource.installs)}</span>
+              {!detail.installed && <span className="text-store-amber">★ {formatInstalls(detail.resource.stars)}</span>}
               <span className={`font-semibold ${type.textClass}`}>{t(`categories.${detail.category}`)}</span>
             </div>
             <p className="mt-3 max-w-[620px] text-sm leading-relaxed text-store-text-2">{detail.description}</p>

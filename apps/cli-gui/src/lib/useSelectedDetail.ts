@@ -33,6 +33,7 @@ export function useSelectedDetail(): SelectedDetail | null {
       if (slug) {
         try {
           const info = await callRpc<ItemDetail>('info', [slug])
+          if (!info) throw new Error(`No detail for ${slug}`)
           if (!cancelled) setDetail({ ...info, installed: true })
           return
         } catch {

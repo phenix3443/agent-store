@@ -45,13 +45,13 @@ const origin = (site: string, upstreamId: string) => ({
 // Rows as GET /api/resources returns them, plus the local slug the engine adds.
 const catalogItem = {
   id: 'mcp-registry:io.github.upstash/context7', kind: 'mcp', name: 'context7', description: '文档上下文',
-  author: { name: 'upstash', url: null }, version: '1.0.0', homepageUrl: null, installs: 118000,
+  author: { name: 'upstash', url: null }, version: '1.0.0', homepageUrl: null, installs: 118000, stars: 51000,
   verified: false, tags: [], transports: ['npm'], origin: origin('mcp-registry', 'io.github.upstash/context7'), slug: 'context7',
 }
 
 const providerCatalogItem = {
   id: 'builtin:test-provider', kind: 'provider', name: 'test-provider', description: '测试供应商',
-  author: { name: 'Agent Store', url: null }, version: '1.0.0', homepageUrl: null, installs: null,
+  author: { name: 'Agent Store', url: null }, version: '1.0.0', homepageUrl: null, installs: null, stars: null,
   verified: true, tags: [], transports: [], origin: origin('builtin', 'test-provider'), slug: 'test-provider',
 }
 
@@ -214,15 +214,15 @@ test('clicking 安装 on a recommended item installs it through the shared polic
   expect(screen.getByTestId('log-count').textContent).not.toBe('0')
 })
 
-test('a recommended row shows its source and install count; search, kind and sort go to the catalog', async () => {
+test('a recommended row shows stars and install count like the mockup; search, kind and sort go to the catalog', async () => {
   const calls: unknown[][] = []
   const search = (...args: unknown[]) => {
     calls.push(args)
     return page([catalogItem, { ...providerCatalogItem, name: 'openrouter' }])(args[0], args[1])
   }
   await renderList({ search })
-  expect(await screen.findByText('MCP Registry · ↓ 118.0K')).toBeInTheDocument()
-  expect(screen.getByText('内置 · ↓ —')).toBeInTheDocument()
+  expect(await screen.findByText('★ 51.0K · ↓ 118.0K')).toBeInTheDocument()
+  expect(screen.getByText('★ — · ↓ —')).toBeInTheDocument()
   expect(screen.getByLabelText('已验证')).toBeInTheDocument()
   expect(calls[0]).toEqual(['', { sort: 'default', limit: 50 }])
 

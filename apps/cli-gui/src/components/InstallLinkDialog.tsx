@@ -17,7 +17,8 @@ type NoticeReason = 'invalid' | 'notFound' | 'catalogError' | 'installed' | 'mis
 
 type Phase =
   | { kind: 'loading'; ref: string }
-  | { kind: 'confirm'; ref: string; item: Item; resource: CatalogResourceDetail; installing: boolean }
+  /** `linkRef` is what the link named (an id or a slug); `ref` is the catalog id it resolved to. */
+  | { kind: 'confirm'; ref: string; linkRef: string; item: Item; resource: CatalogResourceDetail; installing: boolean }
   | { kind: 'notice'; reason: NoticeReason; slug?: string; category?: Category; detail?: string }
 
 type Lookup =
@@ -96,7 +97,7 @@ export function InstallLinkDialog() {
     const current = phaseRef.current
     // The launch link can arrive twice (once from the launch read, once as an event).
     if (current?.kind === 'loading' && current.ref === ref) return
-    if (current?.kind === 'confirm' && current.ref === ref) return
+    if (current?.kind === 'confirm' && (current.ref === ref || current.linkRef === ref)) return
 
     const mine = ++seq.current
     const loading: Phase = { kind: 'loading', ref }
@@ -115,7 +116,7 @@ export function InstallLinkDialog() {
       return setPhase({ kind: 'notice', reason: 'installed', slug: found.slug, category: actual })
     }
     showInList(found.resource.id, actual)
-    setPhase({ kind: 'confirm', ref: found.resource.id, item: resourceItem(found.resource), resource: found.resource, installing: false })
+    setPhase({ kind: 'confirm', ref: found.resource.id, linkRef: ref, item: resourceItem(found.resource), resource: found.resource, installing: false })
   }
 
   const handleLinkRef = useRef(handleLink)

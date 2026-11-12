@@ -446,7 +446,7 @@ export function ResourceList() {
                       )}
                     </p>
                     <p className="truncate text-xs text-store-text-3">
-                      {t(`catalog.source.${r.origin.site}`)} · ↓ {formatInstalls(r.installs)}
+                      ★ {formatInstalls(r.stars)} · ↓ {formatInstalls(r.installs)}
                     </p>
                   </div>
                   <button

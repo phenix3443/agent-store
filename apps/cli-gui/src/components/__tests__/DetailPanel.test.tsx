@@ -20,7 +20,7 @@ function catalogEntry(item: Record<string, unknown>, extra: Record<string, unkno
   const id = `mcp-registry:io.example/${item.slug as string}`
   return {
     id, kind: item.category, name: item.name, description: item.description, author: { name: 'anthropic', url: null },
-    version: item.version, homepageUrl: null, installs: 1200, verified: false, tags: [], transports: ['npm'],
+    version: item.version, homepageUrl: null, installs: 1200, stars: 3400, verified: false, tags: [], transports: ['npm'],
     origin: { site: 'mcp-registry', upstreamId: `io.example/${item.slug as string}`, url: null, upstreamVersion: null, upstreamUpdatedAt: null, syncedAt: '', unavailableAt: null, unavailableReason: null },
     slug: item.slug, install: { ...item, resourceId: id }, ...extra,
   }
@@ -79,8 +79,9 @@ test('shows an installed item detail from the info RPC', async () => {
 })
 
 test('shows an install button for a not-yet-installed item and installs it', async () => {
-  const install = mock(() => ({ slug: 'x', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [], notEnabled: [] }))
+  const install = mock(() => ({ slug: 'filesystem', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [], notEnabled: [] }))
   mockRpc({
+    info: () => { throw new Error('Item not installed: filesystem') },
     list: () => [],
     getResource: () => catalogEntry({
       id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
@@ -99,6 +100,8 @@ test('shows an install button for a not-yet-installed item and installs it', asy
   expect(screen.getByText('run · 启动 npx -y fs-mcp@0.8.1')).toBeInTheDocument()
   expect(screen.getByText('config · 需要填写 TOKEN')).toBeInTheDocument()
   expect(screen.getByText('↓ 1.2K')).toBeInTheDocument()
+  expect(screen.getByText('★ 3.4K')).toBeInTheDocument()
+  expect(screen.getByText('MCP Registry')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '安装' }))
   await waitFor(() => expect(install).toHaveBeenCalledWith('mcp-registry:io.example/filesystem'))
 })
