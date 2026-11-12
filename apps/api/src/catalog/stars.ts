@@ -32,7 +32,7 @@ export function starsQuery(repos: string[]): string {
   const fields = repos.map((full, i) => {
     const [owner, name] = full.split('/') as [string, string]
     // githubRepoOf only lets [A-Za-z0-9._-] through, so nothing here needs escaping.
-    return `r${i}: repository(owner: "${owner}", name: "${name}") { stargazerCount }`
+    return `r${i}: repository(owner: "${owner}", name: "${name}") { stargazerCount createdAt }`
   })
   return `query {\n  ${fields.join('\n  ')}\n  rateLimit { limit cost remaining resetAt }\n}`
 }
@@ -47,6 +47,8 @@ export interface RateLimit {
 export interface StarsBatch {
   /** Stars by repo; null for a repo GitHub did not resolve (missing, private, blocked). */
   stars: Map<string, number | null>
+  /** When GitHub created each resolved repo. */
+  createdAt: Map<string, string | null>
   rateLimit: RateLimit | null
 }
 
@@ -59,16 +61,18 @@ export function parseStarsResponse(repos: string[], body: unknown): StarsBatch {
   }
   const data = body['data']
   const stars = new Map<string, number | null>()
+  const createdAt = new Map<string, string | null>()
   repos.forEach((full, i) => {
     const node = data[`r${i}`]
     stars.set(full, isRecord(node) && typeof node['stargazerCount'] === 'number' ? node['stargazerCount'] : null)
+    createdAt.set(full, isRecord(node) && typeof node['createdAt'] === 'string' ? node['createdAt'] : null)
   })
   const rl = data['rateLimit']
   const rateLimit =
     isRecord(rl) && typeof rl['remaining'] === 'number'
       ? { limit: Number(rl['limit']), cost: Number(rl['cost']), remaining: rl['remaining'], resetAt: String(rl['resetAt']) }
       : null
-  return { stars, rateLimit }
+  return { stars, createdAt, rateLimit }
 }
 
 export interface StarsOptions {
@@ -97,6 +101,8 @@ export interface StarsReport {
   failedBatches: number
   errors: string[]
   rateLimit: RateLimit | null
+  /** Repos whose stars are not credited because they look bought (see SUSPECT_STARS). */
+  suspect: number
   /** GraphQL points the run's queries cost, as GitHub reported them. */
   cost: number
   durationMs: number
@@ -119,6 +125,12 @@ const DEFAULTS: Required<StarsOptions> = {
   maxRetries: 3,
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }
+
+// A repo under a year old with more than 100k stars is not credited: organic growth
+// that fast is rare, and io.github.morluto/rea (created 2026-04, 455k stars, 110k
+// forks) topped the MCP tab ahead of browser-use's 121k (owner, 2026-11-12).
+export const SUSPECT_STARS = 100_000
+export const SUSPECT_MAX_AGE_MS = 365 * 24 * 3600_000
 
 /** How long a secondary-limit or 429 response asks us to wait, or null for any other error. */
 function retryAfterMs(e: unknown): number | null {
@@ -172,11 +184,19 @@ export function assignGithubRepos(db: Database): number {
   return changed
 }
 
-/** Copies github_repos.stars onto the rows; rows without a checked repo get NULL. */
-export function applyStars(db: Database): void {
+const suspectCutoff = (now: Date) => new Date(now.getTime() - SUSPECT_MAX_AGE_MS).toISOString()
+
+/**
+ * Copies github_repos.stars onto the rows. Rows without a checked repo get NULL, and so
+ * do rows whose repo looks bought (SUSPECT_STARS); github_repos keeps the raw count.
+ */
+export function applyStars(db: Database, now: Date): void {
+  db.query(
+    `UPDATE resources SET stars = e.stars
+       FROM (SELECT full_name, CASE WHEN stars > ? AND created_at > ? THEN NULL ELSE stars END AS stars FROM github_repos) e
+      WHERE e.full_name = resources.github_repo AND resources.stars IS NOT e.stars`,
+  ).run(SUSPECT_STARS, suspectCutoff(now))
   db.exec(`
-    UPDATE resources SET stars = g.stars FROM github_repos g
-      WHERE g.full_name = resources.github_repo AND resources.stars IS NOT g.stars;
     UPDATE resources SET stars = NULL
       WHERE stars IS NOT NULL
         AND (github_repo IS NULL OR NOT EXISTS (SELECT 1 FROM github_repos g WHERE g.full_name = resources.github_repo));
@@ -217,10 +237,10 @@ export async function refreshStars(
 
   const report: StarsReport = {
     repos: all.length, due: due.length, queried: 0, queries: 0, found: 0, missing: 0, failedBatches: 0, errors: [],
-    rateLimit: null, cost: 0, durationMs: 0, waitedMs: 0, coverage: {},
+    rateLimit: null, suspect: 0, cost: 0, durationMs: 0, waitedMs: 0, coverage: {},
   }
-  const upsert = db.query(`INSERT INTO github_repos (full_name, stars, checked_at) VALUES (?, ?, ?)
-    ON CONFLICT (full_name) DO UPDATE SET stars = excluded.stars, checked_at = excluded.checked_at`)
+  const upsert = db.query(`INSERT INTO github_repos (full_name, stars, created_at, checked_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT (full_name) DO UPDATE SET stars = excluded.stars, created_at = excluded.created_at, checked_at = excluded.checked_at`)
   const stamp = ctx.now.toISOString()
   let stop: string | null = null
   let done = 0
@@ -245,7 +265,7 @@ export async function refreshStars(
       }
       db.transaction(() => {
         for (const [repo, stars] of batch.stars) {
-          upsert.run(repo, stars, stamp)
+          upsert.run(repo, stars, batch.createdAt.get(repo) ?? null, stamp)
           if (stars === null) report.missing++
           else report.found++
         }
@@ -276,7 +296,10 @@ export async function refreshStars(
   if (batches.length * o.batchSize < due.length) {
     report.errors.push(`${due.length - batches.length * o.batchSize} due repos over the ${o.maxQueries}-query cap wait for the next run`)
   }
-  applyStars(db)
+  applyStars(db, ctx.now)
+  report.suspect = (
+    db.query('SELECT count(*) AS n FROM github_repos WHERE stars > ? AND created_at > ?').get(SUSPECT_STARS, suspectCutoff(ctx.now)) as { n: number }
+  ).n
   report.coverage = coverage(db)
   report.durationMs = Date.now() - started
   return report

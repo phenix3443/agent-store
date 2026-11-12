@@ -179,7 +179,7 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     log('stars: refreshing')
     try {
       stars = await refreshStars(db, options.github, { now: now(), full: options.full ?? false, log }, options.stars)
-      log(`stars: ${stars.queried} repos in ${stars.queries} queries, ${stars.errors.length} errors`)
+      log(`stars: ${stars.queried} repos in ${stars.queries} queries, ${stars.suspect} not credited as suspect, ${stars.errors.length} errors`)
     } catch (e) {
       log(`stars: failed: ${e instanceof Error ? e.message : String(e)}`)
     }
