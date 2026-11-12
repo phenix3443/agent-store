@@ -74,7 +74,7 @@ const SUMMARY_COLUMNS = `r.id, r.kind, r.site, r.upstream_id, r.name, r.descript
 // under providers and verified MCP servers (owner, 2026-11-12).
 const MCP_DEFAULT_ORDER = 'r.verified DESC, r.installs DESC, r.upstream_updated_at DESC, r.id'
 const DEFAULT_ORDER = 'r.installs DESC, r.verified DESC, r.upstream_updated_at DESC, r.id'
-const defaultOrder = (kind: string | undefined) => (kind === 'mcp' ? MCP_DEFAULT_ORDER : DEFAULT_ORDER)
+const defaultOrder = (kind: string | null | undefined) => (kind === 'mcp' ? MCP_DEFAULT_ORDER : DEFAULT_ORDER)
 const ORDERS: Record<Exclude<ResourceSort, 'default'>, string> = {
   installs: 'r.installs DESC, r.id',
   updated: 'r.upstream_updated_at DESC, r.id',
