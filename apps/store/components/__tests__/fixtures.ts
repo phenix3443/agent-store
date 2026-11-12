@@ -110,6 +110,6 @@ export const skillResource: SkillResourceDetail = {
 
 /** The list endpoint's shape: the summary fields only. */
 export function summary(r: ResourceSummary): ResourceSummary {
-  const { id, kind, name, description, author, version, homepageUrl, installs, verified, tags, transports, origin } = r
-  return { id, kind, name, description, author, version, homepageUrl, installs, verified, tags, transports, origin }
+  const { id, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin } = r
+  return { id, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin }
 }
