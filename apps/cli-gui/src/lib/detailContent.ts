@@ -15,16 +15,6 @@ export const TIER_META: Record<string, { textClass: string; bgClass: string }> =
   community: { textClass: 'text-store-text-2', bgClass: 'bg-store-panel-2' },
 }
 
-export const STATUS_META: Record<string, { textClass: string; borderClass: string }> = {
-  published: { textClass: 'text-store-green', borderClass: 'border-store-green' },
-  pending: { textClass: 'text-store-amber', borderClass: 'border-store-amber' },
-  rejected: { textClass: 'text-store-red', borderClass: 'border-store-red' },
-}
-
-export function statusOf(detail: SelectedDetail): 'published' | 'pending' | 'rejected' {
-  return 'status' in detail && detail.status ? detail.status : 'published'
-}
-
 export type ReadmeBlock =
   | { type: 'h'; text: string }
   | { type: 'p'; text: string }
