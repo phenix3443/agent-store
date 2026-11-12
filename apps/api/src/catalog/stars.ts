@@ -257,6 +257,7 @@ export async function refreshStars(
       else done++
     }
   }
+  if (stop) report.errors.push(stop)
   if (batches.length * o.batchSize < due.length) {
     report.errors.push(`${due.length - batches.length * o.batchSize} due repos over the ${o.maxQueries}-query cap wait for the next run`)
   }
