@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { formatPrice } from '@as/types'
-import { getItems } from '@/lib/catalog'
+import { getResource, listResources } from '@/lib/catalog'
+import { desktopSlug } from '@/lib/resource'
 import { desktopOsFromUserAgent } from '@/lib/desktop-os'
 import { getLatestRelease } from '@/lib/latest-release'
 import { DownloadSection } from '@/components/landing/DownloadSection'
@@ -25,14 +26,23 @@ export async function generateMetadata(): Promise<Metadata> {
 const MAP_CATEGORIES: MapCategory[] = ['skill', 'mcp', 'provider']
 const TRUST = ['preview', 'restore', 'keys'] as const
 
+async function mapSample(kind: MapCategory): Promise<MapSample | null> {
+  const page = await listResources({ kind, q: '', sort: 'default' }, 0, 1)
+  const first = page.ok ? page.resources[0] : undefined
+  const slug = first && desktopSlug(first)
+  if (!first || !slug) return null
+  // Skills and MCP servers go to both tools; a provider says which it serves.
+  let tools: MapSample['tools'] = ['claude', 'codex']
+  if (kind === 'provider') {
+    const detail = await getResource(first.id).catch(() => null)
+    if (detail?.kind === 'provider') tools = detail.compatibleWith.filter((t) => t === 'claude' || t === 'codex')
+  }
+  return { name: first.name, slug, tools }
+}
+
 async function mapSamples(): Promise<Record<MapCategory, MapSample | null>> {
-  const lists = await Promise.all(MAP_CATEGORIES.map((category) => getItems({ category }).catch(() => [])))
-  return Object.fromEntries(
-    MAP_CATEGORIES.map((c, i) => {
-      const item = lists[i][0]
-      return [c, item ? { name: item.name, slug: item.slug, tools: item.compatibleWith } : null]
-    }),
-  ) as Record<MapCategory, MapSample | null>
+  const samples = await Promise.all(MAP_CATEGORIES.map((kind) => mapSample(kind).catch(() => null)))
+  return Object.fromEntries(MAP_CATEGORIES.map((c, i) => [c, samples[i]])) as Record<MapCategory, MapSample | null>
 }
 
 const NO_SAMPLES: Record<MapCategory, MapSample | null> = { skill: null, mcp: null, provider: null }

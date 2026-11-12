@@ -4,11 +4,11 @@ import { useTranslations } from 'next-intl'
 import { useStoreQuery } from '@/lib/use-store-query'
 
 export type CategoryValue = 'all' | 'skill' | 'mcp' | 'provider'
-export type CategoryCounts = Record<CategoryValue, number>
 
 const VALUES: CategoryValue[] = ['all', 'skill', 'mcp', 'provider']
 
-export function CategoryFilter({ active, counts }: { active: CategoryValue; counts: CategoryCounts }) {
+// No per-tab counts: /api/resources pages through ~68k records without a total.
+export function CategoryFilter({ active }: { active: CategoryValue }) {
   const t = useTranslations('store')
   const { setParams } = useStoreQuery()
 
@@ -25,7 +25,6 @@ export function CategoryFilter({ active, counts }: { active: CategoryValue; coun
           className="flex shrink-0 items-center gap-1.5 border-b-2 border-transparent px-2 text-[15px] text-ink-2 transition-colors hover:text-ink aria-pressed:border-ink aria-pressed:font-medium aria-pressed:text-ink focus-visible:-outline-offset-2"
         >
           {t(`categories.${value}`)}
-          <span className="font-mono text-xs font-normal text-ink-2">{counts[value]}</span>
         </button>
       ))}
     </div>

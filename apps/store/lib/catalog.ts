@@ -1,5 +1,6 @@
-import type { Item } from '@as/types'
+import type { ResourceDetail, ResourceSummary } from '@as/types'
 import { StoreClient } from '@as/sdk'
+import type { StoreQuery } from './resource'
 
 // Web store and CLI share one catalog source: the standalone apps/api server.
 // Point at it via API_URL (set in dev/Makefile and production config); fall back
@@ -11,52 +12,28 @@ const API_URL =
 // (via Next's Data Cache) when the API server is briefly unreachable.
 const client = new StoreClient(API_URL, { fetchInit: { next: { revalidate: 300 } } as RequestInit })
 
-export interface GetItemsOptions {
-  category?: 'provider' | 'skill' | 'mcp' | null
-  q?: string
-  sort?: 'downloads' | 'created' | 'rating'
-}
+export const PAGE_SIZE = 50
 
-export async function getItems(options: GetItemsOptions = {}): Promise<Item[]> {
-  const { category, q, sort = 'downloads' } = options
-  const { data } = await client.getItems({
-    category: category ?? undefined,
-    q,
-    // The API sorts by downloads or created; rating is sorted in memory below.
-    sort: sort === 'created' ? 'created' : 'downloads',
-    limit: 100,
+export type ListOutcome =
+  | { ok: true; resources: ResourceSummary[]; nextOffset: number | null }
+  | { ok: false; error: string }
+
+export async function listResources(query: StoreQuery, offset = 0, limit = PAGE_SIZE): Promise<ListOutcome> {
+  const { data, error } = await client.listResources({
+    kind: query.kind ?? undefined,
+    q: query.q,
+    sort: query.sort,
+    limit,
+    offset,
   })
-  const items = data ?? []
-  if (sort === 'rating') return items.slice().sort((a, b) => b.rating - a.rating)
-  return items
+  if (!data) return { ok: false, error }
+  return { ok: true, resources: data.resources, nextOffset: data.nextOffset }
 }
 
-// Feature the best packages, not just the most-downloaded: weight publisher tier,
-// with (dampened) downloads as a tiebreaker.
-const TIER_WEIGHT: Record<string, number> = { official: 100, verified: 60, community: 0 }
-
-function featuredScore(item: Item): number {
-  return (
-    (TIER_WEIGHT[item.publisher.tier] ?? 0) +
-    Math.log10((item.downloads ?? 0) + 1) * 5
-  )
-}
-
-export async function getFeaturedItems(): Promise<Item[]> {
-  const { data } = await client.getItems({ sort: 'downloads', limit: 100 })
-  const items = data ?? []
-  return items
-    .slice()
-    .sort((a, b) => featuredScore(b) - featuredScore(a))
-    .slice(0, 6)
-}
-
-export async function getItemVersions(slug: string) {
-  const { data } = await client.getVersions(slug)
-  return data ?? []
-}
-
-export async function getItemBySlug(slug: string): Promise<Item | null> {
-  const { data } = await client.getItemBySlug(slug)
-  return data ?? null
+/** Null when the id does not exist; throws on any other failure so the error page shows. */
+export async function getResource(id: string): Promise<ResourceDetail | null> {
+  const result = await client.getResource(id)
+  if (result.data) return result.data
+  if (result.status === 404) return null
+  throw new Error(`Catalog unavailable: ${result.error}`)
 }

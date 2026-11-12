@@ -1,5 +1,3 @@
-import type { Item } from '@as/types'
-
 const DEFAULT_SCHEME = 'agent-store'
 
 /** Dev builds of the desktop client register `agent-store-dev`; NEXT_PUBLIC_DESKTOP_SCHEME selects it at build time. */
@@ -9,11 +7,13 @@ export function desktopScheme(): string {
 }
 
 /**
- * The link carries only the slug and category. The client looks the package up
- * in the catalog itself, so a crafted link cannot smuggle in a URL or command.
+ * The link carries only identifiers: the client looks the package up in the
+ * catalog itself, so a crafted link cannot smuggle in a URL or command. Today's
+ * client reads `slug` and `category` and drops `id`, the /api/resources id it
+ * will resolve once it reads that catalog.
  */
-export function installLink(item: Pick<Item, 'slug' | 'category'>, scheme = desktopScheme()): string {
-  return `${scheme}://install?slug=${encodeURIComponent(item.slug)}&category=${item.category}`
+export function installLink(target: { slug: string; kind: string; id: string }, scheme = desktopScheme()): string {
+  return `${scheme}://install?slug=${encodeURIComponent(target.slug)}&category=${target.kind}&id=${encodeURIComponent(target.id)}`
 }
 
 export type LaunchResult = 'opened' | 'missing'

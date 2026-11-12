@@ -1,15 +1,12 @@
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { CategoryFilter, type CategoryCounts, type CategoryValue } from './CategoryFilter'
-import { SortSelect, type Sort } from './SortSelect'
-import { VerifiedToggle } from './VerifiedToggle'
+import { CategoryFilter, type CategoryValue } from './CategoryFilter'
+import { SortSelect } from './SortSelect'
+import type { ResourceSort } from '@as/types'
 
 interface StoreToolbarProps {
   category: CategoryValue
-  counts: CategoryCounts
-  sort: Sort
-  verifiedOnly: boolean
-  total: number
+  sort: ResourceSort
   filtered: boolean
 }
 
@@ -32,20 +29,31 @@ export function ClearFiltersLink({ className = 'btn' }: { className?: string }) 
   )
 }
 
-export function StoreToolbar({ category, counts, sort, verifiedOnly, total, filtered }: StoreToolbarProps) {
-  const t = useTranslations('store.filters')
+export function StoreToolbar({ category, sort, filtered }: StoreToolbarProps) {
   return (
     <div className="flex flex-col border-b border-ink lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-      <CategoryFilter active={category} counts={counts} />
+      <CategoryFilter active={category} />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line py-3 lg:border-t-0 lg:py-0">
-        <VerifiedToggle active={verifiedOnly} />
         <SortSelect active={sort} />
-        <p className="ml-auto font-mono text-xs text-ink-2 lg:ml-0" aria-live="polite">
-          {t('results', { count: total })}
-        </p>
         {filtered && (
           <ClearFiltersLink className="text-sm underline decoration-line-strong hover:decoration-ink" />
         )}
+      </div>
+    </div>
+  )
+}
+
+/** The catalog API could not be read: said plainly, with a retry, and kept apart from "no matches". */
+export function StoreError({ retryHref }: { retryHref: string }) {
+  const t = useTranslations('store.list')
+  return (
+    <div role="alert" className="store-results border-b border-line px-3 py-14">
+      <p className="text-lg font-medium">{t('errorTitle')}</p>
+      <p className="mt-1.5 max-w-[60ch] text-sm text-ink-2">{t('errorBody')}</p>
+      <div className="mt-5">
+        <a href={retryHref} className="btn">
+          {t('retry')}
+        </a>
       </div>
     </div>
   )

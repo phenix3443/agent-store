@@ -54,6 +54,9 @@ export interface ResourceSummary {
   origin: ResourceOrigin
 }
 
+/** `default`: verified first, then installs, then most recently updated; with `q`, name matches rank first. */
+export type ResourceSort = 'default' | 'installs' | 'updated' | 'name'
+
 export interface ResourceListResponse {
   resources: ResourceSummary[]
   /** Pass back as `offset` for the next page; null on the last page. */

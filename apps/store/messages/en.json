@@ -31,9 +31,10 @@
     },
     "sort": {
       "label": "Sort",
-      "popular": "Most installed",
-      "new": "Newest",
-      "rating": "Top rated"
+      "default": "Recommended",
+      "installs": "Most installed",
+      "updated": "Recently updated",
+      "name": "Name"
     },
     "search": {
       "placeholder": "Search skills, MCP, providers",
@@ -43,8 +44,6 @@
     },
     "filters": {
       "category": "Category",
-      "verifiedOnly": "Verified only",
-      "results": "{count, plural, one {# package} other {# packages}}",
       "clear": "Clear search and filters"
     },
     "list": {
@@ -59,10 +58,21 @@
       "copiedAnnounce": "Copied install command: {command}",
       "copyFailedAnnounce": "Copy failed. Select the command and copy it by hand: {command}",
       "emptyTitle": "No packages match",
-      "emptyBody": "Try another keyword, or clear the search and filters.",
+      "emptyBody": "Try another keyword or type, or clear the search and filters.",
       "colInstall": "Install",
       "copyCommand": "Copy command",
-      "lede": "Every package states what runs when you install it."
+      "lede": "Every package states what runs when you install it.",
+      "noInstalls": "No install count",
+      "unknownAuthor": "Unknown author",
+      "loading": "Loading packages",
+      "countAll": "{count, plural, one {# package} other {# packages}}",
+      "countShown": "{count} shown",
+      "loadFailed": "More packages could not be loaded.",
+      "retry": "Try again",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "errorTitle": "The catalog is unavailable",
+      "errorBody": "The store could not reach the catalog. Try again in a moment."
     },
     "tier": {
       "official": "Official",
@@ -74,18 +84,12 @@
       "expand": "Open as full page",
       "close": "Close details",
       "installs": "{count} installs",
-      "rating": "{rating} rating ({count} reviews)",
       "favorite": "Save",
       "unfavorite": "Saved",
       "runsTitle": "What it runs after install",
       "runCommand": "Runs",
       "runConnect": "Connects",
-      "runFile": "Installs",
-      "runDownload": "Downloads",
-      "runConfig": "Writes",
-      "runProvider": "Prefills",
       "providerNote": "Writes the endpoint at install time. You only add the API key.",
-      "downloadTo": "{url} → {dest}",
       "installTitle": "Install command",
       "specsTitle": "Specs",
       "version": "Version",
@@ -95,21 +99,22 @@
       "tags": "Tags",
       "readme": "README",
       "content": "Skill content",
-      "versionsTitle": "Version history",
-      "latest": "Latest",
-      "notFound": "Package not found"
-    },
-    "reviews": {
-      "title": "User reviews",
-      "none": "No reviews yet",
-      "summary": "{rating} · {count} reviews",
-      "loginHint": "Sign in to leave a review.",
-      "yourRating": "Your rating",
-      "stars": "{n} stars",
-      "bodyLabel": "Your experience (optional)",
-      "submit": "Post review",
-      "submitting": "Posting…",
-      "anonymous": "Anonymous"
+      "notFound": "Package not found",
+      "runNeeds": "Needs",
+      "runFiles": "Copies",
+      "runsNone": "The registry entry lists no package or remote.",
+      "localNote": "The desktop client’s own local relay. Nothing is downloaded and no key is needed.",
+      "upstreamId": "Upstream id",
+      "repository": "Repository",
+      "files": "Files",
+      "fileCount": "{count, plural, one {# file} other {# files}}",
+      "homepage": "Homepage",
+      "updated": "Updated",
+      "unavailable": "This entry is no longer listed upstream. It stays here so installed copies still resolve.",
+      "deprecated": "The publisher marked this server deprecated.",
+      "executable": "Executable",
+      "symlink": "Symlink",
+      "moreFiles": "and {count} more"
     },
     "lang": {
       "zh": "中文",
@@ -124,7 +129,11 @@
       "openedShort": "Opened",
       "download": "Get the desktop client",
       "fallbackNote": "If the client does not open, the install command is copied and you are pointed to the download.",
-      "phoneNote": "Run this command on your computer, or install with the desktop client."
+      "phoneNote": "Run this command on your computer, or install with the desktop client.",
+      "noCommand": "The record has no package or remote this store can turn into a command. See the repository for setup.",
+      "noteSkill": "Runs the skills.sh CLI, which copies the skill from GitHub into your agents.",
+      "noteMcp": "Adds the server to Claude Code. Replace the values in angle brackets with your own.",
+      "noteProvider": "Runs the Agent Store CLI."
     },
     "notice": {
       "label": "Notification",
@@ -133,7 +142,14 @@
       "copyFailedBody": "The install command could not be copied. Copy the line below by hand and run it in a terminal, or get the desktop client first.",
       "download": "Get the desktop client",
       "downloadAlt": "Go to the download page for the desktop client",
-      "close": "Dismiss"
+      "close": "Dismiss",
+      "noCommandBody": "Open the package for its install command, or get the desktop client first."
+    },
+    "source": {
+      "mcp-registry": "MCP Registry",
+      "github": "GitHub",
+      "builtin": "Built-in",
+      "skillsSh": "skills.sh"
     }
   },
   "site": {

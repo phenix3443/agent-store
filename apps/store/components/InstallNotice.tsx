@@ -7,7 +7,8 @@ import { useTranslations } from 'next-intl'
 
 interface Notice {
   id: number
-  command: string
+  /** Null when there was nothing to copy (an MCP row); the notice points to the detail instead. */
+  command: string | null
   copied: boolean
 }
 
@@ -62,11 +63,13 @@ export function InstallNoticeProvider({ children }: { children: React.ReactNode 
               </Toast.Close>
             </div>
             <Toast.Description className="mt-1 text-sm leading-[22px] text-ink-2">
-              {notice.copied ? t('missingBody') : t('copyFailedBody')}
+              {notice.command === null ? t('noCommandBody') : notice.copied ? t('missingBody') : t('copyFailedBody')}
             </Toast.Description>
-            <code className="mt-2.5 block overflow-x-auto whitespace-nowrap border border-line bg-paper px-3 py-2 font-mono text-[13px]">
-              {notice.command}
-            </code>
+            {notice.command !== null && (
+              <code className="mt-2.5 block border border-line bg-paper px-3 py-2 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
+                {notice.command}
+              </code>
+            )}
             <Toast.Action altText={t('downloadAlt')} asChild>
               <Link href="/download" className="btn mt-3 min-h-9">
                 {t('download')}

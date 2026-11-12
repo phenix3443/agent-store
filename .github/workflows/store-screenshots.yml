@@ -1,0 +1,66 @@
+name: store-screenshots
+
+# Builds the store image against the test API and screenshots the key pages at
+# 390/820/1440 px, light and dark, zh and en, for PR review. Runs on the runner,
+# never on the shared host (see AGENTS.md).
+on:
+  pull_request:
+    paths:
+      - 'apps/store/**'
+      - 'scripts/store-screenshots.mjs'
+      - '.github/workflows/store-screenshots.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: store-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TEST_URL: https://agent-store-test.panghuli.tech
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/store/Dockerfile
+          load: true
+          tags: store-shots:ci
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ env.TEST_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ env.TEST_URL }}
+          # Reads the cache images.yml writes; does not write its own.
+          cache-from: type=gha,scope=store
+      - name: Start the store
+        run: |
+          docker run -d --name store -p 3000:3000 -e API_URL="$TEST_URL" store-shots:ci
+          for i in $(seq 60); do curl -fsS -o /dev/null http://localhost:3000/store && exit 0; sleep 2; done
+          docker logs store; exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i --no-audit --no-fund playwright@1.49.1
+          npx playwright install --with-deps chromium
+      - name: Screenshots
+        # ESM resolves `playwright` next to the script, not through NODE_PATH.
+        run: |
+          cp scripts/store-screenshots.mjs /tmp/pw/
+          node /tmp/pw/store-screenshots.mjs http://localhost:3000 "$GITHUB_WORKSPACE/shots"
+      - name: Store logs
+        if: always()
+        run: docker logs store 2>&1 | tail -200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: store-screenshots
+          path: shots/
+          retention-days: 14

@@ -1,6 +1,26 @@
-import type { Item, Publisher, Plan, UserReview, ItemVersion } from '@as/types'
+import type {
+  Item,
+  Publisher,
+  Plan,
+  UserReview,
+  ItemVersion,
+  ResourceDetail,
+  ResourceKind,
+  ResourceListResponse,
+  ResourceSort,
+} from '@as/types'
 
-export type Result<T> = { data: T; error: null } | { data: null; error: string }
+/** `status` is the HTTP status when the server answered; absent for network errors. */
+export type Result<T> = { data: T; error: null } | { data: null; error: string; status?: number }
+
+export interface ListResourcesParams {
+  kind?: ResourceKind
+  q?: string
+  sort?: ResourceSort
+  /** The API caps it at 100. */
+  limit?: number
+  offset?: number
+}
 
 export interface GetItemsParams {
   category?: 'provider' | 'skill' | 'mcp'
@@ -39,6 +59,40 @@ export class StoreClient {
       return await fetch(url, { ...mergedInit, signal: controller.signal })
     } finally {
       clearTimeout(timer)
+    }
+  }
+
+  /** GET /api/resources: one page of the aggregated catalog, searched and sorted on the server. */
+  async listResources(params: ListResourcesParams = {}): Promise<Result<ResourceListResponse>> {
+    try {
+      const url = new URL(`${this.baseUrl}/api/resources`)
+      if (params.kind) url.searchParams.set('kind', params.kind)
+      if (params.q?.trim()) url.searchParams.set('q', params.q.trim())
+      if (params.sort && params.sort !== 'default') url.searchParams.set('sort', params.sort)
+      if (params.limit != null) url.searchParams.set('limit', String(params.limit))
+      if (params.offset) url.searchParams.set('offset', String(params.offset))
+
+      const res = await this._fetch(url.toString())
+      const json = (await res.json().catch(() => ({}))) as Partial<ResourceListResponse> & { error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
+      if (!Array.isArray(json.resources)) return { data: null, error: 'No resources in response' }
+      return { data: { resources: json.resources, nextOffset: json.nextOffset ?? null }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** GET /api/resources/<id>. Ids hold ':' and '/'; each path segment is encoded on its own. */
+  async getResource(id: string): Promise<Result<ResourceDetail>> {
+    try {
+      const path = id.split('/').map(encodeURIComponent).join('/')
+      const res = await this._fetch(`${this.baseUrl}/api/resources/${path}`)
+      const json = (await res.json().catch(() => ({}))) as { resource?: ResourceDetail; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
+      if (!json.resource) return { data: null, error: 'No resource in response' }
+      return { data: json.resource, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
     }
   }
 

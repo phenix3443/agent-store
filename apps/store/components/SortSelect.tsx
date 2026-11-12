@@ -1,18 +1,12 @@
 'use client'
 
+import type { ResourceSort } from '@as/types'
 import { useId } from 'react'
 import { useTranslations } from 'next-intl'
+import { SORTS } from '@/lib/resource'
 import { useStoreQuery } from '@/lib/use-store-query'
 
-export type Sort = 'downloads' | 'created' | 'rating'
-
-const OPTIONS: { value: Sort; key: 'popular' | 'new' | 'rating' }[] = [
-  { value: 'downloads', key: 'popular' },
-  { value: 'created', key: 'new' },
-  { value: 'rating', key: 'rating' },
-]
-
-export function SortSelect({ active }: { active: Sort }) {
+export function SortSelect({ active }: { active: ResourceSort }) {
   const t = useTranslations('store.sort')
   const { setParams } = useStoreQuery()
   const id = useId()
@@ -25,12 +19,12 @@ export function SortSelect({ active }: { active: Sort }) {
       <select
         id={id}
         value={active}
-        onChange={(e) => setParams({ sort: e.target.value === 'downloads' ? null : e.target.value })}
+        onChange={(e) => setParams({ sort: e.target.value === 'default' ? null : e.target.value })}
         className="h-full cursor-pointer appearance-none bg-transparent pl-1 pr-8 text-sm text-ink outline-offset-4"
       >
-        {OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value} className="bg-plate text-ink">
-            {t(opt.key)}
+        {SORTS.map((value) => (
+          <option key={value} value={value} className="bg-plate text-ink">
+            {t(value)}
           </option>
         ))}
       </select>

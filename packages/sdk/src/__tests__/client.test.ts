@@ -245,3 +245,52 @@ describe('StoreClient.createCheckout', () => {
     globalThis.fetch = originalFetch
   })
 })
+
+describe('StoreClient resources', () => {
+  function stub(handler: (url: string) => Response) {
+    const original = globalThis.fetch
+    const seen: string[] = []
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      seen.push(String(url))
+      return handler(String(url))
+    }) as typeof fetch
+    return { seen, restore: () => (globalThis.fetch = original) }
+  }
+
+  test('listResources passes kind, q, sort, limit and offset to /api/resources', async () => {
+    const f = stub(() => Response.json({ resources: [], nextOffset: 40 }))
+    const result = await new StoreClient('https://s.example').listResources({ kind: 'mcp', q: ' git ', sort: 'installs', limit: 20, offset: 20 })
+    f.restore()
+    expect(f.seen[0]).toBe('https://s.example/api/resources?kind=mcp&q=git&sort=installs&limit=20&offset=20')
+    expect(result).toEqual({ data: { resources: [], nextOffset: 40 }, error: null })
+  })
+
+  test('listResources leaves out the default sort and a zero offset', async () => {
+    const f = stub(() => Response.json({ resources: [], nextOffset: null }))
+    await new StoreClient('https://s.example').listResources({ sort: 'default', offset: 0 })
+    f.restore()
+    expect(f.seen[0]).toBe('https://s.example/api/resources')
+  })
+
+  test('listResources reports the HTTP status of an error', async () => {
+    const f = stub(() => Response.json({ error: 'Catalog not loaded yet' }, { status: 503 }))
+    const result = await new StoreClient('https://s.example').listResources()
+    f.restore()
+    expect(result).toEqual({ data: null, error: 'Catalog not loaded yet', status: 503 })
+  })
+
+  test('getResource encodes each segment of the id and keeps the slashes', async () => {
+    const f = stub(() => Response.json({ resource: { id: 'github:o/r/s' } }))
+    const result = await new StoreClient('https://s.example').getResource('github:o/r/s')
+    f.restore()
+    expect(f.seen[0]).toBe('https://s.example/api/resources/github%3Ao/r/s')
+    expect(result.data?.id).toBe('github:o/r/s')
+  })
+
+  test('getResource returns status 404 for a missing id', async () => {
+    const f = stub(() => Response.json({ error: 'Not found' }, { status: 404 }))
+    const result = await new StoreClient('https://s.example').getResource('builtin:none')
+    f.restore()
+    expect(result).toEqual({ data: null, error: 'Not found', status: 404 })
+  })
+})
