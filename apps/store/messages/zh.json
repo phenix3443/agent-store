@@ -155,26 +155,154 @@
     },
     "home": {
       "metaTitle": "Agent Store：Claude Code / Codex 的技能、MCP 与供应商",
-      "titleA": "找技能、MCP",
-      "titleB": "和模型供应商",
-      "lede": "浏览 Claude Code / Codex 能用的技能、MCP 服务和模型供应商。详情页写明每个包要运行的命令、连接的地址、下载的文件和写入的配置。",
+      "titleA": "技能、MCP 和供应商，",
+      "titleB": "装之前先看清。",
+      "lede": "给 Claude Code 和 Codex 找技能、MCP 服务和模型供应商。每个包都写明装上后要运行的命令和要写入的文件；桌面客户端负责安装、启用和卸载，并运行本地代理。",
+      "browse": "浏览商店",
       "downloadMac": "下载 macOS 版",
       "downloadWin": "下载 Windows 版",
       "downloadLinux": "下载 Linux 版",
       "osHint": "根据你的系统推荐",
       "otherOs": "其他系统：",
-      "browse": "浏览商店",
       "unsigned": "安装包暂未签名，首次打开会被系统拦截。",
       "unsignedLink": "查看放行步骤",
-      "clientTitle": "桌面客户端",
-      "clientBody": "在商店里点「安装」，会先尝试唤起桌面客户端。它管理本机装好的技能、MCP 和供应商，运行本地代理并显示用量。",
       "price": "免费使用；Pro {monthly} / 月起",
-      "featuredTitle": "先从这几个包看起",
-      "featuredAll": "浏览全部 {count} 个包",
-      "plateOpen": "查看详情",
-      "relayTitle": "本地代理：一个地址，多家上游",
-      "relayBody": "Claude Code / Codex 的请求先发到本机，再按你定的顺序转给已配置的供应商；前一家连不上或返回 5xx 时，换下一家。每次请求的 Token 和费用记在本机。",
-      "relayDocs": "端口、优先级和切换条件见文档"
+      "trustLabel": "可以放心的地方",
+      "trust": {
+        "preview": "装之前就能看到它要运行的命令、连接的地址和写入的文件",
+        "restore": "卸载后，Claude Code 和 Codex 的配置逐字节还原",
+        "keys": "API 密钥只存在本机，文件权限 0600；本地代理只接受带 token 的请求"
+      },
+      "heroShotAlt": "Agent Store 桌面客户端的技能页（Linux 版截图）：左侧是已装和推荐的技能，右侧是 brainstorming 的详情、安装命令和安装步骤",
+      "map": {
+        "title": "装了会写到哪",
+        "lede": "选一类包，看它写进 Claude Code 和 Codex 的哪个文件、哪个键。路径和键名取自客户端代码。",
+        "tabsLabel": "包的类别",
+        "tabs": {
+          "skill": "技能",
+          "mcp": "MCP",
+          "provider": "供应商"
+        },
+        "package": "目录里的包",
+        "placeholder": "目录暂时取不到",
+        "skill": {
+          "claude": "软链接，指向 ~/.agents/skills 里的那一份",
+          "codex": "Codex 直接读取 ~/.agents/skills，不另写文件",
+          "store": "技能目录只存这一份；标记文件说明它由 Agent Store 安装，卸载时只删带标记的"
+        },
+        "mcp": {
+          "claude": "user 级别的 MCP 条目；本机装了 claude 命令时经 claude mcp add-json 写入",
+          "codex": "command、args、env，或远程服务的 url；本机装了 codex 命令时经 codex mcp add 写入",
+          "store": "记下写过哪些条目，停用和卸载只删这些，被替换的原条目会放回去"
+        },
+        "provider": {
+          "claude": "指向本机的本地代理；这里的 token 是代理 token，不是你的 API 密钥",
+          "codex": "新增 aas-relay 供应商并设为当前供应商，同样指向本地代理",
+          "store": "API 密钥只存在这里，文件权限 0600"
+        },
+        "unsupported": "这个包不支持 {tool}，不会写它的配置"
+      },
+      "terminal": {
+        "title": "也可以在终端里装",
+        "lede": "桌面客户端自带 aas 命令，和客户端读写同一份安装记录。Linux 安装包把它放在 /usr/bin/aas，macOS 和 Windows 在客户端的安装目录里。",
+        "note": "上面是 Linux 安装包里的 aas 在 2026-11-12 实际运行的输出。",
+        "tabsLabel": "命令"
+      },
+      "features": {
+        "title": "桌面客户端",
+        "lede": "装好的东西在客户端里管理。下面是 Linux 版的真实截图；用量数字来自截图时发给本机测试上游的请求。",
+        "skill": {
+          "title": "技能",
+          "body": "列出装好的和推荐的技能，详情里写着安装命令和安装步骤。技能只存一份，Claude Code 和 Codex 共用。",
+          "alt": "技能页：已装的 brainstorming、canvas-design、executing-plans，右侧是 brainstorming 的详情"
+        },
+        "mcp": {
+          "title": "MCP 配置，按工具启用",
+          "body": "需要参数的 MCP 先填好配置，再分别对 Claude Code 和 Codex 打开或关闭。",
+          "alt": "Context7 的配置面板：Applies to 下面是 Claude Code 和 Codex 两个开关"
+        },
+        "relay": {
+          "title": "供应商与本地代理",
+          "body": "供应商按优先级排好，前一家连不上、限流或返回 5xx 时换下一家，免费版最多在两家之间切换。最近的请求逐条列出模型、供应商、耗时和状态码。",
+          "alt": "本地代理卡片：监听 127.0.0.1:18780，运行中；下面是最近的请求"
+        },
+        "usage": {
+          "title": "用量与预算",
+          "body": "费用、Token 和请求数按今天、近 7 天、近 30 天汇总，记在本机。预算上限和超支提醒是 Pro 功能。",
+          "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总"
+        }
+      },
+      "sources": {
+        "title": "包从哪来",
+        "lede": "目录不由我们手写，由定时任务从三处上游同步进 Agent Store 自己的目录。",
+        "catalogLabel": "来源",
+        "mcp": {
+          "name": "官方 MCP Registry",
+          "body": "Model Context Protocol 官方登记的 MCP 服务"
+        },
+        "skill": {
+          "name": "GitHub 上的技能仓库",
+          "body": "以 skills.sh 作为发现来源，技能内容从 GitHub 仓库下载"
+        },
+        "provider": {
+          "name": "内置供应商列表",
+          "body": "常用的模型供应商，列表写在 Agent Store 的代码里"
+        },
+        "sync": "作者名链接到上游：技能链到 GitHub 的 owner 页，MCP 链到它的命名空间。",
+        "toolsLabel": "支持的工具",
+        "claudeNote": "技能、MCP 条目、供应商设置。设置了 CLAUDE_CONFIG_DIR 时改用那个目录。",
+        "codexNote": "技能、MCP 条目、供应商设置。设置了 CODEX_HOME 时改用那个目录。"
+      },
+      "faq": {
+        "title": "常见问题",
+        "config": {
+          "q": "会改动我现有的 Claude Code / Codex 配置吗？",
+          "a": "只增删它自己写的条目。同名的技能或 MCP 已经存在、又不是 Agent Store 装的，安装会停下来报冲突，不覆盖；MCP 可以用 --replace 明确接管，卸载时把原来的条目放回去。启用供应商前，原来的 ANTHROPIC_BASE_URL 等设置会先存下来，停用时还原。"
+        },
+        "keys": {
+          "q": "API 密钥存在哪？",
+          "a": "存在本机 ~/.agents/providers/ 下该供应商目录的 config.json 里，文件权限 0600。写进 Claude Code 和 Codex 配置的只有本地代理的地址和代理 token，不是你的密钥；转发请求时由本地代理附上密钥。"
+        },
+        "relay": {
+          "q": "本地代理会把请求发到别处吗？",
+          "a": "不会。它只监听 127.0.0.1（默认端口 18780），请求必须带代理 token，来自网页的请求一律拒绝。请求只转给你启用的供应商地址；每次请求的 Token 和费用记在本机，不上传。"
+        },
+        "uninstall": {
+          "q": "能干净卸载吗？",
+          "a": "能。卸载会撤掉它写进 Claude Code 和 Codex 的条目，不是 Agent Store 装的文件原样保留。技能、MCP、供应商在两个工具上都有往返测试：安装、启用、停用、卸载之后，逐字节比较所有配置文件。JSON 配置按两空格缩进写回；如果你的文件用别的缩进，内容不变，排版会变成两空格。"
+        },
+        "unsigned": {
+          "q": "为什么安装包没有签名？",
+          "a": "还没有接入 Apple 和 Windows 的代码签名，所以首次打开时系统会拦一次。安装包由 GitHub Actions 从公开的源码构建，发布在 GitHub Release 上，文件没有损坏。放行步骤见下载页。"
+        }
+      },
+      "download": {
+        "title": "下载桌面客户端",
+        "version": "最新版本",
+        "allReleases": "全部版本与更新说明",
+        "recommendedOs": "根据你的系统推荐",
+        "recommendedFile": "推荐",
+        "os": {
+          "mac": "macOS",
+          "win": "Windows",
+          "linux": "Linux"
+        },
+        "detail": {
+          "mac": "通用版，Apple 芯片与 Intel 都能用",
+          "win": "64 位（x64）",
+          "linux": "x86_64"
+        },
+        "kind": {
+          "dmg": "磁盘映像（.dmg）",
+          "exe": "安装程序（.exe）",
+          "msi": "MSI 安装包",
+          "deb": "Debian / Ubuntu（.deb）",
+          "rpm": "Fedora / openSUSE（.rpm）"
+        },
+        "unavailable": "暂时读不到最新版本的文件列表。",
+        "unavailableLink": "去 GitHub 发布页下载",
+        "downloadPage": "下载页"
+      }
     },
     "docs": {
       "metaTitle": "文档",

@@ -155,26 +155,154 @@
     },
     "home": {
       "metaTitle": "Agent Store: skills, MCP servers and providers for Claude Code / Codex",
-      "titleA": "Find skills, MCP servers",
-      "titleB": "and model providers",
-      "lede": "Browse skills, MCP servers and model providers for Claude Code / Codex. Each detail page lists the commands a package runs, the addresses it connects to and the files and config it writes.",
+      "titleA": "Skills, MCP and providers.",
+      "titleB": "Read before you install.",
+      "lede": "Find skills, MCP servers and model providers for Claude Code and Codex. Every package lists the commands it will run and the files it will write; the desktop client installs, enables and uninstalls them, and runs the local relay.",
+      "browse": "Browse the store",
       "downloadMac": "Download for macOS",
       "downloadWin": "Download for Windows",
       "downloadLinux": "Download for Linux",
       "osHint": "Picked for your system",
       "otherOs": "Other systems: ",
-      "browse": "Browse the store",
       "unsigned": "The installers are not signed yet, so the system blocks them on first launch.",
       "unsignedLink": "See how to allow it",
-      "clientTitle": "Desktop client",
-      "clientBody": "Install in the store tries to open the desktop client first. The client manages the skills, MCP servers and providers on this machine, runs the local relay and shows usage.",
       "price": "Free to use; Pro from {monthly} / month",
-      "featuredTitle": "Start with these packages",
-      "featuredAll": "Browse all {count} packages",
-      "plateOpen": "View details",
-      "relayTitle": "Local relay: one address, multiple upstreams",
-      "relayBody": "Requests from Claude Code / Codex go to this machine first, then to your configured providers in the order you set. If one cannot be reached or returns a 5xx, the relay moves on to the next. Tokens and cost for each request are recorded on this machine.",
-      "relayDocs": "Ports, priority and switch conditions in the docs"
+      "trustLabel": "What you can rely on",
+      "trust": {
+        "preview": "See the commands, addresses and files a package uses before you install it",
+        "restore": "Uninstall puts your Claude Code and Codex config back byte for byte",
+        "keys": "API keys stay on this machine in 0600 files; the local relay only accepts requests with its token"
+      },
+      "heroShotAlt": "The Agent Store desktop client's skills view (Linux build): installed and recommended skills on the left, the brainstorming skill's details, install command and install steps on the right",
+      "map": {
+        "title": "Where an install writes",
+        "lede": "Pick a kind of package to see which file and key it writes for Claude Code and Codex. Paths and key names come from the client code.",
+        "tabsLabel": "Package kind",
+        "tabs": {
+          "skill": "Skill",
+          "mcp": "MCP",
+          "provider": "Provider"
+        },
+        "package": "From the catalog",
+        "placeholder": "Catalog unavailable",
+        "skill": {
+          "claude": "A symlink to the copy in ~/.agents/skills",
+          "codex": "Codex reads ~/.agents/skills itself; nothing else is written",
+          "store": "The only copy of the skill. The marker file says Agent Store installed it; uninstall removes only marked skills"
+        },
+        "mcp": {
+          "claude": "A user-scope MCP entry, added through claude mcp add-json when the claude command is installed",
+          "codex": "command, args and env, or the url of a remote server; added through codex mcp add when the codex command is installed",
+          "store": "Records which entries were written; disable and uninstall remove only those and put back any entry they replaced"
+        },
+        "provider": {
+          "claude": "Points at the local relay. The token is the relay's token, not your API key",
+          "codex": "Adds an aas-relay provider and makes it current, also pointing at the local relay",
+          "store": "Your API key is stored only here, in a 0600 file"
+        },
+        "unsupported": "This package does not support {tool}; nothing is written for it"
+      },
+      "terminal": {
+        "title": "From the terminal too",
+        "lede": "The desktop client ships the aas command, which reads and writes the same install records. The Linux packages put it at /usr/bin/aas; on macOS and Windows it is in the client's install folder.",
+        "note": "Above is the actual output of aas from the Linux package, run on 2026-11-12.",
+        "tabsLabel": "Command"
+      },
+      "features": {
+        "title": "The desktop client",
+        "lede": "What you install is managed in the client. These are real screenshots of the Linux build; the usage numbers come from requests sent to a local test upstream while taking them.",
+        "skill": {
+          "title": "Skills",
+          "body": "Installed and recommended skills, with the install command and install steps in the details. Each skill is stored once and shared by Claude Code and Codex.",
+          "alt": "Skills view: brainstorming, canvas-design and executing-plans installed, with brainstorming's details on the right"
+        },
+        "mcp": {
+          "title": "MCP config, enabled per tool",
+          "body": "Fill in what an MCP server needs, then turn it on or off for Claude Code and Codex separately.",
+          "alt": "Context7's config panel, with Claude Code and Codex toggles under Applies to"
+        },
+        "relay": {
+          "title": "Providers and the local relay",
+          "body": "Providers are tried in priority order; when one cannot be reached, is rate limited or returns a 5xx, the relay moves on to the next. The free plan fails over between up to two. Recent requests list the model, provider, latency and status.",
+          "alt": "Local relay card: listening on 127.0.0.1:18780 and running, with recent requests below"
+        },
+        "usage": {
+          "title": "Usage and budget",
+          "body": "Cost, tokens and requests for today, the last 7 days and the last 30 days, recorded on this machine. Budget limits and overspend alerts are Pro features.",
+          "alt": "Overview: usage trend with total cost, tokens, requests and models"
+        }
+      },
+      "sources": {
+        "title": "Where packages come from",
+        "lede": "We do not write the catalog by hand: a scheduled job syncs it from three upstream sources into Agent Store's own catalog.",
+        "catalogLabel": "Sources",
+        "mcp": {
+          "name": "The official MCP Registry",
+          "body": "MCP servers registered with the Model Context Protocol registry"
+        },
+        "skill": {
+          "name": "Skill repositories on GitHub",
+          "body": "Discovered through skills.sh; skill contents are downloaded from the GitHub repository"
+        },
+        "provider": {
+          "name": "Built-in provider list",
+          "body": "Common model providers, listed in Agent Store's code"
+        },
+        "sync": "Author names link upstream: skills to the GitHub owner, MCP servers to their namespace.",
+        "toolsLabel": "Supported tools",
+        "claudeNote": "Skills, MCP entries and provider settings. Uses CLAUDE_CONFIG_DIR instead when it is set.",
+        "codexNote": "Skills, MCP entries and provider settings. Uses CODEX_HOME instead when it is set."
+      },
+      "faq": {
+        "title": "Questions",
+        "config": {
+          "q": "Will it change my existing Claude Code / Codex config?",
+          "a": "It only adds and removes its own entries. If a skill or MCP server with the same name exists and Agent Store did not install it, the install stops with a conflict instead of overwriting it; for MCP you can take it over explicitly with --replace, and uninstall puts the original entry back. Before a provider is enabled, your existing settings such as ANTHROPIC_BASE_URL are saved and restored when you disable it."
+        },
+        "keys": {
+          "q": "Where are my API keys stored?",
+          "a": "On this machine, in the provider's config.json under ~/.agents/providers/, with 0600 permissions. Claude Code and Codex only get the local relay's address and the relay token, not your key; the relay adds the key when it forwards a request."
+        },
+        "relay": {
+          "q": "Does the relay send my requests anywhere else?",
+          "a": "No. It listens only on 127.0.0.1 (port 18780 by default), requires the relay token and rejects requests from web pages. Requests go only to the providers you enabled; tokens and cost for each request are recorded on this machine and not uploaded."
+        },
+        "uninstall": {
+          "q": "Can I uninstall cleanly?",
+          "a": "Yes. Uninstall removes the entries it wrote for Claude Code and Codex and leaves files Agent Store did not install alone. Skills, MCP servers and providers have round-trip tests on both tools: after install, enable, disable and uninstall, every config file is compared byte for byte. JSON config is written back with two-space indentation; if yours used another indentation, the content is unchanged but the layout becomes two spaces."
+        },
+        "unsigned": {
+          "q": "Why is the installer unsigned?",
+          "a": "Apple and Windows code signing is not set up yet, so the system blocks the app once on first launch. The installers are built from the public source by GitHub Actions and published on GitHub Releases; the files are not damaged. The download page has the steps to allow it."
+        }
+      },
+      "download": {
+        "title": "Download the desktop client",
+        "version": "Latest version",
+        "allReleases": "All releases and release notes",
+        "recommendedOs": "Picked for your system",
+        "recommendedFile": "Recommended",
+        "os": {
+          "mac": "macOS",
+          "win": "Windows",
+          "linux": "Linux"
+        },
+        "detail": {
+          "mac": "Universal, works on Apple silicon and Intel",
+          "win": "64-bit (x64)",
+          "linux": "x86_64"
+        },
+        "kind": {
+          "dmg": "Disk image (.dmg)",
+          "exe": "Installer (.exe)",
+          "msi": "MSI package",
+          "deb": "Debian / Ubuntu (.deb)",
+          "rpm": "Fedora / openSUSE (.rpm)"
+        },
+        "unavailable": "The file list of the latest release cannot be read right now.",
+        "unavailableLink": "Download from GitHub Releases",
+        "downloadPage": "Download page"
+      }
     },
     "docs": {
       "metaTitle": "Docs",

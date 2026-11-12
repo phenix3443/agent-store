@@ -19,6 +19,8 @@ WORKDIR /app
 ENV NODE_ENV=production HOSTNAME=:: PORT=3000 NEXT_TELEMETRY_DISABLED=1
 COPY --from=build --chown=node /repo/apps/store/.next/standalone ./
 COPY --from=build --chown=node /repo/apps/store/.next/static ./apps/store/.next/static
+# standalone output leaves public/ out; the landing page screenshots live there.
+COPY --from=build --chown=node /repo/apps/store/public ./apps/store/public
 USER node
 EXPOSE 3000
 CMD ["node", "apps/store/server.js"]
