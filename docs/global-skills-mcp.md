@@ -322,6 +322,10 @@ Each tool is independent: `enable <slug> <tool>` adds that tool's entry and `dis
   - after config, both tools' recognition check lists `probe`;
   - `--use` (§6) checks that the returned text contains the token and `hello world` as one argument.
 
+### 5.7 Code layout: one adapter per kind (#76 step 5)
+
+`apps/client-core/src/adapters/` holds one adapter per kind (`skill.ts`, `mcp.ts`, `provider.ts`; MCP and provider share `item-dir.ts`). An adapter owns the item's files and every write to a tool config: install, update with rollback, uninstall, enable/disable per tool, resync, readiness (`blocker`) and the installed manifest (interface in `adapters/types.ts`). `engine.ts` keeps what every kind shares: the registry entry (locked, atomic), compatibility, the install/enable policy, `config.json` and its rollback, and the error classes. A new kind is one adapter plus one line in `adapters/index.ts`. Every slug joined into a path goes through `assertSafeSlug` (`paths.ts`). The agent-package prototype (`agent-package-engine.ts`) is gone; `as migrate` retires what it left (`migrate-packages.ts`). `__tests__/round-trip.test.ts` checks that install → enable → disable → uninstall leaves every file byte-identical for each kind and tool.
+
 ## 6. Acceptance script ("both tools actually recognize and use it")
 
 `scripts/accept-global.ts` (added in PR1, run with `bun`). It is TypeScript rather than shell so it can bound every child process (`AbortSignal.timeout`, default 90 s per call), parse JSON events, and speak the `app-server` JSON-RPC. Rules:

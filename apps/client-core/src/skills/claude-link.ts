@@ -4,9 +4,10 @@
 import { lstat, mkdir, readlink, symlink, unlink } from 'fs/promises'
 import { join, resolve, dirname } from 'path'
 import { SkillConflictError } from './store'
+import { assertSafeSlug } from '../paths'
 
 export function claudeSkillLink(claudeConfigDir: string, slug: string): string {
-  return join(claudeConfigDir, 'skills', slug)
+  return join(claudeConfigDir, 'skills', assertSafeSlug(slug))
 }
 
 async function linkState(link: string, target: string): Promise<'absent' | 'ours' | 'other'> {

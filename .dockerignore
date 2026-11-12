@@ -13,5 +13,3 @@ ai-agent-store-icon-under-1mb.jpg
 claude-fable-5.md
 tasks
 docs
-!docker/assets
-!docker/assets/codex-linux-musl.tar.gz

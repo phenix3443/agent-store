@@ -9,7 +9,7 @@ import { patchEntry, readRegistry } from './registry'
 import { itemDir } from './paths'
 import { contentHash, isLegacyInstall, isLoneSkillMd, MARKER, parseFrontmatter, readMarker, type SkillMarker } from './skills/store'
 import { linkClaudeSkill } from './skills/claude-link'
-import { AgentPackageEngine } from './agent-package-engine'
+import { retirePackageInstalls } from './migrate-packages'
 
 export interface MigratePaths {
   aasHome: string
@@ -20,7 +20,7 @@ export interface MigratePaths {
 }
 
 export interface MigrateStep {
-  /** Skill slug, or package id for package-engine steps. */
+  /** Skill slug, or package id for steps about the retired agent-package prototype. */
   slug: string
   /** done: changed; skipped: left alone and why; error: this slug stopped here. */
   result: 'done' | 'skipped' | 'error'
@@ -139,17 +139,16 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
     }
   }
 
-  // Package-engine components still under <publisher>.<name>#<id> (§2.1).
+  // Leftovers of the agent-package prototype (migrate-packages.ts).
   const backedUp = new Set<string>()
-  const engine = new AgentPackageEngine({
-    aasHome: p.aasHome, claudeConfigDir: p.claudeConfigDir, codexConfigDir: p.codexConfigDir,
-    ...(p.claudeJsonPath ? { claudeJsonPath: p.claudeJsonPath } : {}),
-  })
-  const renamed = await engine.migrateLegacyNames(async (path, rel) => {
-    if (backedUp.has(rel) || !(await exists(path))) return
-    backedUp.add(rel)
-    await backup(path, rel)
-  })
-  for (const s of renamed) steps.push({ slug: s.packageId, result: s.result, message: s.message })
+  const packageSteps = await retirePackageInstalls(
+    { ...p, claudeJsonPath: p.claudeJsonPath ?? join(p.claudeConfigDir, '.claude.json') },
+    async (path, rel) => {
+      if (backedUp.has(rel) || !(await exists(path))) return
+      backedUp.add(rel)
+      await backup(path, rel)
+    },
+  )
+  steps.push(...packageSteps)
   return { backupDir, steps }
 }

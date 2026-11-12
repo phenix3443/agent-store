@@ -2,8 +2,8 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'fs/promises'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { syncItemToClaude, enableRelayForClaude, disableRelayForClaude } from '../claude'
-import { enableRelayForCodex, disableRelayForCodex, upsertCodexProviderConnection } from '../codex'
+import { enableRelayForClaude, disableRelayForClaude } from '../claude'
+import { enableRelayForCodex, disableRelayForCodex } from '../codex'
 import { ConfigParseError } from '../safe-file'
 import { runHook } from '../../installer/hook-runner'
 
@@ -25,22 +25,7 @@ async function modeOf(path: string): Promise<number> {
   return (await stat(path)).mode & 0o777
 }
 
-async function seedProvider(config: object): Promise<void> {
-  const dir = join(aasHome, 'providers', 'p')
-  await mkdir(dir, { recursive: true })
-  await writeFile(join(dir, 'config.json'), JSON.stringify(config))
-}
-
 const BROKEN = '{"permissions": {"allow": ['
-
-test('a settings.json that does not parse aborts a provider sync and is left untouched', async () => {
-  await seedProvider({ apiKey: 'sk-1', baseUrl: 'https://api.example' })
-  await writeFile(join(claudeDir, 'settings.json'), BROKEN)
-  await expect(
-    syncItemToClaude('p', 'provider', aasHome, claudeDir, join(claudeDir, '.claude.json'), 'add')
-  ).rejects.toBeInstanceOf(ConfigParseError)
-  expect(await readFile(join(claudeDir, 'settings.json'), 'utf-8')).toBe(BROKEN)
-})
 
 test('a settings.json that does not parse aborts relay enable and disable', async () => {
   await writeFile(join(claudeDir, 'settings.json'), BROKEN)
@@ -71,31 +56,23 @@ test('relay enable and disable never touch auth.json, even one that does not par
   expect(await readFile(join(codexDir, 'config.toml'), 'utf-8')).toBe('model = "gpt-5"\n')
 })
 
-test('an auth.json that does not parse aborts a provider connection write', async () => {
-  await writeFile(join(codexDir, 'auth.json'), 'not json')
-  await expect(upsertCodexProviderConnection(codexDir, {
-    providerKey: 'p', name: 'p', baseUrl: 'https://api.example', apiKey: 'sk-1',
-  })).rejects.toBeInstanceOf(ConfigParseError)
-  expect(await readFile(join(codexDir, 'auth.json'), 'utf-8')).toBe('not json')
-})
-
-test('a new auth.json is 0600', async () => {
-  await upsertCodexProviderConnection(codexDir, { providerKey: 'p', name: 'p', baseUrl: 'https://a', apiKey: 'k1' })
-  expect(await modeOf(join(codexDir, 'auth.json'))).toBe(0o600)
-})
-
 test('an existing auth.json is narrowed to 0600 but a stricter mode is kept', async () => {
+  // Only disabling a takeover written by an old version still writes auth.json.
   const auth = join(codexDir, 'auth.json')
-  await writeFile(auth, JSON.stringify({ OPENAI_API_KEY: 'mine' }))
-  await chmod(auth, 0o644)
-  await upsertCodexProviderConnection(codexDir, { providerKey: 'p', name: 'p', baseUrl: 'https://a', apiKey: 'k1' })
-  expect(await modeOf(auth)).toBe(0o600)
-  await chmod(auth, 0o400)
-  await upsertCodexProviderConnection(codexDir, { providerKey: 'p', name: 'p', baseUrl: 'https://a', apiKey: 'k2' })
-  expect(await modeOf(auth)).toBe(0o400)
-  expect(JSON.parse(await readFile(auth, 'utf-8')).OPENAI_API_KEY).toBe('k2')
+  for (const [mode, expected] of [[0o644, 0o600], [0o400, 0o400]] as const) {
+    await writeFile(join(codexDir, 'config.toml'), 'model_provider = "aas-relay"\n')
+    await mkdir(join(aasHome, 'relay-state'), { recursive: true })
+    await writeFile(join(aasHome, 'relay-state', 'codex.json'), JSON.stringify({
+      originalModelProvider: null, originalAuth: { OPENAI_API_KEY: 'mine' }, originalPreferredAuthMethod: null,
+    }))
+    await rm(auth, { force: true })
+    await writeFile(auth, JSON.stringify({ OPENAI_API_KEY: 'aas-relay', tokens: { a: 1 } }))
+    await chmod(auth, mode)
+    await disableRelayForCodex(aasHome, codexDir)
+    expect(await modeOf(auth)).toBe(expected)
+    expect(JSON.parse(await readFile(auth, 'utf-8'))).toEqual({ OPENAI_API_KEY: 'mine', tokens: { a: 1 } })
+  }
 })
-
 test('relay-state snapshots are 0600', async () => {
   await writeFile(join(claudeDir, 'settings.json'), JSON.stringify({ env: { ANTHROPIC_AUTH_TOKEN: 'sk-user' } }))
   await enableRelayForClaude(aasHome, claudeDir)

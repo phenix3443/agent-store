@@ -1,29 +1,21 @@
-import { cp, readFile, rename, rm } from 'fs/promises'
+import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview, ItemVersion,
-  EnableOptions, DisableOptions, UninstallOptions, InstallOptions, SkillItem,
-  InstallOutcome, TargetStatus, EnableBlocker, MCPItem,
-  UsageSummaryRow, UsageSummaryOptions, RegistryJson, LocalRelayConfig,
+  EnableOptions, DisableOptions, UninstallOptions, InstallOptions,
+  InstallOutcome, TargetStatus, EnableBlocker,
+  UsageSummaryRow, UsageSummaryOptions, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
-import { resolvePaths, itemDir } from './paths'
+import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
 import { readCatalogCache, writeCatalogCache } from './catalog-cache'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry } from './registry/index'
-import { runHook, writeManifest } from './installer/hook-runner'
-import { postInstall as providerPostInstall } from './installer/provider'
-import { postInstall as mcpPostInstall } from './installer/mcp'
-import { syncItemToClaude, enableRelayForClaude, disableRelayForClaude } from './config/claude'
-import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './config/codex'
-import { installSkillContent, readMarker, removeSkillContent } from './skills/store'
-import { hasClaudeSkillLink, linkClaudeSkill, unlinkClaudeSkill } from './skills/claude-link'
+import { createAdapters, type KindAdapter } from './adapters'
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
-import { duplicateProviderConnection, readProviderConnection } from './config/provider'
+import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
-import { buildMcpServerSpec, McpConfigMissingError } from './config/mcp'
-import { readMcpTargets } from './config/mcp-targets'
 import { getDailySummary, getRecentRequests } from './usage/queries'
 import { readProviderHealth, resetProviderHealth } from './usage/provider-health'
 import { exportUsageToFile } from './usage/export'
@@ -36,19 +28,7 @@ import {
   toggleLocalConfig as _toggleLocalConfig,
 } from './relay/local-configs'
 
-export class CodexSkillDisableUnsupported extends Error {
-  constructor(slug: string) {
-    super(`Codex reads every skill in ~/.agents/skills; there is no per-skill disable for Codex yet. Uninstall to remove ${slug} from Codex: as uninstall ${slug}`)
-    this.name = 'CodexSkillDisableUnsupported'
-  }
-}
-
-export class ProviderNotReadyError extends Error {
-  constructor(message: string, readonly reason: 'no-key' | 'relay-not-running') {
-    super(message)
-    this.name = 'ProviderNotReadyError'
-  }
-}
+export { ProviderNotReadyError, CodexSkillDisableUnsupported } from './adapters'
 
 export class IncompatibleTargetError extends Error {
   constructor(slug: string, readonly target: ToolTarget, compatibleWith: ToolTarget[]) {
@@ -71,15 +51,36 @@ export interface EngineOptions {
   startRelay?: () => Promise<void>
 }
 
+/**
+ * The shared flow for every kind of item: registry entry (locked, atomic), compatibility,
+ * install/enable policy, config.json, update and rollback, errors. What a kind writes
+ * and where is its adapter's business (adapters/).
+ */
 export class EngineImpl implements Engine {
   private readonly paths: Required<Paths>
   private readonly client: StoreClient
-  private readonly startRelay?: () => Promise<void>
+  private readonly adapters: Record<Category, KindAdapter>
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
     this.client = new StoreClient(storeUrl, { timeoutMs: 4000 })
-    this.startRelay = options.startRelay
+    this.adapters = createAdapters({
+      paths: this.paths,
+      startRelay: options.startRelay,
+      setEnabled: (slug, target, enabled) => this._setEnabled(slug, target, enabled),
+    })
+  }
+
+  private adapter(category: Category): KindAdapter {
+    const adapter = this.adapters[category]
+    if (!adapter) throw new Error(`Unknown item category: ${String(category)}`)
+    return adapter
+  }
+
+  private async _entry(slug: string): Promise<InstalledItem> {
+    const entry = findEntry(await readRegistry(this.paths.aasHome), slug)
+    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    return entry
   }
 
   async search(query: string, options?: SearchOptions): Promise<Item[]> {
@@ -111,17 +112,13 @@ export class EngineImpl implements Engine {
   }
 
   async install(slug: string, options: InstallOptions = {}): Promise<InstallResult> {
+    assertSafeSlug(slug)
     const itemResult = await this.client.getItemBySlug(slug)
     if (itemResult.error || !itemResult.data) {
       throw new Error(itemResult.error ?? `Item not found: ${slug}`)
     }
     const item = itemResult.data
-    if (item.category === 'skill') return this._installSkill(item, options)
-    const dir = itemDir(this.paths.aasHome, item.category, slug)
-    await runHook(item.installHook.steps, dir)
-    if (item.category === 'provider') await providerPostInstall(dir)
-    else if (item.category === 'mcp') await mcpPostInstall(dir)
-    await writeManifest(dir, item)
+    const installed = await this.adapter(item.category).install(slug, item, options)
     let entry!: InstalledItem
     await updateRegistry(this.paths.aasHome, registry => {
       const existing = findEntry(registry, slug)
@@ -133,21 +130,21 @@ export class EngineImpl implements Engine {
         installedAt: existing?.installedAt ?? now,
         updatedAt: now,
         compatibleWith: item.compatibleWith,
-        enabledFor: existing?.enabledFor ?? {},
+        enabledFor: installed.enabledFor ?? existing?.enabledFor ?? {},
       }
       return upsertEntry(registry, entry)
     })
     // Bump the catalog's real install count (best-effort, non-blocking).
     void this.client.recordInstall(slug)
+    await installed.afterRegistered?.()
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
 
   async installAndEnable(slug: string, options: InstallOptions = {}): Promise<InstallOutcome> {
     const result = await this.install(slug, options)
-    const entry = findEntry(await readRegistry(this.paths.aasHome), slug)!
+    const entry = await this._entry(slug)
     const outcome: InstallOutcome = { ...result, category: entry.category, enabled: [], notEnabled: [] }
-    if (entry.category === 'skill') {
-      // Skills are enabled by install itself (§5.4).
+    if (this.adapter(entry.category).enabledByInstall) {
       outcome.enabled = TARGETS.filter(t => entry.enabledFor[t])
       return outcome
     }
@@ -174,8 +171,7 @@ export class EngineImpl implements Engine {
   }
 
   async getTargetStatus(slug: string): Promise<TargetStatus[]> {
-    const entry = findEntry(await readRegistry(this.paths.aasHome), slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    const entry = await this._entry(slug)
     const status: TargetStatus[] = []
     for (const target of TARGETS) {
       const blocker = await this._blocker(entry, target)
@@ -194,106 +190,12 @@ export class EngineImpl implements Engine {
     if (!entry.compatibleWith.includes(target)) {
       return { reason: 'incompatible', message: new IncompatibleTargetError(entry.slug, target, entry.compatibleWith).message }
     }
-    const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
-    if (entry.category === 'mcp') {
-      const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
-      let config: Record<string, unknown> = {}
-      try { config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
-      try {
-        buildMcpServerSpec(manifest, dir, config)
-      } catch (e) {
-        if (e instanceof McpConfigMissingError) return { reason: 'needs-config', message: e.message }
-        throw e
-      }
-    } else if (entry.category === 'provider') {
-      const connection = await readProviderConnection(dir)
-      if (!connection.apiKey && !(connection.apiKeys?.length)) {
-        return { reason: 'no-key', message: `${entry.slug} has no API key configured; run: aas config ${entry.slug}` }
-      }
-    }
-    return undefined
-  }
-
-  /**
-   * §5.4: content → registry {codex:true, claude:false} → Claude symlink →
-   * claude:true, so a failed symlink leaves the registry truthful.
-   */
-  private async _installSkill(item: SkillItem, options: InstallOptions): Promise<InstallResult> {
-    const slug = item.slug
-    if (options.target === 'claude') {
-      throw new Error(
-        `skills can't be installed for Claude only: they live in ~/.agents/skills, which Codex reads too. ` +
-        `Run a plain "as install ${slug}", or "as install ${slug} --target codex" and later "as enable ${slug} --for claude"`
-      )
-    }
-    if (!item.compatibleWith.includes('codex')) {
-      throw new Error(`${slug} is not declared Codex-compatible, and ~/.agents/skills is shared with Codex; it can't be installed`)
-    }
-    await installSkillContent(this._skillStoreContext, item, { force: options.force })
-
-    const content = this._skillDir(slug)
-    const claudeLinked = await hasClaudeSkillLink(this.paths.claudeConfigDir, slug, content)
-    let entry!: InstalledItem
-    await updateRegistry(this.paths.aasHome, registry => {
-      const existing = findEntry(registry, slug)
-      const now = new Date().toISOString()
-      entry = {
-        slug,
-        category: 'skill',
-        version: item.version,
-        installedAt: existing?.installedAt ?? now,
-        updatedAt: now,
-        compatibleWith: item.compatibleWith,
-        enabledFor: { codex: true, claude: claudeLinked },
-      }
-      return upsertEntry(registry, entry)
-    })
-    void this.client.recordInstall(slug)
-
-    if (options.target !== 'codex' && item.compatibleWith.includes('claude') && !entry.enabledFor.claude) {
-      try {
-        await linkClaudeSkill(this.paths.claudeConfigDir, slug, content)
-      } catch (e) {
-        throw new Error(`installed for Codex, but the Claude symlink step failed: ${e instanceof Error ? e.message : String(e)}`)
-      }
-      await this._setEnabled(slug, 'claude', true)
-    }
-    return { slug, version: item.version, installedAt: entry.installedAt }
-  }
-
-  private _skillDir(slug: string): string {
-    return itemDir(this.paths.aasHome, 'skill', slug)
-  }
-
-  private get _skillStoreContext() {
-    return { aasHome: this.paths.aasHome, codexConfigDir: this.paths.codexConfigDir }
+    return this.adapter(entry.category).blocker(entry, target)
   }
 
   async uninstall(slug: string, options: UninstallOptions = {}): Promise<void> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
-    if (entry.category === 'skill') {
-      // Our Claude symlink, then the content (only with our marker), then the entry.
-      await unlinkClaudeSkill(this.paths.claudeConfigDir, slug, this._skillDir(slug))
-      if (entry.enabledFor['claude']) await this._setEnabled(slug, 'claude', false)
-      await removeSkillContent(this.paths.aasHome, slug, options.force)
-      await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
-      return
-    }
-    const dir = itemDir(this.paths.aasHome, entry.category, slug)
-    // What was actually enabled, not what the catalog says is supported: compatibleWith can
-    // change, and an interrupted enable leaves an MCP record without the registry flag.
-    const recorded = entry.category === 'mcp' ? Object.keys(await readMcpTargets(dir)) as ToolTarget[] : []
-    for (const target of TARGETS) {
-      if (!entry.enabledFor[target] && !recorded.includes(target)) continue
-      if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(await readRegistry(this.paths.aasHome), slug, target)) {
-        await this._syncToTarget(slug, entry.category, target, 'remove', options)
-      }
-      // Record each removed target, so a later failure leaves the registry truthful.
-      await this._setEnabled(slug, target, false)
-    }
-    await rm(dir, { recursive: true, force: true })
+    const entry = await this._entry(slug)
+    await this.adapter(entry.category).uninstall(entry, options)
     await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
   }
 
@@ -306,53 +208,22 @@ export class EngineImpl implements Engine {
   }
 
   async enable(slug: string, target: ToolTarget, options: EnableOptions = {}): Promise<void> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    const entry = await this._entry(slug)
     if (!entry.compatibleWith.includes(target)) throw new IncompatibleTargetError(slug, target, entry.compatibleWith)
-    if (entry.category === 'provider') await this._assertProviderReady(slug)
-    await this._syncToTarget(slug, entry.category, target, 'add', options)
+    await this.adapter(entry.category).enable(entry, target, options)
     await this._setEnabled(slug, target, true)
   }
 
-  /** Enabling points the tool at the relay, so both a key and a running relay must exist before anything is written. */
-  private async _assertProviderReady(slug: string): Promise<void> {
-    const connection = await readProviderConnection(itemDir(this.paths.aasHome, 'provider', slug))
-    if (!connection.apiKey && !(connection.apiKeys?.length)) {
-      throw new ProviderNotReadyError(`${slug} has no API key configured; run: aas config ${slug}`, 'no-key')
-    }
-    if ((await getRelayDaemonStatus(this.paths.aasHome)).running) return
-    let startError = ''
-    if (this.startRelay) {
-      try {
-        await this.startRelay()
-      } catch (e) {
-        startError = ` (${e instanceof Error ? e.message : String(e)})`
-      }
-      if ((await getRelayDaemonStatus(this.paths.aasHome)).running) return
-    }
-    throw new ProviderNotReadyError(
-      `the local relay is not running${this.startRelay ? ' and could not be started' + startError : ''}; start it with: aas relay start`,
-      'relay-not-running'
-    )
-  }
-
   async disable(slug: string, target: ToolTarget, options: DisableOptions = {}): Promise<void> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
-    if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
-      await this._syncToTarget(slug, entry.category, target, 'remove', options)
-    }
+    const entry = await this._entry(slug)
+    await this.adapter(entry.category).disable(entry, target, options)
     await this._setEnabled(slug, target, false)
   }
 
   async getConfigSchema(slug: string): Promise<{ schema: JsonSchema; current: Record<string, unknown> }> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    const entry = await this._entry(slug)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
-    const manifest = await this._readManifest(entry.category, dir) as { configSchema?: JsonSchema }
+    const manifest = await this.adapter(entry.category).readManifest(entry) as { configSchema?: JsonSchema }
     let current: Record<string, unknown> = {}
     try {
       current = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) as Record<string, unknown>
@@ -361,9 +232,8 @@ export class EngineImpl implements Engine {
   }
 
   async setConfig(slug: string, values: Record<string, unknown>): Promise<void> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    const entry = await this._entry(slug)
+    const adapter = this.adapter(entry.category)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
     const configPath = join(dir, 'config.json')
     let previous: string | undefined
@@ -376,12 +246,10 @@ export class EngineImpl implements Engine {
     await atomicWriteSecretFile(configPath, JSON.stringify(values, null, 2))
     const synced: ToolTarget[] = []
     try {
-      // Check every MCP target before writing any, so one refusing leaves all of them as they were.
-      if (entry.category === 'mcp') {
-        for (const target of targets) await this._syncToTarget(slug, entry.category, target, 'add', { dryRun: true })
-      }
+      // Check every target before writing any, so one refusing leaves all of them as they were.
+      for (const target of targets) await adapter.resync(entry, target, { dryRun: true })
       for (const target of targets) {
-        await this._syncToTarget(slug, entry.category, target, 'add')
+        await adapter.resync(entry, target)
         synced.push(target)
       }
     } catch (e) {
@@ -391,7 +259,7 @@ export class EngineImpl implements Engine {
       const stuck: string[] = []
       for (const target of synced) {
         try {
-          await this._syncToTarget(slug, entry.category, target, 'add')
+          await adapter.resync(entry, target)
         } catch (restoreError) {
           stuck.push(`${target} (${(restoreError as Error).message})`)
         }
@@ -412,7 +280,7 @@ export class EngineImpl implements Engine {
       for (const target of effectiveTargets) {
         if (!entry.enabledFor[target]) continue
         try {
-          await this._syncToTarget(entry.slug, entry.category, target, 'add')
+          await this.adapter(entry.category).resync(entry, target)
           synced.push(`${entry.slug}:${target}`)
         } catch (e) {
           errors.push({ slug: `${entry.slug}:${target}`, error: String(e) })
@@ -438,12 +306,7 @@ export class EngineImpl implements Engine {
       try {
         const { latestItem, fromVersion } = await applyUpdate(entry.slug, this.client, entry)
         if (latestItem.version === fromVersion) continue
-        if (latestItem.category === 'skill') {
-          // The whole directory is replaced; local edits make this fail (needs install --force).
-          await installSkillContent(this._skillStoreContext, latestItem)
-        } else {
-          await this._updateFiles(entry, latestItem)
-        }
+        await this.adapter(entry.category).update(entry, latestItem)
         await this._setVersion(entry.slug, latestItem.version)
         results.push({ slug: entry.slug, fromVersion, toVersion: latestItem.version })
       } catch (e) {
@@ -452,43 +315,6 @@ export class EngineImpl implements Engine {
     }
     if (failures.length) throw new UpdateFailedError(results, failures)
     return results
-  }
-
-  /** New files, then every enabled tool; any failure puts the old files and tool entries back. */
-  private async _updateFiles(entry: InstalledItem, latestItem: Item): Promise<void> {
-    const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
-    const backup = `${dir}.update-backup`
-    await rm(backup, { recursive: true, force: true })
-    await cp(dir, backup, { recursive: true })
-    const targets = TARGETS.filter(t => entry.enabledFor[t])
-    const synced: ToolTarget[] = []
-    try {
-      await runHook(latestItem.installHook.steps, dir)
-      if (latestItem.category === 'provider') await providerPostInstall(dir)
-      else if (latestItem.category === 'mcp') await mcpPostInstall(dir)
-      await writeManifest(dir, latestItem)
-      if (entry.category === 'mcp') {
-        for (const target of targets) await this._syncToTarget(entry.slug, entry.category, target, 'add', { dryRun: true })
-      }
-      for (const target of targets) {
-        await this._syncToTarget(entry.slug, entry.category, target, 'add')
-        synced.push(target)
-      }
-    } catch (e) {
-      await rm(dir, { recursive: true, force: true })
-      await rename(backup, dir)
-      const stuck: string[] = []
-      for (const target of synced) {
-        try {
-          await this._syncToTarget(entry.slug, entry.category, target, 'add')
-        } catch (restoreError) {
-          stuck.push(`${target} (${(restoreError as Error).message})`)
-        }
-      }
-      if (stuck.length) throw new Error(`${(e as Error).message}; these tools still have the new version: ${stuck.join('; ')}. Run \`as sync\` to retry`)
-      throw e
-    }
-    await rm(backup, { recursive: true, force: true })
   }
 
   private async _setVersion(slug: string, version: string): Promise<void> {
@@ -509,7 +335,7 @@ export class EngineImpl implements Engine {
     const entry = entries.find(item => item.slug === slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
-    const manifest = await this._readManifest(entry.category, dir) as {
+    const manifest = await this.adapter(entry.category).readManifest(entry) as unknown as {
       name: string; description: string
       publisher: import('@as/types').Publisher; tags: string[]; downloads: number
       configSchema?: import('@as/types').JsonSchema; supportedModels?: string[]
@@ -663,63 +489,5 @@ export class EngineImpl implements Engine {
 
   async getBudgetStatus(): Promise<BudgetStatus> {
     return getBudgetStatus(this.paths.aasHome)
-  }
-
-  private async _readManifest(category: 'provider' | 'skill' | 'mcp', dir: string): Promise<unknown> {
-    if (category === 'skill') {
-      const marker = await readMarker(dir)
-      if (marker) return marker.manifest
-    }
-    return JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8'))
-  }
-
-  private _hasOtherEnabledProvider(registry: RegistryJson, excludeSlug: string, target: ToolTarget): boolean {
-    return registry.installed.some(
-      (item) =>
-        item.slug !== excludeSlug &&
-        item.category === 'provider' &&
-        item.compatibleWith.includes(target) &&
-        item.enabledFor[target] === true
-    )
-  }
-
-  private async _syncToTarget(
-    slug: string,
-    category: 'provider' | 'skill' | 'mcp',
-    target: ToolTarget,
-    action: 'add' | 'remove',
-    options: EnableOptions & DisableOptions & { dryRun?: boolean } = {}
-  ): Promise<void> {
-    if (category === 'provider') {
-      if (target === 'claude') {
-        if (action === 'add') await enableRelayForClaude(this.paths.aasHome, this.paths.claudeConfigDir)
-        else await disableRelayForClaude(this.paths.aasHome, this.paths.claudeConfigDir)
-      } else if (target === 'codex') {
-        if (action === 'add') await enableRelayForCodex(this.paths.aasHome, this.paths.codexConfigDir)
-        else await disableRelayForCodex(this.paths.aasHome, this.paths.codexConfigDir)
-      }
-      return
-    }
-
-    if (category === 'skill') {
-      const content = this._skillDir(slug)
-      if (action === 'add' && !(await readMarker(content))) {
-        throw new Error(`${content} is missing or was not installed by Agent Store; reinstall with: as install ${slug}`)
-      }
-      if (target === 'claude') {
-        if (action === 'add') await linkClaudeSkill(this.paths.claudeConfigDir, slug, content)
-        else await unlinkClaudeSkill(this.paths.claudeConfigDir, slug, content)
-      } else if (action === 'remove') {
-        throw new CodexSkillDisableUnsupported(slug)
-      }
-      // Codex reads ~/.agents/skills natively: enabling is a no-op once the content is there.
-      return
-    }
-
-    if (target === 'claude') {
-      await syncItemToClaude(slug, category, this.paths.aasHome, this.paths.claudeConfigDir, this.paths.claudeJsonPath, action, options)
-    } else if (target === 'codex') {
-      await syncItemToCodex(slug, category, this.paths.aasHome, this.paths.codexConfigDir, action, options)
-    }
   }
 }
