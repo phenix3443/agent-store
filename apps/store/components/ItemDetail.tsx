@@ -92,17 +92,18 @@ export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
           {r.verified && <VerifiedLabel />}
           <span aria-hidden>·</span>
           <SourceLabel resource={r} />
+          {/* Separator and value wrap together, so a line never ends on a lone "·". */}
           {r.installs != null && (
-            <>
+            <span className="flex items-center gap-2">
               <span aria-hidden>·</span>
               <span>{t('detail.installs', { count: formatCount(r.installs) })}</span>
-            </>
+            </span>
           )}
           {r.stars != null && (
-            <>
+            <span className="flex items-center gap-2">
               <span aria-hidden>·</span>
               <span>{t('detail.stars', { count: formatCount(r.stars) })}</span>
-            </>
+            </span>
           )}
         </p>
         {r.description && <p className="mt-3 max-w-[62ch] text-[15px] leading-6">{r.description}</p>}
