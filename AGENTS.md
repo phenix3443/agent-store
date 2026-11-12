@@ -48,8 +48,9 @@ host down (2026-11-12). The `test-setup.ts` of `apps/store` and `apps/cli-gui` o
 `Bun.inspect.custom` on `Node.prototype` to print a short tag. Keep that override, and copy
 it into any new package that tests against happy-dom.
 
-Run test suites in Docker with a memory cap (`docker run --memory 2g --memory-swap 2g`), so
-a runaway test fails its container instead of the host.
+Run test suites, builds and screenshots in GitHub Actions, not on a shared host: a
+runaway test then takes down only its runner. `.github/workflows/unit.yml` type-checks and
+tests every package except `apps/api`, which `api.yml` covers.
 
 ## UI implementation sign-off
 
