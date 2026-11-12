@@ -39,6 +39,18 @@ changes, re-read the relevant section of the `.dc.html` file and update the
 implementation to match — do not implement from memory of an earlier version. When the
 desktop implementation and the design file conflict, the design file wins.
 
+## Tests that touch the DOM
+
+When a matcher fails, Bun prints its values with `Bun.inspect`, which walks a happy-dom
+node into the whole window. One failing `expect(document.activeElement).toBe(el)` in
+`apps/store` wrote about 1 GB of output, grew the test process to about 5 GB and took the
+host down (2026-11-12). The `test-setup.ts` of `apps/store` and `apps/cli-gui` override
+`Bun.inspect.custom` on `Node.prototype` to print a short tag. Keep that override, and copy
+it into any new package that tests against happy-dom.
+
+Run test suites in Docker with a memory cap (`docker run --memory 2g --memory-swap 2g`), so
+a runaway test fails its container instead of the host.
+
 ## UI implementation sign-off
 
 Any UI work (Web Store or the desktop client, whether new or modified) is not done until
