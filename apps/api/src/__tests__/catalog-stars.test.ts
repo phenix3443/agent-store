@@ -164,10 +164,12 @@ describe('refreshStars', () => {
     expect(await run([later], { advanceMs: 73 * 3600_000 })).toMatchObject({ due: 5 })
   })
 
-  test('a repo under a year old with more than 100k stars is not credited, an old one is', async () => {
-    const big = { ...STARS, 'github/github-mcp-server': 450_000, 'chromedevtools/chrome-devtools-mcp': 450_000 }
-    // clock is 2026-11-12: github's repo is seven months old, chrome's two years.
-    const report = await run([githubGraphqlRoute(big, { 'github/github-mcp-server': '2026-04-01T00:00:00Z', 'chromedevtools/chrome-devtools-mcp': '2024-11-01T00:00:00Z' })])
+  test('an MCP repo under a year old with more than 100k stars is not credited; an old one and a skill repo are', async () => {
+    const big = { ...STARS, 'github/github-mcp-server': 450_000, 'chromedevtools/chrome-devtools-mcp': 450_000, 'anthropics/skills': 300_000 }
+    // clock is 2026-11-12: github's and the skills repo are seven months old, chrome's two years.
+    const young = '2026-04-01T00:00:00Z'
+    const report = await run([githubGraphqlRoute(big, { 'github/github-mcp-server': young, 'anthropics/skills': young, 'chromedevtools/chrome-devtools-mcp': '2024-11-01T00:00:00Z' })])
+    expect(stars('github:anthropics/skills/pdf').stars).toBe(300_000)
     expect(report.suspect).toBe(1)
     expect(stars(`mcp-registry:${GITHUB.upstreamId}`)).toEqual({ stars: null, github_repo: 'github/github-mcp-server' })
     expect(stars(`mcp-registry:${CHROME.upstreamId}`).stars).toBe(450_000)
