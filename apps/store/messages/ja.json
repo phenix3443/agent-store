@@ -191,6 +191,8 @@
       "downloadMac": "macOS 版をダウンロード",
       "downloadWin": "Windows 版をダウンロード",
       "downloadLinux": "Linux 版をダウンロード",
+      "osHint": "お使いのシステムに合わせて表示しています",
+      "otherOs": "ほかのシステム：",
       "browse": "ストアを見る",
       "unsigned": "インストーラーはまだ署名されていないため、初回起動時にシステムにブロックされます。",
       "unsignedLink": "許可する手順を見る",

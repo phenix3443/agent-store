@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { formatPrice } from '@as/types'
 import { getFeaturedItems, getItems, getTopics } from '@/lib/catalog'
+import { desktopOsFromUserAgent } from '@/lib/desktop-os'
 import { leadSentence } from '@/lib/item-meta'
 import { reviewVerdict } from '@/lib/review'
 import { FeaturedPlate } from '@/components/FeaturedPlate'
@@ -18,14 +20,16 @@ export async function generateMetadata(): Promise<Metadata> {
 // mac/win are route handlers that redirect to the newest release asset. Linux ships
 // two package formats, so it goes to the download page to pick one.
 const DOWNLOADS = [
-  { href: '/download/mac', label: 'downloadMac' },
-  { href: '/download/win', label: 'downloadWin' },
-  { href: '/download#linux', label: 'downloadLinux' },
+  { os: 'mac', name: 'macOS', href: '/download/mac', label: 'downloadMac' },
+  { os: 'win', name: 'Windows', href: '/download/win', label: 'downloadWin' },
+  { os: 'linux', name: 'Linux', href: '/download#linux', label: 'downloadLinux' },
 ] as const
 
 export default async function LandingPage() {
   const t = await getTranslations('site.home')
-  const [featured, all, topics] = await Promise.all([getFeaturedItems(), getItems({}), getTopics()])
+  const [featured, all, topics, requestHeaders] = await Promise.all([getFeaturedItems(), getItems({}), getTopics(), headers()])
+  const visitorOs = desktopOsFromUserAgent(requestHeaders.get('user-agent'))
+  const recommended = DOWNLOADS.find((d) => d.os === visitorOs)
 
   // The plate shows the stamp only when a package really passed review.
   const lead = featured.find((item) => reviewVerdict(item) === 'passed') ?? featured[0]
@@ -59,14 +63,35 @@ export default async function LandingPage() {
               {t('unsignedLink')}
             </Link>
           </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {DOWNLOADS.map((d) => (
-              // eslint-disable-next-line @next/next/no-html-link-for-pages
-              <a key={d.href} href={d.href} className="btn min-h-12 px-5">
-                {t(d.label)}
+          {recommended ? (
+            <div className="mt-4">
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a href={recommended.href} className="btn min-h-12 px-5">
+                {t(recommended.label)}
               </a>
-            ))}
-          </div>
+              <p className="mt-3 text-[13px] leading-5 text-ink-2">
+                {t('osHint')} · {t('otherOs')}
+                {DOWNLOADS.filter((d) => d !== recommended).map((d, i) => (
+                  <span key={d.href}>
+                    {i > 0 && ' · '}
+                    {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                    <a href={d.href} className="link text-ink">
+                      {d.name}
+                    </a>
+                  </span>
+                ))}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-wrap gap-3">
+              {DOWNLOADS.map((d) => (
+                // eslint-disable-next-line @next/next/no-html-link-for-pages
+                <a key={d.href} href={d.href} className="btn min-h-12 px-5">
+                  {t(d.label)}
+                </a>
+              ))}
+            </div>
+          )}
           <p className="mt-5 border-t border-line pt-4 text-sm leading-[22px]">
             <Link href="/pricing" className="link">
               {t('price', { monthly: formatPrice('monthly') })}
