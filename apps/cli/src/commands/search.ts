@@ -29,7 +29,7 @@ export async function runSearch(
     return
   }
   result.resources.forEach((r, i) => {
-    const facts = [r.kind, SOURCE[r.origin.site] ?? r.origin.site, ...(r.verified ? ['verified'] : []), ...(r.installs != null ? [`${formatDownloads(r.installs)} installs`] : [])]
+    const facts = [r.kind, SOURCE[r.origin.site] ?? r.origin.site, ...(r.verified ? ['verified'] : []), ...(r.installs != null ? [`${formatDownloads(r.installs)} installs`] : []), ...(r.stars != null ? [`${formatDownloads(r.stars)} stars`] : [])]
     out(`${r.name}   ${facts.join(' · ')}`)
     if (r.description) out(`  ${r.description.length > 160 ? `${r.description.slice(0, 157)}...` : r.description}`)
     out(`  aas install ${r.id}`)

@@ -12,7 +12,7 @@ const origin = (site: ResourceOrigin['site'], upstreamId: string): ResourceOrigi
 
 const summary = (kind: ResourceDetail['kind'], site: ResourceOrigin['site'], upstreamId: string) => ({
   id: `${site}:${upstreamId}`, kind, name: upstreamId.split('/').pop()!, description: `${upstreamId} description`,
-  author: { name: upstreamId.split('/')[0], url: null }, version: '1.0.0', homepageUrl: null, installs: null,
+  author: { name: upstreamId.split('/')[0], url: null }, version: '1.0.0', homepageUrl: null, installs: null, stars: null,
   verified: false, tags: [], transports: [], origin: origin(site, upstreamId),
 })
 

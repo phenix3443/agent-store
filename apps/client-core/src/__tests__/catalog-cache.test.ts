@@ -6,7 +6,7 @@ import type { CatalogResource } from '@as/types'
 
 const row: CatalogResource = {
   id: 'github:o/r/test-skill', kind: 'skill', name: 'test-skill', description: 'desc', author: null,
-  version: 'abc', homepageUrl: null, installs: null, verified: false, tags: ['ai'], transports: [],
+  version: 'abc', homepageUrl: null, installs: null, stars: null, verified: false, tags: ['ai'], transports: [],
   origin: {
     site: 'github', upstreamId: 'o/r/test-skill', url: null, upstreamVersion: null, upstreamUpdatedAt: null,
     syncedAt: '2026-11-12T00:00:00Z', unavailableAt: null, unavailableReason: null,

@@ -5,7 +5,7 @@ import type { CatalogResource, CatalogSearchResult, Engine, SearchOptions } from
 const row: CatalogResource = {
   id: 'github:vercel-labs/skills/find-skills', kind: 'skill', name: 'find-skills',
   description: 'Helps users discover and install agent skills.', author: { name: 'vercel-labs', url: null },
-  version: '76a98a285cb0', homepageUrl: null, installs: 1_200_000, verified: false, tags: [], transports: [],
+  version: '76a98a285cb0', homepageUrl: null, installs: 1_200_000, stars: 12_000, verified: false, tags: [], transports: [],
   origin: {
     site: 'github', upstreamId: 'vercel-labs/skills/find-skills', url: null, upstreamVersion: null,
     upstreamUpdatedAt: null, syncedAt: '', unavailableAt: null, unavailableReason: null,
@@ -26,7 +26,7 @@ test('runSearch prints name, kind, source, installs, description and the install
   const lines: string[] = []
   await runSearch(makeEngine({ resources: [row] }), ['find'], s => lines.push(s))
   const out = lines.join('\n')
-  expect(out).toContain('find-skills   skill · GitHub · 1.2M installs')
+  expect(out).toContain('find-skills   skill · GitHub · 1.2M installs · 12K stars')
   expect(out).toContain('Helps users discover')
   expect(out).toContain('aas install github:vercel-labs/skills/find-skills')
 })
