@@ -45,7 +45,7 @@ function mockRpc(overrides: Record<string, (...args: unknown[]) => unknown> = {}
   const defaults: Record<string, (...args: unknown[]) => unknown> = {
     info: (slug) => { throw new Error(`Item not installed: ${String(slug)}`) },
     search: () => [mcpItem, skillItem, providerItem],
-    install: () => ({ version: '0.8.1' }),
+    installAndEnable: () => ({ version: '0.8.1', enabled: [], notEnabled: [] }),
   }
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args: unknown[] = []) => {
     calls.push({ method, args })
@@ -95,7 +95,7 @@ async function click(name: string) {
   })
 }
 
-const installCalls = () => calls.filter((c) => c.method === 'install')
+const installCalls = () => calls.filter((c) => c.method === 'installAndEnable')
 
 beforeEach(() => {
   calls = []
@@ -150,7 +150,7 @@ test('confirming runs the existing install with only the slug', async () => {
   await click('确认安装')
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  expect(installCalls()).toEqual([{ method: 'install', args: ['filesystem'] }])
+  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['filesystem'] }])
   expect(JSON.stringify(calls)).not.toContain('evil')
   expect(screen.getByTestId('log')).toHaveTextContent('$ aas install filesystem|✓ 已安装 filesystem 0.8.1')
 })
@@ -180,7 +180,7 @@ test('a provider opens its configuration after the confirmed install', async () 
   await click('确认安装')
 
   await waitFor(() => expect(screen.getByTestId('editing')).toHaveTextContent('openrouter'))
-  expect(installCalls()).toEqual([{ method: 'install', args: ['openrouter'] }])
+  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['openrouter'] }])
 })
 
 test('an unknown slug is reported and nothing is installed', async () => {
@@ -252,7 +252,7 @@ test('a category that contradicts the catalog stops before the confirmation', as
 })
 
 test('a failed install is reported in the dialog and the log', async () => {
-  mockRpc({ install: () => { throw new Error('hook exited 1') } })
+  mockRpc({ installAndEnable: () => { throw new Error('hook exited 1') } })
   await renderDialog()
   await openLink('agent-store://install?slug=filesystem')
   await click('确认安装')

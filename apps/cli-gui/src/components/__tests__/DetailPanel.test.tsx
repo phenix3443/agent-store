@@ -67,7 +67,7 @@ test('shows an installed item detail from the info RPC', async () => {
 })
 
 test('shows an install button for a not-yet-installed item and installs it', async () => {
-  const install = mock(() => ({ version: '1.0.0' }))
+  const install = mock(() => ({ slug: 'x', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [], notEnabled: [] }))
   mockRpc({
     info: () => { throw new Error('Item not installed: filesystem') },
     search: () => [{
@@ -77,7 +77,7 @@ test('shows an install button for a not-yet-installed item and installs it', asy
       installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
       configSchema: {},
     }],
-    install,
+    installAndEnable: install,
   })
   renderPanel()
   fireEvent.click(screen.getByText('select'))
@@ -307,4 +307,54 @@ test('does not show the child-config banner for a provider with no duplicates', 
   fireEvent.click(screen.getByText('select'))
   await screen.findByRole('heading', { name: 'test-provider' })
   expect(screen.queryByText(/份配置/)).not.toBeInTheDocument()
+})
+
+const mcpInfo = {
+  slug: 'github', category: 'mcp', version: '0.6.2', installedAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude', 'codex'], enabledFor: {},
+  name: 'github', description: 'GitHub API', publisher, tags: [], downloads: 0,
+  configSchema: { type: 'object', properties: { token: { type: 'string', description: 'GitHub token' } }, required: ['token'] },
+}
+const mcpStatus = [
+  { target: 'claude', compatible: true, enabled: false, blocker: { reason: 'needs-config', message: 'x' } },
+  { target: 'codex', compatible: true, enabled: false, blocker: { reason: 'needs-config', message: 'x' } },
+]
+
+// H7: an installed MCP can be configured and enabled from the desktop client.
+test('an installed MCP has a 配置 button that opens the MCP config page', async () => {
+  mockRpc({ info: () => mcpInfo, getTargetStatus: () => mcpStatus, getReviews: () => [], getVersions: () => [] })
+  renderPanel('github')
+  fireEvent.click(screen.getByText('select'))
+  fireEvent.click(await screen.findByRole('button', { name: '配置' }))
+  expect(await screen.findByLabelText(/GitHub token/)).toBeInTheDocument()
+  expect(screen.getByLabelText('Claude Code')).toBeInTheDocument()
+})
+
+test('installing an MCP that needs config goes straight to its config page', async () => {
+  let installed = false
+  mockRpc({
+    info: () => { if (!installed) throw new Error('Item not installed: github'); return mcpInfo },
+    search: () => [{ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }],
+    installAndEnable: () => {
+      installed = true
+      return { slug: 'github', version: '0.6.2', installedAt: '', category: 'mcp', enabled: [], notEnabled: mcpStatus.map(s => ({ target: s.target, reason: 'needs-config', message: 'x' })) }
+    },
+    getTargetStatus: () => mcpStatus,
+  })
+  renderPanel('github')
+  fireEvent.click(screen.getByText('select'))
+  fireEvent.click(await screen.findByRole('button', { name: '安装' }))
+  expect(await screen.findByLabelText(/GitHub token/)).toBeInTheDocument()
+})
+
+test('a failed install is shown on the detail page', async () => {
+  mockRpc({
+    info: () => { throw new Error('Item not installed: github') },
+    search: () => [{ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }],
+    installAndEnable: () => { throw new Error('Installed github 0.6.2, but enabling it for claude failed: conflict') },
+  })
+  renderPanel('github')
+  fireEvent.click(screen.getByText('select'))
+  fireEvent.click(await screen.findByRole('button', { name: '安装' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('enabling it for claude failed')
 })

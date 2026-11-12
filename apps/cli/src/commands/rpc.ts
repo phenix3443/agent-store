@@ -5,6 +5,8 @@ type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
 const RPC_METHODS: Record<string, RpcHandler> = {
   search: (e, a) => e.search(a[0] as string, a[1] as SearchOptions | undefined),
   install: (e, a) => e.install(a[0] as string, a[1] as InstallOptions | undefined),
+  installAndEnable: (e, a) => e.installAndEnable(a[0] as string, a[1] as InstallOptions | undefined),
+  getTargetStatus: (e, a) => e.getTargetStatus(a[0] as string),
   uninstall: (e, a) => e.uninstall(a[0] as string, a[1] as DisableOptions | undefined),
   enable: (e, a) => e.enable(a[0] as string, a[1] as ToolTarget, a[2] as EnableOptions | undefined),
   disable: (e, a) => e.disable(a[0] as string, a[1] as ToolTarget, a[2] as DisableOptions | undefined),
@@ -68,7 +70,8 @@ export async function runRpc(
     out(JSON.stringify({ ok: true, data: data ?? null }))
     return 0
   } catch (err) {
-    out(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err) }))
+    // `code` is the error class name, so the desktop client can offer the right next step (e.g. --force).
+    out(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err), ...(err instanceof Error ? { code: err.name } : {}) }))
     return 1
   }
 }

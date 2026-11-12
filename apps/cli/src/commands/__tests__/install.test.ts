@@ -1,85 +1,46 @@
 import { test, expect } from 'bun:test'
 import { runInstall } from '../install'
-import type { Engine, InstalledItem } from '@as/types'
+import type { Engine, InstallOutcome } from '@as/types'
 
-const installedEntry: InstalledItem = {
-  slug: 'openai-provider', category: 'provider', version: '1.2.0',
-  installedAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
-  compatibleWith: ['claude', 'codex'], enabledFor: {},
+const outcome: InstallOutcome = {
+  slug: 'some-mcp', version: '1.2.0', installedAt: '2026-06-18T00:00:00Z',
+  category: 'mcp', enabled: ['claude', 'codex'], notEnabled: [],
 }
 
 function makeEngine(overrides?: Partial<Engine>): Engine {
   return {
-    install: async () => ({ slug: 'openai-provider', version: '1.2.0', installedAt: '2026-06-18T00:00:00Z' }),
-    info: async () => ({
-      ...installedEntry, name: 'OpenAI Provider', description: '',
- publisher: { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'official' },
-      tags: [], downloads: 0, configSchema: {}, supportedModels: ['gpt-4o'],
-    }),
-    enable: async () => undefined,
+    installAndEnable: async () => outcome,
     ...overrides,
   } as unknown as Engine
 }
 
-test('runInstall shows done steps and installed summary', async () => {
+test('runInstall shows done steps, a sync step per enabled tool and the summary', async () => {
   const lines: string[] = []
-  await runInstall(makeEngine(), ['openai-provider'], s => lines.push(s))
+  expect(await runInstall(makeEngine(), ['some-mcp'], s => lines.push(s))).toBe(0)
   const out = lines.join('\n')
-  expect(out).toContain('done')
-  expect(out).toContain('Installed openai-provider 1.2.0')
-})
-
-test('runInstall shows config warning for provider', async () => {
-  const lines: string[] = []
-  await runInstall(makeEngine(), ['openai-provider'], s => lines.push(s))
-  expect(lines.join('\n')).toContain('aas config')
-})
-
-test('runInstall shows sync step for each compatible target', async () => {
-  const lines: string[] = []
-  await runInstall(makeEngine(), ['openai-provider'], s => lines.push(s))
-  const out = lines.join('\n')
-  expect(out).toContain('claude')
-  expect(out).toContain('codex')
+  expect(out).toContain('Syncing to claude...')
+  expect(out).toContain('Syncing to codex...')
+  expect(out).toContain('Installed some-mcp 1.2.0')
+  expect(out).not.toContain('Not enabled')
 })
 
 test('runInstall shows usage when no slug', async () => {
   const lines: string[] = []
-  await runInstall(makeEngine(), [], s => lines.push(s))
+  expect(await runInstall(makeEngine(), [], s => lines.push(s))).toBe(2)
   expect(lines.join('\n')).toContain('Usage')
 })
 
-test('runInstall shows error message on failure', async () => {
+test('runInstall shows the error and returns 1 on failure', async () => {
   const lines: string[] = []
-  const engine = makeEngine({ install: async () => { throw new Error('Not found') } })
-  await runInstall(engine, ['unknown'], s => lines.push(s))
+  const engine = makeEngine({ installAndEnable: async () => { throw new Error('Not found') } })
+  expect(await runInstall(engine, ['unknown'], s => lines.push(s))).toBe(1)
   expect(lines.join('\n')).toContain('Not found')
-})
-
-test('runInstall returns 0 on success', async () => {
-  expect(await runInstall(makeEngine(), ['openai-provider'], () => {})).toBe(0)
-})
-
-test('runInstall returns non-zero when install fails', async () => {
-  const engine = makeEngine({ install: async () => { throw new Error('Not found') } })
-  expect(await runInstall(engine, ['unknown'], () => {})).toBe(1)
-})
-
-test('runInstall returns non-zero when enabling a target fails', async () => {
-  const lines: string[] = []
-  const engine = makeEngine({ enable: async () => { throw new Error('conflict') } })
-  expect(await runInstall(engine, ['openai-provider'], s => lines.push(s))).toBe(1)
-  expect(lines.join('\n')).toContain('conflict')
-})
-
-test('runInstall returns usage error without a slug', async () => {
-  expect(await runInstall(makeEngine(), [], () => {})).toBe(2)
 })
 
 test('runInstall rejects more than one slug', async () => {
   let installed = false
   const lines: string[] = []
-  const engine = makeEngine({ install: async () => { installed = true; return { slug: 'a', version: '1', installedAt: '' } } })
+  const engine = makeEngine({ installAndEnable: async () => { installed = true; return outcome } })
   expect(await runInstall(engine, ['a', 'b'], s => lines.push(s))).toBe(2)
   expect(installed).toBe(false)
   expect(lines.join('\n')).toContain('one slug')
@@ -87,13 +48,13 @@ test('runInstall rejects more than one slug', async () => {
 
 test('runInstall rejects unknown options', async () => {
   const lines: string[] = []
-  expect(await runInstall(makeEngine(), ['openai-provider', '--bogus'], s => lines.push(s))).toBe(2)
+  expect(await runInstall(makeEngine(), ['some-mcp', '--bogus'], s => lines.push(s))).toBe(2)
   expect(lines.join('\n')).toContain('unknown option --bogus')
 })
 
 test('runInstall passes --target and --force to the engine', async () => {
   let got: unknown
-  const engine = makeEngine({ install: async (_s: string, o?: unknown) => { got = o; return { slug: 'x', version: '1', installedAt: '' } } })
+  const engine = makeEngine({ installAndEnable: async (_s: string, o?: unknown) => { got = o; return outcome } })
   expect(await runInstall(engine, ['x', '--target', 'codex', '--force'], () => {})).toBe(0)
   expect(got).toEqual({ target: 'codex', force: true })
 })
@@ -102,34 +63,35 @@ test('runInstall rejects a bad --target value', async () => {
   expect(await runInstall(makeEngine(), ['x', '--target', 'vim'], () => {})).toBe(2)
 })
 
-test('runInstall leaves enabling skills to the engine', async () => {
-  const enabled: string[] = []
+// L1: the item is installed; a tool waiting for config is a next step, not a failure.
+test('runInstall of an MCP that needs config exits 0 and says how to finish', async () => {
+  const lines: string[] = []
   const engine = makeEngine({
-    enable: async (_s: string, t: string) => { enabled.push(t) },
-    info: async () => ({ ...installedEntry, category: 'skill', enabledFor: { codex: true, claude: true } }),
-  } as unknown as Partial<Engine>)
-  expect(await runInstall(engine, ['a-skill'], () => {})).toBe(0)
-  expect(enabled).toEqual([])
-})
-
-function notReady(message: string, reason: 'no-key' | 'relay-not-running'): Error {
-  return Object.assign(new Error(message), { name: 'ProviderNotReadyError', reason })
-}
-
-test('runInstall of a provider without a key installs it, enables nothing and says what is missing', async () => {
-  const lines: string[] = []
-  const engine = makeEngine({ enable: async () => { throw notReady('test-provider has no API key configured; run: aas config test-provider', 'no-key') } })
-  expect(await runInstall(engine, ['openai-provider'], s => lines.push(s))).toBe(0)
+    installAndEnable: async () => ({
+      ...outcome, slug: 'token-mcp', enabled: [],
+      notEnabled: (['claude', 'codex'] as const).map(target => ({
+        target, reason: 'needs-config' as const,
+        message: 'token-mcp needs configuration before it can be enabled (missing: token); run `aas config token-mcp`',
+      })),
+    }),
+  })
+  expect(await runInstall(engine, ['token-mcp'], s => lines.push(s))).toBe(0)
   const out = lines.join('\n')
-  expect(out).toContain('Installed openai-provider 1.2.0')
-  expect(out).toContain('Not enabled for claude: test-provider has no API key configured')
-  expect(out).toContain('aas enable openai-provider --for claude')
-  expect(out).not.toMatch(/Syncing to claude\.\.\..*done/)
+  expect(out).toContain('Installed token-mcp 1.2.0')
+  expect(out).toContain('Not enabled for claude: token-mcp needs configuration')
+  expect(out).toContain('then: aas enable token-mcp --for claude')
+  expect(out).toContain('then: aas enable token-mcp --for codex')
+  expect(out).not.toContain('Syncing to')
 })
 
-test('runInstall of a provider fails when the relay cannot be started', async () => {
+test('runInstall of a provider without a key exits 0 and says how to finish', async () => {
   const lines: string[] = []
-  const engine = makeEngine({ enable: async () => { throw notReady('the local relay is not running and could not be started; start it with: aas relay start', 'relay-not-running') } })
-  expect(await runInstall(engine, ['openai-provider'], s => lines.push(s))).toBe(1)
-  expect(lines.join('\n')).toContain('aas relay start')
+  const engine = makeEngine({
+    installAndEnable: async () => ({
+      ...outcome, slug: 'p', category: 'provider', enabled: [],
+      notEnabled: [{ target: 'claude', reason: 'no-key', message: 'p has no API key configured; run: aas config p' }],
+    }),
+  })
+  expect(await runInstall(engine, ['p'], s => lines.push(s))).toBe(0)
+  expect(lines.join('\n')).toContain('Not enabled for claude: p has no API key configured; run: aas config p; then: aas enable p --for claude')
 })

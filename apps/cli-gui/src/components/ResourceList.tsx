@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, ItemDetail, UpdateAvailable } from '@as/types'
+import type { Item, InstalledItem, InstallOutcome, ItemDetail, UpdateAvailable } from '@as/types'
 import { Search, Filter, Check } from 'lucide-react'
-import { callRpc } from '../lib/rpc'
+import { callRpc, errorText, RpcError } from '../lib/rpc'
+import { canForce, needsSetup } from '../lib/installPolicy'
+import { UninstallFailedDialog } from './UninstallFailedDialog'
 import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useT } from '../i18n'
@@ -35,6 +37,7 @@ export function ResourceList() {
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
   const [textQuery, setTextQuery] = useState('')
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false)
+  const [uninstallFailure, setUninstallFailure] = useState<{ slug: string; message: string; forceable: boolean } | null>(null)
 
   function openConfigEditor(slug: string) {
     setEditingConfigSlug(slug)
@@ -138,24 +141,31 @@ export function ResourceList() {
     setTokenMenuOpen(false)
   }
 
-  async function uninstall(item: EnrichedInstalledItem) {
-    appendLine(`$ aas uninstall ${item.slug}`)
+  async function uninstall(item: { slug: string }, force = false) {
+    appendLine(`$ aas uninstall ${item.slug}${force ? ' --force' : ''}`)
     try {
-      await callRpc('uninstall', [item.slug])
+      await callRpc('uninstall', force ? [item.slug, { force: true }] : [item.slug])
       appendLine(`✓ ${t('resList.uninstalledPrefix')} ${item.slug}`, 'green')
+      setUninstallFailure(null)
+      if (selectedSlug === item.slug) setSelectedSlug(null)
+      if (editingConfigSlug === item.slug) setEditingConfigSlug(null)
     } catch (err) {
-      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
+      appendLine(`✗ ${errorText(err)}`, 'red')
+      setUninstallFailure({
+        slug: item.slug,
+        message: errorText(err),
+        forceable: !force && err instanceof RpcError && canForce(err.code),
+      })
     }
-    if (selectedSlug === item.slug) setSelectedSlug(null)
-    if (editingConfigSlug === item.slug) setEditingConfigSlug(null)
     bumpInstalledVersion()
   }
 
   async function install(item: Item) {
     appendLine(`$ aas install ${item.slug}`)
     try {
-      const result = await callRpc<{ version: string }>('install', [item.slug])
+      const result = await callRpc<InstallOutcome>('installAndEnable', [item.slug])
       appendLine(`✓ ${t('common.installed')} ${item.slug} ${result.version}`, 'green')
+      if (needsSetup(result)) openConfigEditor(item.slug)
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
@@ -182,7 +192,7 @@ export function ResourceList() {
         appendLine(`✓ ${t('resList.childAddedPrefix')} ${result.newSlug}`, 'green')
         openConfigEditor(result.newSlug)
       } else {
-        await callRpc('install', [item.slug])
+        await callRpc<InstallOutcome>('installAndEnable', [item.slug])
         appendLine(`✓ ${t('common.installed')} ${item.slug}`, 'green')
         openConfigEditor(item.slug)
       }
@@ -418,6 +428,11 @@ export function ResourceList() {
           </div>
         </div>
       )}
+      <UninstallFailedDialog
+        failure={uninstallFailure}
+        onClose={() => setUninstallFailure(null)}
+        onForce={(slug) => uninstall({ slug }, true)}
+      />
     </div>
   )
 }

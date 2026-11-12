@@ -219,8 +219,9 @@ export interface ItemDetail {
  */
 export interface InstallOptions {
   /**
-   * Skills only: `codex` installs the content without the Claude symlink.
-   * `claude` is rejected, because Codex reads ~/.agents/skills anyway.
+   * Skills: `codex` installs the content without the Claude symlink; `claude` is
+   * rejected, because Codex reads ~/.agents/skills anyway.
+   * Other kinds, in installAndEnable: enable for this tool only.
    */
   target?: ToolTarget
   /** Skills only: replace locally edited content and ignore a Codex name clash. */
@@ -239,10 +240,36 @@ export interface DisableOptions {
 
 export type UninstallOptions = DisableOptions
 
+/** Why an item is not enabled for a tool yet; the user can fix all but `incompatible`. */
+export type EnableBlocker = 'incompatible' | 'needs-config' | 'no-key'
+
+export interface TargetStatus {
+  target: ToolTarget
+  compatible: boolean
+  enabled: boolean
+  /** Set when enabling now would be refused. */
+  blocker?: { reason: EnableBlocker; message: string }
+}
+
+export interface InstallOutcome extends InstallResult {
+  category: 'provider' | 'skill' | 'mcp'
+  enabled: ToolTarget[]
+  /** Installed but left disabled for these tools, with what to do next. */
+  notEnabled: Array<{ target: ToolTarget; reason: EnableBlocker; message: string }>
+}
+
 export interface Engine {
   search(query: string, options?: SearchOptions): Promise<Item[]>
   /** Skills are also enabled here (§5.4); other categories are enabled by the caller. */
   install(slug: string, options?: InstallOptions): Promise<InstallResult>
+  /**
+   * Install, then enable for every compatible tool (or `options.target`) that is ready.
+   * Tools waiting for config or a key are reported in `notEnabled`, not thrown.
+   * This is the install that the CLI and the desktop client both use.
+   */
+  installAndEnable(slug: string, options?: InstallOptions): Promise<InstallOutcome>
+  /** Per tool: compatible, enabled, and what would stop enabling it now. */
+  getTargetStatus(slug: string): Promise<TargetStatus[]>
   uninstall(slug: string, options?: UninstallOptions): Promise<void>
   enable(slug: string, target: ToolTarget, options?: EnableOptions): Promise<void>
   disable(slug: string, target: ToolTarget, options?: DisableOptions): Promise<void>
@@ -252,6 +279,7 @@ export interface Engine {
   setConfig(slug: string, values: Record<string, unknown>): Promise<void>
   sync(targets?: ToolTarget[]): Promise<SyncResult>
   checkUpdates(slugs?: string[]): Promise<UpdateAvailable[]>
+  /** Throws UpdateFailedError when any item failed; those items keep their old version and files. */
   update(slug?: string): Promise<UpdateResult[]>
   list(options?: ListOptions): Promise<InstalledItem[]>
   info(slug: string): Promise<ItemDetail>

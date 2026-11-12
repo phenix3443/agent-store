@@ -1,4 +1,4 @@
-export { EngineImpl, ProviderNotReadyError } from './engine'
+export { EngineImpl, ProviderNotReadyError, IncompatibleTargetError, UpdateFailedError } from './engine'
 export type { EngineOptions } from './engine'
 export { AgentPackageEngine } from './agent-package-engine'
 export { sanitizeCodexResponsesRequest } from './agent-package-codex-relay'

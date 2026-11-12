@@ -228,3 +228,34 @@ test('local: does not duplicate the baseUrl field inside 更多设置', async ()
   // Only the essential API 地址 field remains; the optional one is suppressed for local.
   expect(screen.getAllByText('API 地址')).toHaveLength(1)
 })
+
+// L2: a refused enable must be visible, with the engine's reason.
+test('a refused enable shows the reason and leaves the target off', async () => {
+  const enable = mock(async () => { throw new Error('yls-me has no API key configured; run: aas config yls-me') })
+  renderPanel({ enable })
+  await waitFor(() => screen.getByLabelText('Claude Code'))
+  fireEvent.click(screen.getByLabelText('Claude Code'))
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('启用失败 Claude Code')
+  expect(alert.textContent).toContain('no API key configured')
+  expect(screen.getByLabelText('Claude Code')).toHaveAttribute('aria-pressed', 'false')
+})
+
+test('a relay that cannot start is shown when enabling', async () => {
+  const enable = mock(async () => { throw new Error('the local relay is not running and could not be started; start it with: aas relay start') })
+  renderPanel({ enable })
+  await waitFor(() => screen.getByLabelText('Claude Code'))
+  fireEvent.click(screen.getByLabelText('Claude Code'))
+  expect((await screen.findByRole('alert')).textContent).toContain('aas relay start')
+})
+
+test('a failed save is shown instead of 已自动保存', async () => {
+  const setConfig = mock(async () => { throw new Error('disk full') })
+  renderPanel({ setConfig })
+  const input = await waitFor(() => screen.getByDisplayValue('sk-real'))
+  fireEvent.change(input, { target: { value: 'sk-new' } })
+  const alert = await screen.findByRole('alert', {}, { timeout: 2000 })
+  expect(alert.textContent).toContain('保存失败')
+  expect(alert.textContent).toContain('disk full')
+  expect(screen.queryByText('已自动保存')).toBeNull()
+})

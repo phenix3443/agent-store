@@ -33,7 +33,7 @@ export type McpServerSpec =
 
 export class McpConfigMissingError extends Error {
   constructor(readonly slug: string, readonly missing: string[]) {
-    super(`${slug} needs configuration before it can be enabled (missing: ${missing.join(', ')}); run \`as config ${slug}\``)
+    super(`${slug} needs configuration before it can be enabled (missing: ${missing.join(', ')}); run \`aas config ${slug}\``)
     this.name = 'McpConfigMissingError'
   }
 }

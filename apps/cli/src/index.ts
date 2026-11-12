@@ -62,7 +62,7 @@ async function main(): Promise<void> {
     case 'disable':   process.exitCode = await runDisable(engine, rest); break
     case 'config':    await runConfig(engine, rest); break
     case 'sync':      await runSync(engine, rest); break
-    case 'update':    await runUpdate(engine, rest); break
+    case 'update':    process.exitCode = await runUpdate(engine, rest); break
     case 'relay':     await runRelay(rest, realRelayOps()); break
     case 'usage':     await runUsage(engine, rest); break
     case 'migrate':   process.exitCode = await runMigrateCommand(() => runMigrate(resolvePaths())); break

@@ -187,9 +187,9 @@ test('plain text filters both groups by name', async () => {
   expect(screen.getByText('context7')).toBeInTheDocument()
 })
 
-test('clicking 安装 on a recommended item calls install and refreshes', async () => {
-  const install = mock(() => ({ version: '1.0.0' }))
-  await renderList({ install })
+test('clicking 安装 on a recommended item installs it through the shared policy and refreshes', async () => {
+  const install = mock(() => ({ slug: 'x', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [], notEnabled: [] }))
+  await renderList({ installAndEnable: install })
   await waitFor(() => screen.getByText('context7'))
   fireEvent.click(screen.getByText('安装'))
   await waitFor(() => expect(install).toHaveBeenCalledWith('context7'))
@@ -240,13 +240,13 @@ test('the installed list shows an amber outdated dot next to the name for a pack
   expect(screen.queryByText('有更新')).not.toBeInTheDocument()
 })
 
-function SetCategoryFilter({ category }: { category: 'provider' | 'skill' }) {
+function SetCategoryFilter({ category }: { category: 'provider' | 'skill' | 'mcp' }) {
   const { setCategoryFilter } = useAppState()
   useEffect(() => { setCategoryFilter(category) }, [category, setCategoryFilter])
   return null
 }
 
-async function renderListWithCategory(category: 'provider' | 'skill', handlers?: Record<string, (...args: unknown[]) => unknown>) {
+async function renderListWithCategory(category: 'provider' | 'skill' | 'mcp', handlers?: Record<string, (...args: unknown[]) => unknown>) {
   mockRpc(defaultHandlers(handlers))
   return render(
     <AppStateProvider>
@@ -357,8 +357,48 @@ test('clicking 配置 on an already-installed recommended provider duplicates it
       slug === 'x' ? providerTreeInfoBySlug['test-provider'] : providerTreeInfoBySlug[slug as string],
     search: () => [providerCatalogItem],
     duplicateProvider: () => { calledMethod = 'duplicateProvider'; return { newSlug: 'x' } },
-    install: () => { calledMethod = 'install'; return { version: '1.0.0' } },
+    installAndEnable: () => { calledMethod = 'install'; return { version: '1.0.0', enabled: [], notEnabled: [] } },
   })
   fireEvent.click((await screen.findAllByRole('button', { name: '配置' }))[0]!)
   await waitFor(() => expect(calledMethod).toBe('duplicateProvider'))
+})
+
+// L2: uninstall could not pass --force from the desktop client.
+test('an uninstall refused for an entry changed outside Agent Store offers a forced uninstall', async () => {
+  const calls: unknown[][] = []
+  const uninstall = mock((...args: unknown[]) => {
+    calls.push(args)
+    if (args.length === 1) throw new rpcModule.RpcError('The Claude Code MCP entry "filesystem" was changed outside Agent Store', 'McpChangedOutsideError')
+  })
+  await renderList({ uninstall })
+  await waitFor(() => screen.getByText('filesystem'))
+  fireEvent.click(screen.getByLabelText('卸载 filesystem'))
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog.textContent).toContain('卸载失败')
+  expect(dialog.textContent).toContain('changed outside Agent Store')
+  fireEvent.click(screen.getByRole('button', { name: '强制卸载' }))
+  await waitFor(() => expect(calls).toEqual([['filesystem'], ['filesystem', { force: true }]]))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+})
+
+test('an uninstall error that --force does not help is shown without the force button', async () => {
+  const uninstall = mock(() => { throw new rpcModule.RpcError('Cannot read targets.json', 'Error') })
+  await renderList({ uninstall })
+  await waitFor(() => screen.getByText('filesystem'))
+  fireEvent.click(screen.getByLabelText('卸载 filesystem'))
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog.textContent).toContain('Cannot read targets.json')
+  expect(screen.queryByRole('button', { name: '强制卸载' })).toBeNull()
+})
+
+test('installing an MCP that needs config opens its config page', async () => {
+  const installAndEnable = mock(() => ({
+    slug: 'context7', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [],
+    notEnabled: [{ target: 'claude', reason: 'needs-config', message: 'missing key' }],
+  }))
+  await renderListWithCategory('mcp', { installAndEnable })
+  await waitFor(() => screen.getByText('context7'))
+  fireEvent.click(screen.getByText('安装'))
+  await waitFor(() => expect(installAndEnable).toHaveBeenCalledWith('context7'))
+  await waitFor(() => expect(screen.getByTestId('editing-config-slug').textContent).toBe('context7'))
 })

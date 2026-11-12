@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ItemDetail, ToolTarget } from '@as/types'
 import { Check, HelpCircle } from 'lucide-react'
-import { callRpc } from '../lib/rpc'
+import { callRpc, errorText } from '../lib/rpc'
 import { ProGate } from './ProGate'
+import { Banner, TargetPicker, TARGET_LABEL } from './ConfigParts'
 import { useT } from '../i18n'
 
 function MultiKeyEditor({ keys, onChange }: { keys: string[]; onChange: (keys: string[]) => void }) {
@@ -138,6 +139,8 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [helpTip, setHelpTip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [toggling, setToggling] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -147,7 +150,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
       setTargets(detail.enabledFor)
       setProviderName(String(detail.currentConfig?.['provider'] ?? detail.name ?? slug))
       setValues(toEditValues(detail.currentConfig, slug, root === 'local'))
-    })
+    }, (err) => setError(errorText(err)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
@@ -163,17 +166,33 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
     setSaved(false)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
-      void callRpc('setConfig', [slug, toConfigPayload(next)]).then(() => {
-        setSaving(false)
-        setSaved(true)
-      })
+      callRpc('setConfig', [slug, toConfigPayload(next)]).then(
+        () => {
+          setSaving(false)
+          setSaved(true)
+          setError(null)
+        },
+        (err) => {
+          setSaving(false)
+          setError(`${t('policy.saveFailed')}: ${errorText(err)}`)
+        }
+      )
     }, 500)
   }
 
   async function toggleTarget(target: ToolTarget) {
     const isEnabled = !!targets[target]
-    await callRpc(isEnabled ? 'disable' : 'enable', [slug, target])
-    setTargets((prev) => ({ ...prev, [target]: !isEnabled }))
+    setToggling(true)
+    try {
+      await callRpc(isEnabled ? 'disable' : 'enable', [slug, target])
+      setTargets((prev) => ({ ...prev, [target]: !isEnabled }))
+      setError(null)
+    } catch (err) {
+      // e.g. no API key yet, or the relay could not be started.
+      setError(`${t(isEnabled ? 'policy.disableFailed' : 'policy.enableFailed')} ${TARGET_LABEL[target]}: ${errorText(err)}`)
+    } finally {
+      setToggling(false)
+    }
   }
 
   function addWhitelist() {
@@ -248,12 +267,8 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
         </button>
       </div>
 
-      {showWarn && (
-        <div className="mx-7 mb-3.5 mt-3.5 flex items-center gap-2 rounded-lg border border-store-amber bg-store-amber-soft px-3.5 py-2.5">
-          <span className="text-store-amber">⚠</span>
-          <span className="text-[11.5px] text-store-text-2">{warnText}</span>
-        </div>
-      )}
+      {error && <Banner tone="error">{error}</Banner>}
+      {showWarn && <Banner tone="warn">{warnText}</Banner>}
 
       <div className="grid max-w-[620px] grid-cols-2 items-start gap-x-5 gap-y-3.5 px-7">
         <div className="col-span-2">
@@ -261,22 +276,11 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
             {t('cfg.applicableClients')} <span className="text-store-red">*</span>
             <HelpIcon text={HELP.targets} onShow={showHelp} onHide={() => setHelpTip(null)} />
           </label>
-          <div className="flex gap-2">
-            {(['claude', 'codex'] as const).map((target) => (
-              <button
-                key={target}
-                type="button"
-                aria-label={target === 'claude' ? 'Claude Code' : 'Codex'}
-                aria-pressed={!!targets[target]}
-                onClick={() => toggleTarget(target)}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium ${
-                  targets[target] ? 'border-store-accent bg-store-accent-soft text-store-accent' : 'border-store-border text-store-text-2'
-                }`}
-              >
-                {target === 'claude' ? 'Claude Code' : 'Codex'}
-              </button>
-            ))}
-          </div>
+          <TargetPicker
+            options={(['claude', 'codex'] as const).map((target) => ({ target, enabled: !!targets[target] }))}
+            busy={toggling}
+            onToggle={toggleTarget}
+          />
         </div>
 
         {isLocal ? (

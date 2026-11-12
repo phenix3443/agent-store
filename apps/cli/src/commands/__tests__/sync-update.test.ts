@@ -63,3 +63,25 @@ test('runUninstall shows success', async () => {
   await runUninstall({ uninstall: async () => {} } as unknown as Engine, ['test-mcp'], s => lines.push(s))
   expect(lines.join('\n')).toContain('Uninstalled')
 })
+
+// M2: a failed update is reported and fails the command.
+test('runUpdate reports items that failed and returns 1, keeping the ones that updated', async () => {
+  const lines: string[] = []
+  const engine = {
+    update: async () => {
+      throw Object.assign(new Error('Update failed'), {
+        name: 'UpdateFailedError',
+        updated: [{ slug: 'a', fromVersion: '1', toVersion: '2' }],
+        failures: [{ slug: 'b', error: 'changed outside Agent Store' }],
+      })
+    },
+  } as unknown as Engine
+  expect(await runUpdate(engine, [], s => lines.push(s))).toBe(1)
+  const out = lines.join('\n')
+  expect(out).toContain('Updated a from 1 to 2')
+  expect(out).toContain('b was not updated: changed outside Agent Store')
+})
+
+test('runUpdate returns 0 when everything updated', async () => {
+  expect(await runUpdate(makeUpdateEngine([{ slug: 'a', fromVersion: '1', toVersion: '2' }]), [], () => {})).toBe(0)
+})
