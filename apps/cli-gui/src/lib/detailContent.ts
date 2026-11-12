@@ -68,6 +68,33 @@ function defaultSteps(detail: SelectedDetail, t: TFn): string[] {
   ]
 }
 
+export function typeFacts(detail: SelectedDetail, t: TFn): string[] {
+  if (detail.category === 'provider') {
+    const models = 'supportedModels' in detail ? detail.supportedModels : undefined
+    if (models && models.length > 0) return [`${t('readme.factModels')}${models.join('、')}`]
+  }
+  if (detail.category === 'mcp') {
+    const transport = 'transport' in detail ? detail.transport : undefined
+    if (transport) {
+      const serverCommand = 'serverCommand' in detail ? detail.serverCommand : undefined
+      const url = 'url' in detail ? detail.url : undefined
+      return [
+        `${t('readme.factTransport')}${transport}`,
+        transport === 'stdio'
+          ? `${t('readme.factStartCommand')}${serverCommand ?? '—'}`
+          : `${t('readme.factServiceUrl')}${url ?? '—'}`,
+      ]
+    }
+  }
+  if (detail.category === 'skill') {
+    const repo = detail.resource?.kind === 'skill' ? detail.resource.repo : undefined
+    if (repo) return [`${t('catalog.factSource')}${repo.fullName}${repo.dir ? `/${repo.dir}` : ''} @ ${repo.commit.slice(0, 12)}`]
+    const contentUrl = 'contentUrl' in detail ? detail.contentUrl : undefined
+    if (contentUrl) return [`${t('readme.factDownloadUrl')}${contentUrl}`]
+  }
+  return []
+}
+
 /** What installing this package runs and writes, one line per step. */
 export function installStepsOf(detail: SelectedDetail, t: TFn): string[] {
   return 'installHook' in detail && detail.installHook.steps.length > 0

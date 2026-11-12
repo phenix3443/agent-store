@@ -62,7 +62,7 @@ test('shows the 市场 section for a not-yet-installed catalog item too', () => 
         compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
         installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z',
         configSchema: {}, installed: false, transport: 'stdio', serverCommand: './server',
-      } as SelectedDetail}
+      } as unknown as SelectedDetail}
     />
   )
   expect(screen.getByText('市场')).toBeInTheDocument()
