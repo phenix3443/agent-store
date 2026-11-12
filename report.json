@@ -1,0 +1,775 @@
+{
+  "report": [
+    {
+      "file": "home-390-light-zh.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-390-light-zh.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-390-light-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-390-light-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-390-light-zh.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-390-light-en.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-390-light-en.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-390-light-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-390-light-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-390-light-en.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-390-dark-zh.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-390-dark-zh.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-390-dark-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-390-dark-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-390-dark-zh.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-390-dark-en.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-390-dark-en.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-390-dark-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-390-dark-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-390-dark-en.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-820-light-zh.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-820-light-zh.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-820-light-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-820-light-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-820-light-zh.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-820-light-en.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-820-light-en.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-820-light-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-820-light-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-820-light-en.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-820-dark-zh.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-820-dark-zh.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-820-dark-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-820-dark-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-820-dark-zh.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-820-dark-en.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-820-dark-en.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-820-dark-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-820-dark-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-820-dark-en.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-1440-light-zh.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-1440-light-zh.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-1440-light-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-1440-light-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-1440-light-zh.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-1440-light-en.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-1440-light-en.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-1440-light-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-1440-light-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-1440-light-en.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "light",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-1440-dark-zh.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-1440-dark-zh.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-1440-dark-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-1440-dark-zh.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-1440-dark-zh.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "home-1440-dark-en.png",
+      "status": 200,
+      "url": "/",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "store-1440-dark-en.png",
+      "status": 200,
+      "url": "/store",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "drawer-1440-dark-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)"
+      ]
+    },
+    {
+      "file": "detail-1440-dark-en.png",
+      "status": 200,
+      "url": "/store/skill/skills-canvas-design",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 401 (UNAUTHORIZED)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "file": "dashboard-1440-dark-en.png",
+      "status": 200,
+      "url": "/dashboard",
+      "overflow": 0,
+      "dataTheme": "dark",
+      "banned": [],
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "path": "/topics",
+      "status": 308,
+      "location": "/store"
+    },
+    {
+      "path": "/topics/xxx",
+      "status": 308,
+      "location": "/store"
+    },
+    {
+      "path": "/collections",
+      "status": 308,
+      "location": "/store"
+    },
+    {
+      "path": "/publisher/xxx",
+      "status": 404,
+      "location": null
+    },
+    {
+      "path": "/dashboard",
+      "status": 307,
+      "location": "/"
+    }
+  ]
+}
