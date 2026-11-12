@@ -1,5 +1,5 @@
 import { test, expect, mock } from 'bun:test'
-import type { Item, Publisher } from '@as/types'
+import type { Item } from '@as/types'
 
 const mockItem: Item = {
   id: 'item-1', slug: 'openai-provider', name: 'OpenAI Provider',
@@ -11,7 +11,6 @@ const mockItem: Item = {
   createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
   configSchema: {}, supportedModels: ['gpt-4o'],
 }
-const mockPublisher: Publisher = mockItem.publisher
 
 let lastGetItemsOptions: { sort?: string; limit?: number; offset?: number } | null = null
 
@@ -22,9 +21,6 @@ mock.module('../queries', () => ({
   },
   getItemBySlug: async (_env: unknown, slug: string) =>
     slug === 'openai-provider' ? { data: mockItem, error: null } : { data: null, error: null },
-  getPublisherBySlug: async (_env: unknown, slug: string) =>
-    slug === 'openai' ? { data: mockPublisher, error: null } : { data: null, error: null },
-  getPublisherItems: async () => ({ data: [mockItem], error: null }),
 }))
 
 const { app } = await import('../app')
@@ -77,16 +73,9 @@ test('GET /api/items/:slug returns 404 for unknown slug', async () => {
   expect(res.status).toBe(404)
 })
 
-test('GET /api/publishers/:slug returns { publisher, items }', async () => {
-  const res = await app.fetch(new Request('http://localhost/api/publishers/openai'))
-  expect(res.status).toBe(200)
-  const body = (await res.json()) as { publisher: Publisher; items: Item[] }
-  expect(body.publisher.slug).toBe('openai')
-  expect(body.items).toHaveLength(1)
-})
-
-test('GET /api/publishers/:slug returns 404 for unknown publisher', async () => {
-  const res = await app.fetch(new Request('http://localhost/api/publishers/nope'))
+// Publishing and topics were removed in #101.
+test.each(['/api/publishers/openai', '/api/topics', '/api/topics/docs', '/api/me/items'])('GET %s is gone', async (path) => {
+  const res = await app.fetch(new Request(`http://localhost${path}`))
   expect(res.status).toBe(404)
 })
 
@@ -131,32 +120,4 @@ test('POST /api/items/:slug/reviews returns 401 without a token', async () => {
     })
   )
   expect(res.status).toBe(401)
-})
-
-test('GET /api/me/items returns 401 without a bearer token', async () => {
-  const res = await app.fetch(new Request('http://localhost/api/me/items'))
-  expect(res.status).toBe(401)
-})
-
-test('GET /api/me/items returns 401 without a bearer token', async () => {
-  const res = await app.fetch(new Request('http://localhost/api/me/items'))
-  expect(res.status).toBe(401)
-})
-
-test('GET /api/items rejects a limit or offset that is not a non-negative integer', async () => {
-  for (const qs of ['limit=abc', 'limit=0', 'limit=-5', 'limit=1.5', 'offset=abc', 'offset=-1']) {
-    const res = await app.fetch(new Request(`http://localhost/api/items?${qs}`))
-    expect(res.status, qs).toBe(400)
-  }
-})
-
-test('GET /api/items caps limit at 100 and passes offset through', async () => {
-  await app.fetch(new Request('http://localhost/api/items?limit=500&offset=40'))
-  expect(lastGetItemsOptions?.limit).toBe(100)
-  expect(lastGetItemsOptions?.offset).toBe(40)
-})
-
-test('every response carries an X-Request-Id', async () => {
-  const res = await app.fetch(new Request('http://localhost/api/items'))
-  expect(res.headers.get('x-request-id')).toBeTruthy()
 })

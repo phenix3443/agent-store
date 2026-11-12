@@ -1,4 +1,4 @@
-import type { Item, Publisher, Plan, UserReview, ItemVersion, Topic, TopicSummary } from '@as/types'
+import type { Item, Publisher, Plan, UserReview, ItemVersion } from '@as/types'
 
 export type Result<T> = { data: T; error: null } | { data: null; error: string }
 
@@ -10,18 +10,8 @@ export interface GetItemsParams {
   sort?: 'downloads' | 'created'
 }
 
-export interface SubmitManifest {
-  slug: string
-  name: string
-  description: string
-  category: 'provider' | 'skill' | 'mcp'
-  version: string
-  compatibleWith: string[]
-  tags: string[]
-  installHook: { steps: unknown[] }
-  metadata: Record<string, unknown>
-}
-
+// No API route returns this since #101. Kept only because apps/client-core re-exports it;
+// drop it once that re-export goes.
 export interface PublisherWithItems {
   publisher: Publisher
   items: Item[]
@@ -144,63 +134,6 @@ export class StoreClient {
       const json = (await res.json()) as { rating?: number; reviewCount?: number; error?: string }
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
       return { data: { rating: json.rating ?? 0, reviewCount: json.reviewCount ?? 0 }, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async getPublisher(slug: string): Promise<Result<PublisherWithItems>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/publishers/${encodeURIComponent(slug)}`)
-      const json = await res.json() as { publisher?: Publisher; items?: Item[]; error?: string }
-
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      if (!json.publisher) return { data: null, error: 'No publisher in response' }
-      return { data: { publisher: json.publisher, items: json.items ?? [] }, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  /** Curated topics, one entry per topic card. */
-  async getTopics(): Promise<Result<TopicSummary[]>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/topics`)
-      const json = await res.json() as { topics?: TopicSummary[]; error?: string }
-
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      if (json.topics == null) return { data: null, error: 'No topics in response' }
-      return { data: json.topics, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  /** A topic with its packages expanded, in the topic's order. */
-  async getTopic(slug: string): Promise<Result<Topic>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/topics/${encodeURIComponent(slug)}`)
-      const json = await res.json() as { topic?: Topic; error?: string }
-
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      if (!json.topic) return { data: null, error: 'No topic in response' }
-      return { data: json.topic, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  /** Returns the authenticated publisher's own items (any status). */
-  async getMyItems(token: string): Promise<Result<Item[]>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/me/items`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const json = await res.json() as { items?: Item[]; error?: string }
-
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      if (json.items == null) return { data: null, error: 'No items in response' }
-      return { data: json.items, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }

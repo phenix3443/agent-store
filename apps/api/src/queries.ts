@@ -1,8 +1,8 @@
-import type { Item, Publisher } from '@as/types'
+import type { Item } from '@as/types'
 import { and, arrayContains, desc, eq, ilike, or, type SQL } from 'drizzle-orm'
 import { getDb, type DbEnv } from './db/client'
 import { items, publishers } from './db/schema'
-import { mapItem, mapPublisher } from './db-types'
+import { mapItem } from './db-types'
 import { recommendedScoreSql } from './scoring'
 
 export interface GetItemsOptions {
@@ -76,46 +76,5 @@ export async function getItemBySlug(
     return { data: mapItem({ ...row.items, publisher: row.publishers }), error: null }
   } catch (e) {
     return { data: null, error: (e as Error).message ?? 'Query failed' }
-  }
-}
-
-export async function getPublisherBySlug(
-  env: DbEnv | undefined,
-  slug: string
-): Promise<{ data: Publisher | null; error: string | null }> {
-  try {
-    const db = getDb(env)
-    const rows = await db.select().from(publishers).where(eq(publishers.slug, slug)).limit(1)
-    const row = rows[0]
-    if (!row) return { data: null, error: null }
-    return { data: mapPublisher(row), error: null }
-  } catch (e) {
-    return { data: null, error: (e as Error).message ?? 'Query failed' }
-  }
-}
-
-export async function getPublisherItems(
-  env: DbEnv | undefined,
-  publisherSlug: string
-): Promise<{ data: Item[]; error: string | null }> {
-  try {
-    const db = getDb(env)
-    const pub = await db
-      .select({ id: publishers.id })
-      .from(publishers)
-      .where(eq(publishers.slug, publisherSlug))
-      .limit(1)
-    if (!pub[0]) return { data: [], error: null }
-
-    const rows = await db
-      .select()
-      .from(items)
-      .innerJoin(publishers, eq(items.publisherId, publishers.id))
-      .where(and(eq(items.publisherId, pub[0].id), eq(items.status, 'published')))
-      .orderBy(desc(items.downloads))
-
-    return { data: rows.map((r) => mapItem({ ...r.items, publisher: r.publishers })), error: null }
-  } catch (e) {
-    return { data: [], error: (e as Error).message ?? 'Query failed' }
   }
 }

@@ -50,7 +50,7 @@ export interface BaseItem {
   reviewCount?: number
   status: 'published' | 'pending' | 'rejected'
   installHook: InstallHook
-  /** Automated review verdict, when the registry has reviewed this package. */
+  /** Automated review verdict. The API stopped sending it in #101; kept until the desktop client's review tab goes. */
   review?: PackageReview
   createdAt: string
   updatedAt: string
