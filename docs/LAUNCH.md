@@ -1,5 +1,7 @@
 # 发布与增长清单（Go-to-Market）
 
+> [!warning] 2026-11-12（#101）起不再维护自己的 registry，网页端的发布、主题和 LLM 审查都已去掉。本文讲 registry、PR 发布、安全审查的段落已过时，重写前不要直接使用。
+
 面向 Claude Code / Codex 用户的独立开发者发布计划。SEO 侧已在代码里落地（每个包页 `generateMetadata`、`sitemap.xml`、`robots.txt`、OG 标签）；这份文档是叙事 + 渠道 + 节奏。
 
 ## 定位 / 钩子
