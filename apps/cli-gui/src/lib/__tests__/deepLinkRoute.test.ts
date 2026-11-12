@@ -2,16 +2,16 @@ import { test, expect } from 'bun:test'
 import { routeDeepLink } from '../deepLinkRoute'
 
 test('routes an install link to its slug', () => {
-  expect(routeDeepLink('agent-store://install?slug=filesystem')).toEqual({ kind: 'install', slug: 'filesystem' })
+  expect(routeDeepLink('agent-store://install?slug=filesystem')).toEqual({ kind: 'install', ref: 'filesystem', slug: 'filesystem' })
 })
 
 test('accepts the dev build scheme and a trailing slash', () => {
-  expect(routeDeepLink('agent-store-dev://install/?slug=web-search')).toEqual({ kind: 'install', slug: 'web-search' })
+  expect(routeDeepLink('agent-store-dev://install/?slug=web-search')).toEqual({ kind: 'install', ref: 'web-search', slug: 'web-search' })
 })
 
 test('keeps a known category for cross-checking', () => {
   expect(routeDeepLink('agent-store://install?slug=filesystem&category=mcp')).toEqual({
-    kind: 'install', slug: 'filesystem', category: 'mcp',
+    kind: 'install', ref: 'filesystem', slug: 'filesystem', category: 'mcp',
   })
 })
 
@@ -19,7 +19,22 @@ test('drops every parameter other than slug and category', () => {
   const route = routeDeepLink(
     'agent-store://install?slug=filesystem&url=https%3A%2F%2Fevil.example%2Fx.sh&command=rm+-rf&apiKey=sk-1&config=e30%3D&token=t'
   )
-  expect(route).toEqual({ kind: 'install', slug: 'filesystem' })
+  expect(route).toEqual({ kind: 'install', ref: 'filesystem', slug: 'filesystem' })
+})
+
+test('a web store link installs by its catalog id; the slug is kept only for display', () => {
+  expect(routeDeepLink('agent-store://install?slug=skills-find-skills&category=skill&id=github%3Avercel-labs%2Fskills%2Ffind-skills')).toEqual({
+    kind: 'install', ref: 'github:vercel-labs/skills/find-skills', slug: 'skills-find-skills', category: 'skill',
+  })
+  expect(routeDeepLink('agent-store://install?id=mcp-registry%3Aio.github.upstash%2Fcontext7')).toEqual({
+    kind: 'install', ref: 'mcp-registry:io.github.upstash/context7',
+  })
+})
+
+test('an id that is not a catalog id is refused, even next to a good slug', () => {
+  for (const id of ['evil:x', 'github:a b', 'builtin:', `github:${'a'.repeat(301)}`, 'github:x%0Ay']) {
+    expect(routeDeepLink(`agent-store://install?slug=ok&id=${encodeURIComponent(id)}`)).toEqual({ kind: 'invalid', reason: 'slug' })
+  }
 })
 
 test('routes the sign-in callback separately from install', () => {

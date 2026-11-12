@@ -121,3 +121,22 @@ test('a same-name entry in the tool is explained, with the engine text as detail
   expect(lead).not.toContain('--replace')
   expect(alert.querySelector('details pre')?.textContent).toBe(raw)
 })
+
+test('a server Codex cannot run keeps Codex off with the reason; secret fields are masked', async () => {
+  const sseInfo = {
+    ...info,
+    configSchema: { type: 'object', properties: { api_key: { type: 'string', 'x-secret': true, 'x-bearer': true, 'x-env': 'X_API_KEY' } } },
+    currentConfig: { api_key: 'k' },
+  }
+  renderPanel({
+    info: () => sseInfo,
+    getTargetStatus: () => [
+      { target: 'claude', compatible: true, enabled: true },
+      { target: 'codex', compatible: true, enabled: false, blocker: { reason: 'unsupported', message: "x can't be enabled for Codex: Codex does not support SSE MCP servers" } },
+    ],
+  })
+  const codex = await screen.findByLabelText('Codex')
+  expect(codex).toBeDisabled()
+  expect(codex.getAttribute('title')).toBe('Codex 不支持 SSE 传输的 MCP 服务器，只能对 Claude Code 启用。')
+  expect((screen.getByLabelText(/api_key/) as HTMLInputElement).type).toBe('password')
+})

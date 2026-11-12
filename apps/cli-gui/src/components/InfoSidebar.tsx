@@ -2,15 +2,19 @@ import { ExternalLink } from 'lucide-react'
 import type { SelectedDetail } from '../lib/useSelectedDetail'
 import { openExternal } from '../lib/openExternal'
 import { useT, type TFn } from '../i18n'
-
-const STORE_BASE = 'https://agent-store-test.panghuli.tech'
+import { formatVersion, storePageUrl } from '../lib/catalog'
 
 /** Real, openable links for a resource — only ones we actually have a URL for. */
 function resourceLinks(detail: SelectedDetail, t: TFn): { label: string; url: string }[] {
-  const links = [{ label: t('info.storePage'), url: `${STORE_BASE}/store/${detail.category}/${detail.slug}` }]
-  if (detail.category === 'skill' && 'contentUrl' in detail && detail.contentUrl) {
+  const links: { label: string; url: string }[] = []
+  // Only catalog entries have a store page; installs from before /api/resources have no id.
+  if (detail.resourceId) links.push({ label: t('info.storePage'), url: storePageUrl(detail.category, detail.resourceId) })
+  const r = detail.resource
+  if (r?.kind === 'skill') links.push({ label: t('catalog.sourceRepo'), url: r.repo.url })
+  else if (detail.category === 'skill' && 'contentUrl' in detail && detail.contentUrl) {
     links.push({ label: t('info.source'), url: detail.contentUrl })
   }
+  if (r?.homepageUrl) links.push({ label: t('catalog.homepage'), url: r.homepageUrl })
   return links
 }
 
@@ -48,14 +52,15 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
   const t = useT()
   const createdAt = 'createdAt' in detail ? detail.createdAt : undefined
   const categories = [t(`categories.${detail.category}`), ...detail.tags.slice(0, 3)]
+  const links = resourceLinks(detail, t)
 
   return (
     <aside className="flex w-[248px] shrink-0 flex-col gap-6 overflow-y-auto border-l border-store-border bg-store-sidebar p-4">
       <div>
         <SectionHeading>{t('info.installInfo')}</SectionHeading>
         <dl>
-          <Row label={t('info.id')} value={detail.slug} />
-          <Row label={t('info.version')} value={`v${detail.version}`} />
+          <Row label={t('info.id')} value={detail.resourceId ?? detail.slug} />
+          <Row label={t('info.version')} value={formatVersion(detail.version)} />
           <Row label={t('info.updatedAt')} value={formatDate(detail.updatedAt)} />
         </dl>
       </div>
@@ -77,10 +82,10 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
         </div>
       </div>
 
-      <div>
+      {links.length > 0 && <div>
         <SectionHeading>{t('info.resources')}</SectionHeading>
         <div className="flex flex-col gap-2.5">
-          {resourceLinks(detail, t).map(({ label, url }) => (
+          {links.map(({ label, url }) => (
             <button
               key={label}
               type="button"
@@ -92,7 +97,7 @@ export function InfoSidebar({ detail }: { detail: SelectedDetail }) {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
     </aside>
   )
 }

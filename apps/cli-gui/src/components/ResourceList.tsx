@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { Item, InstalledItem, InstallOutcome, ItemDetail, UpdateAvailable } from '@as/types'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CatalogResource, CatalogSearchResult, InstalledItem, InstallOutcome, ItemDetail, UpdateAvailable } from '@as/types'
 import { Search, Filter, Check } from 'lucide-react'
 import { callRpc, errorText, RpcError } from '../lib/rpc'
 import { canForce, needsSetup } from '../lib/installPolicy'
@@ -12,9 +12,13 @@ import { CategoryIcon } from './CategoryIcon'
 import { TIER_META } from '../lib/detailContent'
 import {
   matchesCategoryFilter, matchesText, enrichInstalled, filterInstalledByListFilter,
-  filterRecommendedByListFilter, showInstalledSection, showRecommendedSection,
+  showInstalledSection, showRecommendedSection,
   type EnrichedInstalledItem,
 } from '../lib/resources'
+import { formatInstalls, installedEntryFor, pinLocalFirst, sortForFilter } from '../lib/catalog'
+
+const PAGE = 50
+const SEARCH_DEBOUNCE_MS = 250
 
 const DISCOVERY_TOKENS: Exclude<ListFilter, 'all'>[] = ['featured', 'popular', 'recent', 'recommended']
 const STATUS_TOKENS: Exclude<ListFilter, 'all'>[] = ['installed', 'updates', 'enabled', 'disabled']
@@ -34,7 +38,12 @@ export function ResourceList() {
   const { appendLine } = useTerminalLog()
   const t = useT()
   const [installed, setInstalled] = useState<EnrichedInstalledItem[]>([])
-  const [catalog, setCatalog] = useState<Item[]>([])
+  const [catalog, setCatalog] = useState<CatalogResource[]>([])
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
+  const [offline, setOffline] = useState(false)
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const catalogSeq = useRef(0)
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
   const [textQuery, setTextQuery] = useState('')
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false)
@@ -56,9 +65,38 @@ export function ResourceList() {
     setInstalled(result.map((item, i) => enrichInstalled(item, details[i])))
   }
 
-  async function refreshCatalog() {
-    setCatalog(await callRpc<Item[]>('search', ['']))
+  const kind = categoryFilter === 'all' ? undefined : categoryFilter
+  const sort = sortForFilter(listFilter)
+
+  // Search, kind and sort go to /api/resources; only the installed rows are filtered here.
+  async function loadCatalog(offset = 0) {
+    const mine = ++catalogSeq.current
+    const result = await callRpc<CatalogSearchResult>('search', [
+      searchQuery,
+      { ...(kind ? { category: kind } : {}), sort, limit: PAGE, ...(offset ? { offset } : {}) },
+    ])
+    if (catalogSeq.current !== mine) return
+    setCatalog((prev) => (offset ? [...prev, ...result.resources] : result.resources))
+    setNextOffset(result.nextOffset)
+    setOffline(result.offline)
+    setCatalogLoaded(true)
   }
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(textQuery.trim()), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [textQuery])
+
+  useEffect(() => {
+    if (navView !== 'browse' || !showRecommendedSection(listFilter)) return
+    loadCatalog().catch(() => {
+      setCatalog([])
+      setNextOffset(null)
+      setOffline(true)
+      setCatalogLoaded(true)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, kind, sort, navView, listFilter])
 
   async function refreshUpdates() {
     setUpdates(await callRpc<UpdateAvailable[]>('checkUpdates'))
@@ -66,12 +104,10 @@ export function ResourceList() {
 
   useEffect(() => {
     refreshInstalled()
-    refreshCatalog()
     refreshUpdates()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installedVersion])
 
-  const installedSlugs = useMemo(() => new Set(installed.map((i) => i.slug)), [installed])
   const updatableSlugs = useMemo(() => new Set(updates.map((u) => u.slug)), [updates])
 
   const rootInstalled = useMemo(() => installed.filter((i) => !i.parentSlug), [installed])
@@ -99,20 +135,17 @@ export function ResourceList() {
     [rootInstalled, categoryFilter, textQuery, listFilter, agentApp, updatableSlugs]
   )
 
-  const recommendedBase = useMemo(
-    () =>
-      catalog.filter(
-        (item) =>
-          (!installedSlugs.has(item.slug) || item.category === 'provider') &&
-          matchesCategoryFilter(item.category, categoryFilter) &&
-          matchesText(item.name, item.description, textQuery)
-      ),
-    [catalog, installedSlugs, categoryFilter, textQuery]
-  )
-
+  // Installed resources show in 已配置; providers stay here because each install is one more config.
   const visibleRecommended = useMemo(
-    () => filterRecommendedByListFilter(recommendedBase, listFilter),
-    [recommendedBase, listFilter]
+    () =>
+      pinLocalFirst(
+        catalog.filter(
+          (r) =>
+            (r.kind === 'provider' || !installedEntryFor(r, installed)) &&
+            (listFilter !== 'featured' || r.verified)
+        )
+      ),
+    [catalog, installed, listFilter]
   )
 
   function handleSearchInput(value: string) {
@@ -161,12 +194,13 @@ export function ResourceList() {
     bumpInstalledVersion()
   }
 
-  async function install(item: Item) {
-    appendLine(`$ aas install ${item.slug}`)
+  async function install(r: CatalogResource) {
+    appendLine(`$ aas install ${r.id}`)
     try {
-      const result = await callRpc<InstallOutcome>('installAndEnable', [item.slug])
-      appendLine(`✓ ${t('common.installed')} ${item.slug} ${result.version}`, 'green')
-      if (needsSetup(result)) openConfigEditor(item.slug)
+      const result = await callRpc<InstallOutcome>('installAndEnable', [r.id])
+      appendLine(`✓ ${t('common.installed')} ${result.slug} ${result.version}`, 'green')
+      if (needsSetup(result)) openConfigEditor(result.slug)
+      else if (selectedSlug === r.id) setSelectedSlug(result.slug)
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
     }
@@ -185,17 +219,18 @@ export function ResourceList() {
     bumpInstalledVersion()
   }
 
-  async function configureProvider(item: Item) {
-    appendLine(`$ aas configure ${item.slug}`)
+  async function configureProvider(r: CatalogResource) {
+    const entry = installedEntryFor(r, installed)
+    appendLine(`$ aas configure ${entry?.slug ?? r.id}`)
     try {
-      if (installedSlugs.has(item.slug)) {
-        const result = await callRpc<{ newSlug: string }>('duplicateProvider', [item.slug])
+      if (entry) {
+        const result = await callRpc<{ newSlug: string }>('duplicateProvider', [entry.slug])
         appendLine(`✓ ${t('resList.childAddedPrefix')} ${result.newSlug}`, 'green')
         openConfigEditor(result.newSlug)
       } else {
-        await callRpc<InstallOutcome>('installAndEnable', [item.slug])
-        appendLine(`✓ ${t('common.installed')} ${item.slug}`, 'green')
-        openConfigEditor(item.slug)
+        const result = await callRpc<InstallOutcome>('installAndEnable', [r.id])
+        appendLine(`✓ ${t('common.installed')} ${result.slug}`, 'green')
+        openConfigEditor(result.slug)
       }
     } catch (err) {
       appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
@@ -382,50 +417,64 @@ export function ResourceList() {
           <p className="mb-2 text-xs font-medium text-store-text-2">
             {t('resList.recommended')} <span className="rounded-full bg-store-panel-2 px-1.5">{visibleRecommended.length}</span>
           </p>
+          {offline && <p role="status" className="mb-2 text-[11px] text-store-amber">{t('catalog.offline')}</p>}
           <div className="flex flex-col gap-1">
-            {visibleRecommended.map((item) => (
+            {visibleRecommended.map((r) => (
               <div
-                key={item.slug}
-                onClick={() => selectResource(item.slug)}
+                key={r.id}
+                onClick={() => selectResource(r.id)}
                 className={`cursor-pointer rounded-lg border px-3 py-2 ${
-                  selectedSlug === item.slug ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
+                  selectedSlug === r.id ? 'border-store-accent bg-store-accent-soft' : 'border-store-border bg-store-panel'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
                     <p className="flex items-center gap-1 text-sm text-store-text">
-                      <span className="truncate">{item.name}</span>
-                      {item.publisher.tier !== 'community' && (
+                      <span className="truncate">{r.name}</span>
+                      {r.verified && (
                         <svg
                           width="11"
                           height="11"
                           viewBox="0 0 16 16"
                           fill="none"
-                          className={`shrink-0 ${TIER_META[item.publisher.tier]?.textClass ?? ''}`}
+                          aria-label={t('tier.verified')}
+                          className={`shrink-0 ${TIER_META.verified.textClass}`}
                         >
                           <circle cx="8" cy="8" r="6.4" stroke="currentColor" strokeWidth="1.3" />
                           <path d="M6 8l1.5 1.5L11 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </p>
-                    <p className="text-xs text-store-text-3">
-                      ★ {item.rating} · ↓ {item.downloads}
+                    <p className="truncate text-xs text-store-text-3">
+                      {t(`catalog.source.${r.origin.site}`)} · ↓ {formatInstalls(r.installs)}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (item.category === 'provider') configureProvider(item)
-                      else install(item)
+                      if (r.kind === 'provider') configureProvider(r)
+                      else install(r)
                     }}
-                    className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                    className="shrink-0 rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
                   >
-                    {item.category === 'provider' ? t('resList.configure') : t('common.install')}
+                    {r.kind === 'provider' ? t('resList.configure') : t('common.install')}
                   </button>
                 </div>
               </div>
             ))}
+            {catalogLoaded && visibleRecommended.length === 0 && (
+              <p className="px-1 py-2 text-xs text-store-text-3">{t('catalog.empty')}</p>
+            )}
+            {nextOffset !== null && (
+              <button
+                type="button"
+                onClick={() => void loadCatalog(nextOffset).catch(() => undefined)}
+                className="rounded-lg border border-store-border px-3 py-1.5 text-xs font-medium text-store-text-2 hover:bg-store-panel hover:text-store-text"
+              >
+                {t('catalog.loadMore')}
+              </button>
+            )}
           </div>
         </div>
       )}

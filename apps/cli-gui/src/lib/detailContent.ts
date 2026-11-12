@@ -1,4 +1,5 @@
 import type { SelectedDetail } from './useSelectedDetail'
+import { formatVersion } from './catalog'
 import type { TFn } from '../i18n'
 
 export type Category = 'provider' | 'skill' | 'mcp'
@@ -33,45 +34,38 @@ function formatStep(step: { type: string; command?: string; dest?: string }, t: 
   return `file · ${step.dest}`
 }
 
+function requiredKeys(detail: SelectedDetail): string[] {
+  const schema = ('configSchema' in detail ? detail.configSchema : undefined) as { required?: string[] } | undefined
+  return schema?.required ?? []
+}
+
 function defaultSteps(detail: SelectedDetail, t: TFn): string[] {
   if (detail.category === 'skill') {
-    return [`file · ${t('readme.skillDownloadTo')} ~/.agents/skills/${detail.slug}`, `config · ${t('readme.skillRegister')}`]
+    return [`file · ${t('catalog.skillFetch')} ~/.agent-store/skills/${detail.slug}`, `link · ${t('catalog.skillLink')}`]
   }
   if (detail.category === 'mcp') {
     const transport = 'transport' in detail && detail.transport ? detail.transport : 'stdio'
-    return transport === 'stdio'
-      ? [`script · ${t('readme.mcpBuild')}`, `config · ${t('readme.writeMcp')} mcpServers.${detail.slug}（stdio）`]
-      : [`config · ${t('readme.writeMcp')} mcpServers.${detail.slug}（${transport} ${t('readme.remoteEndpoint')}）`]
-  }
-  return [
-    `config · ${t('readme.writeEndpointPreset')}（baseUrl / apiKey / model）`,
-    `script · ${t('readme.syncToCli')}`,
-  ]
-}
-
-export function typeFacts(detail: SelectedDetail, t: TFn): string[] {
-  if (detail.category === 'provider') {
-    const models = 'supportedModels' in detail ? detail.supportedModels : undefined
-    if (models && models.length > 0) return [`${t('readme.factModels')}${models.join('、')}`]
-  }
-  if (detail.category === 'mcp') {
-    const transport = 'transport' in detail ? detail.transport : undefined
-    if (transport) {
-      const serverCommand = 'serverCommand' in detail ? detail.serverCommand : undefined
-      const url = 'url' in detail ? detail.url : undefined
+    const needs = requiredKeys(detail)
+    const needsLine = needs.length ? [`config · ${t('catalog.mcpNeeds')} ${needs.join(', ')}`] : []
+    if (transport === 'stdio') {
+      const command = 'serverCommand' in detail ? detail.serverCommand : undefined
       return [
-        `${t('readme.factTransport')}${transport}`,
-        transport === 'stdio'
-          ? `${t('readme.factStartCommand')}${serverCommand ?? '—'}`
-          : `${t('readme.factServiceUrl')}${url ?? '—'}`,
+        ...(command ? [`run · ${t('catalog.mcpRun')} ${command}`] : []),
+        ...needsLine,
+        `config · ${t('readme.writeMcp')} mcpServers.${detail.slug}（stdio）`,
       ]
     }
+    const url = 'url' in detail ? detail.url : undefined
+    return [
+      ...(url ? [`connect · ${t('catalog.mcpConnect')} ${url}`] : []),
+      ...needsLine,
+      `config · ${t('readme.writeMcp')} mcpServers.${detail.slug}（${transport} ${t('readme.remoteEndpoint')}）`,
+    ]
   }
-  if (detail.category === 'skill') {
-    const contentUrl = 'contentUrl' in detail ? detail.contentUrl : undefined
-    if (contentUrl) return [`${t('readme.factDownloadUrl')}${contentUrl}`]
-  }
-  return []
+  return [
+    `config · ${t('catalog.providerPreset')} ~/.agent-store/providers/${detail.slug}/config.json`,
+    `config · ${t('readme.syncToCli')}`,
+  ]
 }
 
 /** What installing this package runs and writes, one line per step. */
@@ -81,8 +75,13 @@ export function installStepsOf(detail: SelectedDetail, t: TFn): string[] {
     : defaultSteps(detail, t)
 }
 
-export function installCmdOf(slug: string): string {
-  return `aas install ${slug}`
+/** `aas install <catalog id>` when the item has one, else its slug. */
+export function installCmdOf(ref: string): string {
+  return `aas install ${ref}`
+}
+
+export function installRefOf(detail: Pick<SelectedDetail, 'slug' | 'resourceId'>): string {
+  return detail.resourceId ?? detail.slug
 }
 
 /** Builds the overview tab content in section order:
@@ -95,7 +94,7 @@ export function buildReadme(detail: SelectedDetail, description: string, t: TFn)
     { type: 'h', text: t('readme.overview') },
     { type: 'p', text: description },
     { type: 'h', text: t('readme.install') },
-    { type: 'code', text: installCmdOf(detail.slug) },
+    { type: 'code', text: installCmdOf(installRefOf(detail)) },
     { type: 'h', text: t('readme.steps') },
     ...steps.map((s) => ({ type: 'li' as const, text: s })),
     { type: 'h', text: t('readme.useCases') },
@@ -103,7 +102,7 @@ export function buildReadme(detail: SelectedDetail, description: string, t: TFn)
     ...typeFacts(detail, t).map((fact) => ({ type: 'li' as const, text: fact })),
     { type: 'li', text: `${t('readme.footType')}${t(`categories.${detail.category}`)}（${detail.category}）` },
     { type: 'li', text: `${t('readme.footMaintainer')}${detail.publisher.name} · ${tierLabel}` },
-    { type: 'li', text: `${t('readme.footVersion')}v${detail.version}` },
+    ...(detail.version ? [{ type: 'li' as const, text: `${t('readme.footVersion')}${formatVersion(detail.version)}` }] : []),
   ]
   return blocks
 }

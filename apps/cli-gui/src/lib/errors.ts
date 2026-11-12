@@ -36,7 +36,21 @@ export function describeError(err: unknown, t: TFn, context: 'action' | 'uninsta
     case 'McpConflictError':
       return known('conflict')
     case 'SkillConflictError':
+      if (reason === 'name-clash') return known('nameClash')
+      if (reason === 'not-ours') return known('skillNotOurs')
       return known(context === 'uninstall' ? 'skillChangedUninstall' : 'skillChanged')
+    case 'SkillDeployRefusedError':
+      return known(reason === 'record-mismatch' ? 'deployMismatch' : 'deployRefused')
+    case 'CodexMcpUnsupportedError':
+      return known(reason === 'sse' ? 'codexSse' : 'codexHeaders')
+    case 'AmbiguousResourceError':
+      return known('ambiguous')
+    case 'ResourceNotFoundError':
+      return known('resourceNotFound')
+    case 'CatalogUnavailableError':
+      return known('catalogDown')
+    case 'McpNotInstallableError':
+      return known('notInstallable')
   }
   return { message: raw }
 }
