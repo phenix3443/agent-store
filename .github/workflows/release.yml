@@ -2,12 +2,17 @@ name: Release desktop app
 
 # Build the Tauri desktop app for macOS (Apple Silicon + Intel), Windows and Linux,
 # then publish the installers to a GitHub Release. Triggered by pushing a
-# version tag (e.g. `v0.1.0`), or manually via the Actions tab.
+# version tag (e.g. `v0.1.0`), or manually with an existing tag to rebuild
+# and re-attach its installers (assets with the same name are replaced).
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build and attach installers to (e.g. v0.2.0)
+        required: true
 
 permissions:
   contents: write
@@ -40,6 +45,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
@@ -84,27 +91,37 @@ jobs:
       - name: Build frontend
         run: pnpm --filter @as/cli-gui build
 
-      - name: Build and publish release
-        uses: tauri-apps/tauri-action@v0
+      # The Tauri bundler treats an empty APPLE_CERTIFICATE as set and fails the
+      # bundle, so only export the signing secrets that are actually set. Once an
+      # Apple Developer account's secrets are added, signing turns on unchanged.
+      - name: Export Apple signing secrets that are set
+        if: runner.os == 'macOS'
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Pin the toolchain so tauri's universal target detection sees both arch targets.
-          RUSTUP_TOOLCHAIN: stable
-          # macOS Developer ID signing + notarization. Left empty until an Apple
-          # Developer account is approved and these secrets are added — while empty,
-          # tauri-action produces the current unsigned build. Once set, it signs and
-          # notarizes automatically with no further changes.
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for k in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!k}" ]; then
+              { echo "$k<<__APPLE_EOF__"; echo "${!k}"; echo "__APPLE_EOF__"; } >> "$GITHUB_ENV"
+            fi
+          done
+
+      - name: Build and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pin the toolchain so tauri's universal target detection sees both arch targets.
+          RUSTUP_TOOLCHAIN: stable
         with:
           projectPath: apps/cli-gui
           args: ${{ matrix.tauri-args }}
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Agent Store CLI ${{ github.ref_name }}'
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: 'Agent Store CLI ${{ inputs.tag || github.ref_name }}'
           releaseBody: |
             桌面客户端安装包。
 
