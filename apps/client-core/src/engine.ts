@@ -19,7 +19,7 @@ import { syncItemToCodex, enableRelayForCodex, disableRelayForCodex } from './co
 import { installSkillContent, readMarker, removeSkillContent } from './skills/store'
 import { hasClaudeSkillLink, linkClaudeSkill, unlinkClaudeSkill } from './skills/claude-link'
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
-import { duplicateProviderConnection } from './config/provider'
+import { duplicateProviderConnection, readProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
 import { getDailySummary, getRecentRequests } from './usage/queries'
 import { readProviderHealth, resetProviderHealth } from './usage/provider-health'
@@ -40,13 +40,27 @@ export class CodexSkillDisableUnsupported extends Error {
   }
 }
 
+export class ProviderNotReadyError extends Error {
+  constructor(message: string, readonly reason: 'no-key' | 'relay-not-running') {
+    super(message)
+    this.name = 'ProviderNotReadyError'
+  }
+}
+
+export interface EngineOptions {
+  /** Starts the local relay daemon; without it, enabling a provider needs a relay that is already running. */
+  startRelay?: () => Promise<void>
+}
+
 export class EngineImpl implements Engine {
   private readonly paths: Required<Paths>
   private readonly client: StoreClient
+  private readonly startRelay?: () => Promise<void>
 
-  constructor(pathOverrides?: Partial<Paths>, storeUrl?: string) {
+  constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
     this.client = new StoreClient(storeUrl, { timeoutMs: 4000 })
+    this.startRelay = options.startRelay
   }
 
   async search(query: string, options?: SearchOptions): Promise<Item[]> {
@@ -201,8 +215,31 @@ export class EngineImpl implements Engine {
     const registry = await readRegistry(this.paths.aasHome)
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
+    if (entry.category === 'provider') await this._assertProviderReady(slug)
     await this._syncToTarget(slug, entry.category, target, 'add', options)
     await this._setEnabled(slug, target, true)
+  }
+
+  /** Enabling points the tool at the relay, so both a key and a running relay must exist before anything is written. */
+  private async _assertProviderReady(slug: string): Promise<void> {
+    const connection = await readProviderConnection(itemDir(this.paths.aasHome, 'provider', slug))
+    if (!connection.apiKey && !(connection.apiKeys?.length)) {
+      throw new ProviderNotReadyError(`${slug} has no API key configured; run: aas config ${slug}`, 'no-key')
+    }
+    if ((await getRelayDaemonStatus(this.paths.aasHome)).running) return
+    let startError = ''
+    if (this.startRelay) {
+      try {
+        await this.startRelay()
+      } catch (e) {
+        startError = ` (${e instanceof Error ? e.message : String(e)})`
+      }
+      if ((await getRelayDaemonStatus(this.paths.aasHome)).running) return
+    }
+    throw new ProviderNotReadyError(
+      `the local relay is not running${this.startRelay ? ' and could not be started' + startError : ''}; start it with: aas relay start`,
+      'relay-not-running'
+    )
   }
 
   async disable(slug: string, target: ToolTarget, options: DisableOptions = {}): Promise<void> {

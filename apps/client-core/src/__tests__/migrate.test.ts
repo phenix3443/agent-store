@@ -6,6 +6,7 @@ import type { InstalledItem } from '@as/types'
 import { runMigrate, type MigratePaths } from '../migrate'
 import { runDoctor } from '../doctor'
 import { MARKER, readMarker } from '../skills/store'
+import { parse as parseToml } from '@iarna/toml'
 
 const BODY = '---\nname: old-name\ndescription: d\n---\nbody\n'
 const NOW = new Date('2026-10-22T00:00:00Z')
@@ -162,9 +163,9 @@ test('package-engine entries get the <publisher>-<name>-<id> names, old ones bac
   expect(Object.keys(claude.mcpServers).sort()).toEqual(['local-pkg-fs', 'mine'])
   const codex = readFileSync(join(p.codexConfigDir, 'config.toml'), 'utf-8')
   expect(codex).not.toContain('local.pkg#')
-  expect(codex).toContain('model_provider = "local-pkg-prov"')
-  expect(codex).toContain('[mcp_servers.local-pkg-fs]')
-  expect(codex).toContain('[mcp_servers.mine]')
+  const codexConfig = parseToml(codex) as { model_provider: string; mcp_servers: Record<string, unknown> }
+  expect(codexConfig.model_provider).toBe('local-pkg-prov')
+  expect(Object.keys(codexConfig.mcp_servers).sort()).toEqual(['local-pkg-fs', 'mine'])
 
   const backup = backupOf()
   for (const rel of ['packages/claude/skills/local.pkg#sk/SKILL.md', 'packages/codex/skills/local.pkg#sk/SKILL.md', 'packages/claude/.claude.json', 'packages/codex/config.toml']) {

@@ -1,7 +1,8 @@
-import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, mkdir, writeFile } from 'fs/promises'
+import { test, expect, beforeEach, afterEach, describe } from 'bun:test'
+import { mkdtemp, rm, mkdir, readFile, stat, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { startRelayServer } from '../server'
+import { RELAY_TOKEN_HEADER, relayTokenPath } from '../token'
 import { writeRegistry } from '../../registry/index'
 import { itemDir } from '../../paths'
 import { recordProviderHealthBatch } from '../../usage/provider-health'
@@ -28,6 +29,17 @@ afterEach(async () => {
   await rm(aasHome, { recursive: true, force: true })
 })
 
+// Requests as Claude Code / Codex send them once the takeover wrote the relay token into their config.
+async function relayFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${await readToken()}`)
+  return fetch(url, { ...init, headers })
+}
+
+async function readToken(): Promise<string> {
+  return (await readFile(relayTokenPath(aasHome), 'utf-8')).trim()
+}
+
 async function installProvider(slug: string, enabledFor: Record<string, boolean>, config: Record<string, unknown>) {
   const entry: InstalledItem = {
     slug, category: 'provider', version: '1.0.0',
@@ -52,7 +64,7 @@ test('forwards to the active claude provider', async () => {
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, {
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, {
     method: 'POST',
     body: JSON.stringify({ model: 'claude-3-5-sonnet' }),
   })
@@ -68,7 +80,7 @@ test('returns 503 when no provider is enabled for the target', async () => {
   const server = startRelayServer({ aasHome, port: 0 })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, {
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, {
     method: 'POST',
     body: JSON.stringify({ model: 'claude-3-5-sonnet' }),
   })
@@ -88,12 +100,12 @@ test('switching which provider is enabled changes routing on the next request, n
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: '{}' })
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: '{}' })
 
   // Switch the active provider without restarting the relay.
   await installProvider('provider-b', { claude: true }, { apiKey: 'key-b', baseUrl: 'https://b.example.com' })
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: '{}' })
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: '{}' })
 
   expect(capturedUrls).toEqual(['https://a.example.com/v1/messages', 'https://b.example.com/v1/messages'])
 })
@@ -110,7 +122,7 @@ test('routes /responses to the codex target', async () => {
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/responses`, { method: 'POST', body: '{}' })
+  await relayFetch(`http://127.0.0.1:${server.port}/responses`, { method: 'POST', body: '{}' })
   expect(capturedUrl).toBe('https://upstream.example.com/responses')
 })
 
@@ -128,7 +140,7 @@ test('returns 403 and does not forward when the requested model is not in the wh
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/responses`, {
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/responses`, {
     method: 'POST',
     body: JSON.stringify({ model: 'gpt-4o' }),
   })
@@ -151,7 +163,7 @@ test('does not record usage when every candidate is whitelist-rejected (403, no 
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/responses`, {
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/responses`, {
     method: 'POST',
     body: JSON.stringify({ model: 'gpt-4o' }),
   })
@@ -176,7 +188,7 @@ test('forwards to the endpoint override path instead of the route default when c
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, {
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, {
     method: 'POST',
     body: JSON.stringify({ model: 'claude-3-5-sonnet' }),
   })
@@ -213,7 +225,7 @@ test('with two enabled providers, tries the higher-priority (lower level) one fi
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual(['https://high.example.com/v1/messages'])
 })
@@ -237,7 +249,7 @@ test('falls back to the next-priority provider when the first returns a 5xx, and
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual(['https://flaky.example.com/v1/messages', 'https://reliable.example.com/v1/messages'])
   expect(res.status).toBe(200)
@@ -260,7 +272,7 @@ test('skips a provider that is cooling down and routes to the next healthy one',
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   // The cooling level-1 provider is never dialed; the request goes straight to the healthy one.
   expect(calls).toEqual(['https://healthy.example.com/v1/messages'])
@@ -282,7 +294,7 @@ test('when every provider is cooling, still tries them (half-open) instead of fa
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual(['https://only.example.com/v1/messages'])
   expect(res.status).toBe(200)
@@ -303,7 +315,7 @@ test('does not fall back when the first provider returns a 4xx', async () => {
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual(['https://rejects.example.com/v1/messages'])
   expect(res.status).toBe(400)
@@ -324,7 +336,7 @@ test('falls back to the next provider when the first one whitelist-rejects the m
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/responses`, {
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/responses`, {
     method: 'POST',
     body: JSON.stringify({ model: 'gpt-4o' }),
   })
@@ -352,7 +364,7 @@ test('free plan does not proactively skip a cooling provider (reactive failover)
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   // Free doesn't avoid the cooling provider — it's dialed first and (here) succeeds.
   expect(calls).toEqual(['https://cooling.example.com/v1/messages'])
@@ -375,7 +387,7 @@ test('free plan caps failover at two upstreams; a third is never tried', async (
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual(['https://p1.example.com/v1/messages', 'https://p2.example.com/v1/messages'])
 })
@@ -398,7 +410,7 @@ test('Pro plan fails over across every upstream beyond the free cap', async () =
   const server = startRelayServer({ aasHome, port: 0, fetchImpl })
   stop = server.stop
 
-  const res = await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+  const res = await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
 
   expect(calls).toEqual([
     'https://p1.example.com/v1/messages',
@@ -426,7 +438,7 @@ test('Pro key rotation round-robins across a provider\'s keys', async () => {
   stop = server.stop
 
   for (let i = 0; i < 4; i++) {
-    await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+    await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
   }
 
   expect(keys).toEqual(['Bearer k1', 'Bearer k2', 'Bearer k3', 'Bearer k1'])
@@ -448,8 +460,80 @@ test('free plan uses only the first key (no rotation)', async () => {
   stop = server.stop
 
   for (let i = 0; i < 3; i++) {
-    await fetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
+    await relayFetch(`http://127.0.0.1:${server.port}/v1/messages`, { method: 'POST', body: JSON.stringify({ model: 'claude-3-5-sonnet' }) })
   }
 
   expect(keys).toEqual(['Bearer k1', 'Bearer k1', 'Bearer k1'])
+})
+
+describe('relay access control', () => {
+  let upstreamCalls: Array<{ url: string; headers: Headers }>
+  let port: number
+
+  beforeEach(async () => {
+    await installProvider('test-provider', { claude: true, codex: true }, { apiKey: 'sk-user-secret', baseUrl: 'https://upstream.example.com' })
+    upstreamCalls = []
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      upstreamCalls.push({ url, headers: new Headers(init?.headers) })
+      return new Response('{}', { status: 200 })
+    }) as typeof fetch
+    const server = startRelayServer({ aasHome, port: 0, fetchImpl })
+    stop = server.stop
+    port = server.port
+  })
+
+  const post = (path: string, headers: Record<string, string>, body = '{}') =>
+    fetch(`http://127.0.0.1:${port}${path}`, { method: 'POST', headers, body })
+
+  test('creates a 0600 token file', async () => {
+    expect((await stat(relayTokenPath(aasHome))).mode & 0o777).toBe(0o600)
+    expect((await readToken()).length).toBeGreaterThanOrEqual(32)
+  })
+
+  test('rejects a request without a token', async () => {
+    const res = await post('/v1/messages', { 'Content-Type': 'application/json' })
+    expect(res.status).toBe(401)
+    expect(upstreamCalls).toHaveLength(0)
+  })
+
+  test('rejects a request with a wrong token', async () => {
+    const attempts: Array<Record<string, string>> = [{ Authorization: 'Bearer wrong' }, { [RELAY_TOKEN_HEADER]: 'wrong' }, { 'x-api-key': await readToken() }]
+    for (const headers of attempts) {
+      expect((await post('/v1/messages', headers)).status).toBe(401)
+    }
+    expect(upstreamCalls).toHaveLength(0)
+  })
+
+  test('rejects any request carrying a browser Origin header, even with the right token', async () => {
+    const token = await readToken()
+    for (const origin of ['https://evil.example', 'null', 'http://127.0.0.1:18780']) {
+      const res = await post('/v1/messages', { Origin: origin, Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain' })
+      expect(res.status).toBe(403)
+    }
+    expect(upstreamCalls).toHaveLength(0)
+  })
+
+  test('forwards a request with the token as Claude Code sends it (Authorization: Bearer)', async () => {
+    const res = await post('/v1/messages', { Authorization: `Bearer ${await readToken()}` })
+    expect(res.status).toBe(200)
+    expect(upstreamCalls.map(c => c.url)).toEqual(['https://upstream.example.com/v1/messages'])
+    expect(upstreamCalls[0]!.headers.get('Authorization')).toBe('Bearer sk-user-secret')
+  })
+
+  test('forwards a request with the token as Codex sends it (relay token header) and never passes the token upstream', async () => {
+    const token = await readToken()
+    const res = await post('/responses', { [RELAY_TOKEN_HEADER]: token })
+    expect(res.status).toBe(200)
+    expect(upstreamCalls).toHaveLength(1)
+    const sent = [...upstreamCalls[0]!.headers.values()].join(' ')
+    expect(sent).not.toContain(token)
+  })
+
+  test('keeps the same token across restarts', async () => {
+    const token = await readToken()
+    stop()
+    const again = startRelayServer({ aasHome, port: 0 })
+    stop = again.stop
+    expect(await readToken()).toBe(token)
+  })
 })

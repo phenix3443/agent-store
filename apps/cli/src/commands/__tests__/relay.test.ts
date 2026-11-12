@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { runRelay } from '../relay'
+import { runRelay, ensureRelayRunning } from '../relay'
 import type { RelayProcessOps } from '../relay'
 
 function makeOps(overrides?: Partial<RelayProcessOps>): RelayProcessOps & { spawned: string[]; killed: number[] } {
@@ -77,4 +77,15 @@ test('relay with no subcommand prints usage', async () => {
   const lines: string[] = []
   await runRelay([], ops, s => lines.push(s))
   expect(lines.join('\n')).toContain('Usage: aas relay')
+})
+
+test('ensureRelayRunning starts the relay only when it is not already running', async () => {
+  const down = makeOps()
+  await ensureRelayRunning(down)
+  expect(down.spawned).toHaveLength(1)
+  expect(await down.readPidFile()).toBe(12345)
+
+  const up = makeOps({ readPidFile: async () => 999, isRunning: () => true })
+  await ensureRelayRunning(up)
+  expect(up.spawned).toHaveLength(0)
 })

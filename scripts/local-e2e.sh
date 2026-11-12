@@ -75,6 +75,11 @@ echo "=== config: apply provider credentials ==="
 printf 'sk-local-e2e\n\n\n' | AS_STORE_URL=http://127.0.0.1:3001 "$AS" config openai-provider-test
 
 echo ""
+echo "=== enable: a provider is enabled only once it has a key (starts the relay) ==="
+"$AS" enable openai-provider-test --for claude
+"$AS" enable openai-provider-test --for codex
+
+echo ""
 echo "=== list: all items installed and enabled ==="
 "$AS" list
 
@@ -101,8 +106,9 @@ grep -q '"apiKey": "sk-local-e2e"' "$AS_HOME/providers/openai-provider-test/conf
   && echo "✓ provider config saved in AS_HOME" \
   || { echo "✗ provider config missing from AS_HOME"; exit 1; }
 
+RELAY_TOKEN=$(cat "$AS_HOME/relay-token")
 grep -q '"ANTHROPIC_BASE_URL": "http://127.0.0.1:18780"' "$CLAUDE_CONFIG_DIR/settings.json" \
-  && grep -q '"ANTHROPIC_AUTH_TOKEN": "aas-relay"' "$CLAUDE_CONFIG_DIR/settings.json" \
+  && grep -q "\"ANTHROPIC_AUTH_TOKEN\": \"$RELAY_TOKEN\"" "$CLAUDE_CONFIG_DIR/settings.json" \
   && echo "✓ claude routed through local relay" \
   || { echo "✗ claude relay settings missing"; exit 1; }
 
@@ -119,12 +125,13 @@ grep -q '"fs-mcp-test"' "$CLAUDE_CONFIG_DIR/.claude.json" \
 
 grep -q 'model_provider = "aas-relay"' "$CODEX_CONFIG_DIR/config.toml" 2>/dev/null \
   && grep -q 'base_url = "http://127.0.0.1:18780"' "$CODEX_CONFIG_DIR/config.toml" 2>/dev/null \
-  && grep -q '"OPENAI_API_KEY": "aas-relay"' "$CODEX_CONFIG_DIR/auth.json" 2>/dev/null \
+  && grep -q "$RELAY_TOKEN" "$CODEX_CONFIG_DIR/config.toml" 2>/dev/null \
   && echo "✓ codex routed through local relay" \
   || echo "⚠ codex config not checked (codex may not be installed)"
 
 echo ""
-echo "=== [cleanup] removing isolated dirs ==="
+echo "=== [cleanup] stopping the relay and removing isolated dirs ==="
+"$AS" relay stop
 rm -rf "$AS_HOME" "$CLAUDE_CONFIG_DIR" "$CODEX_CONFIG_DIR"
 
 echo ""

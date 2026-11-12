@@ -38,6 +38,7 @@ export async function runInstall(
     return EXIT_USAGE
   }
 
+  const skipped: string[] = []
   try {
     const result = await engine.install(slug, options.target || options.force ? options : undefined)
     out(formatStep(`Fetching ${slug}@${result.version}...`, 'done'))
@@ -53,13 +54,21 @@ export async function runInstall(
       }
     } else {
       for (const target of detail.compatibleWith) {
-        await engine.enable(slug, target)
+        try {
+          await engine.enable(slug, target)
+        } catch (err) {
+          // A fresh provider has no key yet: it stays installed but not enabled, and nothing is written to the tool.
+          if (!isMissingKey(err)) throw err
+          skipped.push(`  Not enabled for ${target}: ${errorMessage(err)}; then: aas enable ${slug} --for ${target}`)
+          continue
+        }
         out(formatStep(`Syncing to ${target}...`, 'done'))
       }
     }
 
     out('')
     out(`  Installed ${slug} ${result.version}`)
+    for (const line of skipped) out(line)
 
     if (detail.category === 'provider' || detail.category === 'mcp') {
       out(`  ⚠ Configuration required — run: aas config ${slug}`)
@@ -69,4 +78,8 @@ export async function runInstall(
     out(`  Error: ${errorMessage(err)}`)
     return EXIT_FAILURE
   }
+}
+
+function isMissingKey(err: unknown): boolean {
+  return err instanceof Error && err.name === 'ProviderNotReadyError' && (err as { reason?: string }).reason === 'no-key'
 }

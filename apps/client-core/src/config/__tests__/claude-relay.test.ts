@@ -3,6 +3,7 @@ import { mkdtemp, rm, readFile, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { enableRelayForClaude, disableRelayForClaude } from '../claude'
 import { RELAY_PORT } from '../../relay/server'
+import { relayTokenPath } from '../../relay/token'
 
 let aasHome: string
 let claudeDir: string
@@ -21,12 +22,44 @@ async function readSettings(): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
 }
 
-test('enableRelayForClaude points settings.json at the relay', async () => {
+test('enableRelayForClaude points settings.json at the relay with the relay token', async () => {
   await enableRelayForClaude(aasHome, claudeDir)
   const settings = await readSettings()
   const env = settings['env'] as Record<string, unknown>
   expect(env['ANTHROPIC_BASE_URL']).toBe(`http://127.0.0.1:${RELAY_PORT}`)
-  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('aas-relay')
+  const token = (await readFile(relayTokenPath(aasHome), 'utf-8')).trim()
+  expect(token.length).toBeGreaterThanOrEqual(32)
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe(token)
+})
+
+test('disable keeps env values the user changed while the relay was on', async () => {
+  await writeFile(join(claudeDir, 'settings.json'), JSON.stringify({
+    env: { ANTHROPIC_BASE_URL: 'https://original.example.com', ANTHROPIC_AUTH_TOKEN: 'original-token' },
+  }))
+  await enableRelayForClaude(aasHome, claudeDir)
+  const settings = await readSettings()
+  ;(settings['env'] as Record<string, unknown>)['ANTHROPIC_BASE_URL'] = 'https://switched.example.com'
+  ;(settings['env'] as Record<string, unknown>)['OTHER'] = 'added'
+  await writeFile(join(claudeDir, 'settings.json'), JSON.stringify(settings))
+
+  await disableRelayForClaude(aasHome, claudeDir)
+
+  const env = (await readSettings())['env'] as Record<string, unknown>
+  expect(env['ANTHROPIC_BASE_URL']).toBe('https://switched.example.com')
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('original-token')
+  expect(env['OTHER']).toBe('added')
+})
+
+test('disable after an upgrade removes the old aas-relay sentinel token', async () => {
+  await mkdir(join(aasHome, 'relay-state'), { recursive: true })
+  await writeFile(join(aasHome, 'relay-state', 'claude.json'), JSON.stringify({ originalBaseUrl: null, originalAuthToken: null }))
+  await writeFile(join(claudeDir, 'settings.json'), JSON.stringify({
+    env: { ANTHROPIC_BASE_URL: `http://127.0.0.1:${RELAY_PORT}`, ANTHROPIC_AUTH_TOKEN: 'aas-relay' },
+  }))
+
+  await disableRelayForClaude(aasHome, claudeDir)
+
+  expect((await readSettings())['env']).toBeUndefined()
 })
 
 test('enableRelayForClaude snapshots pre-existing env values on first call only', async () => {

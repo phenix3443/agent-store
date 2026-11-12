@@ -5,6 +5,7 @@ import { forwardWithFailover } from './forward'
 import { recordUsageAsync } from '../usage/record-usage'
 import { recordProviderHealthBatch, getCoolingProviderSlugs, type ProviderAttempt } from '../usage/provider-health'
 import { resolveEntitlements } from '../entitlement/index'
+import { ensureRelayToken, hasRelayToken } from './token'
 
 export const RELAY_PORT = 18780
 
@@ -43,11 +44,21 @@ const ROUTES: Record<string, ToolTarget> = {
 export function startRelayServer(options: RelayServerOptions): { stop: () => void; port: number } {
   const { aasHome, port = RELAY_PORT, fetchImpl } = options
   const keyCursor = new Map<string, number>() // per-provider key-rotation cursor
+  const token = ensureRelayToken(aasHome)
 
   const server = Bun.serve({
     hostname: '127.0.0.1',
     port,
     async fetch(req) {
+      // The relay spends the user's provider keys, so only the tools whose config
+      // carries the token may use it. Claude Code and Codex never send Origin;
+      // browsers send it on every POST, including text/plain ones that skip preflight.
+      if (req.headers.has('origin')) {
+        return Response.json({ error: 'requests from web pages are not accepted' }, { status: 403 })
+      }
+      if (!hasRelayToken(req.headers, token)) {
+        return Response.json({ error: 'missing or wrong relay token; run `aas sync` to refresh the Claude Code / Codex config' }, { status: 401 })
+      }
       const url = new URL(req.url)
       const target = ROUTES[url.pathname]
       if (!target) return new Response('Not found', { status: 404 })

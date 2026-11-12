@@ -68,9 +68,15 @@ beforeEach(async () => {
   codexDir = await mkdtemp('/tmp/as-test-codex-')
   engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
-    'http://localhost:3000'
+    'http://localhost:3000',
+    { startRelay: markRelayRunning }
   )
 })
+
+// Stands in for `aas relay start`: the relay counts as running while relay.pid names a live process.
+async function markRelayRunning(): Promise<void> {
+  await writeFile(join(aasHome, 'relay.pid'), String(process.pid))
+}
 
 afterEach(async () => {
   globalThis.fetch = origFetch
@@ -251,7 +257,7 @@ test('enabling a second provider for the same target does not disable the first'
   await engine.enable('test-provider-2', 'claude')
 
   const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('aas-relay')
+  expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(await relayToken())
   expect(settings.env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:18780')
 
   const list = await engine.list()
@@ -335,7 +341,7 @@ test('enable on a provider item points Claude at the relay instead of writing th
   const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
   const env = settings['env'] as Record<string, unknown>
   expect(env['ANTHROPIC_BASE_URL']).toBe('http://127.0.0.1:18780')
-  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('aas-relay')
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe(await relayToken())
   expect(env['ANTHROPIC_AUTH_TOKEN']).not.toBe('sk-real-secret')
 })
 
@@ -382,7 +388,7 @@ test('disabling one of two enabled providers keeps the relay connected for the s
   const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
   const env = settings['env'] as Record<string, unknown>
   expect(env['ANTHROPIC_BASE_URL']).toBe('http://127.0.0.1:18780')
-  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('aas-relay')
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe(await relayToken())
 
   const list = await engine.list()
   const first = list.find(item => item.slug === 'test-provider')
@@ -413,7 +419,7 @@ test('uninstalling one of two enabled providers keeps the relay connected for th
   const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8')) as Record<string, unknown>
   const env = settings['env'] as Record<string, unknown>
   expect(env['ANTHROPIC_BASE_URL']).toBe('http://127.0.0.1:18780')
-  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe('aas-relay')
+  expect(env['ANTHROPIC_AUTH_TOKEN']).toBe(await relayToken())
 
   const list = await engine.list()
   expect(list.find(item => item.slug === 'test-provider')).toBeUndefined()
@@ -430,9 +436,76 @@ test('enable on a provider item points Codex at the relay instead of writing the
 
   await engine.enable('test-provider', 'codex')
 
-  const auth = JSON.parse(await readFile(join(codexDir, 'auth.json'), 'utf-8')) as Record<string, unknown>
-  expect(auth['OPENAI_API_KEY']).toBe('aas-relay')
-  expect(auth['OPENAI_API_KEY']).not.toBe('sk-real-secret')
+  const configText = await readFile(join(codexDir, 'config.toml'), 'utf-8')
+  expect(configText).toContain('model_provider = "aas-relay"')
+  expect(configText).toContain(await relayToken())
+  expect(configText).not.toContain('sk-real-secret')
+  expect(existsSync(join(codexDir, 'auth.json'))).toBe(false)
+})
+
+async function relayToken(): Promise<string> {
+  return (await readFile(join(aasHome, 'relay-token'), 'utf-8')).trim()
+}
+
+async function snapshotToolConfigs(): Promise<Record<string, string>> {
+  const files: Record<string, string> = {}
+  for (const path of [join(claudeDir, 'settings.json'), join(codexDir, 'config.toml'), join(codexDir, 'auth.json')]) {
+    files[path] = await readFile(path, 'utf-8')
+  }
+  return files
+}
+
+async function seedToolConfigs(): Promise<void> {
+  await writeFile(join(claudeDir, 'settings.json'), '{\n  "env": { "ANTHROPIC_AUTH_TOKEN": "sk-user-own" }\n}\n')
+  await writeFile(join(codexDir, 'config.toml'), '# mine\nmodel_provider = "mine"\n')
+  await writeFile(join(codexDir, 'auth.json'), '{"OPENAI_API_KEY":"sk-user-own"}')
+}
+
+for (const target of ['claude', 'codex'] as const) {
+  test(`enabling a provider without an API key for ${target} fails and leaves every tool config byte-identical`, async () => {
+    mockFetch({ '/api/items/test-provider': { item: providerItem } })
+    await engine.install('test-provider')
+    await seedToolConfigs()
+    const before = await snapshotToolConfigs()
+
+    await expect(engine.enable('test-provider', target)).rejects.toThrow(/no API key.*aas config test-provider/)
+
+    expect(await snapshotToolConfigs()).toEqual(before)
+    expect((await engine.info('test-provider')).enabledFor[target]).toBeFalsy()
+    expect(existsSync(join(aasHome, 'relay.pid'))).toBe(false)
+  })
+
+  test(`enabling a provider for ${target} while the relay is down and cannot be started fails without touching configs`, async () => {
+    const noRelay = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000')
+    mockFetch({ '/api/items/test-provider': { item: providerItem } })
+    await noRelay.install('test-provider')
+    await noRelay.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
+    await seedToolConfigs()
+    const before = await snapshotToolConfigs()
+
+    await expect(noRelay.enable('test-provider', target)).rejects.toThrow(/relay is not running.*aas relay start/)
+
+    expect(await snapshotToolConfigs()).toEqual(before)
+    expect((await noRelay.info('test-provider')).enabledFor[target]).toBeFalsy()
+  })
+}
+
+test('enabling a configured provider starts the relay when it is not running', async () => {
+  let started = 0
+  const withStarter = new EngineImpl(
+    { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
+    'http://localhost:3000',
+    { startRelay: async () => { started++; await markRelayRunning() } }
+  )
+  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  await withStarter.install('test-provider')
+  await withStarter.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
+
+  await withStarter.enable('test-provider', 'claude')
+  await withStarter.enable('test-provider', 'codex')
+
+  expect(started).toBe(1)
+  expect((await withStarter.info('test-provider')).enabledFor).toEqual({ claude: true, codex: true })
 })
 
 const SKILL_MD = '---\nname: test-skill\ndescription: d\n---\n# Test Skill\n'
