@@ -1,6 +1,5 @@
 import type { Database } from 'bun:sqlite'
 import type { Octokit } from '@octokit/rest'
-import pMap from 'p-map'
 import { isRecord } from './http'
 
 // Stars are per repo, and tens of thousands of rows share about 30k repos, so they
@@ -78,9 +77,13 @@ export interface StarsOptions {
   batchSize?: number
   /** Upper bound on queries per run. */
   maxQueries?: number
-  concurrency?: number
+  /** Wall-clock budget per run; due repos left over wait for the next run. */
+  budgetMs?: number
   /** Stop starting batches once GitHub reports fewer points than this. */
   minRemaining?: number
+  /** Secondary-limit waits in a row before giving up for this run. */
+  maxRetries?: number
+  sleep?: (ms: number) => Promise<void>
 }
 
 export interface StarsReport {
@@ -97,16 +100,34 @@ export interface StarsReport {
   /** GraphQL points the run's queries cost, as GitHub reported them. */
   cost: number
   durationMs: number
+  /** Time spent waiting out secondary rate limits. */
+  waitedMs: number
   /** Available rows per kind: how many have a GitHub repo, and how many of those have stars. */
   coverage: Record<string, { rows: number; withRepo: number; withStars: number }>
 }
 
+// Queries go one at a time: GitHub's secondary limit counts server CPU time, and a
+// 100-repo query takes seconds of it. Four in flight hit that limit after 42 queries
+// (catalog-sync run 43256484321). Stars move slowly, so a repo is re-asked after three
+// days; about 31k repos then cost about 100 queries a day.
 const DEFAULTS: Required<StarsOptions> = {
-  refreshAfterMs: 20 * 3600_000,
+  refreshAfterMs: 72 * 3600_000,
   batchSize: 100,
   maxQueries: 450,
-  concurrency: 4,
+  budgetMs: 20 * 60_000,
   minRemaining: 50,
+  maxRetries: 3,
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+}
+
+/** How long a secondary-limit or 429 response asks us to wait, or null for any other error. */
+function retryAfterMs(e: unknown): number | null {
+  if (!isRecord(e) || typeof e['status'] !== 'number') return null
+  const message = String(e['message'] ?? '')
+  if (e['status'] !== 429 && !(e['status'] === 403 && /secondary rate limit/i.test(message))) return null
+  const headers = isRecord(e['response']) && isRecord(e['response']['headers']) ? e['response']['headers'] : {}
+  const seconds = Number(headers['retry-after'])
+  return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 60_000
 }
 
 /** Sets resources.github_repo from each row's own data: an MCP server's repository URL, a skill's repo. */
@@ -181,49 +202,61 @@ export async function refreshStars(
 
   const report: StarsReport = {
     repos: all.length, due: due.length, queried: 0, queries: 0, found: 0, missing: 0, failedBatches: 0, errors: [],
-    rateLimit: null, cost: 0, durationMs: 0, coverage: {},
+    rateLimit: null, cost: 0, durationMs: 0, waitedMs: 0, coverage: {},
   }
   const upsert = db.query(`INSERT INTO github_repos (full_name, stars, checked_at) VALUES (?, ?, ?)
     ON CONFLICT (full_name) DO UPDATE SET stars = excluded.stars, checked_at = excluded.checked_at`)
   const stamp = ctx.now.toISOString()
   let stop: string | null = null
-  await pMap(
-    batches,
-    async (repos) => {
-      if (stop) return
-      if (report.rateLimit && report.rateLimit.remaining < o.minRemaining) {
-        stop = `GitHub GraphQL budget down to ${report.rateLimit.remaining} points; the remaining repos wait for the next run`
-        return
+  let done = 0
+  let retries = 0
+  while (done < batches.length && !stop) {
+    const repos = batches[done]!
+    if (Date.now() - started > o.budgetMs) {
+      stop = `stars time budget of ${o.budgetMs / 60_000} min used; the remaining repos wait for the next run`
+      break
+    }
+    if (report.rateLimit && report.rateLimit.remaining < o.minRemaining) {
+      stop = `GitHub GraphQL budget down to ${report.rateLimit.remaining} points; the remaining repos wait for the next run`
+      break
+    }
+    report.queries++
+    try {
+      const res = await github.request('POST /graphql', { query: starsQuery(repos), request: { signal: AbortSignal.timeout(60_000) } })
+      const batch = parseStarsResponse(repos, res.data)
+      if (batch.rateLimit) {
+        report.rateLimit = batch.rateLimit
+        report.cost += batch.rateLimit.cost
       }
-      report.queries++
-      try {
-        const res = await github.request('POST /graphql', { query: starsQuery(repos), request: { signal: AbortSignal.timeout(60_000) } })
-        const batch = parseStarsResponse(repos, res.data)
-        if (batch.rateLimit) {
-          report.rateLimit = batch.rateLimit
-          report.cost += batch.rateLimit.cost
+      db.transaction(() => {
+        for (const [repo, stars] of batch.stars) {
+          upsert.run(repo, stars, stamp)
+          if (stars === null) report.missing++
+          else report.found++
         }
-        db.transaction(() => {
-          for (const [repo, stars] of batch.stars) {
-            upsert.run(repo, stars, stamp)
-            if (stars === null) report.missing++
-            else report.found++
-          }
-        })()
-        report.queried += repos.length
-        if (report.queries % 50 === 0) ctx.log(`stars: ${report.queries} queries, ${report.queried} repos`)
-      } catch (e) {
-        report.failedBatches++
-        const status = isRecord(e) && typeof e['status'] === 'number' ? e['status'] : null
-        report.errors.push(e instanceof Error ? e.message : String(e))
-        // No token, a bad token or an exhausted budget fails every later batch the same way.
-        if (status === 401 || status === 403 || status === 429) stop = `GitHub GraphQL HTTP ${status}; stopped`
-        else if (/rate limit/i.test(String(isRecord(e) ? e['message'] : e))) stop = 'GitHub GraphQL rate limit; stopped'
+      })()
+      report.queried += repos.length
+      done++
+      retries = 0
+      if (report.queries % 50 === 0) ctx.log(`stars: ${report.queries} queries, ${report.queried} repos`)
+    } catch (e) {
+      const wait = retryAfterMs(e)
+      if (wait !== null && retries < o.maxRetries) {
+        retries++
+        report.waitedMs += wait
+        ctx.log(`stars: rate limited, waiting ${Math.round(wait / 1000)} s`)
+        await o.sleep(wait)
+        continue
       }
-    },
-    { concurrency: o.concurrency },
-  )
-  if (stop) report.errors.push(stop)
+      report.failedBatches++
+      report.errors.push(e instanceof Error ? e.message : String(e))
+      const status = isRecord(e) && typeof e['status'] === 'number' ? e['status'] : null
+      // No token, a bad token or an exhausted budget fails every later batch the same way.
+      if (status === 401 || status === 403 || status === 429) stop = `GitHub GraphQL HTTP ${status}; stopped`
+      else if (/rate limit/i.test(String(isRecord(e) ? e['message'] : e))) stop = 'GitHub GraphQL rate limit; stopped'
+      else done++
+    }
+  }
   if (batches.length * o.batchSize < due.length) {
     report.errors.push(`${due.length - batches.length * o.batchSize} due repos over the ${o.maxQueries}-query cap wait for the next run`)
   }
