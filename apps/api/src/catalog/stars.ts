@@ -101,7 +101,7 @@ export interface StarsReport {
   failedBatches: number
   errors: string[]
   rateLimit: RateLimit | null
-  /** Repos whose stars are not credited because they look bought (see SUSPECT_STARS). */
+  /** MCP repos whose stars are not credited because they look bought (see SUSPECT_STARS). */
   suspect: number
   /** GraphQL points the run's queries cost, as GitHub reported them. */
   cost: number
@@ -126,9 +126,11 @@ const DEFAULTS: Required<StarsOptions> = {
   sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }
 
-// A repo under a year old with more than 100k stars is not credited: organic growth
-// that fast is rare, and io.github.morluto/rea (created 2026-04, 455k stars, 110k
-// forks) topped the MCP tab ahead of browser-use's 121k (owner, 2026-11-12).
+// An MCP server whose repo is under a year old and has more than 100k stars is not
+// credited: io.github.morluto/rea (created 2026-04, 455k stars, 110k forks) topped the
+// MCP tab ahead of browser-use's 121k (owner, 2026-11-12). Skills are exempt: the skill
+// ecosystem is itself under a year old, and the rule hid real ones such as
+// mattpocock/skills and addyosmani/agent-skills (11 of the 12 repos it caught).
 export const SUSPECT_STARS = 100_000
 export const SUSPECT_MAX_AGE_MS = 365 * 24 * 3600_000
 
@@ -192,9 +194,10 @@ const suspectCutoff = (now: Date) => new Date(now.getTime() - SUSPECT_MAX_AGE_MS
  */
 export function applyStars(db: Database, now: Date): void {
   db.query(
-    `UPDATE resources SET stars = e.stars
-       FROM (SELECT full_name, CASE WHEN stars > ? AND created_at > ? THEN NULL ELSE stars END AS stars FROM github_repos) e
-      WHERE e.full_name = resources.github_repo AND resources.stars IS NOT e.stars`,
+    `UPDATE resources SET stars = CASE WHEN e.suspect AND resources.kind = 'mcp' THEN NULL ELSE e.stars END
+       FROM (SELECT full_name, stars, stars > ? AND created_at > ? AS suspect FROM github_repos) e
+      WHERE e.full_name = resources.github_repo
+        AND resources.stars IS NOT (CASE WHEN e.suspect AND resources.kind = 'mcp' THEN NULL ELSE e.stars END)`,
   ).run(SUSPECT_STARS, suspectCutoff(now))
   db.exec(`
     UPDATE resources SET stars = NULL
@@ -298,7 +301,10 @@ export async function refreshStars(
   }
   applyStars(db, ctx.now)
   report.suspect = (
-    db.query('SELECT count(*) AS n FROM github_repos WHERE stars > ? AND created_at > ?').get(SUSPECT_STARS, suspectCutoff(ctx.now)) as { n: number }
+    db.query(
+      `SELECT count(*) AS n FROM github_repos g WHERE g.stars > ? AND g.created_at > ?
+         AND EXISTS (SELECT 1 FROM resources r WHERE r.github_repo = g.full_name AND r.kind = 'mcp')`,
+    ).get(SUSPECT_STARS, suspectCutoff(ctx.now)) as { n: number }
   ).n
   report.coverage = coverage(db)
   report.durationMs = Date.now() - started
