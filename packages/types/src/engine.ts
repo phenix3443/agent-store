@@ -1,6 +1,8 @@
-import type { Item, JsonSchema, UserReview, ItemVersion } from './items'
+import type { JsonSchema, UserReview, ItemVersion } from './items'
 import type { Publisher } from './publisher'
 import type { Entitlements } from './entitlement'
+import type { CatalogResourceDetail, CatalogSearchResult } from './catalog'
+import type { ResourceKind, ResourceSort } from './resources'
 
 /** The canonical union for supported tool targets */
 export type ToolTarget = 'claude' | 'codex'
@@ -8,7 +10,7 @@ export type ToolTarget = 'claude' | 'codex'
 /**
  * Configurable paths — all three must be overridable for test isolation.
  * Default resolution (in Engine implementation, not this package):
- *   aasHome       = process.env.AS_HOME ?? '~/.agents'
+ *   aasHome       = process.env.AS_HOME ?? '~/.agent-store'
  *   claudeConfigDir = process.env.CLAUDE_CONFIG_DIR ?? '~/.claude'
  *   codexConfigDir  = process.env.CODEX_HOME || process.env.CODEX_CONFIG_DIR || '~/.codex'
  */
@@ -25,8 +27,9 @@ export interface Paths {
 }
 
 export interface SearchOptions {
-  category?: 'provider' | 'skill' | 'mcp'
-  compatibleWith?: ToolTarget[]
+  category?: ResourceKind
+  sort?: ResourceSort
+  /** The API caps it at 100. */
   limit?: number
   offset?: number
 }
@@ -155,7 +158,20 @@ export interface ProviderHealth {
   lastErrorAt: string | null
 }
 
-/** A registry entry — shape stored in ~/.agents/registry.json and returned by Engine.list() */
+/**
+ * Where a skill is deployed for one tool: a link to (or, where links fail, a copy
+ * of) its library directory ~/.agent-store/skills/<slug>. Enable and disable only
+ * touch what a record covers.
+ */
+export interface SkillDeployment {
+  /** Absolute path in the tool's skills directory. */
+  path: string
+  mode: 'symlink' | 'copy'
+  /** Content hash of the library directory when it was deployed. */
+  sourceHash: string
+}
+
+/** A registry entry — shape stored in ~/.agent-store/registry.json and returned by Engine.list() */
 export interface InstalledItem {
   slug: string
   category: 'provider' | 'skill' | 'mcp'
@@ -167,6 +183,10 @@ export interface InstalledItem {
   enabledFor: Partial<Record<ToolTarget, boolean>>
   /** Root provider slug this entry was duplicated from. Absent means this entry is a root (not a duplicate). */
   parentSlug?: string
+  /** Catalog id it was installed from; absent for installs from the old /api/items catalog. */
+  resourceId?: string
+  /** Skills: one record per tool the skill is deployed to. */
+  deployments?: Partial<Record<ToolTarget, SkillDeployment>>
 }
 
 /**
@@ -185,6 +205,8 @@ export interface ItemDetail {
   enabledFor: Partial<Record<ToolTarget, boolean>>
   /** Root provider slug this entry was duplicated from. Absent means this entry is a root (not a duplicate). */
   parentSlug?: string
+  resourceId?: string
+  deployments?: Partial<Record<ToolTarget, SkillDeployment>>
   // Store metadata
   name: string
   description: string
@@ -194,7 +216,7 @@ export interface ItemDetail {
   // Category-specific (optional — populated based on category)
   /** provider + mcp: JSON Schema for user configuration fields */
   configSchema?: JsonSchema
-  /** provider + mcp: current values stored in ~/.agents/.../config.json */
+  /** provider + mcp: current values stored in ~/.agent-store/.../config.json */
   currentConfig?: Record<string, unknown>
   /** provider only */
   supportedModels?: string[]
@@ -218,30 +240,35 @@ export interface ItemDetail {
  * The CLI layer calls getConfigSchema() + setConfig() and handles prompting itself.
  */
 export interface InstallOptions {
-  /**
-   * Skills: `codex` installs the content without the Claude symlink; `claude` is
-   * rejected, because Codex reads ~/.agents/skills anyway.
-   * Other kinds, in installAndEnable: enable for this tool only.
-   */
+  /** Install, then enable for this tool only (skills: deploy to this tool only). */
   target?: ToolTarget
-  /** Skills only: replace locally edited content and ignore a Codex name clash. */
+  /**
+   * Skills only: replace locally edited content, ignore a Codex name clash, and
+   * replace whatever sits at a tool's skill path.
+   */
   force?: boolean
 }
 
 export interface EnableOptions {
   /** Take over a same-name MCP entry Agent Store did not write; it is restored on disable/uninstall. */
   replace?: boolean
+  /** Skills: replace whatever sits at the tool's skill path. */
+  force?: boolean
 }
 
 export interface DisableOptions {
-  /** Remove an MCP entry even if it was changed or removed outside Agent Store. */
+  /** Remove an MCP entry, or a skill's tool directory, even if it was changed outside Agent Store. */
   force?: boolean
 }
 
 export type UninstallOptions = DisableOptions
 
-/** Why an item is not enabled for a tool yet; the user can fix all but `incompatible`. */
-export type EnableBlocker = 'incompatible' | 'needs-config' | 'no-key'
+/**
+ * Why an item is not enabled for a tool yet. The user can fix `needs-config` and
+ * `no-key`; `incompatible` and `unsupported` (the tool cannot run this item, e.g.
+ * an SSE server in Codex) they cannot.
+ */
+export type EnableBlocker = 'incompatible' | 'unsupported' | 'needs-config' | 'no-key'
 
 export interface TargetStatus {
   target: ToolTarget
@@ -259,15 +286,21 @@ export interface InstallOutcome extends InstallResult {
 }
 
 export interface Engine {
-  search(query: string, options?: SearchOptions): Promise<Item[]>
-  /** Skills are also enabled here (§5.4); other categories are enabled by the caller. */
-  install(slug: string, options?: InstallOptions): Promise<InstallResult>
+  /** One page of the aggregated catalog (/api/resources); the last cached first page when the API is down. */
+  search(query: string, options?: SearchOptions): Promise<CatalogSearchResult>
+  /** A catalog resource by id (`mcp-registry:…`, `github:…`, `builtin:…`) or by slug or name. */
+  getResource(ref: string, options?: { kind?: ResourceKind }): Promise<CatalogResourceDetail>
+  /**
+   * Installs a catalog resource, by id or by slug. Skills are deployed here too;
+   * other categories are enabled by the caller.
+   */
+  install(ref: string, options?: InstallOptions): Promise<InstallResult>
   /**
    * Install, then enable for every compatible tool (or `options.target`) that is ready.
    * Tools waiting for config or a key are reported in `notEnabled`, not thrown.
    * This is the install that the CLI and the desktop client both use.
    */
-  installAndEnable(slug: string, options?: InstallOptions): Promise<InstallOutcome>
+  installAndEnable(ref: string, options?: InstallOptions): Promise<InstallOutcome>
   /** Per tool: compatible, enabled, and what would stop enabling it now. */
   getTargetStatus(slug: string): Promise<TargetStatus[]>
   uninstall(slug: string, options?: UninstallOptions): Promise<void>

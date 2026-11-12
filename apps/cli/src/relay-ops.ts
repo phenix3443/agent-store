@@ -1,6 +1,6 @@
 import { readFile, writeFile, rm, mkdir } from 'fs/promises'
 import { join, dirname } from 'path'
-import { homedir } from 'os'
+import { resolvePaths } from '@as/client-core'
 import type { RelayProcessOps } from './commands/relay'
 
 // Re-invokes this same CLI (whether running via `bun run src/index.ts` or as a
@@ -15,7 +15,7 @@ function selfInvocation(): string[] {
 }
 
 export function realRelayOps(): RelayProcessOps {
-  const pidFile = join(process.env['AS_HOME'] ?? join(homedir(), '.agents'), 'relay.pid')
+  const pidFile = join(resolvePaths().aasHome, 'relay.pid')
   return {
     spawnDetached: () => {
       const proc = Bun.spawn([...selfInvocation(), '__relay-daemon'], { stdio: ['ignore', 'ignore', 'ignore'] })

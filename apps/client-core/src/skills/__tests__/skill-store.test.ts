@@ -5,7 +5,9 @@ import { existsSync, readdirSync, lstatSync, mkdirSync, mkdtempSync, readFileSyn
 import { tmpdir } from 'os'
 import { join } from 'path'
 import type { SkillItem } from '@as/types'
-import { EngineImpl, CodexSkillDisableUnsupported } from '../../engine'
+import { EngineImpl } from '../../engine'
+import { SkillDeployRefusedError } from '../deploy'
+import { ItemCatalog } from '../../__tests__/helpers/item-catalog'
 import { extractSkillDir, UnsafeArchiveError } from '../tar'
 import { MARKER, readMarker } from '../store'
 
@@ -85,8 +87,10 @@ function serve(it: SkillItem) {
 }
 
 const storeDir = (slug = 'probe-skill') => join(aasHome, 'skills', slug)
-const claudeLink = (slug = 'probe-skill') => join(claudeDir, 'skills', slug)
-const registry = () => JSON.parse(readFileSync(join(aasHome, 'registry.json'), 'utf-8')) as { installed: Array<{ slug: string; enabledFor: Record<string, boolean> }> }
+// Deployed under the frontmatter name, so both tools call it the same.
+const claudeLink = (name = 'probe-codeword') => join(claudeDir, 'skills', name)
+const codexLink = (name = 'probe-codeword') => join(codexDir, 'skills', name)
+const registry = () => JSON.parse(readFileSync(join(aasHome, 'registry.json'), 'utf-8')) as { installed: Array<{ slug: string; enabledFor: Record<string, boolean>; deployments?: Record<string, { path: string; mode: string; sourceHash: string }> }> }
 const entry = (slug = 'probe-skill') => registry().installed.find(e => e.slug === slug)
 
 beforeEach(() => {
@@ -96,7 +100,7 @@ beforeEach(() => {
   codexDir = join(root, 'codex')
   process.env['AS_GITHUB_API_URL'] = 'https://gh.test'
   process.env['AS_CODELOAD_URL'] = 'https://codeload.test'
-  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://store.test')
+  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://store.test', { catalog: new ItemCatalog('http://store.test') })
   fetched = []
   tarball = codeload({
     'skills/probe/SKILL.md': SKILL_MD,
@@ -195,21 +199,25 @@ test('extractSkillDir rejects content over the size limit', async () => {
 
 // ── install ───────────────────────────────────────────────────────────────────
 
-test('install puts the whole directory in the store, writes the marker and links Claude', async () => {
+test('install puts the whole directory in the library, writes the marker and links both tools', async () => {
   serve(item())
   await engine.install('probe-skill')
   expect(readFileSync(join(storeDir(), 'references', 'token.md'), 'utf-8')).toBe('TOKEN_42\n')
   const marker = await readMarker(storeDir())
-  expect(marker?.runtimeNames).toEqual({ claude: 'probe-skill', codex: 'probe-codeword' })
+  expect(marker?.runtimeNames).toEqual({ claude: 'probe-codeword', codex: 'probe-codeword' })
   expect(marker?.source).toEqual({ repo: 'acme/probes', ref: 'main', resolvedSha: SHA, path: 'skills/probe' })
   expect(marker?.contentHash).toMatch(/^[0-9a-f]{64}$/)
-  expect(lstatSync(claudeLink()).isSymbolicLink()).toBe(true)
-  expect(readlinkSync(claudeLink())).toBe(storeDir())
+  for (const link of [claudeLink(), codexLink()]) {
+    expect(lstatSync(link).isSymbolicLink()).toBe(true)
+    expect(readlinkSync(link)).toBe(storeDir())
+  }
   expect(entry()?.enabledFor).toEqual({ codex: true, claude: true })
+  expect(entry()?.deployments).toEqual({
+    claude: { path: claudeLink(), mode: 'symlink', sourceHash: marker!.contentHash },
+    codex: { path: codexLink(), mode: 'symlink', sourceHash: marker!.contentHash },
+  })
   // Frontmatter is kept as the source wrote it.
   expect(readFileSync(join(storeDir(), 'SKILL.md'), 'utf-8')).toBe(SKILL_MD)
-  // Nothing is copied into Codex's deprecated skills dir.
-  expect(existsSync(join(codexDir, 'skills'))).toBe(false)
 })
 
 test('install without source falls back to contentUrl as SKILL.md', async () => {
@@ -219,25 +227,24 @@ test('install without source falls back to contentUrl as SKILL.md', async () => 
   expect((await readMarker(storeDir()))?.source).toBeNull()
 })
 
-test('install --target codex installs content only', async () => {
-  serve(item())
-  await engine.install('probe-skill', { target: 'codex' })
-  expect(existsSync(join(storeDir(), 'SKILL.md'))).toBe(true)
-  expect(existsSync(claudeLink())).toBe(false)
-  expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
-})
+for (const [target, other] of [['codex', 'claude'], ['claude', 'codex']] as const) {
+  test(`install --target ${target} deploys to ${target} only`, async () => {
+    serve(item())
+    await engine.install('probe-skill', { target })
+    expect(existsSync(join(storeDir(), 'SKILL.md'))).toBe(true)
+    expect(existsSync(target === 'claude' ? claudeLink() : codexLink())).toBe(true)
+    expect(existsSync(other === 'claude' ? claudeLink() : codexLink())).toBe(false)
+    expect(entry()?.enabledFor).toEqual({ [target]: true })
+  })
+}
 
-test('install --target claude is rejected and writes nothing', async () => {
-  serve(item())
-  await expect(engine.install('probe-skill', { target: 'claude' })).rejects.toThrow('--target codex')
-  expect(existsSync(storeDir())).toBe(false)
-  expect(existsSync(join(aasHome, 'registry.json'))).toBe(false)
-})
-
-test('install of a skill not declared Codex-compatible is rejected', async () => {
+test('a skill declared for one tool is deployed to that tool only', async () => {
   serve(item({ compatibleWith: ['claude'] }))
-  await expect(engine.install('probe-skill')).rejects.toThrow('shared with Codex')
-  expect(existsSync(storeDir())).toBe(false)
+  await engine.install('probe-skill')
+  expect(existsSync(claudeLink())).toBe(true)
+  expect(existsSync(codexLink())).toBe(false)
+  expect(entry()?.enabledFor).toEqual({ claude: true })
+  await expect(engine.enable('probe-skill', 'codex')).rejects.toThrow('does not support codex')
 })
 
 test('a SKILL.md without name/description fails and leaves no trace', async () => {
@@ -249,8 +256,8 @@ test('a SKILL.md without name/description fails and leaves no trace', async () =
 })
 
 test('an invalid slug is rejected before anything is written', async () => {
-  serve(item({ slug: 'Bad.Slug' }))
-  await expect(engine.install('Bad.Slug')).rejects.toThrow('invalid skill slug')
+  serve(item({ slug: '-bad' }))
+  await expect(engine.install('-bad')).rejects.toThrow('Invalid slug')
   expect(existsSync(join(aasHome, 'skills'))).toBe(false)
 })
 
@@ -259,13 +266,6 @@ test('SKILL.md must exist with exact case', async () => {
   serve(item())
   await expect(engine.install('probe-skill')).rejects.toThrow('no SKILL.md')
   expect(existsSync(storeDir())).toBe(false)
-})
-
-test('a skill not declared for claude gets no Claude symlink', async () => {
-  serve(item({ compatibleWith: ['codex'] }))
-  await engine.install('probe-skill')
-  expect(existsSync(claudeLink())).toBe(false)
-  expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
 })
 
 test('a pre-marker install (manifest.json + skill.md) can be reinstalled and uninstalled', async () => {
@@ -280,22 +280,21 @@ test('a pre-marker install (manifest.json + skill.md) can be reinstalled and uni
     }] }))
   }
   legacy()
-  // The old Codex copy is the same SKILL.md older versions copied there: provably ours, not a clash.
-  mkdirSync(join(codexDir, 'skills', 'probe-skill'), { recursive: true })
-  writeFileSync(join(codexDir, 'skills', 'probe-skill', 'SKILL.md'), SKILL_MD)
   serve(item())
   await engine.install('probe-skill')
   expect(existsSync(join(storeDir(), MARKER))).toBe(true)
   expect(readdirSync(storeDir()).sort()).toEqual([MARKER, 'SKILL.md', 'references'].sort())
 
   rmSync(storeDir(), { recursive: true, force: true })
+  rmSync(claudeLink())
+  rmSync(codexLink())
   legacy()
   await engine.uninstall('probe-skill')
   expect(existsSync(storeDir())).toBe(false)
   expect(entry()).toBeUndefined()
 })
 
-test('a user directory with the same slug is never replaced', async () => {
+test('a user directory with the same slug in the library is never replaced', async () => {
   mkdirSync(storeDir(), { recursive: true })
   writeFileSync(join(storeDir(), 'SKILL.md'), 'mine')
   serve(item())
@@ -304,34 +303,33 @@ test('a user directory with the same slug is never replaced', async () => {
   expect(existsSync(join(storeDir(), MARKER))).toBe(false)
 })
 
-test('a Codex name clash fails unless --force', async () => {
-  for (const base of [join(aasHome, 'skills', 'users-own'), join(codexDir, 'skills', 'users-own')]) {
-    rmSync(join(aasHome, 'skills'), { recursive: true, force: true })
-    rmSync(join(codexDir, 'skills'), { recursive: true, force: true })
-    mkdirSync(base, { recursive: true })
-    writeFileSync(join(base, 'SKILL.md'), '---\nname: probe-codeword\ndescription: mine\n---\n')
-    serve(item())
-    await expect(engine.install('probe-skill')).rejects.toThrow('Codex already sees a skill named "probe-codeword"')
-    expect(existsSync(storeDir())).toBe(false)
-  }
-  await engine.install('probe-skill', { force: true })
-  expect(existsSync(join(storeDir(), MARKER))).toBe(true)
+test('a Codex name clash stops the Codex deployment only; --force deploys anyway', async () => {
+  const users = join(codexDir, 'skills', 'users-own')
+  mkdirSync(users, { recursive: true })
+  writeFileSync(join(users, 'SKILL.md'), '---\nname: probe-codeword\ndescription: mine\n---\n')
+  serve(item())
+  const err = await engine.install('probe-skill').catch(e => e)
+  expect(err.message).toContain(`deploying it to codex failed: Codex already sees a skill named "probe-codeword" at ${users}`)
+  expect(err.reason).toBe('name-clash')
+  expect(entry()?.enabledFor).toEqual({ claude: true })
+  expect(existsSync(codexLink())).toBe(false)
+  await engine.enable('probe-skill', 'codex', { force: true })
+  expect(readlinkSync(codexLink())).toBe(storeDir())
+  // A same-named skill in the library is not something Codex reads.
+  expect(existsSync(join(users, 'SKILL.md'))).toBe(true)
 })
 
-test('a user Codex skill under the same slug still clashes; an old copy Agent Store wrote does not', async () => {
-  const userCopy = join(codexDir, 'skills', 'probe-skill')
-  mkdirSync(userCopy, { recursive: true })
-  writeFileSync(join(userCopy, 'SKILL.md'), '---\nname: probe-codeword\ndescription: mine\n---\n')
+test('a user directory at a tool path is refused and kept; --force replaces it', async () => {
+  mkdirSync(codexLink(), { recursive: true })
+  writeFileSync(join(codexLink(), 'SKILL.md'), 'users own')
   serve(item())
-  await expect(engine.install('probe-skill')).rejects.toThrow(`Codex already sees a skill named "probe-codeword" at ${userCopy}`)
-  expect(existsSync(storeDir())).toBe(false)
-
-  // The legacy layout: store manifest.json + skill.md, and the same SKILL.md copied to Codex.
-  mkdirSync(storeDir(), { recursive: true })
-  writeFileSync(join(storeDir(), 'manifest.json'), JSON.stringify({ slug: 'probe-skill', category: 'skill', version: '0.9.0' }))
-  writeFileSync(join(storeDir(), 'skill.md'), readFileSync(join(userCopy, 'SKILL.md'), 'utf-8'))
-  await engine.install('probe-skill')
-  expect(existsSync(join(storeDir(), MARKER))).toBe(true)
+  const err = await engine.install('probe-skill').catch(e => e)
+  expect(err).toBeInstanceOf(SkillDeployRefusedError)
+  expect([err.reason, err.state, err.tool]).toEqual(['not-managed', 'real-dir', 'codex'])
+  expect(readFileSync(join(codexLink(), 'SKILL.md'), 'utf-8')).toBe('users own')
+  expect(entry()?.enabledFor).toEqual({ claude: true })
+  await engine.enable('probe-skill', 'codex', { force: true })
+  expect(readlinkSync(codexLink())).toBe(storeDir())
 })
 
 test('reinstall replaces the directory; a local edit needs --force', async () => {
@@ -350,58 +348,99 @@ test('reinstall replaces the directory; a local edit needs --force', async () =>
   expect(readFileSync(join(storeDir(), 'new.md'), 'utf-8')).toBe('v2')
 })
 
-// ── lifecycle (§5.4) ──────────────────────────────────────────────────────────
+// ── lifecycle ─────────────────────────────────────────────────────────────────
 
-test('lifecycle: disable/enable claude, codex rejections, uninstall', async () => {
+test('lifecycle: each tool is enabled and disabled on its own, then uninstall', async () => {
   serve(item())
   await engine.install('probe-skill')
 
   await engine.disable('probe-skill', 'claude')
   expect(existsSync(claudeLink())).toBe(false)
+  expect(readlinkSync(codexLink())).toBe(storeDir())
   expect(existsSync(join(storeDir(), 'SKILL.md'))).toBe(true)
   expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
 
-  await expect(engine.disable('probe-skill', 'codex')).rejects.toBeInstanceOf(CodexSkillDisableUnsupported)
-  expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
+  await engine.disable('probe-skill', 'codex')
+  expect(existsSync(codexLink())).toBe(false)
+  expect(entry()?.enabledFor).toEqual({ codex: false, claude: false })
+  expect(entry()?.deployments).toBeUndefined()
 
   await engine.enable('probe-skill', 'codex')
-  expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
-
+  expect(readlinkSync(codexLink())).toBe(storeDir())
   await engine.enable('probe-skill', 'claude')
-  expect(readlinkSync(claudeLink())).toBe(storeDir())
   await engine.enable('probe-skill', 'claude') // idempotent
+  expect(readlinkSync(claudeLink())).toBe(storeDir())
   expect(entry()?.enabledFor).toEqual({ codex: true, claude: true })
 
   await engine.uninstall('probe-skill')
   expect(existsSync(claudeLink())).toBe(false)
+  expect(existsSync(codexLink())).toBe(false)
   expect(existsSync(storeDir())).toBe(false)
   expect(entry()).toBeUndefined()
 })
 
-test('enable claude refuses to replace something that is not our symlink', async () => {
+test('enable refuses to replace a link that is not ours', async () => {
   serve(item())
   await engine.install('probe-skill', { target: 'codex' })
   mkdirSync(join(claudeDir, 'skills'), { recursive: true })
   symlinkSync(join(root, 'elsewhere'), claudeLink())
-  await expect(engine.enable('probe-skill', 'claude')).rejects.toThrow('not Agent Store')
+  await expect(engine.enable('probe-skill', 'claude')).rejects.toThrow('Refusing to replace')
   expect(readlinkSync(claudeLink())).toBe(join(root, 'elsewhere'))
-  expect(entry()?.enabledFor['claude']).toBe(false)
+  expect(entry()?.enabledFor['claude']).toBeFalsy()
+})
+
+test('disable keeps a directory the user put where our link was; --force removes it', async () => {
+  serve(item())
+  await engine.install('probe-skill')
+  rmSync(claudeLink())
+  mkdirSync(claudeLink())
+  writeFileSync(join(claudeLink(), 'SKILL.md'), 'users own')
+  const err = await engine.disable('probe-skill', 'claude').catch(e => e)
+  expect(err).toBeInstanceOf(SkillDeployRefusedError)
+  expect(err.reason).toBe('record-mismatch')
+  expect(readFileSync(join(claudeLink(), 'SKILL.md'), 'utf-8')).toBe('users own')
+  expect(entry()?.enabledFor.claude).toBe(true)
+  await engine.disable('probe-skill', 'claude', { force: true })
+  expect(existsSync(claudeLink())).toBe(false)
+  expect(entry()?.enabledFor.claude).toBe(false)
 })
 
 test('partial failure: a user directory at the Claude path leaves the registry truthful', async () => {
   mkdirSync(claudeLink(), { recursive: true })
   writeFileSync(join(claudeLink(), 'SKILL.md'), 'users own')
   serve(item())
-  await expect(engine.install('probe-skill')).rejects.toThrow('Claude symlink step failed')
-  expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
+  await expect(engine.install('probe-skill')).rejects.toThrow('deploying it to claude failed')
+  expect(entry()?.enabledFor).toEqual({ codex: true })
   expect(existsSync(join(storeDir(), MARKER))).toBe(true)
   expect(lstatSync(claudeLink()).isDirectory()).toBe(true)
-  expect(readFileSync(join(claudeLink(), 'SKILL.md'), 'utf-8')).toBe('users own')
 
   // Uninstall leaves the user's directory alone.
   await engine.uninstall('probe-skill')
   expect(readFileSync(join(claudeLink(), 'SKILL.md'), 'utf-8')).toBe('users own')
   expect(existsSync(storeDir())).toBe(false)
+  expect(existsSync(codexLink())).toBe(false)
+})
+
+test('copy mode: real copies without the marker, refreshed on reinstall, removed on disable', async () => {
+  process.env['AS_SKILL_DEPLOY_MODE'] = 'copy'
+  try {
+    serve(item())
+    await engine.install('probe-skill')
+    for (const dir of [claudeLink(), codexLink()]) {
+      expect(lstatSync(dir).isDirectory()).toBe(true)
+      expect(readFileSync(join(dir, 'references', 'token.md'), 'utf-8')).toBe('TOKEN_42\n')
+      expect(existsSync(join(dir, MARKER))).toBe(false)
+    }
+    expect(entry()?.deployments?.['claude']?.mode).toBe('copy')
+    tarball = codeload({ 'skills/probe/SKILL.md': SKILL_MD, 'skills/probe/new.md': 'v2' })
+    await engine.install('probe-skill')
+    expect(readFileSync(join(claudeLink(), 'new.md'), 'utf-8')).toBe('v2')
+    expect(existsSync(join(claudeLink(), 'references'))).toBe(false)
+    await engine.disable('probe-skill', 'codex')
+    expect(existsSync(codexLink())).toBe(false)
+  } finally {
+    delete process.env['AS_SKILL_DEPLOY_MODE']
+  }
 })
 
 test('uninstall refuses locally edited content without --force', async () => {
@@ -411,13 +450,13 @@ test('uninstall refuses locally edited content without --force', async () => {
   await expect(engine.uninstall('probe-skill')).rejects.toThrow('--force')
   expect(existsSync(storeDir())).toBe(true)
   expect(existsSync(claudeLink())).toBe(false)
-  expect(entry()?.enabledFor).toEqual({ codex: true, claude: false })
+  expect(entry()?.enabledFor).toEqual({ codex: false, claude: false })
   await engine.uninstall('probe-skill', { force: true })
   expect(existsSync(storeDir())).toBe(false)
   expect(entry()).toBeUndefined()
 })
 
-test('sync recreates a missing Claude symlink and reports missing content', async () => {
+test('sync recreates a missing link and reports missing content', async () => {
   serve(item())
   await engine.install('probe-skill')
   rmSync(claudeLink())
@@ -436,6 +475,6 @@ test('info and getConfigSchema read the manifest from the marker', async () => {
   expect(existsSync(join(storeDir(), 'manifest.json'))).toBe(false)
   const info = await engine.info('probe-skill')
   expect(info.name).toBe('Probe')
+  expect(info.deployments?.codex?.path).toBe(codexLink())
   expect((await engine.getConfigSchema('probe-skill')).schema).toEqual({})
 })
-

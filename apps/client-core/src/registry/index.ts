@@ -1,7 +1,7 @@
 import { mkdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import lockfile from 'proper-lockfile'
-import type { RegistryJson, InstalledItem } from '@as/types'
+import type { RegistryJson, InstalledItem, SkillDeployment, ToolTarget } from '@as/types'
 import { atomicWriteFile, ConfigParseError } from '../config/safe-file'
 
 function registryPath(aasHome: string): string {
@@ -97,4 +97,30 @@ export function upsertEntry(registry: RegistryJson, entry: InstalledItem): Regis
 
 export function removeEntry(registry: RegistryJson, slug: string): RegistryJson {
   return { installed: registry.installed.filter(e => e.slug !== slug) }
+}
+
+/** Records (or, with null, drops) one tool's skill deployment and sets that tool's enabled flag to match. */
+export async function setDeploymentRecord(
+  aasHome: string, slug: string, target: ToolTarget, record: SkillDeployment | null,
+): Promise<void> {
+  await patchEntry(aasHome, slug, e => {
+    const deployments = { ...(e.deployments ?? {}) }
+    if (record) deployments[target] = record
+    else delete deployments[target]
+    const { deployments: _previous, ...rest } = e
+    return {
+      ...rest,
+      ...(Object.keys(deployments).length ? { deployments } : {}),
+      enabledFor: { ...e.enabledFor, [target]: record !== null },
+      updatedAt: new Date().toISOString(),
+    }
+  })
+}
+
+export async function setEnabledFlag(aasHome: string, slug: string, target: ToolTarget, enabled: boolean): Promise<void> {
+  await patchEntry(aasHome, slug, e => ({
+    ...e,
+    enabledFor: { ...e.enabledFor, [target]: enabled },
+    updatedAt: new Date().toISOString(),
+  }))
 }

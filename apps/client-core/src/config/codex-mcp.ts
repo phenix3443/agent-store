@@ -39,14 +39,16 @@ export interface CodexMcpCli {
 
 export interface CodexMcpContext extends CodexLocation {
   aasHome: string
-  /** ~/.agents/mcps/<slug> */
+  /** ~/.agent-store/mcps/<slug> */
   itemDir: string
   /** null: the codex binary is not installed. */
   cli: CodexMcpCli | null
 }
 
+/** Codex cannot run this server as described: `sse` transport, or HTTP headers other than a bearer token. */
 export class CodexMcpUnsupportedError extends Error {
-  constructor(slug: string, what: string) {
+  readonly tool = 'codex'
+  constructor(slug: string, what: string, readonly reason: 'sse' | 'headers') {
     super(`${slug} can't be enabled for Codex: ${what}`)
     this.name = 'CodexMcpUnsupportedError'
   }
@@ -60,10 +62,10 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 
 /** Codex fields: stdio command/args/env, http url/bearer_token_env_var; no sse, no other headers. */
 export function toCodexEntry(slug: string, spec: McpServerSpec): CodexMcpEntry {
-  if (spec.transport === 'sse') throw new CodexMcpUnsupportedError(slug, 'Codex does not support SSE MCP servers')
+  if (spec.transport === 'sse') throw new CodexMcpUnsupportedError(slug, 'Codex does not support SSE MCP servers', 'sse')
   if (spec.transport !== 'stdio') {
     if (Object.keys(spec.headers).length) {
-      throw new CodexMcpUnsupportedError(slug, `HTTP headers (${Object.keys(spec.headers).join(', ')}) other than a bearer token are not supported`)
+      throw new CodexMcpUnsupportedError(slug, `HTTP headers (${Object.keys(spec.headers).join(', ')}) other than a bearer token are not supported`, 'headers')
     }
     return { url: spec.url, ...(spec.bearer ? { bearer_token_env_var: spec.bearer.env } : {}) }
   }

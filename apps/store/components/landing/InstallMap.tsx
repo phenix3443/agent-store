@@ -14,7 +14,7 @@ export interface MapSample {
 }
 
 interface Write {
-  /** Which side reads it: a tool, or Agent Store's own store under ~/.agents. */
+  /** Which side reads it: a tool, or Agent Store's own files under ~/.agent-store. */
   owner: 'claude' | 'codex' | 'store'
   file: string
   /** The key or table inside the file; absent when the entry is the file or directory itself. */
@@ -26,14 +26,14 @@ interface Write {
 // `{slug}` is replaced with the sample package; `<name>` stays literal.
 const WRITES: Record<MapCategory, Write[]> = {
   skill: [
-    { owner: 'claude', file: '~/.claude/skills/{slug}', note: 'skill.claude' },
-    { owner: 'codex', file: '~/.agents/skills/{slug}/', note: 'skill.codex' },
-    { owner: 'store', file: '~/.agents/skills/{slug}/', entry: '.agent-store.json', note: 'skill.store' },
+    { owner: 'claude', file: '~/.claude/skills/<name>', note: 'skill.claude' },
+    { owner: 'codex', file: '~/.codex/skills/<name>', note: 'skill.codex' },
+    { owner: 'store', file: '~/.agent-store/skills/{slug}/', entry: '.agent-store.json', note: 'skill.store' },
   ],
   mcp: [
     { owner: 'claude', file: '~/.claude.json', entry: 'mcpServers.{slug}', note: 'mcp.claude' },
     { owner: 'codex', file: '~/.codex/config.toml', entry: '[mcp_servers.{slug}]', note: 'mcp.codex' },
-    { owner: 'store', file: '~/.agents/mcps/{slug}/', entry: 'targets.json', note: 'mcp.store' },
+    { owner: 'store', file: '~/.agent-store/mcps/{slug}/', entry: 'targets.json', note: 'mcp.store' },
   ],
   provider: [
     {
@@ -48,7 +48,7 @@ const WRITES: Record<MapCategory, Write[]> = {
       entry: 'model_provider = "aas-relay"\n[model_providers.aas-relay]\nbase_url = "http://127.0.0.1:18780"',
       note: 'provider.codex',
     },
-    { owner: 'store', file: '~/.agents/providers/{slug}/', entry: 'config.json  (0600)', note: 'provider.store' },
+    { owner: 'store', file: '~/.agent-store/providers/{slug}/', entry: 'config.json  (0600)', note: 'provider.store' },
   ],
 }
 

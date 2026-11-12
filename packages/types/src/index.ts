@@ -1,5 +1,5 @@
 export type { Publisher } from './publisher'
-export type { JsonSchema, InstallHook, ItemVersion, UserReview, PackageReview, BaseItem, ProviderItem, SkillItem, SkillSource, MCPItem, Item } from './items'
+export type { JsonSchema, InstallHook, ItemVersion, UserReview, PackageReview, BaseItem, ProviderItem, SkillItem, SkillSource, MCPItem, StdioMCPItem, RemoteMCPItem, Item } from './items'
 export type {
   ToolTarget,
   Paths,
@@ -18,6 +18,7 @@ export type {
   UninstallOptions,
   EnableBlocker,
   TargetStatus,
+  SkillDeployment,
   InstallOutcome,
   ModelPricing,
   UsageSummaryRow,
@@ -54,3 +55,5 @@ export type {
   ProviderResourceDetail,
   ResourceDetail,
 } from './resources'
+export { resourceSlug, resourceLongSlug } from './catalog'
+export type { CatalogResource, CatalogResourceDetail, CatalogSearchResult } from './catalog'

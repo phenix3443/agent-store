@@ -2,13 +2,18 @@ import { homedir } from 'os'
 import { join } from 'path'
 import type { Paths } from '@as/types'
 
+/** Agent Store's own home before 2026-11-12; `~/.agents` is a convention directory other tools read too. */
+export function legacyAasHome(): string {
+  return join(homedir(), '.agents')
+}
+
 export function resolvePaths(overrides?: Partial<Paths>): Required<Paths> {
   const home = homedir()
   // Claude Code keeps user-scope MCP servers in `.claude.json`, which sits at
   // $CLAUDE_CONFIG_DIR/.claude.json when that dir is set, otherwise $HOME/.claude.json.
   const claudeDirSet = overrides?.claudeConfigDir ?? process.env['CLAUDE_CONFIG_DIR']
   return {
-    aasHome: overrides?.aasHome ?? process.env['AS_HOME'] ?? join(home, '.agents'),
+    aasHome: overrides?.aasHome ?? process.env['AS_HOME'] ?? join(home, '.agent-store'),
     claudeConfigDir: overrides?.claudeConfigDir ?? process.env['CLAUDE_CONFIG_DIR'] ?? join(home, '.claude'),
     claudeJsonPath: overrides?.claudeJsonPath ?? join(claudeDirSet ?? home, '.claude.json'),
     // Codex reads CODEX_HOME; CODEX_CONFIG_DIR is this project's older name for it.

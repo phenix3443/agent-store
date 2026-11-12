@@ -30,8 +30,8 @@ test('install map starts on skills and shows where a skill lands for each tool',
   const panel = screen.getByRole('tabpanel')
   expect(screen.getByRole('tab', { name: '技能' }).getAttribute('aria-selected')).toBe('true')
   expect(panel.textContent).toContain('aas install superpowers-brainstorming')
-  expect(panel.textContent).toContain('~/.claude/skills/superpowers-brainstorming')
-  expect(panel.textContent).toContain('~/.agents/skills/superpowers-brainstorming/')
+  expect(panel.textContent).toContain('~/.claude/skills/<name>')
+  expect(panel.textContent).toContain('~/.agent-store/skills/superpowers-brainstorming/')
 })
 
 // Radix's RovingFocusGroup moves focus on arrow keys in a setTimeout, so wait for it.
@@ -54,14 +54,14 @@ test('install map switches with the arrow keys and only shows the tools a packag
   // OpenRouter only declares Codex, so no Claude Code settings are shown for it.
   expect(panel.textContent).not.toContain('ANTHROPIC_BASE_URL')
   expect(panel.textContent).toContain('不支持 Claude Code')
-  expect(panel.textContent).toContain('~/.agents/providers/openrouter/')
+  expect(panel.textContent).toContain('~/.agent-store/providers/openrouter/')
 })
 
 test('install map falls back to a placeholder slug when the catalog is empty', () => {
   render(<InstallMap samples={{ skill: null, mcp: null, provider: null }} />)
   const panel = screen.getByRole('tabpanel')
   expect(panel.textContent).toContain('目录暂时取不到')
-  expect(panel.textContent).toContain('~/.claude/skills/<slug>')
+  expect(panel.textContent).toContain('~/.claude/skills/<name>')
 })
 
 test('terminal demo has one tab per aas command and shows its captured output', () => {
@@ -85,7 +85,7 @@ test('faq answers are collapsed until their question is opened, and several can 
 
   fireEvent.click(screen.getByRole('button', { name: 'API 密钥存在哪？' }))
   fireEvent.click(screen.getByRole('button', { name: '能干净卸载吗？' }))
-  expect(screen.getByText(/~\/\.agents\/providers\/ 下该供应商目录的 config\.json/)).toBeInTheDocument()
+  expect(screen.getByText(/~\/\.agent-store\/providers\/ 下该供应商目录的 config\.json/)).toBeInTheDocument()
   expect(screen.getByText(/逐字节比较/)).toBeInTheDocument()
 })
 

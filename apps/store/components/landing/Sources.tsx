@@ -16,7 +16,7 @@ const TOOLS = [
   {
     key: 'codex',
     name: 'Codex',
-    paths: ['~/.agents/skills/', '~/.codex/config.toml'],
+    paths: ['~/.codex/skills/', '~/.codex/config.toml'],
   },
 ] as const
 

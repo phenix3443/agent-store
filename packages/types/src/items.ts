@@ -1,5 +1,6 @@
 import type { Publisher } from './publisher'
 import type { ToolTarget } from './engine'
+import type { SkillFile } from './resources'
 
 export type JsonSchema = Record<string, unknown>
 
@@ -54,6 +55,8 @@ export interface BaseItem {
   review?: PackageReview
   createdAt: string
   updatedAt: string
+  /** Catalog id (`mcp-registry:…`, `github:…`, `builtin:…`) for items built from /api/resources. */
+  resourceId?: string
 }
 
 export interface ProviderItem extends BaseItem {
@@ -78,11 +81,19 @@ export interface SkillItem extends BaseItem {
   contentUrl: string
   /** The skill's whole directory, when the registry knows it */
   source?: SkillSource
+  /** Every file of that directory at `source.ref`, from the catalog; fetched one by one instead of the repo tarball. */
+  files?: SkillFile[]
 }
 
 interface BaseMCPItem extends BaseItem {
   category: 'mcp'
   configSchema: JsonSchema
+  /**
+   * `{key}` in `args`, `env` values and `headers` values is replaced by the config
+   * value (or the schema default) of `key`. Items built from the catalog set it;
+   * without it only the url is templated.
+   */
+  templated?: boolean
 }
 
 export interface StdioMCPItem extends BaseMCPItem {
@@ -92,6 +103,8 @@ export interface StdioMCPItem extends BaseMCPItem {
   /** Structured argv; when set, used as given instead of splitting serverCommand */
   command?: string
   args?: string[]
+  /** Fixed environment, written next to the values bound from config. */
+  env?: Record<string, string>
 }
 
 export interface RemoteMCPItem extends BaseMCPItem {

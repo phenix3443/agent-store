@@ -3,8 +3,9 @@ import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/re
 import { ProviderConfigPanel } from '../ProviderConfigPanel'
 import * as rpcModule from '../../lib/rpc'
 import { EntitlementProvider } from '../../state/Entitlement'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 const publisher = { id: 'p', slug: 'yls', name: 'yls', avatarUrl: '', tier: 'community' as const }
 

@@ -33,7 +33,7 @@ export interface ClaudeMcpCli {
 
 export interface ClaudeMcpContext extends ClaudeLocation {
   aasHome: string
-  /** ~/.agents/mcps/<slug> */
+  /** ~/.agent-store/mcps/<slug> */
   itemDir: string
   /** null: the claude binary is not installed. */
   cli: ClaudeMcpCli | null

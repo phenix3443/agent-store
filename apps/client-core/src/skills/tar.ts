@@ -1,6 +1,7 @@
-// Extracts one directory of a codeload tarball without trusting it: absolute
-// entries, `..`, links that leave the directory, special files and anything
-// over the size limit are rejected before a single file is written.
+// Writes a skill directory without trusting its source (a codeload tarball, or
+// the catalog's file list): absolute entries, `..`, links that leave the
+// directory, special files and anything over the size limit are rejected before
+// a single file is written.
 import { gunzipSync } from 'zlib'
 import { mkdir, symlink, writeFile } from 'fs/promises'
 import { dirname, join, posix } from 'path'
@@ -11,8 +12,8 @@ const MAX_ARCHIVE_BYTES = 100 * 1024 * 1024
 const MAX_TAR_BYTES = 512 * 1024 * 1024
 
 export class UnsafeArchiveError extends Error {
-  constructor(message: string) {
-    super(`unsafe skill archive: ${message}`)
+  constructor(message: string, label = 'skill archive') {
+    super(`unsafe ${label}: ${message}`)
     this.name = 'UnsafeArchiveError'
   }
 }
@@ -89,6 +90,64 @@ export function parseTar(tar: Uint8Array): TarEntry[] {
   return entries
 }
 
+/** One file, directory or link of a skill, relative to the skill directory. */
+export interface SkillEntry {
+  rel: string
+  type: 'file' | 'dir' | 'symlink'
+  mode: number
+  linkname: string
+  data: Uint8Array
+}
+
+/**
+ * Checks every entry, then writes them into `dest`: no absolute or `..` paths,
+ * nothing below a link, no link that leaves the directory, nothing over the size
+ * limit. Nothing is written when any entry is refused. Returns the files written.
+ */
+export async function writeSkillEntries(picked: SkillEntry[], dest: string, label = 'skill archive'): Promise<string[]> {
+  const fail = (m: string) => new UnsafeArchiveError(m, label)
+  let total = 0
+  for (const e of picked) {
+    if (e.rel.startsWith('/') || e.rel.includes('\\')) throw fail(`absolute or backslash path ${e.rel}`)
+    if (e.rel.split('/').includes('..')) throw fail(`path with .. ${e.rel}`)
+    total += e.data.length
+    if (total > MAX_SKILL_BYTES) throw fail(`skill content is over ${MAX_SKILL_BYTES} bytes`)
+  }
+
+  // Links are checked lexically, so nothing may be reached *through* a link:
+  // no entry below one, and no link target that passes one or uses `..` after a
+  // name (`l -> .` plus `l2 -> l/..` would otherwise leave the directory).
+  const links = new Set(picked.filter(p => p.type === 'symlink').map(p => p.rel))
+  const throughLink = (path: string) => {
+    const parts = path.split('/')
+    for (let i = 1; i < parts.length; i++) if (links.has(parts.slice(0, i).join('/'))) return true
+    return false
+  }
+  for (const e of picked) {
+    if (throughLink(e.rel)) throw fail(`${e.rel} is below a symlink`)
+    if (e.type !== 'symlink') continue
+    const target = e.linkname
+    const segs = target.split('/').filter(s => s && s !== '.')
+    const firstName = segs.findIndex(s => s !== '..')
+    const resolved = posix.normalize(posix.join(posix.dirname(e.rel), target))
+    if (target.startsWith('/') || target.includes('\\') || resolved === '..' || resolved.startsWith('../') ||
+        (firstName !== -1 && segs.slice(firstName).includes('..')) || links.has(resolved) || throughLink(resolved)) {
+      throw fail(`symlink ${e.rel} points outside the skill directory or through another link (${target})`)
+    }
+  }
+
+  const written: string[] = []
+  for (const e of picked) {
+    const out = join(dest, e.rel)
+    if (e.type === 'dir') { await mkdir(out, { recursive: true }); continue }
+    await mkdir(dirname(out), { recursive: true })
+    if (e.type === 'symlink') await symlink(e.linkname, out)
+    else await writeFile(out, e.data, { mode: (e.mode & 0o111) ? 0o755 : 0o644 })
+    written.push(e.rel)
+  }
+  return written
+}
+
 /**
  * Writes the entries under `<top>/<dir>/` of a gzipped codeload tarball into
  * `dest`. `dir` is repo-relative (`''` = repo root). Returns the files written.
@@ -103,7 +162,7 @@ export async function extractSkillDir(gz: Uint8Array, dir: string, dest: string)
   }
   const entries = parseTar(raw)
   const want = dir.replace(/^\/+|\/+$/g, '')
-  const picked: Array<{ rel: string; entry: TarEntry }> = []
+  const picked: SkillEntry[] = []
   let total = 0
   for (const entry of entries) {
     if (entry.path.startsWith('/') || entry.path.includes('\\')) throw new UnsafeArchiveError(`absolute or backslash path ${entry.path}`)
@@ -116,39 +175,7 @@ export async function extractSkillDir(gz: Uint8Array, dir: string, dest: string)
     if (entry.type === 'other') throw new UnsafeArchiveError(`unsupported entry type for ${entry.path}`)
     total += entry.data.length
     if (total > MAX_SKILL_BYTES) throw new UnsafeArchiveError(`skill content is over ${MAX_SKILL_BYTES} bytes`)
-    picked.push({ rel, entry })
+    picked.push({ rel, type: entry.type, mode: entry.mode, linkname: entry.linkname, data: entry.data })
   }
-
-  // Links are checked lexically, so nothing may be reached *through* a link:
-  // no entry below one, and no link target that passes one or uses `..` after a
-  // name (`l -> .` plus `l2 -> l/..` would otherwise leave the directory).
-  const links = new Set(picked.filter(p => p.entry.type === 'symlink').map(p => p.rel))
-  const throughLink = (path: string) => {
-    const parts = path.split('/')
-    for (let i = 1; i < parts.length; i++) if (links.has(parts.slice(0, i).join('/'))) return true
-    return false
-  }
-  for (const { rel, entry } of picked) {
-    if (throughLink(rel)) throw new UnsafeArchiveError(`${entry.path} is below a symlink`)
-    if (entry.type !== 'symlink') continue
-    const target = entry.linkname
-    const segs = target.split('/').filter(s => s && s !== '.')
-    const firstName = segs.findIndex(s => s !== '..')
-    const resolved = posix.normalize(posix.join(posix.dirname(rel), target))
-    if (target.startsWith('/') || target.includes('\\') || resolved === '..' || resolved.startsWith('../') ||
-        (firstName !== -1 && segs.slice(firstName).includes('..')) || links.has(resolved) || throughLink(resolved)) {
-      throw new UnsafeArchiveError(`symlink ${entry.path} points outside the skill directory or through another link (${target})`)
-    }
-  }
-
-  const written: string[] = []
-  for (const { rel, entry } of picked) {
-    const out = join(dest, rel)
-    if (entry.type === 'dir') { await mkdir(out, { recursive: true }); continue }
-    await mkdir(dirname(out), { recursive: true })
-    if (entry.type === 'symlink') await symlink(entry.linkname, out)
-    else await writeFile(out, entry.data, { mode: (entry.mode & 0o111) ? 0o755 : 0o644 })
-    written.push(rel)
-  }
-  return written
+  return writeSkillEntries(picked, dest)
 }

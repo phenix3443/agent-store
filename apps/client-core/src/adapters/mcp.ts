@@ -6,6 +6,7 @@ import { buildMcpServerSpec, McpConfigMissingError } from '../config/mcp'
 import { readMcpTargets } from '../config/mcp-targets'
 import { syncMcpToClaude } from '../config/claude'
 import { syncMcpToCodex } from '../config/codex'
+import { CodexMcpUnsupportedError, toCodexEntry } from '../config/codex-mcp'
 import { ItemDirAdapter, TARGETS } from './item-dir'
 import type { AdapterContext } from './types'
 
@@ -25,15 +26,21 @@ export class McpAdapter extends ItemDirAdapter {
     return TARGETS.filter(t => entry.enabledFor[t] || recorded.includes(t))
   }
 
-  async blocker(entry: InstalledItem) {
+  async blocker(entry: InstalledItem, target: ToolTarget) {
     const dir = this.dir(entry.slug)
     const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
+    // Codex has no SSE: no config value can change that, so it is not reported as needing config.
+    if (target === 'codex' && manifest.transport === 'sse') {
+      return { reason: 'unsupported' as const, message: new CodexMcpUnsupportedError(entry.slug, 'Codex does not support SSE MCP servers', 'sse').message }
+    }
     let config: Record<string, unknown> = {}
     try { config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
     try {
-      buildMcpServerSpec(manifest, dir, config)
+      const spec = buildMcpServerSpec(manifest, dir, config)
+      if (target === 'codex') toCodexEntry(entry.slug, spec)
     } catch (e) {
       if (e instanceof McpConfigMissingError) return { reason: 'needs-config' as const, message: e.message }
+      if (e instanceof CodexMcpUnsupportedError) return { reason: 'unsupported' as const, message: e.message }
       throw e
     }
     return undefined

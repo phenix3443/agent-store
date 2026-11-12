@@ -2,8 +2,9 @@ import { test, expect, afterEach, mock, spyOn } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { McpConfigPanel } from '../McpConfigPanel'
 import * as rpcModule from '../../lib/rpc'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 const publisher = { id: 'p', slug: 'gh', name: 'gh', avatarUrl: '', tier: 'official' as const }
 

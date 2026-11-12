@@ -5,8 +5,9 @@ import { AppStateProvider, useAppState } from '../../state/AppState'
 import { EntitlementProvider } from '../../state/Entitlement'
 import { Overview } from '../Overview'
 import type { InstalledItem } from '@as/types'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 const providerItem: InstalledItem = {
   slug: 'p1', category: 'provider', version: '1.0.0', installedAt: '', updatedAt: '',

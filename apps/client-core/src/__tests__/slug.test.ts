@@ -5,7 +5,7 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import { EngineImpl } from '../engine'
 import { assertSafeSlug, InvalidSlugError, itemDir } from '../paths'
-import { claudeSkillLink } from '../skills/claude-link'
+import { ItemCatalog } from './helpers/item-catalog'
 import type { MCPItem } from '@as/types'
 
 const BAD = ['', '.', '..', '../x', 'a/b', 'a\\b', '/abs', '.hidden', 'x'.repeat(129), 'a\0b']
@@ -15,9 +15,8 @@ test('unsafe slugs are refused, ordinary ones pass', () => {
   for (const slug of ['github-mcp', 'gpt-4o', 'local.pkg', 'my_provider-copy-2', 'A1']) expect(assertSafeSlug(slug)).toBe(slug)
 })
 
-test('itemDir and the Claude skill link refuse an unsafe slug', () => {
+test('itemDir refuses an unsafe slug', () => {
   expect(() => itemDir('/h', 'mcp', '../../etc')).toThrow(InvalidSlugError)
-  expect(() => claudeSkillLink('/c', '../x')).toThrow(InvalidSlugError)
   expect(itemDir('/h', 'mcp', 'ok')).toBe('/h/mcps/ok')
 })
 
@@ -29,7 +28,7 @@ let fetched: string[]
 beforeEach(async () => {
   aasHome = await mkdtemp('/tmp/as-slug-')
   fetched = []
-  engine = new EngineImpl({ aasHome, claudeConfigDir: join(aasHome, 'claude'), codexConfigDir: join(aasHome, 'codex') }, 'http://localhost:3000')
+  engine = new EngineImpl({ aasHome, claudeConfigDir: join(aasHome, 'claude'), codexConfigDir: join(aasHome, 'codex') }, 'http://localhost:3000', { catalog: new ItemCatalog() })
 })
 
 afterEach(async () => {
@@ -60,9 +59,9 @@ test('install refuses an unsafe slug before asking the store', async () => {
   expect(await readdir(aasHome)).toEqual([])
 })
 
-test('a skill whose catalog slug differs from the one asked for is refused', async () => {
+test('an unsafe slug from the catalog is refused before anything is written', async () => {
   serve({ ...item, category: 'skill', slug: '../other', compatibleWith: ['claude', 'codex'] } as unknown as MCPItem)
-  await expect(engine.install('ok-skill')).rejects.toThrow('nothing was installed')
+  await expect(engine.install('ok-skill')).rejects.toBeInstanceOf(InvalidSlugError)
   expect(existsSync(join(aasHome, 'registry.json'))).toBe(false)
   expect(existsSync(join(aasHome, 'skills'))).toBe(false)
 })

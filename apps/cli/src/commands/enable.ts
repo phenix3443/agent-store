@@ -16,11 +16,12 @@ export async function runEnable(
   const slug = args[0]
   const target = getFlag(args, '--for') as ToolTarget | undefined
   if (!slug || !target || !TARGETS.includes(target)) {
-    out('Usage: aas enable <slug> --for <claude|codex> [--replace]')
+    out('Usage: aas enable <slug> --for <claude|codex> [--replace] [--force]')
     return EXIT_USAGE
   }
   try {
-    await engine.enable(slug, target, args.includes('--replace') ? { replace: true } : undefined)
+    const options = { ...(args.includes('--replace') ? { replace: true } : {}), ...(args.includes('--force') ? { force: true } : {}) }
+    await engine.enable(slug, target, Object.keys(options).length ? options : undefined)
     out(`  ${slug} enabled for ${target}`)
     return EXIT_OK
   } catch (err) {

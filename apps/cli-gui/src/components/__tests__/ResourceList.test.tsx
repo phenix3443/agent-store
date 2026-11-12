@@ -7,8 +7,9 @@ import * as rpcModule from '../../lib/rpc'
 import { ResourceList } from '../ResourceList'
 import { DetailPanel } from '../DetailPanel'
 import { EntitlementProvider } from '../../state/Entitlement'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 const publisher = { id: 'p', slug: 'anthropic', name: 'anthropic', avatarUrl: '', tier: 'official' as const }
 

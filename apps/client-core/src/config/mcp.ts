@@ -103,15 +103,20 @@ function resolveIfRelative(value: string, baseDir: string): string {
 
 // ── config → env / url / bearer ──────────────────────────────────────────────
 
-interface ConfigProperty { 'x-env'?: string; 'x-bearer'?: boolean }
+interface ConfigProperty { 'x-env'?: string; 'x-bearer'?: boolean; 'x-template'?: boolean; default?: unknown }
 
 const upperSnake = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
+
+const PLACEHOLDER = /\{([A-Za-z0-9_]+)\}/g
 
 function bindConfig(manifest: MCPItem, config: Record<string, unknown>) {
   const schema = (manifest.configSchema ?? {}) as { properties?: Record<string, ConfigProperty>; required?: string[] }
   const properties = schema.properties ?? {}
+  // Items built from the catalog fall back to the schema default; older items only use what the user set.
+  const templated = manifest.templated === true
   const value = (key: string): string | undefined => {
-    const v = config[key]
+    let v = config[key]
+    if ((v === undefined || v === null || v === '') && templated) v = properties[key]?.default
     if (v === undefined || v === null || v === '') return undefined
     const s = String(v)
     if (/[\r\n]/.test(s)) throw new Error(`Config value ${key} for ${manifest.slug} contains a newline`)
@@ -128,10 +133,32 @@ function bindConfig(manifest: MCPItem, config: Record<string, unknown>) {
     if (v === undefined) continue
     const envName = prop['x-env'] ?? upperSnake(key)
     placeholders[key] = v
-    if (prop['x-bearer']) bearer = { env: envName, value: v }
-    else env[envName] = v
+    // The user may paste the whole header value; the scheme is added back when it is written.
+    if (prop['x-bearer']) bearer = { env: envName, value: v.replace(/^Bearer\s+/i, '') }
+    else if (!prop['x-template']) env[envName] = v
   }
-  return { env, placeholders, bearer }
+  return { env, placeholders, bearer, templated }
+}
+
+/** `template` with every `{key}` filled; undefined when one has no value. */
+function fill(template: string, placeholders: Record<string, string>): string | undefined {
+  let complete = true
+  const out = template.replace(PLACEHOLDER, (_whole, key: string) => {
+    if (key in placeholders) return placeholders[key]
+    complete = false
+    return ''
+  })
+  return complete ? out : undefined
+}
+
+/** For templated items: required values are already checked, so an empty optional value drops its entry. */
+function fillMap(map: Record<string, string>, placeholders: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(map)) {
+    const filled = fill(v, placeholders)
+    if (filled !== undefined) out[k] = filled
+  }
+  return out
 }
 
 export function buildMcpServerSpec(manifest: MCPItem, itemDir: string, config: Record<string, unknown>): McpServerSpec {
@@ -140,14 +167,15 @@ export function buildMcpServerSpec(manifest: MCPItem, itemDir: string, config: R
     case 'http':
     case 'sse': {
       if (!manifest.url) throw new Error(`Missing MCP url for ${manifest.slug}`)
-      const url = manifest.url.replace(/\{([A-Za-z0-9_]+)\}/g, (whole, key: string) => {
+      const url = manifest.url.replace(PLACEHOLDER, (whole, key: string) => {
         if (!(key in bound.placeholders)) throw new McpConfigMissingError(manifest.slug, [key])
         return encodeURIComponent(bound.placeholders[key])
       })
+      const headers = bound.templated ? fillMap(manifest.headers ?? {}, bound.placeholders) : { ...(manifest.headers ?? {}) }
       return {
         transport: manifest.transport,
         url,
-        headers: { ...(manifest.headers ?? {}) },
+        headers,
         ...(bound.bearer ? { bearer: bound.bearer } : {}),
       }
     }
@@ -160,7 +188,16 @@ export function buildMcpServerSpec(manifest: MCPItem, itemDir: string, config: R
         argv = splitCommandLine(manifest.serverCommand)
       }
       if (!argv[0]) throw new Error(`Empty MCP command for ${manifest.slug}`)
-      return { transport: 'stdio', command: resolveIfRelative(argv[0], itemDir), args: argv.slice(1), env: bound.env }
+      if (bound.templated) {
+        argv = argv.map(arg => {
+          const filled = fill(arg, bound.placeholders)
+          if (filled === undefined) throw new McpConfigMissingError(manifest.slug, [...arg.matchAll(PLACEHOLDER)].map(m => m[1]).filter(k => !(k in bound.placeholders)))
+          return filled
+        })
+      }
+      const fixed = manifest.env ?? {}
+      const env = { ...(bound.templated ? fillMap(fixed, bound.placeholders) : fixed), ...bound.env }
+      return { transport: 'stdio', command: resolveIfRelative(argv[0], itemDir), args: argv.slice(1), env }
     }
   }
 }

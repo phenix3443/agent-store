@@ -4,6 +4,7 @@ import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, writeFile } from 'fs/promises'
 import { join, relative } from 'path'
 import { EngineImpl } from '../engine'
+import { ItemCatalog } from './helpers/item-catalog'
 import type { MCPItem, ProviderItem, SkillItem, ToolTarget } from '@as/types'
 
 process.env['AS_CLAUDE_BIN'] = ''
@@ -95,7 +96,7 @@ beforeEach(async () => {
   engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000',
-    { startRelay: async () => { await writeFile(join(aasHome, 'relay.pid'), String(process.pid)) } },
+    { startRelay: async () => { await writeFile(join(aasHome, 'relay.pid'), String(process.pid)) }, catalog: new ItemCatalog() },
   )
 })
 
@@ -106,7 +107,7 @@ afterEach(async () => {
 
 // Left behind on purpose: backups of every config write, the relay token and pid
 // (shared by all providers). Empty per-kind parent directories are not listed either.
-const IGNORED = [/^agents\/agent-store\/backups(\/|$)/, /^agents\/relay-token$/, /^agents\/relay\.pid$/]
+const IGNORED = [/^agents\/backups(\/|$)/, /^agents\/relay-token$/, /^agents\/relay\.pid$/]
 
 /** Every file and symlink under the test root with its mode and bytes. */
 async function snapshot(): Promise<Record<string, string>> {
@@ -166,28 +167,20 @@ for (const target of ['claude', 'codex'] as ToolTarget[]) {
   })
 }
 
-test('skill × claude: install → enable → disable → uninstall leaves every file byte-identical', async () => {
-  const before = await snapshot()
-  await engine.install('rt-skill')
-  await engine.enable('rt-skill', 'claude')
-  expect((await lstat(join(claudeDir, 'skills', 'rt-skill'))).isSymbolicLink()).toBe(true)
-  await engine.disable('rt-skill', 'claude')
-  expect(await readdir(join(claudeDir, 'skills'))).toEqual(['user-skill'])
-  await engine.uninstall('rt-skill')
-  await expectUnchangedSince(before)
-})
-
-test('skill × codex: install → enable → (disable is refused) → uninstall leaves every file byte-identical', async () => {
-  const before = await snapshot()
-  await engine.install('rt-skill', { target: 'codex' })
-  await engine.enable('rt-skill', 'codex')
-  expect(await readFile(join(aasHome, 'skills', 'rt-skill', 'SKILL.md'), 'utf-8')).toBe(SKILL_MD)
-  // Codex reads every skill in ~/.agents/skills; there is no per-skill switch to turn off.
-  const err = await engine.disable('rt-skill', 'codex').catch(e => e)
-  expect(err?.name).toBe('CodexSkillDisableUnsupported')
-  await engine.uninstall('rt-skill')
-  await expectUnchangedSince(before)
-})
+for (const target of ['claude', 'codex'] as ToolTarget[]) {
+  test(`skill × ${target}: install → enable → disable → uninstall leaves every file byte-identical`, async () => {
+    const before = await snapshot()
+    const toolDir = target === 'claude' ? claudeDir : codexDir
+    await engine.install('rt-skill', { target })
+    await engine.enable('rt-skill', target)
+    expect(await readlink(join(toolDir, 'skills', 'rt-skill'))).toBe(join(aasHome, 'skills', 'rt-skill'))
+    await engine.disable('rt-skill', target)
+    await expect(lstat(join(toolDir, 'skills', 'rt-skill'))).rejects.toThrow()
+    await engine.enable('rt-skill', target)
+    await engine.uninstall('rt-skill')
+    await expectUnchangedSince(before)
+  })
+}
 
 // ── the user edits tool configs while the item is enabled ───────────────────
 

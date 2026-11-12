@@ -3,8 +3,9 @@ import { render, screen, cleanup } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 import { ProxyLogModal } from '../ProxyLogModal'
 import type { LocalRelayConfig, RecentRequestRow } from '@as/types'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 function row(overrides: Partial<RecentRequestRow>): RecentRequestRow {
   return {

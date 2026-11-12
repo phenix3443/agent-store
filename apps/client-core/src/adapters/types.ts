@@ -1,5 +1,5 @@
 import type {
-  DisableOptions, EnableBlocker, EnableOptions, InstalledItem, InstallOptions, Item, Paths, ToolTarget,
+  DisableOptions, EnableBlocker, EnableOptions, InstalledItem, InstallOptions, Item, Paths, SkillDeployment, ToolTarget,
 } from '@as/types'
 
 export type EnabledFor = Partial<Record<ToolTarget, boolean>>
@@ -13,17 +13,19 @@ export interface AdapterContext {
    * config change, so a run that stops halfway leaves the registry truthful.
    */
   setEnabled(slug: string, target: ToolTarget, enabled: boolean): Promise<void>
+  /** Records (or, with null, drops) a skill's deployment for one tool, and sets its enabled flag to match. */
+  setDeployment(slug: string, target: ToolTarget, record: SkillDeployment | null): Promise<void>
 }
 
 export interface Installed {
   /** Tools that installing alone turned on (skills); omitted to keep the existing flags. */
   enabledFor?: EnabledFor
-  /** Runs once the registry entry exists (the skill's Claude link). */
+  /** Runs once the registry entry exists (a skill's deployments). */
   afterRegistered?: () => Promise<void>
 }
 
 /**
- * Everything one kind of item needs to live in ~/.agents and in each tool's config.
+ * Everything one kind of item needs to live in ~/.agent-store and in each tool's config.
  * The engine owns the registry entry, compatibility, the install/enable policy and
  * config.json; an adapter owns the item's files and every tool config write.
  */

@@ -205,9 +205,9 @@
         "package": "From the catalog",
         "placeholder": "Catalog unavailable",
         "skill": {
-          "claude": "A symlink to the copy in ~/.agents/skills",
-          "codex": "Codex reads ~/.agents/skills itself; nothing else is written",
-          "store": "The only copy of the skill. The marker file says Agent Store installed it; uninstall removes only marked skills"
+          "claude": "A symlink to the library copy, named after the skill. Disable removes only this link",
+          "codex": "Its own symlink in Codex's skills directory, switched on and off separately from Claude Code",
+          "store": "The library: the only copy of the skill, which no tool reads directly. The marker file says Agent Store installed it; uninstall removes only marked skills"
         },
         "mcp": {
           "claude": "A user-scope MCP entry, added through claude mcp add-json when the claude command is installed",
@@ -224,7 +224,7 @@
       "terminal": {
         "title": "From the terminal too",
         "lede": "The desktop client ships the aas command, which reads and writes the same install records. The Linux packages put it at /usr/bin/aas; on macOS and Windows it is in the client's install folder.",
-        "note": "Above is the actual output of aas from the Linux package, run on 2026-11-12.",
+        "note": "Above is the output format of aas; the commands and data are from the test catalog on 2026-11-12.",
         "tabsLabel": "Command"
       },
       "features": {
@@ -280,7 +280,7 @@
         },
         "keys": {
           "q": "Where are my API keys stored?",
-          "a": "On this machine, in the provider's config.json under ~/.agents/providers/, with 0600 permissions. Claude Code and Codex only get the local relay's address and the relay token, not your key; the relay adds the key when it forwards a request."
+          "a": "On this machine, in the provider's config.json under ~/.agent-store/providers/, with 0600 permissions. Claude Code and Codex only get the local relay's address and the relay token, not your key; the relay adds the key when it forwards a request."
         },
         "relay": {
           "q": "Does the relay send my requests anywhere else?",
@@ -363,10 +363,10 @@
         {
           "id": "where",
           "title": "Where the three resource types are installed",
-          "body": "Installing downloads the resource to the ~/.agents directory on your machine (with subdirectories for skills, MCP and providers), then connects it to the tools you choose by type. When enabling a resource, you specify which tool it applies to (Claude Code or Codex).",
+          "body": "Installing downloads the resource to the ~/.agent-store directory on your machine (with subdirectories for skills, MCP and providers), then connects it to the tools you choose by type: skills are linked into each tool's skills directory, MCP servers and providers are written into each tool's config. When enabling a resource, you specify which tool it applies to (Claude Code or Codex).",
           "bullets": [
-            "Skills: written to the tool's skills directory, for example ~/.claude/skills/<name>.md",
-            "MCP: the server entry is written into the tool config: mcpServers in ~/.claude/settings.json for Claude Code, mcp_servers in ~/.codex/config.toml for Codex",
+            "Skills: the whole skill directory is kept once in ~/.agent-store/skills/<slug>/, and each tool you enable gets a symlink to it: ~/.claude/skills/<name> for Claude Code, ~/.codex/skills/<name> for Codex",
+            "MCP: the server entry is written into the tool config: mcpServers in ~/.claude.json for Claude Code, mcp_servers in ~/.codex/config.toml for Codex",
             "Providers: registered as an editable access configuration (API key, upstream address, model mapping, etc.), which takes effect through the local relay once enabled"
           ]
         },
@@ -396,7 +396,7 @@
           "id": "cli",
           "title": "Command line",
           "body": "You can install and manage resources without opening the desktop client: install a resource with install, apply it to a tool with enable, then write enabled resources into the tool config with sync.",
-          "code": "aas install <slug>              # Install a resource\naas list                        # List installed\naas search <query>              # Search the store\naas info <slug>                 # Show resource details\naas enable <slug> --for claude  # Enable for Claude Code\naas disable <slug> --for codex  # Disable for Codex\naas sync                        # Write enabled resources into tool config\naas relay start|stop|status     # Manage the local relay\naas usage --days 7              # Show usage and cost\naas update [slug]               # Update installed resources"
+          "code": "aas install <id|slug>           # Install from the catalog\naas list                        # List installed\naas search <query>              # Search the catalog\naas info <slug>                 # Show resource details\naas enable <slug> --for claude  # Enable for Claude Code\naas disable <slug> --for codex  # Disable for Codex\naas sync                        # Write enabled resources into tool config\naas relay start|stop|status     # Manage the local relay\naas usage --days 7              # Show usage and cost\naas update [slug]               # Update installed resources"
         },
         {
           "id": "usage",
