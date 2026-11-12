@@ -1,7 +1,5 @@
 import type { Item } from '@as/types'
-import { MOCK_PUBLISHERS, getPublisherBySlug as getPublisherBySlugImpl } from './publishers'
-
-export { getPublisherBySlugImpl as getPublisherBySlug }
+import { MOCK_PUBLISHERS } from './publishers'
 
 function publisher(slug: string) {
   const p = MOCK_PUBLISHERS.find((pub) => pub.slug === slug)
@@ -265,8 +263,4 @@ export function getItemBySlug(slug: string): Item | null {
 
 export function getFeaturedItems(): Item[] {
   return getItems({ sort: 'downloads' }).slice(0, 6)
-}
-
-export function getPublisherItems(publisherSlug: string): Item[] {
-  return MOCK_ITEMS.filter((i) => i.publisher.slug === publisherSlug)
 }

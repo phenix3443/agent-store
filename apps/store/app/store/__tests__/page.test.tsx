@@ -26,9 +26,6 @@ mock.module('next-intl', () => intlMock)
 const { getItems: mockGetItems } = await import('../../../lib/mock/items')
 mock.module('@/lib/catalog', () => ({
   getItems: async (opts: Parameters<typeof mockGetItems>[0]) => mockGetItems(opts),
-  // bun shares module mocks across test files; keep the same exports as the topics test.
-  getTopics: async () => [],
-  getTopic: async () => null,
 }))
 
 const { default: StorePage } = await import('../page')

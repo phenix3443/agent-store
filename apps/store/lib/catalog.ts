@@ -1,4 +1,4 @@
-import type { Item, Publisher, Topic, TopicSummary } from '@as/types'
+import type { Item } from '@as/types'
 import { StoreClient } from '@as/sdk'
 
 // Web store and CLI share one catalog source: the standalone apps/api server.
@@ -31,16 +31,14 @@ export async function getItems(options: GetItemsOptions = {}): Promise<Item[]> {
   return items
 }
 
-// Feature the best packages, not just the most-downloaded: weight publisher tier
-// and the review quality score, with (dampened) downloads as a tiebreaker.
+// Feature the best packages, not just the most-downloaded: weight publisher tier,
+// with (dampened) downloads as a tiebreaker.
 const TIER_WEIGHT: Record<string, number> = { official: 100, verified: 60, community: 0 }
 
 function featuredScore(item: Item): number {
   return (
     (TIER_WEIGHT[item.publisher.tier] ?? 0) +
-    (item.review?.quality ?? 0) * 10 +
-    Math.log10((item.downloads ?? 0) + 1) * 5 -
-    (item.review?.risk === 'medium' ? 20 : 0)
+    Math.log10((item.downloads ?? 0) + 1) * 5
   )
 }
 
@@ -60,23 +58,5 @@ export async function getItemVersions(slug: string) {
 
 export async function getItemBySlug(slug: string): Promise<Item | null> {
   const { data } = await client.getItemBySlug(slug)
-  return data ?? null
-}
-
-export async function getPublisherWithItems(
-  slug: string
-): Promise<{ publisher: Publisher; items: Item[] } | null> {
-  const { data } = await client.getPublisher(slug)
-  if (!data?.publisher) return null
-  return { publisher: data.publisher, items: data.items ?? [] }
-}
-
-export async function getTopics(): Promise<TopicSummary[]> {
-  const { data } = await client.getTopics()
-  return data ?? []
-}
-
-export async function getTopic(slug: string): Promise<Topic | null> {
-  const { data } = await client.getTopic(slug)
   return data ?? null
 }

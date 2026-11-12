@@ -1,11 +1,8 @@
 import type { Item, ItemVersion } from '@as/types'
-import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
-import { formatDownloads } from '@/lib/item-meta'
-import { reviewVerdict, runEntries, type RunEntry } from '@/lib/review'
+import { authorHref, formatDownloads } from '@/lib/item-meta'
+import { runEntries, type RunEntry } from '@/lib/install-preview'
 import { InstallPanel } from './InstallPanel'
-import { ReviewStamp } from './ReviewStamp'
-import { PendingIcon, WarnIcon } from './ReviewStatus'
 import { ReviewsSection } from './ReviewsSection'
 import { TierLabel } from './TierLabel'
 
@@ -27,15 +24,12 @@ const RUN_LABEL: Record<RunEntry['kind'], string> = {
   provider: 'runProvider',
 }
 
-const RISK_LABEL: Record<string, string> = { low: 'riskLow', medium: 'riskMedium', high: 'riskHigh' }
-
 export const TITLE_CLASS = 'break-words text-[32px] leading-[1.1] tracking-[-0.025em] sm:text-[40px]'
 
 export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
   const t = useTranslations('store')
   const locale = useLocale()
-  const verdict = reviewVerdict(item)
-  const review = item.review
+  const author = authorHref(item)
   const runs = runEntries(item)
   const reviewCount = item.reviewCount ?? 0
   const dateFormat = new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -50,7 +44,7 @@ export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
   if (item.tags.length > 0) specs.push({ label: t('detail.tags'), value: item.tags.join(', ') })
 
   return (
-    <article className="plate px-5 pb-8 pt-5 sm:px-6 sm:pt-[22px]" data-verdict={verdict}>
+    <article className="plate px-5 pb-8 pt-5 sm:px-6 sm:pt-[22px]">
       <i className="plate-mark -left-2 -top-2" />
       <i className="plate-mark -right-2 -top-2" />
       <i className="plate-mark -bottom-2 -left-2" />
@@ -59,9 +53,13 @@ export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
       <header>
         {title}
         <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
-          <Link href={`/publisher/${item.publisher.slug}`} className="font-medium text-ink underline decoration-line-strong hover:decoration-ink">
-            {item.publisher.name}
-          </Link>
+          {author ? (
+            <a href={author} rel="noopener noreferrer" className="font-medium text-ink underline decoration-line-strong hover:decoration-ink">
+              {item.publisher.name}
+            </a>
+          ) : (
+            <span className="font-medium text-ink">{item.publisher.name}</span>
+          )}
           <TierLabel tier={item.publisher.tier} />
           <span aria-hidden>·</span>
           <span>{t('detail.installs', { count: formatDownloads(item.downloads) })}</span>
@@ -75,44 +73,7 @@ export function ItemDetail({ item, versions, title, readme }: ItemDetailProps) {
         <p className="mt-3 max-w-[62ch] text-[15px] leading-6">{item.description}</p>
       </header>
 
-      <section className="relative mt-7 border-b border-t border-line border-t-ink py-4">
-        <h2 className="label">{t('review.title')}</h2>
-        <div className={verdict === 'passed' ? 'pr-[104px] sm:pr-[132px]' : ''}>
-          <p className="mt-2 flex items-start gap-2 text-base leading-6">
-            {verdict === 'flagged' && <span className="mt-0.5"><WarnIcon size={20} /></span>}
-            {verdict === 'pending' && <span className="mt-0.5"><PendingIcon size={20} /></span>}
-            <span>
-              <b className="font-semibold">{t(`review.${verdict}`)}</b>
-              {review ? <>{' · '}{review.summary}</> : null}
-            </span>
-          </p>
-          {!review && <p className="mt-1.5 max-w-[52ch] text-sm leading-[22px] text-ink-2">{t('review.pendingBody')}</p>}
-          {review && review.concerns?.length > 0 && (
-            <ul aria-label={t('review.concerns')} className="mt-2 list-disc space-y-1 pl-5 text-sm leading-[22px] marker:text-ink-2">
-              {review.concerns.map((concern) => (
-                <li key={concern}>{concern}</li>
-              ))}
-            </ul>
-          )}
-          {review && (
-            <p className="mt-2 text-[13px] text-ink-2">
-              {t('review.automated')}
-              {RISK_LABEL[review.risk] ? <> · {t(`review.${RISK_LABEL[review.risk]}`)}</> : null}
-              {' · '}
-              {t('review.quality', { score: review.quality })}
-            </p>
-          )}
-        </div>
-        {verdict === 'passed' && (
-          <ReviewStamp
-            label={t('review.stampLabel')}
-            word={t('review.passed')}
-            className="absolute -right-3 -top-9 h-[112px] w-[112px] sm:-right-[18px] sm:-top-11 sm:h-[148px] sm:w-[148px]"
-          />
-        )}
-      </section>
-
-      <section className="mt-6">
+      <section className="mt-7 border-t border-ink pt-4">
         <h2 className="label mb-2">{t('detail.runsTitle')}</h2>
         <ul>
           {runs.map((run, i) => (

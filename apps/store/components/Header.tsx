@@ -18,7 +18,6 @@ interface HeaderProps {
 
 const NAV = [
   { href: '/store', key: 'store' },
-  { href: '/topics', key: 'topics' },
   { href: '/docs', key: 'docs' },
   { href: '/pricing', key: 'pricing' },
 ] as const
@@ -50,8 +49,6 @@ export function Header({ user }: HeaderProps) {
   const tl = useTranslations('store.lang')
   const { theme, setTheme } = useTheme()
   const [loginOpen, setLoginOpen] = useState(false)
-
-  const isStore = pathname.startsWith('/store')
 
   function selectLocale(next: string) {
     document.cookie = `locale=${next as SupportedLocale}; path=/; max-age=31536000`
@@ -91,12 +88,6 @@ export function Header({ user }: HeaderProps) {
           <SearchInput className="order-last mb-3 w-full lg:order-none lg:mb-0 lg:w-44 xl:w-72" />
         </Suspense>
 
-        {isStore && (
-          <Link href="/store?publish=1" className="btn hidden h-9 px-4 md:inline-flex">
-            {t('publish')}
-          </Link>
-        )}
-
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
             aria-label={t('menu')}
@@ -122,14 +113,6 @@ export function Header({ user }: HeaderProps) {
                     </Link>
                   </DropdownMenu.Item>
                 ))}
-                {isStore && (
-                  <DropdownMenu.Item asChild className="menu-item">
-                    <Link href="/store?publish=1">
-                      <span className="w-4" />
-                      {t('publish')}
-                    </Link>
-                  </DropdownMenu.Item>
-                )}
                 <DropdownMenu.Separator className="menu-separator" />
               </div>
               <DropdownMenu.Label className="label menu-label">{t('theme')}</DropdownMenu.Label>
@@ -168,9 +151,6 @@ export function Header({ user }: HeaderProps) {
                   {user.email && <div className="mt-0.5 truncate text-xs text-ink-2">{user.email}</div>}
                 </div>
                 <DropdownMenu.Item asChild className="menu-item mt-1.5">
-                  <Link href={user.username ? `/publisher/${user.username}` : '/dashboard'}>{t('myHome')}</Link>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item asChild className="menu-item">
                   <Link href="/dashboard">{t('settings')}</Link>
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="menu-separator" />

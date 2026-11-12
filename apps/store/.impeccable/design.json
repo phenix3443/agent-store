@@ -1,11 +1,10 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-11T18:00:00Z",
+  "generatedAt": "2026-11-12T00:00:00Z",
   "title": "Design System: Agent Store Web",
   "extensions": {
     "colorMeta": {
       "ink": { "role": "primary", "displayName": "墨", "canonical": "#16181A" },
-      "lilac": { "role": "accent", "displayName": "审查淡紫", "canonical": "#DCDDF3" },
       "sel": { "role": "accent", "displayName": "选区淡紫", "canonical": "#EAEAF4" },
       "paper": { "role": "neutral", "displayName": "纸", "canonical": "#F5F4F6" },
       "plate": { "role": "neutral", "displayName": "图版", "canonical": "#FAF6F5" },
@@ -16,21 +15,18 @@
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "抽屉和整页详情的包名，每屏一个。" },
       "label": { "displayName": "Label", "purpose": "栏目标签、表头、按钮文字：等宽大写加字距。" },
-      "display-xl": { "displayName": "Display XL", "purpose": "索引页标题（主题、定价）桌面 88px。" },
-      "display-lg": { "displayName": "Display L", "purpose": "商店、下载、主题详情的标题。" },
+      "display-xl": { "displayName": "Display XL", "purpose": "索引页标题（定价）桌面 88px。" },
+      "display-lg": { "displayName": "Display L", "purpose": "商店、下载的标题。" },
       "display-md": { "displayName": "Display M", "purpose": "文档类页面标题、平板档索引页标题。" },
       "display-sm": { "displayName": "Display S", "purpose": "手机档索引页标题、404。" },
       "headline-sm": { "displayName": "Headline S", "purpose": "落地页节标题（手机）、弹层标题、文档小节。" },
-      "title-lg": { "displayName": "Title L", "purpose": "主题行、方案名、法律页小节。" },
+      "title-lg": { "displayName": "Title L", "purpose": "方案名、法律页小节。" },
       "reading": { "displayName": "Reading", "purpose": "文档与法律页正文栏，最长 68ch。" }
     },
     "shadows": [
-      { "name": "float", "value": "0 12px 28px -12px rgba(22,24,26,0.35)", "purpose": "弹出菜单和安装提示浮层。" },
-      { "name": "stamp-lift", "value": "drop-shadow(0 10px 10px rgba(22,24,26,0.22))", "purpose": "圆章悬停抬起。" }
+      { "name": "float", "value": "0 12px 28px -12px rgba(22,24,26,0.35)", "purpose": "弹出菜单和安装提示浮层。" }
     ],
     "motion": [
-      { "name": "stamp-turn", "value": "48s linear infinite", "purpose": "圆章外圈文字转动；减少动效时静止。" },
-      { "name": "stamp-lift", "value": "320ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "圆章悬停抬起。" },
       { "name": "state", "value": "150ms", "purpose": "按钮和页签的颜色切换。" }
     ],
     "breakpoints": [
@@ -71,29 +67,21 @@
       "description": "筛选条上的类别页签，焦点框内收但不压字。",
       "html": "<button class=\"ds-tab\" aria-pressed=\"true\">MCP <span>10</span></button>",
       "css": ".ds-tab { height: 56px; padding: 0 8px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--ink-2, #55585c); font-size: 15px; cursor: pointer; } .ds-tab span { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-2, #55585c); } .ds-tab[aria-pressed=true] { border-bottom-color: var(--ink, #16181a); color: var(--ink, #16181a); font-weight: 500; } .ds-tab:focus-visible { outline: 2px solid var(--ink, #16181a); outline-offset: -2px; }"
-    },
-    {
-      "name": "Review Chop",
-      "kind": "chip",
-      "refersTo": "review-stamp",
-      "description": "列表行里的小审查章，只在审查通过时出现。",
-      "html": "<span class=\"ds-chop\">审</span>",
-      "css": ".ds-chop { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 9999px; background: #dcddf3; color: #16181a; font-size: 13px; font-weight: 500; transform: rotate(-10deg); mix-blend-mode: multiply; }"
     }
   ],
   "narrative": {
-    "northStar": "被审过的图版",
-    "overview": "每个包是一张设计年鉴里的图版：近白的纸、墨色的字、细线分栏，审查结论是压在图版上的一枚淡紫圆章。访客是熟悉终端的开发者，这一页的任务是让他在几秒内判断「能不能信、装了会跑什么」，然后拿到安装方式。所以表现力只花在两处：抽屉四角的套准十字，和那枚圆章；其余部分克制到像一张印刷表格。",
+    "northStar": "图版",
+    "overview": "每个包是一张设计年鉴里的图版：近白的纸、墨色的字、细线分栏。访客是熟悉终端的开发者，这一页的任务是让他在几秒内判断「装了会跑什么」，然后拿到安装方式。所以表现力只花在图版四角的套准十字上，其余部分克制到像一张印刷表格。",
     "keyCharacteristics": [
       "浅色为本，近白底 #F5F4F6，抽屉面略偏暖 #FAF6F5",
-      "墨色 #16181A 而不是纯黑，全站只有一个彩色：审查圆章和选区用的淡紫",
+      "墨色 #16181A 而不是纯黑，全站只有一个彩色：选区用的淡紫",
       "一套 grotesque 无衬线（Schibsted Grotesk）贯穿标题与正文，包名、命令、数字用 JetBrains Mono",
       "直角、1px 细线、没有阴影层级",
       "固定列宽的表格代替卡片网格"
     ],
     "rules": [
-      { "name": "The One Colour Rule", "body": "淡紫是唯一的彩色，只出现在审查圆章、小章和选区上。状态靠形状和文字区分，不靠加色。", "section": "colors" },
-      { "name": "The Honest Pending Rule", "body": "没有审查数据的包一律显示「待审」，不显示圆章；没有评价的包不显示零分；网页端不显示它无法确认的「已安装」状态。", "section": "colors" },
+      { "name": "The One Colour Rule", "body": "淡紫是唯一的彩色，只出现在选区上。状态靠形状和文字区分，不靠加色。", "section": "colors" },
+      { "name": "The Honest State Rule", "body": "没有评价的包不显示零分；网页端不显示它无法确认的「已安装」状态，也不显示没有依据的安全结论。", "section": "colors" },
       { "name": "The No Eyebrow Rule", "body": "标题上方不放类别小标签或 kicker。类别已在面包屑里出现，标题自己承担层级。", "section": "typography" },
       { "name": "The Flat Plate Rule", "body": "底面是平涂色，不加纸纹、斜面、浮雕来模仿实物材质。", "section": "elevation" }
     ],
@@ -106,7 +94,7 @@
     "donts": [
       "Don't 在标题上方放类别小标签或 eyebrow。",
       "Don't 用卡片网格、图标卡片、轮播排包列表。",
-      "Don't 在没有审查数据时显示圆章或「已审」，也不显示「已安装」。",
+      "Don't 显示没有依据的审查或安全结论，也不显示「已安装」。",
       "Don't 用横向滚动隐藏命令或包名的关键部分。",
       "Don't 给控件加圆角或阴影层级。",
       "Don't 用 docs/ui/Agent Store.dc.html 的旧外观约束网页商店；它只作为旧外观参考。"

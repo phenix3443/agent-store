@@ -14,7 +14,6 @@ const config: Config = {
         ink: { DEFAULT: 'var(--ink)', 2: 'var(--ink-2)' },
         'on-ink': 'var(--on-ink)',
         line: { DEFAULT: 'var(--line)', strong: 'var(--line-strong)' },
-        lilac: 'var(--lilac)',
         sel: 'var(--sel)',
         fill: 'var(--fill)',
         danger: 'var(--red)',

@@ -1,7 +1,7 @@
 import { test, expect, afterEach, beforeEach, mock } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { intlMock } from '../../test-intl'
-import { cleanReview, flaggedReview, mcpItem, providerItem } from './fixtures'
+import { mcpItem, providerItem, skillItem } from './fixtures'
 
 mock.module('next/link', () => ({
   default: ({ href, children, scroll: _scroll, ...rest }: { href: string; children: React.ReactNode; scroll?: boolean }) => (
@@ -47,7 +47,7 @@ test('the drawer and the page render the same detail: name, description, publish
     renderIt()
     expect(screen.getByText('OpenAI Provider')).toBeInTheDocument()
     expect(screen.getByText('OpenAI API provider with GPT-4o support')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'OpenAI' }).getAttribute('href')).toBe('/publisher/openai')
+    expect(screen.getByText('OpenAI').closest('a')).toBeNull()
     expect(screen.getByText('官方')).toBeInTheDocument()
     expect(screen.getByText('安装后会执行')).toBeInTheDocument()
     cleanup()
@@ -64,23 +64,16 @@ test('discloses what a stdio MCP server runs after install', () => {
   expect(screen.getByText('npx -y @ankimcp/anki-mcp-server')).toBeInTheDocument()
 })
 
-test('no review data reads as pending and carries no stamp', () => {
-  renderPage()
-  expect(screen.getByText('待审')).toBeInTheDocument()
-  expect(screen.queryByRole('img', { name: /审查章/ })).toBeNull()
+test('the author links upstream when the item says where', () => {
+  renderPage({ ...skillItem, source: { repo: 'obra/superpowers', ref: 'main', dir: 'skills/brainstorming' } })
+  expect(screen.getByRole('link', { name: 'obra' }).getAttribute('href')).toBe('https://github.com/obra')
 })
 
-test('a clean review carries the stamp and its summary', () => {
-  renderPage({ ...providerItem, review: cleanReview })
-  expect(screen.getByRole('img', { name: '审查章：已审，Agent Store' })).toBeInTheDocument()
-  expect(screen.getByText(/Does what the manifest says\./)).toBeInTheDocument()
-})
-
-test('a flagged review lists its concerns and carries no stamp', () => {
-  renderPage({ ...mcpItem, review: flaggedReview })
-  expect(screen.getByText('有提醒')).toBeInTheDocument()
-  expect(screen.getByText('Downloads and runs code through npx')).toBeInTheDocument()
-  expect(screen.queryByRole('img', { name: /审查章/ })).toBeNull()
+test('there is no review verdict, stamp or pending mark', () => {
+  renderPage(mcpItem)
+  expect(screen.queryByText('待审')).toBeNull()
+  expect(screen.queryByText('审查结论')).toBeNull()
+  expect(screen.queryByRole('img')).toBeNull()
 })
 
 test('a package without ratings shows no score', () => {

@@ -45,14 +45,15 @@ test('renders nav links and marks the current section', () => {
   expect(nav.textContent).toContain('商店')
   expect(nav.textContent).toContain('文档')
   expect(nav.textContent).not.toContain('合集')
+  expect(nav.textContent).not.toContain('主题')
   expect(nav.textContent).toContain('定价')
   expect(screen.getByRole('link', { name: '商店' }).getAttribute('aria-current')).toBe('page')
 })
 
-test('publish button links to ?publish=1 on the store page', () => {
+test('there is no publish entry, on the bar or in the menu', () => {
   render(<Header user={null} />)
-  const publishLink = screen.getByText('发布').closest('a')
-  expect(publishLink?.getAttribute('href')).toBe('/store?publish=1')
+  openMenu('菜单')
+  expect(screen.queryByText('发布')).toBeNull()
 })
 
 test('shows the login button when logged out', () => {
@@ -96,9 +97,10 @@ test('selecting English sets the locale cookie and refreshes', () => {
   expect(refresh).toHaveBeenCalled()
 })
 
-test('the account menu holds profile, settings and sign-out', () => {
+test('the account menu holds settings and sign-out', () => {
   render(<Header user={{ initial: 'Y', username: 'you', email: 'you@dev' }} />)
   openMenu('账号菜单')
-  expect(screen.getByRole('menuitem', { name: '我的主页' }).getAttribute('href')).toBe('/publisher/you')
+  expect(screen.getByRole('menuitem', { name: '设置' }).getAttribute('href')).toBe('/dashboard')
+  expect(screen.queryByRole('menuitem', { name: '我的主页' })).toBeNull()
   expect(screen.getByRole('menuitem', { name: '退出登录' }).getAttribute('href')).toBe('/auth/logout')
 })

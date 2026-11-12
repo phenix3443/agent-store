@@ -1,8 +1,6 @@
-import { Suspense } from 'react'
 import { getItems } from '@/lib/catalog'
 import type { CategoryCounts } from '@/components/CategoryFilter'
 import { ItemTable } from '@/components/ItemTable'
-import { PublishModalTrigger } from '@/components/PublishModalTrigger'
 import { ClearFiltersLink, StoreHeading, StoreToolbar } from '@/components/StoreToolbar'
 
 interface StorePageProps {
@@ -36,9 +34,6 @@ export default async function StorePage({ searchParams }: StorePageProps) {
 
   return (
     <div className="store-shell px-4 pb-16 lg:px-10">
-      <Suspense>
-        <PublishModalTrigger />
-      </Suspense>
       <StoreHeading />
       <StoreToolbar
         category={category}

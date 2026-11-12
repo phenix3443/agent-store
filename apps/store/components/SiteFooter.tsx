@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 
-const REGISTRY_URL = 'https://github.com/awesome-agent-store/registry'
 const SOURCE_URL = 'https://github.com/awesome-agent-store/agent-store'
 
 export async function SiteFooter() {
@@ -12,7 +11,6 @@ export async function SiteFooter() {
       title: t('product'),
       links: [
         { href: '/store', label: t('store') },
-        { href: '/topics', label: t('topics') },
         { href: '/pricing', label: t('pricing') },
         { href: '/download', label: t('download') },
       ],
@@ -21,7 +19,6 @@ export async function SiteFooter() {
       title: t('resources'),
       links: [
         { href: '/docs', label: t('docs') },
-        { href: REGISTRY_URL, label: t('registry') },
         { href: SOURCE_URL, label: t('source') },
         { href: `${SOURCE_URL}/releases`, label: t('releases') },
       ],
