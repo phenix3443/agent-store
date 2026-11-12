@@ -8,9 +8,9 @@ export function desktopScheme(): string {
 
 /**
  * The link carries only identifiers: the client looks the package up in the
- * catalog itself, so a crafted link cannot smuggle in a URL or command. Today's
- * client reads `slug` and `category` and drops `id`, the /api/resources id it
- * will resolve once it reads that catalog.
+ * catalog itself, so a crafted link cannot smuggle in a URL or command. The
+ * client installs by `id` (the /api/resources id); `slug` is what older clients
+ * read, and `category` is cross-checked against the catalog.
  */
 export function installLink(target: { slug: string; kind: string; id: string }, scheme = desktopScheme()): string {
   return `${scheme}://install?slug=${encodeURIComponent(target.slug)}&category=${target.kind}&id=${encodeURIComponent(target.id)}`
