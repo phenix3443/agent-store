@@ -234,7 +234,7 @@
       },
       "sources": {
         "title": "包从哪来",
-        "lede": "目录不由我们手写。定时任务从三处上游同步进 Agent Store 自己的目录，商店和客户端读的都是这份目录。",
+        "lede": "目录不由我们手写，由定时任务从三处上游同步进 Agent Store 自己的目录。",
         "catalogLabel": "来源",
         "mcp": {
           "name": "官方 MCP Registry",

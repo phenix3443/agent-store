@@ -234,7 +234,7 @@
       },
       "sources": {
         "title": "Where packages come from",
-        "lede": "We do not write the catalog by hand. A scheduled job syncs three upstream sources into Agent Store's own catalog, which both the store and the client read.",
+        "lede": "We do not write the catalog by hand: a scheduled job syncs it from three upstream sources into Agent Store's own catalog.",
         "catalogLabel": "Sources",
         "mcp": {
           "name": "The official MCP Registry",
