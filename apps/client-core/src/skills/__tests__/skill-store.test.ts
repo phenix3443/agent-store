@@ -90,7 +90,7 @@ const storeDir = (slug = 'probe-skill') => join(aasHome, 'skills', slug)
 // Deployed under the frontmatter name, so both tools call it the same.
 const claudeLink = (name = 'probe-codeword') => join(claudeDir, 'skills', name)
 const codexLink = (name = 'probe-codeword') => join(codexDir, 'skills', name)
-const registry = () => JSON.parse(readFileSync(join(aasHome, 'registry.json'), 'utf-8')) as { installed: Array<{ slug: string; enabledFor: Record<string, boolean>; deployments?: Record<string, { path: string; mode: string }> }> }
+const registry = () => JSON.parse(readFileSync(join(aasHome, 'registry.json'), 'utf-8')) as { installed: Array<{ slug: string; enabledFor: Record<string, boolean>; deployments?: Record<string, { path: string; mode: string; sourceHash: string }> }> }
 const entry = (slug = 'probe-skill') => registry().installed.find(e => e.slug === slug)
 
 beforeEach(() => {

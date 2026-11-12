@@ -50,7 +50,8 @@ const origFetch = globalThis.fetch
 function mockFetch(items: Record<string, unknown>) {
   globalThis.fetch = (async (url: string) => {
     const u = String(url)
-    for (const [pattern, body] of Object.entries(items)) {
+    // Longest pattern first, so /api/items/x-2 is not answered by /api/items/x.
+    for (const [pattern, body] of Object.entries(items).sort(([a], [b]) => b.length - a.length)) {
       if (u.includes(pattern)) {
         if (typeof body === 'string') return new Response(body, { status: 200 })
         return new Response(JSON.stringify(body), {

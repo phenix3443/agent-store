@@ -99,6 +99,8 @@ export async function migrateHome(p: HomeMigrationPaths, now: Date = new Date())
     const stage = join(parent, `${basename(p.to)}.migrating-${process.pid}`)
     await mkdir(stage, { recursive: true, mode: 0o700 })
     try {
+      // Old backups first: the backups of this run go into the same directory.
+      if (await exists(join(p.from, 'agent-store', 'backups'))) await copy(join(p.from, 'agent-store', 'backups'), join(stage, 'backups'))
       const backups = join(stage, 'backups', `home-migrate-${stamp}`)
       for (const file of [p.claudeJsonPath, join(p.claudeConfigDir, 'settings.json'), join(p.codexConfigDir, 'config.toml'), join(p.from, 'registry.json')]) {
         if (await exists(file)) await copy(file, join(backups, file.replace(/^\/+/, '').replace(/[\\/:]+/g, '_')))
@@ -106,7 +108,6 @@ export async function migrateHome(p: HomeMigrationPaths, now: Date = new Date())
       for (const name of OWNED) {
         if (await exists(join(p.from, name))) await copy(join(p.from, name), join(stage, name))
       }
-      if (await exists(join(p.from, 'agent-store', 'backups'))) await copy(join(p.from, 'agent-store', 'backups'), join(stage, 'backups'))
       for (const slug of skills) await copy(join(p.from, 'skills', slug), join(stage, 'skills', slug))
       await writeFile(join(stage, STATE), JSON.stringify({ phase: 'copied', from: p.from, skills, startedAt: now.toISOString() }, null, 2))
       await rename(stage, p.to)

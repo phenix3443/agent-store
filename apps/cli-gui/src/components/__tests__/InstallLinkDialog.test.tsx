@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-libra
 import { AppStateProvider, useAppState } from '../../state/AppState'
 import { TerminalLogProvider, useTerminalLog } from '../../state/TerminalLog'
 import * as rpcModule from '../../lib/rpc'
+import { settleRpc } from '../../test/settle'
 
 const handlers = new Set<(url: string) => void>()
 let launchLinks: string[] = []
@@ -104,7 +105,7 @@ beforeEach(() => {
   resetLaunchLinksForTest()
   focusMock.mockClear()
 })
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 test('an install link opens the package and asks before installing', async () => {
   mockRpc()

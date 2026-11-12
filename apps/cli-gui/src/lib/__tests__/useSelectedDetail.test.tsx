@@ -3,8 +3,9 @@ import { render, screen, cleanup } from '@testing-library/react'
 import * as rpcModule from '../rpc'
 import { AppStateProvider, useAppState } from '../../state/AppState'
 import { useSelectedDetail } from '../useSelectedDetail'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 function Select({ slug }: { slug: string }) {
   const { setSelectedSlug } = useAppState()

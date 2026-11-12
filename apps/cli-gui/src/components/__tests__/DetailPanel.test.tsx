@@ -4,8 +4,9 @@ import { AppStateProvider, useAppState } from '../../state/AppState'
 import { TerminalLogProvider } from '../../state/TerminalLog'
 import * as rpcModule from '../../lib/rpc'
 import { DetailPanel } from '../DetailPanel'
+import { settleRpc } from '../../test/settle'
 
-afterEach(() => { cleanup(); mock.restore() })
+afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
 const publisher = { id: 'p', slug: 'anthropic', name: 'anthropic', avatarUrl: '', tier: 'official' as const }
 

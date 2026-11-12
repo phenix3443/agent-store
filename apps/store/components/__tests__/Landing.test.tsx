@@ -61,7 +61,7 @@ test('install map falls back to a placeholder slug when the catalog is empty', (
   render(<InstallMap samples={{ skill: null, mcp: null, provider: null }} />)
   const panel = screen.getByRole('tabpanel')
   expect(panel.textContent).toContain('目录暂时取不到')
-  expect(panel.textContent).toContain('~/.claude/skills/<slug>')
+  expect(panel.textContent).toContain('~/.claude/skills/<name>')
 })
 
 test('terminal demo has one tab per aas command and shows its captured output', () => {
