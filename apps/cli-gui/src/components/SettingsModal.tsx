@@ -7,6 +7,7 @@ import { useEntitlement } from '../state/Entitlement'
 import { useI18n, LOCALES, LOCALE_NAMES } from '../i18n'
 import { callRpc } from '../lib/rpc'
 import { openExternal } from '../lib/openExternal'
+import { version as appVersion } from '../../src-tauri/tauri.conf.json'
 
 interface SettingsModalProps {
   open: boolean
@@ -313,7 +314,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     </svg>
                   </div>
                   <div className="text-[15px] font-bold text-store-text">Agent Store CLI</div>
-                  <div className="font-mono text-xs text-store-text-3">v0.0.1 · {t('settings.about.subtitle')}</div>
+                  <div className="font-mono text-xs text-store-text-3">v{appVersion} · {t('settings.about.subtitle')}</div>
                   <div className="mt-1.5 flex items-center gap-4.5">
                     <button
                       type="button"
