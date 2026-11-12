@@ -13,6 +13,15 @@ async function isAlreadyRunning(ops: RelayProcessOps): Promise<number | null> {
   return null
 }
 
+/** Starts the relay unless it already runs; returns its pid and whether this call started it. */
+export async function ensureRelayRunning(ops: RelayProcessOps): Promise<{ pid: number; started: boolean }> {
+  const running = await isAlreadyRunning(ops)
+  if (running) return { pid: running, started: false }
+  const pid = ops.spawnDetached()
+  await ops.writePidFile(pid)
+  return { pid, started: true }
+}
+
 export async function runRelay(
   args: string[],
   ops: RelayProcessOps,
@@ -21,14 +30,8 @@ export async function runRelay(
   const subcommand = args[0]
 
   if (subcommand === 'start') {
-    const running = await isAlreadyRunning(ops)
-    if (running) {
-      out(`  relay already running (pid ${running})`)
-      return
-    }
-    const pid = ops.spawnDetached()
-    await ops.writePidFile(pid)
-    out(`  relay started (pid ${pid})`)
+    const { pid, started } = await ensureRelayRunning(ops)
+    out(started ? `  relay started (pid ${pid})` : `  relay already running (pid ${pid})`)
     return
   }
 

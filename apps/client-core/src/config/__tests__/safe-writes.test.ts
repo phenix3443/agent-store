@@ -1,8 +1,9 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { chmod, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'fs/promises'
+import { readFileSync } from 'fs'
 import { join } from 'path'
 import { syncItemToClaude, enableRelayForClaude, disableRelayForClaude } from '../claude'
-import { enableRelayForCodex, upsertCodexProviderConnection } from '../codex'
+import { enableRelayForCodex, disableRelayForCodex, upsertCodexProviderConnection } from '../codex'
 import { ConfigParseError } from '../safe-file'
 import { runHook } from '../../installer/hook-runner'
 
@@ -53,7 +54,7 @@ test('settings.json writes are backed up, keep other keys and are 0600', async (
   await enableRelayForClaude(aasHome, claudeDir)
   const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
   expect(settings.model).toBe('opus')
-  expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('aas-relay')
+  expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(readFileSync(join(aasHome, 'relay-token'), 'utf-8'))
   expect(await modeOf(join(claudeDir, 'settings.json'))).toBe(0o600)
   const backups = await readdir(join(aasHome, 'agent-store', 'backups'))
   expect(backups.length).toBeGreaterThan(0)
@@ -61,10 +62,11 @@ test('settings.json writes are backed up, keep other keys and are 0600', async (
     .toBe(JSON.stringify({ model: 'opus' }))
 })
 
-test('an auth.json that does not parse aborts relay enable; auth.json and config.toml are left untouched', async () => {
+test('relay enable and disable never touch auth.json, even one that does not parse', async () => {
   await writeFile(join(codexDir, 'auth.json'), '{"tokens": {')
   await writeFile(join(codexDir, 'config.toml'), 'model = "gpt-5"\n')
-  await expect(enableRelayForCodex(aasHome, codexDir)).rejects.toBeInstanceOf(ConfigParseError)
+  await enableRelayForCodex(aasHome, codexDir)
+  await disableRelayForCodex(aasHome, codexDir)
   expect(await readFile(join(codexDir, 'auth.json'), 'utf-8')).toBe('{"tokens": {')
   expect(await readFile(join(codexDir, 'config.toml'), 'utf-8')).toBe('model = "gpt-5"\n')
 })
@@ -78,7 +80,7 @@ test('an auth.json that does not parse aborts a provider connection write', asyn
 })
 
 test('a new auth.json is 0600', async () => {
-  await enableRelayForCodex(aasHome, codexDir)
+  await upsertCodexProviderConnection(codexDir, { providerKey: 'p', name: 'p', baseUrl: 'https://a', apiKey: 'k1' })
   expect(await modeOf(join(codexDir, 'auth.json'))).toBe(0o600)
 })
 

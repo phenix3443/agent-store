@@ -1,12 +1,12 @@
 import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
-import { parse, stringify } from '@iarna/toml'
-import type { JsonMap } from '@iarna/toml'
+import { parse, patch, stringify } from '@decimalturn/toml-patch'
 import { load } from 'js-yaml'
 import type { McpServerConfig } from './mcp'
 import { resolveCodexCli, syncCodexMcp, type CodexMcpCli } from './codex-mcp'
 import { readProviderConnection } from './provider'
 import { atomicWriteFile, backupFile, ConfigParseError, readJsonObject, replaceSecretJsonFile } from './safe-file'
+import { ensureRelayToken, RELAY_TOKEN_HEADER } from '../relay/token'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
 
@@ -20,10 +20,14 @@ const RELAY_PROVIDER_KEY = 'aas-relay'
 
 interface CodexRelayState {
   originalModelProvider: string | null
-  originalModelProviders: Record<string, unknown> | null
-  originalAuth: Record<string, unknown> | null
-  originalPreferredAuthMethod: string | null
+  // Written by versions that also took over auth.json and preferred_auth_method.
+  originalAuth?: Record<string, unknown> | null
+  originalPreferredAuthMethod?: string | null
 }
+
+// What those versions wrote into auth.json / config.toml.
+const LEGACY_RELAY_API_KEY = RELAY_PROVIDER_KEY
+const LEGACY_RELAY_AUTH_METHOD = 'apikey'
 
 function readRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -68,8 +72,16 @@ async function readConfig(codexConfigDir: string): Promise<Record<string, unknow
   }
 }
 
+// Patching the existing text instead of re-serialising keeps the user's comments and layout.
 async function writeConfig(codexConfigDir: string, config: Record<string, unknown>): Promise<void> {
-  await atomicWriteFile(join(codexConfigDir, 'config.toml'), stringify(config as JsonMap), 0o600)
+  const tomlPath = join(codexConfigDir, 'config.toml')
+  let existing: string | undefined
+  try {
+    existing = await readFile(tomlPath, 'utf-8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e
+  }
+  await atomicWriteFile(tomlPath, existing === undefined ? stringify(config) : patch(existing, config), 0o600)
 }
 
 async function readAuth(codexConfigDir: string): Promise<Record<string, unknown>> {
@@ -214,59 +226,86 @@ export async function syncItemToCodex(
 }
 
 export async function enableRelayForCodex(aasHome: string, codexConfigDir: string): Promise<void> {
+  const token = ensureRelayToken(aasHome)
   const config = await readConfig(codexConfigDir)
-  const auth = await readAuth(codexConfigDir)
 
   const existingSnapshot = await readRelayState<CodexRelayState>(aasHome, 'codex')
   if (!existingSnapshot) {
+    const current = config['model_provider']
     await writeRelayState<CodexRelayState>(aasHome, 'codex', {
-      originalModelProvider: typeof config['model_provider'] === 'string' ? config['model_provider'] : null,
-      originalModelProviders: (config['model_providers'] as Record<string, unknown> | undefined) ?? null,
-      originalAuth: Object.keys(auth).length > 0 ? auth : null,
-      originalPreferredAuthMethod: typeof config['preferred_auth_method'] === 'string' ? config['preferred_auth_method'] : null,
+      originalModelProvider: typeof current === 'string' && current !== RELAY_PROVIDER_KEY ? current : null,
     })
   }
 
+  // The relay provider needs no OpenAI login (requires_openai_auth = false), so
+  // auth.json is left alone; the token travels in a static request header.
   const providers = (config['model_providers'] ?? {}) as Record<string, unknown>
   providers[RELAY_PROVIDER_KEY] = {
     name: RELAY_PROVIDER_KEY,
     base_url: `http://127.0.0.1:${RELAY_PORT}`,
     wire_api: 'responses',
     requires_openai_auth: false,
+    http_headers: { [RELAY_TOKEN_HEADER]: token },
   }
   config['model_providers'] = providers
   config['model_provider'] = RELAY_PROVIDER_KEY
-  config['preferred_auth_method'] = 'apikey'
-
-  auth['OPENAI_API_KEY'] = RELAY_PROVIDER_KEY
 
   await writeConfig(codexConfigDir, config)
-  await writeAuth(codexConfigDir, auth, aasHome)
 }
 
-export async function disableRelayForCodex(
-  aasHome: string,
-  codexConfigDir: string,
-  options?: { preserveOfficialAuthOnSwitch?: boolean }
-): Promise<void> {
+/**
+ * Undoes only what the relay owns: its own provider entry, and model_provider while
+ * it still points at that entry. Providers, logins and tokens that changed while the
+ * relay was on stay as they are now.
+ */
+export async function disableRelayForCodex(aasHome: string, codexConfigDir: string): Promise<void> {
   const snapshot = await readRelayState<CodexRelayState>(aasHome, 'codex')
   const config = await readConfig(codexConfigDir)
 
-  if (snapshot?.originalModelProvider != null) config['model_provider'] = snapshot.originalModelProvider
-  else delete config['model_provider']
+  // A snapshot taken while a takeover was already in place holds relay values as "originals".
+  if (config['model_provider'] === RELAY_PROVIDER_KEY) {
+    const original = snapshot?.originalModelProvider
+    if (original != null && original !== RELAY_PROVIDER_KEY) config['model_provider'] = original
+    else delete config['model_provider']
+  }
 
-  if (snapshot?.originalModelProviders != null) config['model_providers'] = snapshot.originalModelProviders
-  else delete config['model_providers']
+  const providers = config['model_providers'] as Record<string, unknown> | undefined
+  if (providers) {
+    delete providers[RELAY_PROVIDER_KEY]
+    if (Object.keys(providers).length === 0) delete config['model_providers']
+  }
 
-  if (snapshot?.originalPreferredAuthMethod != null) config['preferred_auth_method'] = snapshot.originalPreferredAuthMethod
-  else delete config['preferred_auth_method']
+  if (snapshot && 'originalPreferredAuthMethod' in snapshot && config['preferred_auth_method'] === LEGACY_RELAY_AUTH_METHOD) {
+    if (snapshot.originalPreferredAuthMethod != null) config['preferred_auth_method'] = snapshot.originalPreferredAuthMethod
+    else delete config['preferred_auth_method']
+  }
 
   await writeConfig(codexConfigDir, config)
 
-  if (!options?.preserveOfficialAuthOnSwitch) {
-    const restoredAuth = snapshot?.originalAuth ?? {}
-    await writeAuth(codexConfigDir, restoredAuth, aasHome)
+  if (snapshot && 'originalAuth' in snapshot) {
+    const auth = await readAuth(codexConfigDir)
+    if (auth['OPENAI_API_KEY'] === LEGACY_RELAY_API_KEY) {
+      const original = snapshot.originalAuth?.['OPENAI_API_KEY']
+      if (original !== undefined && original !== LEGACY_RELAY_API_KEY) auth['OPENAI_API_KEY'] = original
+      else delete auth['OPENAI_API_KEY']
+      await writeAuth(codexConfigDir, auth, aasHome)
+    }
   }
 
   await clearRelayState(aasHome, 'codex')
+}
+
+/**
+ * Rewrites a takeover still in place so it carries the current relay token (older
+ * versions sent none). Writes nothing when Codex is not on the relay or already
+ * sends the token. The existing snapshot is kept.
+ */
+export async function refreshRelayForCodex(aasHome: string, codexConfigDir: string): Promise<boolean> {
+  if (!(await readRelayState<CodexRelayState>(aasHome, 'codex'))) return false
+  const config = await readConfig(codexConfigDir)
+  if (config['model_provider'] !== RELAY_PROVIDER_KEY) return false
+  const relayProvider = readRecord(readRecord(config['model_providers'])?.[RELAY_PROVIDER_KEY])
+  if (readRecord(relayProvider?.['http_headers'])?.[RELAY_TOKEN_HEADER] === ensureRelayToken(aasHome)) return false
+  await enableRelayForCodex(aasHome, codexConfigDir)
+  return true
 }

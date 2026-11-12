@@ -111,3 +111,25 @@ test('runInstall leaves enabling skills to the engine', async () => {
   expect(await runInstall(engine, ['a-skill'], () => {})).toBe(0)
   expect(enabled).toEqual([])
 })
+
+function notReady(message: string, reason: 'no-key' | 'relay-not-running'): Error {
+  return Object.assign(new Error(message), { name: 'ProviderNotReadyError', reason })
+}
+
+test('runInstall of a provider without a key installs it, enables nothing and says what is missing', async () => {
+  const lines: string[] = []
+  const engine = makeEngine({ enable: async () => { throw notReady('test-provider has no API key configured; run: aas config test-provider', 'no-key') } })
+  expect(await runInstall(engine, ['openai-provider'], s => lines.push(s))).toBe(0)
+  const out = lines.join('\n')
+  expect(out).toContain('Installed openai-provider 1.2.0')
+  expect(out).toContain('Not enabled for claude: test-provider has no API key configured')
+  expect(out).toContain('aas enable openai-provider --for claude')
+  expect(out).not.toMatch(/Syncing to claude\.\.\..*done/)
+})
+
+test('runInstall of a provider fails when the relay cannot be started', async () => {
+  const lines: string[] = []
+  const engine = makeEngine({ enable: async () => { throw notReady('the local relay is not running and could not be started; start it with: aas relay start', 'relay-not-running') } })
+  expect(await runInstall(engine, ['openai-provider'], s => lines.push(s))).toBe(1)
+  expect(lines.join('\n')).toContain('aas relay start')
+})
