@@ -46,8 +46,8 @@ describe('mcpStarsRepo', () => {
 describe('star queries', () => {
   test('one aliased field per repo, plus the rate limit', () => {
     const q = starsQuery(['a/b', 'c/d.e'])
-    expect(q).toContain('r0: repository(owner: "a", name: "b") { stargazerCount }')
-    expect(q).toContain('r1: repository(owner: "c", name: "d.e") { stargazerCount }')
+    expect(q).toContain('r0: repository(owner: "a", name: "b") { stargazerCount createdAt }')
+    expect(q).toContain('r1: repository(owner: "c", name: "d.e") { stargazerCount createdAt }')
     expect(q).toContain('rateLimit { limit cost remaining resetAt }')
   })
 
@@ -162,6 +162,16 @@ describe('refreshStars', () => {
     expect(stars(`mcp-registry:${SUPABASE.upstreamId}`).stars).toBe(2_500)
     const later = githubGraphqlRoute(STARS)
     expect(await run([later], { advanceMs: 73 * 3600_000 })).toMatchObject({ due: 5 })
+  })
+
+  test('a repo under a year old with more than 100k stars is not credited, an old one is', async () => {
+    const big = { ...STARS, 'github/github-mcp-server': 450_000, 'chromedevtools/chrome-devtools-mcp': 450_000 }
+    // clock is 2026-11-12: github's repo is seven months old, chrome's two years.
+    const report = await run([githubGraphqlRoute(big, { 'github/github-mcp-server': '2026-04-01T00:00:00Z', 'chromedevtools/chrome-devtools-mcp': '2024-11-01T00:00:00Z' })])
+    expect(report.suspect).toBe(1)
+    expect(stars(`mcp-registry:${GITHUB.upstreamId}`)).toEqual({ stars: null, github_repo: 'github/github-mcp-server' })
+    expect(stars(`mcp-registry:${CHROME.upstreamId}`).stars).toBe(450_000)
+    expect((db.query("SELECT stars FROM github_repos WHERE full_name = 'github/github-mcp-server'").get() as { stars: number }).stars).toBe(450_000)
   })
 
   test('a failed batch keeps the previous stars; a 401 stops the run', async () => {

@@ -80,6 +80,10 @@ const MIGRATIONS: string[] = [
   CREATE INDEX resources_by_stars ON resources (stars DESC, verified DESC, upstream_updated_at DESC, id)
     WHERE unavailable_at IS NULL;
   `,
+  `
+  -- When GitHub created the repo; with stars it flags counts that look bought (stars.ts SUSPECT_STARS).
+  ALTER TABLE github_repos ADD COLUMN created_at TEXT;
+  `,
 ]
 
 export const CATALOG_SCHEMA_VERSION = MIGRATIONS.length

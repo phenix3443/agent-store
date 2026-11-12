@@ -64,7 +64,7 @@ export function octokitWith(fetchImpl: typeof fetch): Octokit {
  * owner/name); repos not listed resolve to null with a NOT_FOUND error, as GitHub does.
  * `queries` records the repos of each query.
  */
-export function githubGraphqlRoute(stars: Record<string, number>): Route & { queries: string[][] } {
+export function githubGraphqlRoute(stars: Record<string, number>, createdAt: Record<string, string> = {}): Route & { queries: string[][] } {
   const queries: string[][] = []
   const route = ((url: URL, init?: RequestInit) => {
     if (url.hostname !== 'api.github.com' || url.pathname !== '/graphql') return undefined
@@ -77,7 +77,7 @@ export function githubGraphqlRoute(stars: Record<string, number>): Route & { que
     const data: Record<string, unknown> = { rateLimit: { limit: 1000, cost: 1, remaining: 1000 - queries.length, resetAt: '2026-11-12T01:00:00Z' } }
     const errors: unknown[] = []
     for (const r of repos) {
-      if (r.full in stars) data[r.alias] = { stargazerCount: stars[r.full] }
+      if (r.full in stars) data[r.alias] = { stargazerCount: stars[r.full], createdAt: createdAt[r.full] ?? '2015-01-01T00:00:00Z' }
       else {
         data[r.alias] = null
         errors.push({ type: 'NOT_FOUND', path: [r.alias], message: `Could not resolve to a Repository with the name '${r.full}'.` })
