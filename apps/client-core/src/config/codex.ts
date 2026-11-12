@@ -2,19 +2,12 @@ import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
 import { parse, patch, stringify } from '@decimalturn/toml-patch'
 import { load } from 'js-yaml'
-import type { McpServerConfig } from './mcp'
+import { itemDir } from '../paths'
 import { resolveCodexCli, syncCodexMcp, type CodexMcpCli } from './codex-mcp'
-import { readProviderConnection } from './provider'
 import { atomicWriteFile, backupFile, ConfigParseError, readJsonObject, replaceSecretJsonFile } from './safe-file'
 import { ensureRelayToken, RELAY_TOKEN_HEADER } from '../relay/token'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
-
-const CATEGORY_DIR: Record<string, string> = {
-  provider: 'providers',
-  skill: 'skills',
-  mcp: 'mcps',
-}
 
 const RELAY_PROVIDER_KEY = 'aas-relay'
 
@@ -99,86 +92,14 @@ async function writeAuth(codexConfigDir: string, auth: Record<string, unknown>, 
   await replaceSecretJsonFile(aasHome, path, auth)
 }
 
-export async function upsertCodexMcpServer(
-  codexConfigDir: string,
-  slug: string,
-  entry: McpServerConfig
-): Promise<void> {
+/** Removes one `[mcp_servers.<name>]` table as-is; only `as migrate` uses it, for entries it proved it wrote. */
+export async function removeCodexMcpServer(codexConfigDir: string, name: string): Promise<void> {
   const config = await readConfig(codexConfigDir)
   const mcpServers = (config['mcp_servers'] ?? {}) as Record<string, unknown>
-  mcpServers[slug] = entry
-  config['mcp_servers'] = mcpServers
-  await writeConfig(codexConfigDir, config)
-}
-
-export async function removeCodexMcpServer(codexConfigDir: string, slug: string): Promise<void> {
-  const config = await readConfig(codexConfigDir)
-  const mcpServers = (config['mcp_servers'] ?? {}) as Record<string, unknown>
-  delete mcpServers[slug]
+  delete mcpServers[name]
   if (Object.keys(mcpServers).length > 0) config['mcp_servers'] = mcpServers
   else delete config['mcp_servers']
   await writeConfig(codexConfigDir, config)
-}
-
-interface CodexProviderConfigInput {
-  providerKey: string
-  name: string
-  baseUrl: string
-  apiKey: string
-  model?: string
-  adapter?: string
-}
-
-export async function upsertCodexProviderConnection(
-  codexConfigDir: string,
-  input: CodexProviderConfigInput,
-  aasHome?: string
-): Promise<void> {
-  const config = await readConfig(codexConfigDir)
-  const auth = await readAuth(codexConfigDir)
-  const providers = (config['model_providers'] ?? {}) as Record<string, unknown>
-
-  config['preferred_auth_method'] = 'apikey'
-  config['model_provider'] = input.providerKey
-  if (input.model) config['model'] = input.model
-
-  const providerConfig: Record<string, unknown> = {
-    name: input.name,
-    base_url: input.baseUrl,
-    wire_api: 'responses',
-    requires_openai_auth: false,
-  }
-  if (input.adapter) providerConfig['adapter'] = input.adapter
-  providers[input.providerKey] = providerConfig
-  config['model_providers'] = providers
-
-  auth['OPENAI_API_KEY'] = input.apiKey
-  await writeConfig(codexConfigDir, config)
-  await writeAuth(codexConfigDir, auth, aasHome)
-}
-
-export async function removeCodexProviderConnection(
-  codexConfigDir: string,
-  providerKey: string,
-  aasHome?: string
-): Promise<void> {
-  const config = await readConfig(codexConfigDir)
-  const auth = await readAuth(codexConfigDir)
-  const isActiveProvider = config['model_provider'] === providerKey
-  const providers = (config['model_providers'] ?? {}) as Record<string, unknown>
-
-  if (isActiveProvider) {
-    delete config['model_provider']
-    if (config['preferred_auth_method'] === 'apikey') delete config['preferred_auth_method']
-    delete auth['OPENAI_API_KEY']
-  }
-
-  delete providers[providerKey]
-  if (Object.keys(providers).length > 0) config['model_providers'] = providers
-  else delete config['model_providers']
-
-  await writeConfig(codexConfigDir, config)
-  await writeAuth(codexConfigDir, auth, aasHome)
 }
 
 export interface CodexSyncOptions {
@@ -192,37 +113,15 @@ export interface CodexSyncOptions {
   cli?: CodexMcpCli | null
 }
 
-export async function syncItemToCodex(
+export async function syncMcpToCodex(
   slug: string,
-  category: 'provider' | 'skill' | 'mcp',
   aasHome: string,
   codexConfigDir: string,
   action: 'add' | 'remove',
   options: CodexSyncOptions = {}
 ): Promise<void> {
-  const dir = join(aasHome, CATEGORY_DIR[category], slug)
-
-  if (category === 'mcp') {
-    const cli = options.cli === undefined ? resolveCodexCli() : options.cli
-    await syncCodexMcp({ aasHome, codexHome: codexConfigDir, itemDir: dir, cli }, slug, action, options)
-    return
-  }
-  // Skills are not synced here: Codex reads them from ~/.agents/skills (engine + skills/store.ts).
-  if (category === 'provider') {
-    if (action === 'add') {
-      const connection = await readProviderConnection(dir)
-      if (connection.apiKey && connection.baseUrl) {
-        await upsertCodexProviderConnection(codexConfigDir, {
-          providerKey: slug,
-          name: slug,
-          baseUrl: connection.baseUrl,
-          apiKey: connection.apiKey,
-        }, aasHome)
-      }
-    } else {
-      await removeCodexProviderConnection(codexConfigDir, slug, aasHome)
-    }
-  }
+  const cli = options.cli === undefined ? resolveCodexCli() : options.cli
+  await syncCodexMcp({ aasHome, codexHome: codexConfigDir, itemDir: itemDir(aasHome, 'mcp', slug), cli }, slug, action, options)
 }
 
 export async function enableRelayForCodex(aasHome: string, codexConfigDir: string): Promise<void> {

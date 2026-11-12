@@ -1,8 +1,8 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, rm, readFile, readdir, writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
-import { syncItemToClaude } from '../claude'
-import type { MCPItem, ProviderItem } from '@as/types'
+import { syncMcpToClaude } from '../claude'
+import type { MCPItem } from '@as/types'
 
 // Unit tests use the safe file-edit path, not the installed claude CLI.
 process.env['AS_CLAUDE_BIN'] = ''
@@ -23,11 +23,6 @@ const mcpManifest: MCPItem = {
   ...baseItem, slug: 'test-mcp', category: 'mcp',
   transport: 'stdio', serverCommand: './server',
   configSchema: {},
-}
-
-const providerManifest: ProviderItem = {
-  ...baseItem, slug: 'test-provider', category: 'provider',
-  configSchema: {}, supportedModels: ['gpt-4o'],
 }
 
 async function setupItem(category: string, slug: string, manifest: object, config?: object) {
@@ -52,7 +47,7 @@ afterEach(async () => {
 
 test('mcp add writes mcpServers entry with absolute command path', async () => {
   await setupItem('mcp', 'test-mcp', mcpManifest)
-  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'add')
+  await syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'add')
   const config = JSON.parse(await readFile(claudeJson, 'utf-8'))
   const entry = config.mcpServers['test-mcp']
   expect(entry).toBeDefined()
@@ -66,7 +61,7 @@ test('mcp add writes remote mcpServers entry for http transport', async () => {
     transport: 'http',
     url: 'https://mcp.example.com',
   })
-  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'add')
+  await syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'add')
   const config = JSON.parse(await readFile(claudeJson, 'utf-8'))
   const entry = config.mcpServers['test-mcp']
   expect(entry).toEqual({
@@ -77,66 +72,22 @@ test('mcp add writes remote mcpServers entry for http transport', async () => {
 
 test('mcp remove deletes mcpServers entry', async () => {
   await setupItem('mcp', 'test-mcp', mcpManifest)
-  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'add')
-  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'remove')
+  await syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'add')
+  await syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'remove')
   const config = JSON.parse(await readFile(claudeJson, 'utf-8'))
   expect(config.mcpServers?.['test-mcp']).toBeUndefined()
-})
-
-test('provider add writes providers entry with config values', async () => {
-  await setupItem('provider', 'test-provider', providerManifest, {
-    apiKey: 'sk-123',
-    baseUrl: 'https://api.example.com/v1',
-  })
-  await syncItemToClaude('test-provider', 'provider', aasHome, claudeDir, claudeJson, 'add')
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('sk-123')
-  expect(settings.env.ANTHROPIC_BASE_URL).toBe('https://api.example.com/v1')
-})
-
-test('provider remove deletes providers entry', async () => {
-  await setupItem('provider', 'test-provider', providerManifest, {
-    apiKey: 'sk-123',
-    baseUrl: 'https://api.example.com/v1',
-  })
-  await syncItemToClaude('test-provider', 'provider', aasHome, claudeDir, claudeJson, 'add')
-  await syncItemToClaude('test-provider', 'provider', aasHome, claudeDir, claudeJson, 'remove')
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.env?.ANTHROPIC_AUTH_TOKEN).toBeUndefined()
-  expect(settings.env?.ANTHROPIC_BASE_URL).toBeUndefined()
-})
-
-test('provider add preserves existing non-provider settings', async () => {
-  await writeFile(
-    join(claudeDir, 'settings.json'),
-    JSON.stringify({ model: 'claude-sonnet-4-6', env: { EXISTING_KEY: 'keep-me' } })
-  )
-  await setupItem('provider', 'test-provider', providerManifest, {
-    apiKey: 'sk-123',
-    baseUrl: 'https://api.example.com/v1',
-  })
-  await syncItemToClaude('test-provider', 'provider', aasHome, claudeDir, claudeJson, 'add')
-  const settings = JSON.parse(await readFile(join(claudeDir, 'settings.json'), 'utf-8'))
-  expect(settings.model).toBe('claude-sonnet-4-6')
-  expect(settings.env.EXISTING_KEY).toBe('keep-me')
-  expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe('sk-123')
-})
-
-test('skills are not written into the Claude config dir by this module', async () => {
-  await syncItemToClaude('test-skill', 'skill', aasHome, claudeDir, claudeJson, 'add')
-  await expect(readdir(claudeDir)).resolves.toEqual([])
 })
 
 test('mcp remove without the item directory: no ENOENT, refused without proof of ownership, --force removes', async () => {
   // First add the entry, then simulate the directory (manifest + targets.json) being deleted already
   await setupItem('mcp', 'test-mcp', mcpManifest)
-  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'add')
+  await syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'add')
   await rm(join(aasHome, 'mcps', 'test-mcp'), { recursive: true, force: true })
   await expect(
-    syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'remove')
+    syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'remove')
   ).rejects.toThrow(/outside Agent Store/)
   await expect(
-    syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'remove', { force: true })
+    syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'remove', { force: true })
   ).resolves.toBeUndefined()
   const config = JSON.parse(await readFile(claudeJson, 'utf-8'))
   expect(config.mcpServers?.['test-mcp']).toBeUndefined()
@@ -145,7 +96,7 @@ test('mcp remove without the item directory: no ENOENT, refused without proof of
 test('mcp add preserves existing .claude.json keys', async () => {
   await writeFile(claudeJson, JSON.stringify({ numStartups: 5 }))
   await setupItem('mcp', 'test-mcp', mcpManifest)
-  await syncItemToClaude('test-mcp', 'mcp', aasHome, claudeDir, claudeJson, 'add')
+  await syncMcpToClaude('test-mcp', aasHome, claudeDir, claudeJson, 'add')
   const config = JSON.parse(await readFile(claudeJson, 'utf-8'))
   expect(config.numStartups).toBe(5)
   expect(config.mcpServers['test-mcp']).toBeDefined()

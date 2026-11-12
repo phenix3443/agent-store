@@ -1,17 +1,10 @@
 import { join } from 'path'
-import type { McpServerConfig } from './mcp'
+import { itemDir } from '../paths'
 import { resolveClaudeCli, syncClaudeMcp, type ClaudeMcpCli } from './claude-mcp'
 import { atomicWriteFile, readJsonObject, replaceSecretJsonFile } from './safe-file'
-import { readProviderConnection } from './provider'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
 import { ensureRelayToken, readRelayToken } from '../relay/token'
-
-const CATEGORY_DIR: Record<string, string> = {
-  provider: 'providers',
-  skill: 'skills',
-  mcp: 'mcps',
-}
 
 // Versions before the relay token wrote this fixed value; disable still recognises it.
 const LEGACY_RELAY_AUTH_TOKEN = 'aas-relay'
@@ -41,22 +34,11 @@ async function writeClaudeJson(claudeJsonPath: string, config: Record<string, un
   await atomicWriteFile(claudeJsonPath, JSON.stringify(config, null, 2), 0o600, true)
 }
 
-export async function upsertClaudeMcpServer(
-  claudeJsonPath: string,
-  slug: string,
-  entry: McpServerConfig
-): Promise<void> {
+/** Removes one `mcpServers` entry as-is; only `as migrate` uses it, for entries it proved it wrote. */
+export async function removeClaudeMcpServer(claudeJsonPath: string, name: string): Promise<void> {
   const config = await readClaudeJson(claudeJsonPath)
   const mcpServers = (config['mcpServers'] ?? {}) as Record<string, unknown>
-  mcpServers[slug] = entry
-  config['mcpServers'] = mcpServers
-  await writeClaudeJson(claudeJsonPath, config)
-}
-
-export async function removeClaudeMcpServer(claudeJsonPath: string, slug: string): Promise<void> {
-  const config = await readClaudeJson(claudeJsonPath)
-  const mcpServers = (config['mcpServers'] ?? {}) as Record<string, unknown>
-  delete mcpServers[slug]
+  delete mcpServers[name]
   if (Object.keys(mcpServers).length > 0) config['mcpServers'] = mcpServers
   else delete config['mcpServers']
   await writeClaudeJson(claudeJsonPath, config)
@@ -73,43 +55,16 @@ export interface ClaudeSyncOptions {
   cli?: ClaudeMcpCli | null
 }
 
-export async function syncItemToClaude(
+export async function syncMcpToClaude(
   slug: string,
-  category: 'provider' | 'skill' | 'mcp',
   aasHome: string,
   claudeConfigDir: string,
   claudeJsonPath: string,
   action: 'add' | 'remove',
   options: ClaudeSyncOptions = {}
 ): Promise<void> {
-  const dir = join(aasHome, CATEGORY_DIR[category], slug)
-
-  if (category === 'mcp') {
-    const cli = options.cli === undefined ? resolveClaudeCli() : options.cli
-    await syncClaudeMcp({ aasHome, claudeConfigDir, claudeJsonPath, itemDir: dir, cli }, slug, action, options)
-    return
-  }
-
-  // Skills are not synced here: Claude sees them through a symlink (engine + skills/claude-link.ts).
-  if (category === 'provider') {
-    const settings = await readSettings(claudeConfigDir)
-    if (action === 'add') {
-      const connection = await readProviderConnection(dir)
-      if (connection.apiKey) {
-        const env = (settings['env'] ?? {}) as Record<string, unknown>
-        env['ANTHROPIC_AUTH_TOKEN'] = connection.apiKey
-        if (connection.baseUrl) env['ANTHROPIC_BASE_URL'] = connection.baseUrl
-        settings['env'] = env
-      }
-    } else {
-      const env = (settings['env'] ?? {}) as Record<string, unknown>
-      delete env['ANTHROPIC_AUTH_TOKEN']
-      delete env['ANTHROPIC_BASE_URL']
-      if (Object.keys(env).length > 0) settings['env'] = env
-      else delete settings['env']
-    }
-    await writeSettings(aasHome, claudeConfigDir, settings)
-  }
+  const cli = options.cli === undefined ? resolveClaudeCli() : options.cli
+  await syncClaudeMcp({ aasHome, claudeConfigDir, claudeJsonPath, itemDir: itemDir(aasHome, 'mcp', slug), cli }, slug, action, options)
 }
 
 const relayBaseUrl = () => `http://127.0.0.1:${RELAY_PORT}`

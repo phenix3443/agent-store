@@ -178,19 +178,3 @@ export function toClaudeEntry(spec: McpServerSpec): McpServerConfig {
   const headers = { ...spec.headers, ...(spec.bearer ? { Authorization: `Bearer ${spec.bearer.value}` } : {}) }
   return { type: spec.transport, url: spec.url, ...(Object.keys(headers).length ? { headers } : {}) }
 }
-
-export function buildPackageStdioMcpServerConfig(input: {
-  command: string
-  args?: string[]
-  cwd?: string
-  env?: Record<string, string>
-  packageDir: string
-}): StdioMcpServerConfig {
-  return {
-    type: 'stdio',
-    command: resolveIfRelative(input.command, input.packageDir),
-    args: input.args ?? [],
-    ...(input.cwd ? { cwd: resolveIfRelative(input.cwd, input.packageDir) } : {}),
-    ...(input.env && Object.keys(input.env).length > 0 ? { env: input.env } : {}),
-  }
-}
