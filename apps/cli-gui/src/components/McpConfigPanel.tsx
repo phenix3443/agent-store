@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ItemDetail, TargetStatus, ToolTarget } from '@as/types'
 import { Check } from 'lucide-react'
-import { callRpc, errorText } from '../lib/rpc'
+import { callRpc } from '../lib/rpc'
 import { useT } from '../i18n'
-import { Banners, TargetPicker, TARGET_LABEL } from './ConfigParts'
+import { Banners, TargetPicker, TARGET_LABEL, type PanelError } from './ConfigParts'
+import { describeError } from '../lib/errors'
 
 interface SchemaProperty {
   description?: string
@@ -26,7 +27,7 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [toggling, setToggling] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<PanelError | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   async function refreshStatus() {
@@ -40,7 +41,7 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
         setStatus(s)
         setValues(toValues(d.currentConfig))
       },
-      (err) => setError(errorText(err))
+      (err) => setError(describeError(err, t))
     )
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -68,7 +69,7 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
           setError(null)
           await refreshStatus()
         })
-        .catch((err) => setError(`${t('policy.saveFailed')}: ${errorText(err)}`))
+        .catch((err) => setError({ lead: t('policy.saveFailed'), ...describeError(err, t) }))
         .finally(() => setSaving(false))
     }, 500)
   }
@@ -80,7 +81,7 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
       await callRpc(enabled ? 'disable' : 'enable', [slug, target])
       setError(null)
     } catch (err) {
-      setError(`${t(enabled ? 'policy.disableFailed' : 'policy.enableFailed')} ${TARGET_LABEL[target]}: ${errorText(err)}`)
+      setError({ lead: t(enabled ? 'policy.disableFailed' : 'policy.enableFailed').replace('{tool}', TARGET_LABEL[target]), ...describeError(err, t) })
     } finally {
       await refreshStatus().catch(() => undefined)
       setToggling(false)

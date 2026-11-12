@@ -1,9 +1,12 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useT } from '../i18n'
+import { ErrorDetail } from './ConfigParts'
 
 export interface UninstallFailure {
   slug: string
   message: string
+  /** The engine's own text, behind 详细信息. */
+  detail?: string
   /** `uninstall --force` would get past this error. */
   forceable: boolean
 }
@@ -35,6 +38,7 @@ export function UninstallFailedDialog({
                   {failure.slug}
                 </p>
                 <p className="mt-2 break-words text-xs text-store-red">{failure.message}</p>
+                <ErrorDetail detail={failure.detail} />
                 {failure.forceable && (
                   <p className="mt-3 text-sm leading-relaxed text-store-text-2">{t('policy.forceHint')}</p>
                 )}

@@ -3,7 +3,8 @@ import type { Item, InstalledItem, InstallOutcome, ItemDetail, UpdateAvailable }
 import { Search, Filter, Check } from 'lucide-react'
 import { callRpc, errorText, RpcError } from '../lib/rpc'
 import { canForce, needsSetup } from '../lib/installPolicy'
-import { UninstallFailedDialog } from './UninstallFailedDialog'
+import { describeError } from '../lib/errors'
+import { UninstallFailedDialog, type UninstallFailure } from './UninstallFailedDialog'
 import { useAppState, type AgentApp, type ListFilter } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useT } from '../i18n'
@@ -37,7 +38,7 @@ export function ResourceList() {
   const [updates, setUpdates] = useState<UpdateAvailable[]>([])
   const [textQuery, setTextQuery] = useState('')
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false)
-  const [uninstallFailure, setUninstallFailure] = useState<{ slug: string; message: string; forceable: boolean } | null>(null)
+  const [uninstallFailure, setUninstallFailure] = useState<UninstallFailure | null>(null)
 
   function openConfigEditor(slug: string) {
     setEditingConfigSlug(slug)
@@ -153,7 +154,7 @@ export function ResourceList() {
       appendLine(`✗ ${errorText(err)}`, 'red')
       setUninstallFailure({
         slug: item.slug,
-        message: errorText(err),
+        ...describeError(err, t, 'uninstall'),
         forceable: !force && err instanceof RpcError && canForce(err.code),
       })
     }

@@ -139,3 +139,15 @@ test('rpc errors carry the error class so the desktop client can offer --force',
   expect((await rpc('uninstall', 'other-mcp', { force: true })).ok).toBe(true)
   expect(JSON.parse(await readFile(path, 'utf-8')).mcpServers?.['other-mcp']).toBeUndefined()
 })
+
+test('rpc errors carry the engine reason and tool, also when installAndEnable wraps them', async () => {
+  const conflicting = { ...otherMcp, slug: 'conflict-mcp' }
+  globalThis.fetch = (async (url: string) => {
+    if (String(url).includes('/api/items/conflict-mcp')) return new Response(JSON.stringify({ item: conflicting }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    return new Response('{}', { status: 200 })
+  }) as typeof fetch
+  await writeFile(join(claudeDir, '.claude.json'), JSON.stringify({ mcpServers: { 'conflict-mcp': { type: 'stdio', command: 'mine', args: [] } } }, null, 2))
+  const res = await rpc('installAndEnable', 'conflict-mcp')
+  expect(res).toMatchObject({ ok: false, code: 'McpConflictError', tool: 'claude' })
+  expect(res.error).toContain('Installed conflict-mcp')
+})

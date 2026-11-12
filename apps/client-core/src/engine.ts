@@ -161,7 +161,12 @@ export class EngineImpl implements Engine {
       try {
         await this.enable(slug, target)
       } catch (e) {
-        throw new Error(`Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${(e as Error).message}`)
+        // Keep the error class and its fields: callers map them to what the user should do.
+        if (e instanceof Error) {
+          e.message = `Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${e.message}`
+          throw e
+        }
+        throw new Error(`Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${String(e)}`)
       }
       outcome.enabled.push(target)
     }

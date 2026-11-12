@@ -44,6 +44,20 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   getBudgetStatus: (e) => e.getBudgetStatus(),
 }
 
+/**
+ * `code` is the error class name; `reason` / `tool` / `target` are the engine error's own
+ * fields. The desktop client turns them into what the user should do next.
+ */
+function errorFields(err: unknown): Record<string, string> {
+  if (!(err instanceof Error)) return {}
+  const fields: Record<string, string> = { code: err.name }
+  for (const key of ['reason', 'tool', 'target'] as const) {
+    const value = (err as unknown as Record<string, unknown>)[key]
+    if (typeof value === 'string') fields[key] = value
+  }
+  return fields
+}
+
 export async function runRpc(
   engine: Engine,
   args: string[],
@@ -70,8 +84,7 @@ export async function runRpc(
     out(JSON.stringify({ ok: true, data: data ?? null }))
     return 0
   } catch (err) {
-    // `code` is the error class name, so the desktop client can offer the right next step (e.g. --force).
-    out(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err), ...(err instanceof Error ? { code: err.name } : {}) }))
+    out(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : String(err), ...errorFields(err) }))
     return 1
   }
 }

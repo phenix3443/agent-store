@@ -3,6 +3,8 @@ import { Copy, Heart } from 'lucide-react'
 import type { InstalledItem, InstallOutcome, PackageReview, UserReview, ItemVersion } from '@as/types'
 import { callRpc, errorText } from '../lib/rpc'
 import { needsSetup } from '../lib/installPolicy'
+import { describeError, type FriendlyError } from '../lib/errors'
+import { ErrorDetail } from './ConfigParts'
 import { McpConfigPanel } from './McpConfigPanel'
 import { useAppState } from '../state/AppState'
 import { useT } from '../i18n'
@@ -38,7 +40,7 @@ export function DetailPanel() {
   const [childCount, setChildCount] = useState(0)
   const [userReviews, setUserReviews] = useState<UserReview[]>([])
   const [versions, setVersions] = useState<ItemVersion[]>([])
-  const [installError, setInstallError] = useState<string | null>(null)
+  const [installError, setInstallError] = useState<FriendlyError | null>(null)
 
   useEffect(() => {
     if (!detail) return
@@ -92,7 +94,7 @@ export function DetailPanel() {
       if (needsSetup(result)) setEditingConfigSlug(detail.slug)
     } catch (err) {
       appendLine(`✗ ${errorText(err)}`, 'red')
-      setInstallError(errorText(err))
+      setInstallError(describeError(err, t))
       bumpInstalledVersion()
     }
   }
@@ -169,8 +171,13 @@ export function DetailPanel() {
             </div>
             {installError && (
               <p role="alert" className="mt-2 max-w-[620px] text-xs text-store-red">
-                {t('policy.installFailed')}: {installError}
+                {t('policy.installFailed')}：{installError.message}
               </p>
+            )}
+            {installError && (
+              <div className="max-w-[620px]">
+                <ErrorDetail detail={installError.detail} />
+              </div>
             )}
             {childCount > 0 && (
               <p className="mt-2 text-xs text-store-text-2">

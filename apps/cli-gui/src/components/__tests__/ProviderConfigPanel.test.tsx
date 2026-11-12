@@ -236,7 +236,7 @@ test('a refused enable shows the reason and leaves the target off', async () => 
   await waitFor(() => screen.getByLabelText('Claude Code'))
   fireEvent.click(screen.getByLabelText('Claude Code'))
   const alert = await screen.findByRole('alert')
-  expect(alert.textContent).toContain('启用失败 Claude Code')
+  expect(alert.textContent).toContain('启用 Claude Code 失败')
   expect(alert.textContent).toContain('no API key configured')
   expect(screen.getByLabelText('Claude Code')).toHaveAttribute('aria-pressed', 'false')
 })
@@ -258,4 +258,31 @@ test('a failed save is shown instead of 已自动保存', async () => {
   expect(alert.textContent).toContain('保存失败')
   expect(alert.textContent).toContain('disk full')
   expect(screen.queryByText('已自动保存')).toBeNull()
+})
+
+test('a missing key is explained in the app, focuses the key field and keeps the engine text as detail', async () => {
+  const raw = 'yls-me has no API key configured; run: aas config yls-me'
+  const enable = mock(async () => { throw new rpcModule.RpcError(raw, 'ProviderNotReadyError', { reason: 'no-key' }) })
+  renderPanel({ enable })
+  await waitFor(() => screen.getByLabelText('Claude Code'))
+  fireEvent.click(screen.getByLabelText('Claude Code'))
+  const alert = await screen.findByRole('alert')
+  const lead = alert.textContent!.split('详细信息')[0]
+  expect(lead).toContain('启用 Claude Code 失败')
+  expect(lead).toContain('请先填写 API 密钥')
+  expect(lead).not.toContain('aas config')
+  expect(alert.querySelector('details pre')?.textContent).toBe(raw)
+  expect(document.activeElement).toBe(screen.getByLabelText(/API 密钥/))
+})
+
+test('a relay that could not start is explained without the CLI command', async () => {
+  const enable = mock(async () => {
+    throw new rpcModule.RpcError('the local relay is not running and could not be started; start it with: aas relay start', 'ProviderNotReadyError', { reason: 'relay-not-running' })
+  })
+  renderPanel({ enable })
+  await waitFor(() => screen.getByLabelText('Codex'))
+  fireEvent.click(screen.getByLabelText('Claude Code'))
+  const lead = (await screen.findByRole('alert')).textContent!.split('详细信息')[0]
+  expect(lead).toContain('本地中转服务没有启动起来')
+  expect(lead).not.toContain('aas relay start')
 })

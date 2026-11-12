@@ -5,6 +5,8 @@ import { AppStateProvider, useAppState } from '../../state/AppState'
 import { TerminalLogProvider, useTerminalLog } from '../../state/TerminalLog'
 import * as rpcModule from '../../lib/rpc'
 import { ResourceList } from '../ResourceList'
+import { DetailPanel } from '../DetailPanel'
+import { EntitlementProvider } from '../../state/Entitlement'
 
 afterEach(() => { cleanup(); mock.restore() })
 
@@ -368,14 +370,17 @@ test('an uninstall refused for an entry changed outside Agent Store offers a for
   const calls: unknown[][] = []
   const uninstall = mock((...args: unknown[]) => {
     calls.push(args)
-    if (args.length === 1) throw new rpcModule.RpcError('The Claude Code MCP entry "filesystem" was changed outside Agent Store', 'McpChangedOutsideError')
+    if (args.length === 1) throw new rpcModule.RpcError('The Claude Code MCP entry "filesystem" was changed outside Agent Store; Use --force', 'McpChangedOutsideError', { tool: 'claude' })
   })
   await renderList({ uninstall })
   await waitFor(() => screen.getByText('filesystem'))
   fireEvent.click(screen.getByLabelText('卸载 filesystem'))
   const dialog = await screen.findByRole('dialog')
   expect(dialog.textContent).toContain('卸载失败')
-  expect(dialog.textContent).toContain('changed outside Agent Store')
+  const main = dialog.textContent!.split('详细信息')[0]
+  expect(main).toContain('Claude Code 里的这条配置在 Agent Store 之外被改动过')
+  expect(main).not.toContain('--force')
+  expect(dialog.querySelector('details pre')?.textContent).toContain('Use --force')
   fireEvent.click(screen.getByRole('button', { name: '强制卸载' }))
   await waitFor(() => expect(calls).toEqual([['filesystem'], ['filesystem', { force: true }]]))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -401,4 +406,35 @@ test('installing an MCP that needs config opens its config page', async () => {
   fireEvent.click(screen.getByText('安装'))
   await waitFor(() => expect(installAndEnable).toHaveBeenCalledWith('context7'))
   await waitFor(() => expect(screen.getByTestId('editing-config-slug').textContent).toBe('context7'))
+})
+
+// #97 review: the detail pane must follow the list. Selecting another item while a
+// config page is open shows that item; switching only the category keeps the open page,
+// as the mockup's setCliFilter does (it leaves cliEditId alone).
+test('selecting another item while a provider config page is open switches the detail pane to it', async () => {
+  const childInfo = { ...(infoBySlug.yls as object), slug: 'yls-copy', name: 'yls-copy', parentSlug: 'yls', currentConfig: { name: 'copy' } }
+  mockRpc(defaultHandlers({
+    info: (slug: unknown) => (slug === 'yls-copy' ? childInfo : infoBySlug[slug as string]),
+    duplicateProvider: () => ({ newSlug: 'yls-copy' }),
+    getReviews: () => [], getVersions: () => [],
+    getEntitlements: () => ({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }),
+  }))
+  render(
+    <AppStateProvider>
+      <EntitlementProvider>
+        <TerminalLogProvider>
+          <ForceBrowseNav>
+            <ResourceList />
+            <DetailPanel />
+          </ForceBrowseNav>
+        </TerminalLogProvider>
+      </EntitlementProvider>
+    </AppStateProvider>
+  )
+  await waitFor(() => screen.getByText('filesystem'))
+  fireEvent.click(screen.getByLabelText('新增子配置 yls'))
+  expect(await screen.findByDisplayValue('copy')).toBeInTheDocument()
+  fireEvent.click(screen.getByText('filesystem'))
+  expect(await screen.findByRole('heading', { name: 'filesystem' })).toBeInTheDocument()
+  expect(screen.queryByDisplayValue('copy')).toBeNull()
 })

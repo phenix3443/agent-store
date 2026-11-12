@@ -10,10 +10,19 @@ interface RpcFailure {
   error: string
   /** The engine's error class name, e.g. McpChangedOutsideError. */
   code?: string
+  reason?: string
+  tool?: string
+  target?: string
+}
+
+export interface RpcErrorFields {
+  reason?: string
+  tool?: string
+  target?: string
 }
 
 export class RpcError extends Error {
-  constructor(message: string, readonly code?: string) {
+  constructor(message: string, readonly code?: string, readonly fields: RpcErrorFields = {}) {
     super(message)
     this.name = 'RpcError'
   }
@@ -36,6 +45,9 @@ export async function callRpc<T>(method: string, args: unknown[] = []): Promise<
     throw new Error(`Malformed RPC response for ${method}: ${output.stdout || output.stderr}`)
   }
 
-  if (!envelope.ok) throw new RpcError(envelope.error, envelope.code)
+  if (!envelope.ok) {
+    const { reason, tool, target } = envelope
+    throw new RpcError(envelope.error, envelope.code, { reason, tool, target })
+  }
   return envelope.data
 }

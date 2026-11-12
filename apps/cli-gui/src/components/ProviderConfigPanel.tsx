@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ItemDetail, ToolTarget } from '@as/types'
 import { Check, HelpCircle } from 'lucide-react'
-import { callRpc, errorText } from '../lib/rpc'
+import { callRpc } from '../lib/rpc'
 import { ProGate } from './ProGate'
-import { Banners, TargetPicker, TARGET_LABEL } from './ConfigParts'
+import { Banners, TargetPicker, TARGET_LABEL, type PanelError } from './ConfigParts'
+import { describeError } from '../lib/errors'
 import { useT } from '../i18n'
 
 function MultiKeyEditor({ keys, onChange }: { keys: string[]; onChange: (keys: string[]) => void }) {
@@ -139,7 +140,8 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [helpTip, setHelpTip] = useState<{ text: string; x: number; y: number } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<PanelError | null>(null)
+  const apiKeyRef = useRef<HTMLInputElement>(null)
   const [toggling, setToggling] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -150,7 +152,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
       setTargets(detail.enabledFor)
       setProviderName(String(detail.currentConfig?.['provider'] ?? detail.name ?? slug))
       setValues(toEditValues(detail.currentConfig, slug, root === 'local'))
-    }, (err) => setError(errorText(err)))
+    }, (err) => setError(describeError(err, t)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
@@ -174,7 +176,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
         },
         (err) => {
           setSaving(false)
-          setError(`${t('policy.saveFailed')}: ${errorText(err)}`)
+          setError({ lead: t('policy.saveFailed'), ...describeError(err, t) })
         }
       )
     }, 500)
@@ -188,8 +190,9 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
       setTargets((prev) => ({ ...prev, [target]: !isEnabled }))
       setError(null)
     } catch (err) {
-      // e.g. no API key yet, or the relay could not be started.
-      setError(`${t(isEnabled ? 'policy.disableFailed' : 'policy.enableFailed')} ${TARGET_LABEL[target]}: ${errorText(err)}`)
+      const friendly = describeError(err, t)
+      setError({ lead: t(isEnabled ? 'policy.disableFailed' : 'policy.enableFailed').replace('{tool}', TARGET_LABEL[target]), ...friendly })
+      if (friendly.focus === 'apiKey') apiKeyRef.current?.focus()
     } finally {
       setToggling(false)
     }
@@ -302,6 +305,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
               {t('cfg.apiKey')} <span className="text-store-red">*</span>
             </label>
             <input
+              ref={apiKeyRef}
               id="provider-apiKey"
               value={values.apiKey}
               onChange={(e) => persist({ ...values, apiKey: e.target.value })}

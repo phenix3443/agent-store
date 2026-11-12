@@ -90,7 +90,7 @@ test('a refused enable shows the engine reason', async () => {
   await waitFor(() => expect(screen.getByLabelText('Claude Code')).not.toBeDisabled())
   fireEvent.click(screen.getByLabelText('Claude Code'))
   const alert = await screen.findByRole('alert')
-  expect(alert.textContent).toContain('启用失败 Claude Code')
+  expect(alert.textContent).toContain('启用 Claude Code 失败')
   expect(alert.textContent).toContain('did not write')
 })
 
@@ -106,4 +106,17 @@ test('a refused save shows the reason', async () => {
 test('an MCP without a schema says it needs no configuration', async () => {
   renderPanel({ info: () => ({ ...info, configSchema: { type: 'object' } }), getTargetStatus: () => ready })
   expect(await screen.findByText(/这个 MCP 不需要配置/)).toBeInTheDocument()
+})
+
+test('a same-name entry in the tool is explained, with the engine text as detail', async () => {
+  const raw = 'Claude Code already has an MCP server named "github" that Agent Store did not write; nothing was changed. Rename or remove it, or enable with --replace'
+  const enable = mock(async () => { throw new rpcModule.RpcError(raw, 'McpConflictError', { tool: 'claude' }) })
+  renderPanel({ info: () => info, getTargetStatus: () => ready, enable })
+  await waitFor(() => expect(screen.getByLabelText('Claude Code')).not.toBeDisabled())
+  fireEvent.click(screen.getByLabelText('Claude Code'))
+  const alert = await screen.findByRole('alert')
+  const lead = alert.textContent!.split('详细信息')[0]
+  expect(lead).toContain('Claude Code 里已经有一条同名的 MCP 配置')
+  expect(lead).not.toContain('--replace')
+  expect(alert.querySelector('details pre')?.textContent).toBe(raw)
 })
