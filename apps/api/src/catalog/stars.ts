@@ -130,11 +130,26 @@ function retryAfterMs(e: unknown): number | null {
   return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 60_000
 }
 
+/**
+ * The repo whose stars an MCP server may claim. server.json can name any repository, and
+ * entries do name famous ones they do not own (io.github.IncorporatedPartners/… names
+ * paperclipai/paperclip). An io.github.<login> namespace was proven by that GitHub login,
+ * so its repo must belong to the same owner; a repo moved to an organisation loses its
+ * stars here. Domain namespaces cannot be checked against GitHub and keep their repo.
+ */
+export function mcpStarsRepo(serverName: string, repositoryUrl: string | null | undefined): string | null {
+  const repo = githubRepoOf(repositoryUrl)
+  if (!repo) return null
+  const gh = (serverName.split('/')[0] ?? '').match(/^io\.github\.(.+)$/i)
+  if (gh && repo.split('/')[0] !== gh[1]!.toLowerCase()) return null
+  return repo
+}
+
 /** Sets resources.github_repo from each row's own data: an MCP server's repository URL, a skill's repo. */
 export function assignGithubRepos(db: Database): number {
   const rows = db
-    .query("SELECT id, kind, scope, detail, github_repo FROM resources WHERE kind IN ('mcp', 'skill')")
-    .all() as { id: string; kind: string; scope: string | null; detail: string; github_repo: string | null }[]
+    .query("SELECT id, kind, upstream_id, scope, detail, github_repo FROM resources WHERE kind IN ('mcp', 'skill')")
+    .all() as { id: string; kind: string; upstream_id: string; scope: string | null; detail: string; github_repo: string | null }[]
   const set = db.query('UPDATE resources SET github_repo = ? WHERE id = ?')
   let changed = 0
   for (const r of rows) {
@@ -144,7 +159,7 @@ export function assignGithubRepos(db: Database): number {
     } else {
       try {
         const d = JSON.parse(r.detail) as { repository?: { url?: string } | null }
-        repo = githubRepoOf(d.repository?.url)
+        repo = mcpStarsRepo(r.upstream_id, d.repository?.url)
       } catch {
         repo = null
       }

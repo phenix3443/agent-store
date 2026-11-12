@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { Database } from 'bun:sqlite'
 import { openCatalogForWrite } from '../catalog/db'
 import { normalizeServer } from '../catalog/sources/mcp-registry'
-import { githubRepoOf, parseStarsResponse, refreshStars, starsQuery } from '../catalog/stars'
+import { githubRepoOf, mcpStarsRepo, parseStarsResponse, refreshStars, starsQuery } from '../catalog/stars'
 import { syncCatalog } from '../catalog/sync'
 import type { CatalogRecord, CatalogSource } from '../catalog/types'
 import { fakeFetch, fixtureJson, githubGraphqlRoute, json, octokitWith, type Route } from './helpers/upstream-fixtures'
@@ -27,6 +27,20 @@ describe('githubRepoOf', () => {
     ['https://github.com/owner/..'], ['https://github.com/ow"ner/repo'], ['https://example.com/github.com/owner/repo'],
     ['https://github.company.com/owner/repo'],
   ])('rejects %p', (url) => expect(githubRepoOf(url)).toBeNull())
+})
+
+describe('mcpStarsRepo', () => {
+  test('an io.github namespace only claims repos of its own login', () => {
+    expect(mcpStarsRepo('io.github.github/github-mcp-server', 'https://github.com/github/github-mcp-server')).toBe('github/github-mcp-server')
+    expect(mcpStarsRepo('io.github.ChromeDevTools/x', 'https://github.com/chromedevtools/chrome-devtools-mcp')).toBe('chromedevtools/chrome-devtools-mcp')
+    expect(mcpStarsRepo('io.github.secforge/chrome-devtools-mcp', 'https://github.com/ChromeDevTools/chrome-devtools-mcp')).toBeNull()
+    expect(mcpStarsRepo('io.github.IncorporatedPartners/labelhead', 'https://github.com/paperclipai/paperclip')).toBeNull()
+  })
+
+  test('a domain namespace keeps whatever GitHub repo it names', () => {
+    expect(mcpStarsRepo('com.browser-use/browser-use', 'https://github.com/browser-use/browser-use')).toBe('browser-use/browser-use')
+    expect(mcpStarsRepo('com.supabase/mcp', 'https://gitlab.com/x/y')).toBeNull()
+  })
 })
 
 describe('star queries', () => {
@@ -114,7 +128,8 @@ describe('refreshStars', () => {
     await syncCatalog(db, {
       sources: [
         source('mcp', [GITHUB, CHROME, SUPABASE, GREPTIME, withRepo(REMOTE, 'ac.inference.sh/gitlab', 'https://gitlab.com/x/y'),
-          withRepo(GITHUB, 'io.github.github/second', 'https://github.com/github/github-mcp-server.git')]),
+          withRepo(GITHUB, 'io.github.github/second', 'https://github.com/github/github-mcp-server.git'),
+          withRepo(GITHUB, 'io.github.copycat/github-mcp-server', 'https://github.com/github/github-mcp-server')]),
         source('skill', [skill('anthropics/skills', 'pdf'), skill('anthropics/skills', 'docx')]),
       ],
       fetch: f, github: octokitWith(f), now: () => new Date(clock),
@@ -132,8 +147,9 @@ describe('refreshStars', () => {
     expect(stars('mcp-registry:io.github.github/second').stars).toBe(28_000)
     expect(stars(`mcp-registry:${GREPTIME.upstreamId}`)).toEqual({ stars: null, github_repo: 'greptimeteam/greptimedb-mcp-server' })
     expect(stars('mcp-registry:ac.inference.sh/gitlab')).toEqual({ stars: null, github_repo: null })
+    expect(stars('mcp-registry:io.github.copycat/github-mcp-server')).toEqual({ stars: null, github_repo: null })
     expect(stars('github:anthropics/skills/pdf').stars).toBe(90_000)
-    expect(report.coverage['mcp']).toEqual({ rows: 6, withRepo: 5, withStars: 4 })
+    expect(report.coverage['mcp']).toEqual({ rows: 7, withRepo: 5, withStars: 4 })
   })
 
   test('a repo checked within the interval is not asked again unless the run is full', async () => {
@@ -175,9 +191,9 @@ describe('refreshStars', () => {
 
   test('a row whose repository changes picks up the new repo on the next refresh', async () => {
     await run([githubGraphqlRoute(STARS)])
-    db.query("UPDATE resources SET detail = json_set(detail, '$.repository.url', 'https://github.com/supabase/mcp') WHERE id = ?").run(`mcp-registry:${CHROME.upstreamId}`)
+    db.query("UPDATE resources SET detail = json_set(detail, '$.repository.url', 'https://github.com/ChromeDevTools/chrome-devtools-mcp') WHERE id = ?").run(`mcp-registry:${SUPABASE.upstreamId}`)
     await run([githubGraphqlRoute(STARS)])
-    expect(stars(`mcp-registry:${CHROME.upstreamId}`)).toEqual({ stars: 2_000, github_repo: 'supabase/mcp' })
+    expect(stars(`mcp-registry:${SUPABASE.upstreamId}`)).toEqual({ stars: 20_000, github_repo: 'chromedevtools/chrome-devtools-mcp' })
   })
 
   test('syncCatalog refreshes stars when asked and reports them', async () => {
