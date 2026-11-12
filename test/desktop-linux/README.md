@@ -7,7 +7,13 @@ docker build -f test/desktop-linux/Dockerfile -t as-desktop-linux .
 docker run --rm --shm-size 1g -v "$PWD/test/desktop-linux/out:/out" as-desktop-linux
 ```
 
-`out/` gets a screenshot per step and `result.txt`. The run fails if the confirmed install did not land under `~/.claude/skills`.
+`out/` gets a screenshot per step and `result.txt`. The run fails if the confirmed install did not land in the skill library `~/.agent-store/skills`.
+
+`shots.sh` runs in the same image (the `desktop-shots` workflow): the move from `~/.agents`, a skill with a link per tool, search, MCP from npm, a bearer remote and an SSE remote, a provider and the installed list, each screenshotted and checked on disk.
+
+```sh
+docker run --rm --shm-size 1g -v "$PWD/test/desktop-linux/out:/out" --entrypoint bash as-desktop-linux /work/test/desktop-linux/shots.sh
+```
 
 | Step | Expected |
 |---|---|

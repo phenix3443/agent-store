@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
 import {
   matchesCategoryFilter, matchesText, enrichInstalled,
-  filterInstalledByListFilter, filterRecommendedByListFilter,
+  filterInstalledByListFilter,
   showInstalledSection, showRecommendedSection,
 } from '../resources'
 import type { InstalledItem, Item, ItemDetail } from '@as/types'
@@ -85,45 +85,6 @@ test('filterInstalledByListFilter: "updates" with no available updates returns a
   const result = filterInstalledByListFilter(items, 'updates', 'claude', new Set())
 
   expect(result).toEqual([])
-})
-
-test('filterRecommendedByListFilter: "popular" sorts by downloads descending', () => {
-  const low: Item = { ...catalogItem, slug: 'low', downloads: 10 }
-  const high: Item = { ...catalogItem, slug: 'high', downloads: 999 }
-  const sorted = filterRecommendedByListFilter([low, high], 'popular')
-  expect(sorted.map(i => i.slug)).toEqual(['high', 'low'])
-})
-
-test('filterRecommendedByListFilter: "recent" sorts by createdAt descending', () => {
-  const older: Item = { ...catalogItem, slug: 'older', createdAt: '2026-01-01T00:00:00Z' }
-  const newer: Item = { ...catalogItem, slug: 'newer', createdAt: '2026-06-01T00:00:00Z' }
-  const sorted = filterRecommendedByListFilter([older, newer], 'recent')
-  expect(sorted.map(i => i.slug)).toEqual(['newer', 'older'])
-})
-
-test('filterRecommendedByListFilter: "featured"/"recommended" pass everything through unchanged', () => {
-  expect(filterRecommendedByListFilter([catalogItem], 'featured')).toEqual([catalogItem])
-  expect(filterRecommendedByListFilter([catalogItem], 'recommended')).toEqual([catalogItem])
-})
-
-const localItem: Item = { ...catalogItem, slug: 'local', downloads: 1, createdAt: '2020-01-01T00:00:00Z' }
-
-test('filterRecommendedByListFilter: pins the built-in "local" relay first under all/popular/recent', () => {
-  const a: Item = { ...catalogItem, slug: 'a', downloads: 999, createdAt: '2026-06-01T00:00:00Z' }
-  const b: Item = { ...catalogItem, slug: 'b', downloads: 500, createdAt: '2026-05-01T00:00:00Z' }
-  // local has the lowest downloads and oldest createdAt, so only the pin keeps it first.
-  for (const filter of ['all', 'popular', 'recent'] as const) {
-    const sorted = filterRecommendedByListFilter([a, localItem, b], filter)
-    expect(sorted[0].slug).toBe('local')
-    expect(sorted.map((i) => i.slug).sort()).toEqual(['a', 'b', 'local'])
-  }
-})
-
-test('filterRecommendedByListFilter: returns the input untouched when "local" is absent or already first', () => {
-  const noLocal = [catalogItem]
-  expect(filterRecommendedByListFilter(noLocal, 'all')).toBe(noLocal)
-  const alreadyFirst = [localItem, catalogItem]
-  expect(filterRecommendedByListFilter(alreadyFirst, 'all')).toBe(alreadyFirst)
 })
 
 test('showInstalledSection / showRecommendedSection: "all" shows both, status filters only show installed, discovery filters only show recommended', () => {

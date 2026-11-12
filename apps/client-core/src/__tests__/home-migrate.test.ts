@@ -96,10 +96,14 @@ function behavior() {
   }
 }
 
+const origHome = process.env['HOME']
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'as-home-migrate-'))
+  // ~/.agents is where Codex also looks for skills, so the old home must be the real one here.
+  process.env['HOME'] = root
   p = {
-    from: join(root, 'agents'), to: join(root, 'agent-store'),
+    from: join(root, '.agents'), to: join(root, '.agent-store'),
     claudeConfigDir: join(root, 'claude'), claudeJsonPath: join(root, 'claude', '.claude.json'), codexConfigDir: join(root, 'codex'),
   }
   globalThis.fetch = (async (url: string) => {
@@ -114,6 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   globalThis.fetch = origFetch
+  process.env['HOME'] = origHome
   rmSync(root, { recursive: true, force: true })
 })
 

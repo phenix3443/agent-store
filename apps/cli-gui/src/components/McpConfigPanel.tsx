@@ -7,10 +7,12 @@ import { Banners, TargetPicker, TARGET_LABEL, type PanelError } from './ConfigPa
 import { describeError } from '../lib/errors'
 
 interface SchemaProperty {
+  title?: string
   description?: string
   default?: unknown
   'x-env'?: string
   'x-bearer'?: boolean
+  'x-secret'?: boolean
 }
 
 const upperSnake = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()
@@ -125,6 +127,8 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
               disabledReason:
                 s.blocker?.reason === 'incompatible'
                   ? t('policy.unsupported')
+                  : s.blocker?.reason === 'unsupported'
+                    ? (s.blocker.message.includes('SSE') ? t('errors.codexSse') : t('errors.codexHeaders'))
                   : s.blocker?.reason === 'needs-config'
                     ? t('policy.fillFirst')
                     : undefined,
@@ -143,11 +147,13 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
           return (
             <div key={key} className="col-span-2">
               <label htmlFor={id} className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-store-text-2">
-                {prop.description ?? key}
+                {prop.description ?? prop.title ?? key}
                 {required.includes(key) && <span className="text-store-red">*</span>}
               </label>
               <input
                 id={id}
+                type={prop['x-secret'] ? 'password' : 'text'}
+                autoComplete="off"
                 value={values[key] ?? ''}
                 onChange={(e) => persist({ ...values, [key]: e.target.value })}
                 placeholder={prop.default != null ? String(prop.default) : (prop['x-env'] ?? upperSnake(key))}

@@ -18,6 +18,15 @@ test('known engine errors become in-app instructions, keeping the engine text as
     [err('McpConfigMissingError'), '请先填写带 * 的必填配置', 'Fill in the required fields'],
     [err('McpChangedOutsideError', { tool: 'claude' }), 'Claude Code 里的这条配置在 Agent Store 之外被改动过', 'This entry in Claude Code was changed outside'],
     [err('McpConflictError', { tool: 'codex' }), 'Codex 里已经有一条同名的 MCP 配置', 'Codex already has an MCP server'],
+    [err('SkillDeployRefusedError', { reason: 'not-managed', tool: 'codex' }), 'Codex 的技能目录里已经有同名的内容', "Codex's skills folder already has"],
+    [err('SkillDeployRefusedError', { reason: 'record-mismatch', tool: 'claude' }), 'Claude Code 里这个技能的位置已被别的内容占用', 'Something else now sits where this skill was deployed in Claude Code'],
+    [err('SkillConflictError', { reason: 'name-clash' }), 'Codex 已经能看到另一个同名的技能', 'Codex already sees another skill'],
+    [err('CodexMcpUnsupportedError', { reason: 'sse', tool: 'codex' }), 'Codex 不支持 SSE', "Codex doesn't support MCP servers over SSE"],
+    [err('CodexMcpUnsupportedError', { reason: 'headers', tool: 'codex' }), 'Bearer 令牌以外的请求头', 'other than a bearer token'],
+    [err('AmbiguousResourceError', { reason: 'ambiguous' }), '目录里有多个同名的资源', 'several resources with this name'],
+    [err('ResourceNotFoundError', { reason: 'not-found' }), '目录里没有这个资源', "doesn't have this resource"],
+    [err('CatalogUnavailableError', { reason: 'unavailable' }), '目录暂时取不到', "couldn't be reached"],
+    [err('McpNotInstallableError', { reason: 'no-launcher' }), '没有 Agent Store 能运行的安装方式', 'no install method Agent Store can run'],
   ]
   for (const [e, zhText, enText] of cases) {
     const z = describeError(e, zh)

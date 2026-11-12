@@ -37,20 +37,35 @@ const infoBySlug: Record<string, unknown> = {
   },
 }
 
+const origin = (site: string, upstreamId: string) => ({
+  site, upstreamId, url: null, upstreamVersion: null, upstreamUpdatedAt: null,
+  syncedAt: '2026-11-12T00:00:00Z', unavailableAt: null, unavailableReason: null,
+})
+
+// Rows as GET /api/resources returns them, plus the local slug the engine adds.
 const catalogItem = {
-  id: 'i1', slug: 'context7', name: 'context7', description: '文档上下文',
- category: 'mcp', version: '1.0.0', publisher,
-  compatibleWith: ['claude'], tags: [], downloads: 118000, rating: 4.7,
-  status: 'published', installHook: { steps: [] },
-  createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z', configSchema: {},
+  id: 'mcp-registry:io.github.upstash/context7', kind: 'mcp', name: 'context7', description: '文档上下文',
+  author: { name: 'upstash', url: null }, version: '1.0.0', homepageUrl: null, installs: 118000, stars: 51000,
+  verified: false, tags: [], transports: ['npm'], origin: origin('mcp-registry', 'io.github.upstash/context7'), slug: 'context7',
 }
 
 const providerCatalogItem = {
-  id: 'i2', slug: 'test-provider', name: 'test-provider', description: '测试供应商',
- category: 'provider', version: '1.0.0', publisher,
-  compatibleWith: ['claude'], tags: [], downloads: 0, rating: 0,
-  status: 'published', installHook: { steps: [] },
-  createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z', configSchema: {},
+  id: 'builtin:test-provider', kind: 'provider', name: 'test-provider', description: '测试供应商',
+  author: { name: 'Agent Store', url: null }, version: '1.0.0', homepageUrl: null, installs: null, stars: null,
+  verified: true, tags: [], transports: [], origin: origin('builtin', 'test-provider'), slug: 'test-provider',
+}
+
+/** Filters like the API: by name and by kind. */
+function page(rows: Array<{ name: string; kind: string }>) {
+  return (q: unknown, o: unknown) => {
+    const query = String(q ?? '').toLowerCase()
+    const kind = (o as { category?: string } | undefined)?.category
+    return {
+      resources: rows.filter((r) => (!kind || r.kind === kind) && r.name.toLowerCase().includes(query)),
+      nextOffset: null,
+      offline: false,
+    }
+  }
 }
 
 const providerTreeList = [
@@ -86,7 +101,7 @@ function defaultHandlers(overrides?: Record<string, (...args: unknown[]) => unkn
   return {
     list: () => installedList,
     info: (slug: unknown) => infoBySlug[slug as string],
-    search: () => [catalogItem],
+    search: page([catalogItem]),
     checkUpdates: () => [],
     ...overrides,
   }
@@ -195,8 +210,40 @@ test('clicking 安装 on a recommended item installs it through the shared polic
   await renderList({ installAndEnable: install })
   await waitFor(() => screen.getByText('context7'))
   fireEvent.click(screen.getByText('安装'))
-  await waitFor(() => expect(install).toHaveBeenCalledWith('context7'))
+  await waitFor(() => expect(install).toHaveBeenCalledWith('mcp-registry:io.github.upstash/context7'))
   expect(screen.getByTestId('log-count').textContent).not.toBe('0')
+})
+
+test('a recommended row shows stars and install count like the mockup; search, kind and sort go to the catalog', async () => {
+  const calls: unknown[][] = []
+  const search = (...args: unknown[]) => {
+    calls.push(args)
+    return page([catalogItem, { ...providerCatalogItem, name: 'openrouter' }])(args[0], args[1])
+  }
+  await renderList({ search })
+  expect(await screen.findByText('★ 51.0K · ↓ 118.0K')).toBeInTheDocument()
+  expect(screen.getByText('★ — · ↓ —')).toBeInTheDocument()
+  expect(screen.getByLabelText('已验证')).toBeInTheDocument()
+  expect(calls[0]).toEqual(['', { sort: 'default', limit: 50 }])
+
+  fireEvent.change(screen.getByPlaceholderText('搜索，或用 @ 过滤…'), { target: { value: '@' } })
+  fireEvent.click(screen.getByText('最热门'))
+  await waitFor(() => expect(calls.at(-1)).toEqual(['', { sort: 'installs', limit: 50 }]))
+})
+
+test('more catalog rows load on demand; an unreachable catalog says the rows are cached', async () => {
+  const search = (_q: unknown, o: unknown) => {
+    const offset = (o as { offset?: number }).offset ?? 0
+    return offset === 0
+      ? { resources: [catalogItem], nextOffset: 50, offline: true }
+      : { resources: [{ ...catalogItem, id: 'mcp-registry:io.x/second', name: 'second', slug: 'second' }], nextOffset: null, offline: false }
+  }
+  await renderList({ search })
+  expect(await screen.findByText('目录暂时取不到，显示的是上次缓存的结果')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '加载更多' }))
+  expect(await screen.findByText('second')).toBeInTheDocument()
+  expect(screen.getByText('context7')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '加载更多' })).toBeNull()
 })
 
 test('clicking the × uninstall icon on an installed item calls uninstall', async () => {
@@ -265,11 +312,11 @@ async function renderListWithCategory(category: 'provider' | 'skill' | 'mcp', ha
   )
 }
 
-const localCatalogItem = { ...providerCatalogItem, id: 'l', slug: 'local', name: 'local' }
+const localCatalogItem = { ...providerCatalogItem, id: 'builtin:local', slug: 'local', name: 'local', origin: origin('builtin', 'local') }
 
 test('renders local as an ordinary provider row (no 内置 badge, no pinned port rows)', async () => {
   await renderListWithCategory('provider', {
-    search: () => [localCatalogItem],
+    search: page([localCatalogItem]),
   })
   expect(await screen.findByText('local')).toBeInTheDocument()
   expect(screen.queryByText('内置')).not.toBeInTheDocument()
@@ -278,7 +325,7 @@ test('renders local as an ordinary provider row (no 内置 badge, no pinned port
 
 test('clicking the local provider row selects it as a normal provider', async () => {
   await renderListWithCategory('provider', {
-    search: () => [localCatalogItem],
+    search: page([localCatalogItem]),
   })
   const localRow = (await screen.findByText('local')).closest('[class*="border-store"]')! as HTMLElement
   fireEvent.click(localRow)
@@ -287,7 +334,7 @@ test('clicking the local provider row selects it as a normal provider', async ()
 
 test('does not show the local provider row outside the provider category', async () => {
   await renderListWithCategory('skill', {
-    search: () => [localCatalogItem],
+    search: page([localCatalogItem]),
   })
   await screen.findByPlaceholderText('搜索，或用 @ 过滤…')
   expect(screen.queryByText('local')).not.toBeInTheDocument()
@@ -346,7 +393,7 @@ test('recommended section shows an already-installed provider with a 配置 butt
   await renderListWithCategory('provider', {
     list: () => providerTreeList,
     info: (slug: unknown) => providerTreeInfoBySlug[slug as string],
-    search: () => [providerCatalogItem],
+    search: page([providerCatalogItem]),
   })
   const recommendedButtons = await screen.findAllByRole('button', { name: '配置' })
   expect(recommendedButtons.length).toBeGreaterThan(0)
@@ -358,7 +405,7 @@ test('clicking 配置 on an already-installed recommended provider duplicates it
     list: () => providerTreeList,
     info: (slug: unknown) =>
       slug === 'x' ? providerTreeInfoBySlug['test-provider'] : providerTreeInfoBySlug[slug as string],
-    search: () => [providerCatalogItem],
+    search: page([providerCatalogItem]),
     duplicateProvider: () => { calledMethod = 'duplicateProvider'; return { newSlug: 'x' } },
     installAndEnable: () => { calledMethod = 'install'; return { version: '1.0.0', enabled: [], notEnabled: [] } },
   })
@@ -405,7 +452,7 @@ test('installing an MCP that needs config opens its config page', async () => {
   await renderListWithCategory('mcp', { installAndEnable })
   await waitFor(() => screen.getByText('context7'))
   fireEvent.click(screen.getByText('安装'))
-  await waitFor(() => expect(installAndEnable).toHaveBeenCalledWith('context7'))
+  await waitFor(() => expect(installAndEnable).toHaveBeenCalledWith('mcp-registry:io.github.upstash/context7'))
   await waitFor(() => expect(screen.getByTestId('editing-config-slug').textContent).toBe('context7'))
 })
 

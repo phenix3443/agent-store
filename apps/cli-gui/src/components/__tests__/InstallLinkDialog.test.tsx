@@ -42,11 +42,30 @@ const providerItem = {
 
 let calls: Array<{ method: string; args: unknown[] }> = []
 
+const SITE: Record<string, string> = { mcp: 'mcp-registry', skill: 'github', provider: 'builtin' }
+const idOf = (item: { slug: string; category: string }) => `${SITE[item.category]}:io.example/${item.slug}`
+
+/** GET /api/resources/<id> as the engine returns it: the entry plus its install preview. */
+function entry(item: typeof mcpItem | typeof skillItem | typeof providerItem) {
+  const id = idOf(item)
+  return {
+    id, kind: item.category, name: item.name, description: item.description, author: { name: item.publisher.name, url: null },
+    version: item.version, homepageUrl: null, installs: null, verified: item.publisher.tier !== 'community', tags: [], transports: [],
+    origin: { site: SITE[item.category], upstreamId: `io.example/${item.slug}`, url: null, upstreamVersion: null, upstreamUpdatedAt: null, syncedAt: '', unavailableAt: null, unavailableReason: null },
+    slug: item.slug, install: { ...item, resourceId: id },
+  }
+}
+const catalog = [mcpItem, skillItem, providerItem].map(entry)
+
 function mockRpc(overrides: Record<string, (...args: unknown[]) => unknown> = {}) {
   const defaults: Record<string, (...args: unknown[]) => unknown> = {
-    info: (slug) => { throw new Error(`Item not installed: ${String(slug)}`) },
-    search: () => [mcpItem, skillItem, providerItem],
-    installAndEnable: () => ({ version: '0.8.1', enabled: [], notEnabled: [] }),
+    list: () => [],
+    getResource: (ref) => {
+      const found = catalog.find((r) => r.id === ref || r.slug === ref)
+      if (!found) throw new rpcModule.RpcError(`Not in the catalog: ${String(ref)}`, 'ResourceNotFoundError', { reason: 'not-found' })
+      return found
+    },
+    installAndEnable: (ref) => ({ slug: catalog.find((r) => r.id === ref)?.slug, version: '0.8.1', enabled: [], notEnabled: [] }),
   }
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args: unknown[] = []) => {
     calls.push({ method, args })
@@ -114,7 +133,7 @@ test('an install link opens the package and asks before installing', async () =>
 
   const dialog = await screen.findByRole('dialog', { name: '确认安装' })
   await waitFor(() => expect(dialog).toHaveTextContent('Filesystem'))
-  expect(dialog).toHaveTextContent('filesystem · v0.8.1')
+  expect(dialog).toHaveTextContent('mcp-registry:io.example/filesystem · v0.8.1')
   expect(dialog).toHaveTextContent('anthropic')
   expect(dialog).toHaveTextContent('官方')
   expect(dialog).toHaveTextContent('MCP')
@@ -124,9 +143,21 @@ test('an install link opens the package and asks before installing', async () =>
 
   expect(installCalls()).toHaveLength(0)
   expect(focusMock).toHaveBeenCalledTimes(1)
-  expect(screen.getByTestId('selected')).toHaveTextContent('filesystem')
+  expect(screen.getByTestId('selected')).toHaveTextContent('mcp-registry:io.example/filesystem')
   expect(screen.getByTestId('nav')).toHaveTextContent('browse')
   expect(screen.getByTestId('category')).toHaveTextContent('mcp')
+})
+
+test('a web store link is looked up and installed by its catalog id', async () => {
+  mockRpc()
+  await renderDialog()
+  await openLink('agent-store://install?slug=whatever-old&category=mcp&id=mcp-registry%3Aio.example%2Ffilesystem')
+  await click('确认安装')
+
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(calls.filter((c) => c.method === 'getResource')).toEqual([{ method: 'getResource', args: ['mcp-registry:io.example/filesystem'] }])
+  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['mcp-registry:io.example/filesystem'] }])
+  expect(screen.getByTestId('selected')).toHaveTextContent('filesystem')
 })
 
 test('cancel is the default focus and installs nothing', async () => {
@@ -151,9 +182,9 @@ test('confirming runs the existing install with only the slug', async () => {
   await click('确认安装')
 
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['filesystem'] }])
+  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['mcp-registry:io.example/filesystem'] }])
   expect(JSON.stringify(calls)).not.toContain('evil')
-  expect(screen.getByTestId('log')).toHaveTextContent('$ aas install filesystem|✓ 已安装 filesystem 0.8.1')
+  expect(screen.getByTestId('log')).toHaveTextContent('$ aas install mcp-registry:io.example/filesystem|✓ 已安装 filesystem 0.8.1')
 })
 
 test('a skill from a community publisher shows its tier and default steps', async () => {
@@ -166,7 +197,7 @@ test('a skill from a community publisher shows its tier and default steps', asyn
   expect(dialog).toHaveTextContent('someone')
   expect(dialog).toHaveTextContent('社区')
   expect(dialog).toHaveTextContent('技能')
-  expect(dialog).toHaveTextContent('~/.agents/skills/pdf-tools')
+  expect(dialog).toHaveTextContent('~/.agent-store/skills/pdf-tools')
   expect(dialog).toHaveTextContent('下载地址：https://example.test/pdf-tools.md')
 })
 
@@ -181,7 +212,7 @@ test('a provider opens its configuration after the confirmed install', async () 
   await click('确认安装')
 
   await waitFor(() => expect(screen.getByTestId('editing')).toHaveTextContent('openrouter'))
-  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['openrouter'] }])
+  expect(installCalls()).toEqual([{ method: 'installAndEnable', args: ['builtin:io.example/openrouter'] }])
 })
 
 test('an unknown slug is reported and nothing is installed', async () => {
@@ -199,7 +230,7 @@ test('an unknown slug is reported and nothing is installed', async () => {
 })
 
 test('a catalog failure is reported and nothing is installed', async () => {
-  mockRpc({ search: () => { throw new Error('catalog unreachable') } })
+  mockRpc({ getResource: () => { throw new Error('catalog unreachable') } })
   await renderDialog()
   await openLink('agent-store://install?slug=filesystem')
 
@@ -208,8 +239,8 @@ test('a catalog failure is reported and nothing is installed', async () => {
   expect(installCalls()).toHaveLength(0)
 })
 
-test('an empty catalog (offline, no cache) is a catalog failure, not a missing package', async () => {
-  mockRpc({ search: () => [] })
+test('an unreachable catalog is a catalog failure, not a missing package', async () => {
+  mockRpc({ getResource: () => { throw new rpcModule.RpcError('The catalog could not be reached', 'CatalogUnavailableError', { reason: 'unavailable' }) } })
   await renderDialog()
   await openLink('agent-store://install?slug=filesystem')
 
@@ -218,7 +249,7 @@ test('an empty catalog (offline, no cache) is a catalog failure, not a missing p
 })
 
 test('an already installed package offers to view it instead', async () => {
-  mockRpc({ info: () => ({ slug: 'filesystem', category: 'mcp' }) })
+  mockRpc({ list: () => [{ slug: 'filesystem', category: 'mcp', resourceId: 'mcp-registry:io.example/filesystem' }] })
   await renderDialog()
   await openLink('agent-store://install?slug=filesystem')
 
@@ -281,7 +312,7 @@ test('the launch link arriving again as an event does not restart the flow', asy
 
   await screen.findByRole('button', { name: '确认安装' })
   await openLink('agent-store://install?slug=filesystem')
-  expect(calls.filter((c) => c.method === 'search')).toHaveLength(1)
+  expect(calls.filter((c) => c.method === 'getResource')).toHaveLength(1)
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
 })
 

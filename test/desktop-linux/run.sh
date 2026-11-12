@@ -20,7 +20,7 @@ stop_app() { pkill -x app; sleep 2; }
 # xdg-open's generic fallback (no desktop session here) cannot run a quoted Exec
 # path and fails silently, so go through gio like a real desktop.
 open_link() { (gio open "$1" >>"$OUT/open.log" 2>&1 &); sleep "$SETTLE"; }
-skill_installed() { [ -d "$HOME/.claude/skills/$1" ]; }
+skill_installed() { [ -f "$HOME/.agent-store/skills/$1/.agent-store.json" ]; }
 failed=0
 check() { if eval "$2"; then log "ok: $1"; else log "FAIL: $1"; failed=1; fi; }
 

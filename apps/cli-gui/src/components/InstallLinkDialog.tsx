@@ -1,7 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useRef, useState } from 'react'
-import type { InstallOutcome, Item, ItemDetail } from '@as/types'
-import { callRpc } from '../lib/rpc'
+import type { CatalogResourceDetail, InstalledItem, InstallOutcome, Item } from '@as/types'
+import { callRpc, RpcError } from '../lib/rpc'
+import { formatVersion, installedEntryFor, resourceItem } from '../lib/catalog'
 import { needsSetup } from '../lib/installPolicy'
 import { onDeepLink, getLaunchDeepLinks } from '../lib/deepLink'
 import { routeDeepLink } from '../lib/deepLinkRoute'
@@ -15,33 +16,39 @@ import { CategoryIcon } from './CategoryIcon'
 type NoticeReason = 'invalid' | 'notFound' | 'catalogError' | 'installed' | 'mismatch' | 'failed'
 
 type Phase =
-  | { kind: 'loading'; slug: string }
-  | { kind: 'confirm'; item: Item; installing: boolean }
+  | { kind: 'loading'; ref: string }
+  /** `linkRef` is what the link named (an id or a slug); `ref` is the catalog id it resolved to. */
+  | { kind: 'confirm'; ref: string; linkRef: string; item: Item; resource: CatalogResourceDetail; installing: boolean }
   | { kind: 'notice'; reason: NoticeReason; slug?: string; category?: Category; detail?: string }
 
 type Lookup =
-  | { status: 'installed'; category: Category }
-  | { status: 'available'; item: Item }
+  | { status: 'installed'; slug: string; category: Category }
+  | { status: 'available'; resource: CatalogResourceDetail }
   | { status: 'notFound' }
   | { status: 'catalogError'; detail: string }
 
-async function lookup(slug: string): Promise<Lookup> {
+/** `ref` is a catalog id, or a slug from links made before the store sent ids. */
+async function lookup(ref: string): Promise<Lookup> {
+  let resource: CatalogResourceDetail
   try {
-    const info = await callRpc<ItemDetail>('info', [slug])
-    return { status: 'installed', category: info.category }
-  } catch {
-    // `info` only knows installed packages; anything else comes from the catalog.
-  }
-  try {
-    const items = await callRpc<Item[]>('search', [''])
-    // search falls back to the local cache without throwing; an empty result means
-    // the catalog was unreachable, not that the package is gone.
-    if (items.length === 0) return { status: 'catalogError', detail: 'catalog unavailable' }
-    const item = items.find((i) => i.slug === slug)
-    return item ? { status: 'available', item } : { status: 'notFound' }
+    resource = await callRpc<CatalogResourceDetail>('getResource', [ref])
   } catch (err) {
+    if (err instanceof RpcError && (err.code === 'ResourceNotFoundError' || err.code === 'AmbiguousResourceError')) {
+      // An installed slug may no longer resolve in the catalog; it is still installed.
+      if (!ref.includes(':')) {
+        const list = await callRpc<InstalledItem[]>('list').catch(() => [] as InstalledItem[])
+        const entry = list.find((e) => e.slug === ref)
+        if (entry) return { status: 'installed', slug: entry.slug, category: entry.category }
+      }
+      return { status: 'notFound' }
+    }
     return { status: 'catalogError', detail: err instanceof Error ? err.message : String(err) }
   }
+  const list = await callRpc<InstalledItem[]>('list').catch(() => [] as InstalledItem[])
+  const entry = installedEntryFor(resource, list)
+  // Every provider install is one more config of the same provider, so it is never "already installed".
+  if (entry && resource.kind !== 'provider') return { status: 'installed', slug: entry.slug, category: entry.category }
+  return { status: 'available', resource }
 }
 
 // The launch link stays readable for the whole session, so a remount would replay it.
@@ -85,30 +92,31 @@ export function InstallLinkDialog() {
       return
     }
 
-    const { slug, category } = route
+    const { ref, category } = route
+    const shown = route.slug ?? ref
     const current = phaseRef.current
     // The launch link can arrive twice (once from the launch read, once as an event).
-    if (current?.kind === 'loading' && current.slug === slug) return
-    if (current?.kind === 'confirm' && current.item.slug === slug) return
+    if (current?.kind === 'loading' && current.ref === ref) return
+    if (current?.kind === 'confirm' && (current.ref === ref || current.linkRef === ref)) return
 
     const mine = ++seq.current
-    const loading: Phase = { kind: 'loading', slug }
+    const loading: Phase = { kind: 'loading', ref }
     phaseRef.current = loading
     setPhase(loading)
-    const found = await lookup(slug)
+    const found = await lookup(ref)
     if (seq.current !== mine) return
 
-    if (found.status === 'notFound') return setPhase({ kind: 'notice', reason: 'notFound', slug })
+    if (found.status === 'notFound') return setPhase({ kind: 'notice', reason: 'notFound', slug: shown })
     if (found.status === 'catalogError') {
-      return setPhase({ kind: 'notice', reason: 'catalogError', slug, detail: found.detail })
+      return setPhase({ kind: 'notice', reason: 'catalogError', slug: shown, detail: found.detail })
     }
-    const actual = found.status === 'installed' ? found.category : found.item.category
-    if (category && category !== actual) return setPhase({ kind: 'notice', reason: 'mismatch', slug })
+    const actual = found.status === 'installed' ? found.category : found.resource.kind
+    if (category && category !== actual) return setPhase({ kind: 'notice', reason: 'mismatch', slug: shown })
     if (found.status === 'installed') {
-      return setPhase({ kind: 'notice', reason: 'installed', slug, category: actual })
+      return setPhase({ kind: 'notice', reason: 'installed', slug: found.slug, category: actual })
     }
-    showInList(slug, actual)
-    setPhase({ kind: 'confirm', item: found.item, installing: false })
+    showInList(found.resource.id, actual)
+    setPhase({ kind: 'confirm', ref: found.resource.id, linkRef: ref, item: resourceItem(found.resource), resource: found.resource, installing: false })
   }
 
   const handleLinkRef = useRef(handleLink)
@@ -134,25 +142,24 @@ export function InstallLinkDialog() {
     }
   }, [])
 
-  async function confirmInstall(item: Item) {
+  async function confirmInstall(phase: Extract<Phase, { kind: 'confirm' }>) {
+    const { item, ref } = phase
     const mine = seq.current
-    setPhase({ kind: 'confirm', item, installing: true })
-    appendLine(`$ aas install ${item.slug}`)
+    setPhase({ ...phase, installing: true })
+    appendLine(`$ aas install ${ref}`)
     try {
-      const result = await callRpc<InstallOutcome>('installAndEnable', [item.slug])
-      appendLine(`✓ ${t('common.installed')} ${item.slug} ${result.version}`, 'green')
+      const result = await callRpc<InstallOutcome>('installAndEnable', [ref])
+      appendLine(`✓ ${t('common.installed')} ${result.slug} ${result.version}`, 'green')
       bumpInstalledVersion()
       if (seq.current !== mine) return
-      if (item.category === 'provider' || needsSetup(result)) {
-        setEditingConfigSlug(item.slug)
-        setSelectedSlug(item.slug)
-      }
+      setSelectedSlug(result.slug)
+      if (item.category === 'provider' || needsSetup(result)) setEditingConfigSlug(result.slug)
       setPhase(null)
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err)
       appendLine(`✗ ${detail}`, 'red')
       bumpInstalledVersion()
-      if (seq.current === mine) setPhase({ kind: 'notice', reason: 'failed', slug: item.slug, detail })
+      if (seq.current === mine) setPhase({ kind: 'notice', reason: 'failed', slug: ref, detail })
     }
   }
 
@@ -177,7 +184,7 @@ export function InstallLinkDialog() {
               <>
                 <Dialog.Title className="text-base font-semibold text-store-text">{t('installLink.confirmTitle')}</Dialog.Title>
                 <p role="status" className="mt-3 text-sm text-store-text-2">
-                  {t('installLink.loading')} <span className="font-mono text-store-text">{phase.slug}</span>…
+                  {t('installLink.loading')} <span className="font-mono text-store-text">{phase.ref}</span>…
                 </p>
               </>
             )}
@@ -197,7 +204,7 @@ export function InstallLinkDialog() {
               </>
             )}
 
-            {phase?.kind === 'confirm' && <ConfirmBody item={phase.item} />}
+            {phase?.kind === 'confirm' && <ConfirmBody item={phase.item} resource={phase.resource} />}
           </div>
 
           <div className="flex justify-end gap-2 border-t border-store-border px-6 py-4">
@@ -225,8 +232,8 @@ export function InstallLinkDialog() {
             {phase?.kind === 'confirm' && (
               <button
                 type="button"
-                onClick={() => void confirmInstall(phase.item)}
-                disabled={installing}
+                onClick={() => void confirmInstall(phase)}
+                disabled={installing || !!phase.resource.installError}
                 className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
               >
                 {installing ? t('installLink.installing') : t('installLink.confirm')}
@@ -239,9 +246,9 @@ export function InstallLinkDialog() {
   )
 }
 
-function ConfirmBody({ item }: { item: Item }) {
+function ConfirmBody({ item, resource }: { item: Item; resource: CatalogResourceDetail }) {
   const t = useT()
-  const detail = { ...item, installed: false as const }
+  const detail = { ...item, installed: false as const, resource }
   const tierKey = TIER_META[item.publisher.tier] ? item.publisher.tier : 'community'
   const tier = TIER_META[tierKey]
   const lines = [...installStepsOf(detail, t), ...typeFacts(detail, t)]
@@ -255,7 +262,7 @@ function ConfirmBody({ item }: { item: Item }) {
         <div className="min-w-0">
           <p className="truncate font-mono text-sm font-bold text-store-text">{item.name}</p>
           <p className="truncate font-mono text-[11px] text-store-text-3">
-            {item.slug} · v{item.version}
+            {resource.id}{item.version ? ` · ${formatVersion(item.version)}` : ''}
           </p>
         </div>
       </div>
@@ -282,6 +289,9 @@ function ConfirmBody({ item }: { item: Item }) {
       </ul>
       {item.category === 'provider' && (
         <p className="mt-2 text-xs text-store-text-3">{t('installLink.providerNext')}</p>
+      )}
+      {resource.installError && (
+        <p className="mt-2 break-words text-xs text-store-red">{t('errors.notInstallable')} {resource.installError}</p>
       )}
 
       <p className="mt-4 rounded-lg border border-store-amber bg-store-amber-soft px-3 py-2 text-xs leading-relaxed text-store-text">

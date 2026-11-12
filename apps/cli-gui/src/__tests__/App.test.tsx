@@ -12,7 +12,7 @@ afterEach(async () => { cleanup(); await settleRpc(); mock.restore(); try { loca
 function mockAllRpcs() {
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string) => {
     if (method === 'list') return []
-    if (method === 'search') return []
+    if (method === 'search') return { resources: [], nextOffset: null, offline: false }
     if (method === 'getUsageSummary') return []
     if (method === 'getRelayStatus') return { running: false }
     if (method === 'listLocalConfigs') return []

@@ -18,12 +18,15 @@ import {
   TIER_META,
   buildReadme,
   installCmdOf,
+  installRefOf,
 } from '../lib/detailContent'
+import { formatInstalls, formatVersion } from '../lib/catalog'
+import { SkillTargets } from './SkillTargets'
 
 type Tab = 'overview' | 'reviews' | 'versions'
 
 export function DetailPanel() {
-  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, editingConfigSlug, setEditingConfigSlug } =
+  const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, editingConfigSlug, setEditingConfigSlug, setSelectedSlug } =
     useAppState()
   const { appendLine } = useTerminalLog()
   const detail = useSelectedDetail()
@@ -77,13 +80,16 @@ export function DetailPanel() {
 
   async function install() {
     if (!detail || detail.installed) return
-    appendLine(`$ aas install ${detail.slug}`)
+    const ref = installRefOf(detail)
+    appendLine(`$ aas install ${ref}`)
     setInstallError(null)
     try {
-      const result = await callRpc<InstallOutcome>('installAndEnable', [detail.slug])
-      appendLine(`✓ ${t('detail.installedPrefix')} ${detail.slug} ${result.version}`, 'green')
+      const result = await callRpc<InstallOutcome>('installAndEnable', [ref])
+      appendLine(`✓ ${t('detail.installedPrefix')} ${result.slug} ${result.version}`, 'green')
+      // The selection was the catalog id; the installed entry is known by its slug.
+      setSelectedSlug(result.slug)
       bumpInstalledVersion()
-      if (needsSetup(result)) setEditingConfigSlug(detail.slug)
+      if (needsSetup(result)) setEditingConfigSlug(result.slug)
     } catch (err) {
       appendLine(`✗ ${errorText(err)}`, 'red')
       setInstallError(describeError(err, t))
@@ -95,6 +101,8 @@ export function DetailPanel() {
   const type = TYPE_META[detail.category]
   const tier = TIER_META[detail.publisher.tier] ?? TIER_META.community
   const readme = buildReadme(detail, detail.description, t)
+  const installCmd = installCmdOf(installRefOf(detail))
+  const notInstallable = !detail.installed ? detail.resource.installError : undefined
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -113,7 +121,8 @@ export function DetailPanel() {
             <div className="mt-1.5 flex items-center gap-3 text-xs text-store-text-2">
               <span className="font-semibold">{detail.publisher.name}</span>
               <span className="text-store-border-strong">|</span>
-              <span className="text-store-text-3">↓ {detail.downloads}</span>
+              <span className="text-store-text-3">↓ {formatInstalls(detail.installed ? detail.downloads || null : detail.resource.installs)}</span>
+              {!detail.installed && <span className="text-store-amber">★ {formatInstalls(detail.resource.stars)}</span>}
               <span className={`font-semibold ${type.textClass}`}>{t(`categories.${detail.category}`)}</span>
             </div>
             <p className="mt-3 max-w-[620px] text-sm leading-relaxed text-store-text-2">{detail.description}</p>
@@ -137,9 +146,11 @@ export function DetailPanel() {
                 <button
                   type="button"
                   onClick={install}
-                  className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+                  disabled={!!notInstallable}
+                  title={notInstallable}
+                  className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {t('common.install')}
+                  {notInstallable ? t('catalog.notInstallable') : t('common.install')}
                 </button>
               )}
               <button
@@ -163,6 +174,12 @@ export function DetailPanel() {
                 <ErrorDetail detail={installError.detail} />
               </div>
             )}
+            {notInstallable && (
+              <p className="mt-2 max-w-[620px] text-xs text-store-text-3">{t('errors.notInstallable')}</p>
+            )}
+            {detail.installed && detail.category === 'skill' && (
+              <SkillTargets slug={detail.slug} onChange={bumpInstalledVersion} />
+            )}
             {childCount > 0 && (
               <p className="mt-2 text-xs text-store-text-2">
                 {childCount} {t('detail.configCountSuffix')}
@@ -173,11 +190,11 @@ export function DetailPanel() {
 
         <div className="mt-5 flex items-center gap-2 rounded-lg border border-store-border bg-store-term-bg px-3 py-2.5 font-mono text-xs text-store-text-2">
           <span className="text-store-green">$</span>
-          <span className="flex-1">{installCmdOf(detail.slug)}</span>
+          <span className="flex-1 break-all">{installCmd}</span>
           <button
             type="button"
             aria-label={t('detail.copyCmd')}
-            onClick={() => navigator.clipboard?.writeText(installCmdOf(detail.slug))}
+            onClick={() => navigator.clipboard?.writeText(installCmd)}
             className="text-store-text-3 hover:text-store-text"
           >
             <Copy size={12} />
@@ -259,7 +276,7 @@ export function DetailPanel() {
           <div className="mt-5 flex flex-col gap-px overflow-hidden rounded-lg border border-store-border">
             {(versions.length > 0 ? versions : [{ version: detail.version, publishedAt: '' }]).map((v, i) => (
               <div key={v.version} className="flex items-center gap-3 bg-store-panel px-3.5 py-3">
-                <span className="font-mono text-xs font-semibold text-store-text">v{v.version}</span>
+                <span className="font-mono text-xs font-semibold text-store-text">{formatVersion(v.version)}</span>
                 {i === 0 && (
                   <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[9.5px] font-bold text-store-green">
                     latest

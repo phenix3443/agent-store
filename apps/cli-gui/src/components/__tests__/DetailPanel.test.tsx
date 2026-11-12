@@ -15,6 +15,17 @@ function mockRpc(handlers: Record<string, (...args: unknown[]) => unknown>) {
     handlers[method]?.(...args)) as typeof rpcModule.callRpc)
 }
 
+/** A GET /api/resources/<id> answer with the engine's install preview, for a not-yet-installed item. */
+function catalogEntry(item: Record<string, unknown>, extra: Record<string, unknown> = {}) {
+  const id = `mcp-registry:io.example/${item.slug as string}`
+  return {
+    id, kind: item.category, name: item.name, description: item.description, author: { name: 'anthropic', url: null },
+    version: item.version, homepageUrl: null, installs: 1200, stars: 3400, verified: false, tags: [], transports: ['npm'],
+    origin: { site: 'mcp-registry', upstreamId: `io.example/${item.slug as string}`, url: null, upstreamVersion: null, upstreamUpdatedAt: null, syncedAt: '', unavailableAt: null, unavailableReason: null },
+    slug: item.slug, install: { ...item, resourceId: id }, ...extra,
+  }
+}
+
 function Select({ slug }: { slug: string }) {
   const { setSelectedSlug } = useAppState()
   return <button onClick={() => setSelectedSlug(slug)}>select</button>
@@ -68,23 +79,76 @@ test('shows an installed item detail from the info RPC', async () => {
 })
 
 test('shows an install button for a not-yet-installed item and installs it', async () => {
-  const install = mock(() => ({ slug: 'x', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [], notEnabled: [] }))
+  const install = mock(() => ({ slug: 'filesystem', version: '1.0.0', installedAt: '', category: 'mcp', enabled: [], notEnabled: [] }))
   mockRpc({
     info: () => { throw new Error('Item not installed: filesystem') },
-    search: () => [{
+    list: () => [],
+    getResource: () => catalogEntry({
       id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
- category: 'mcp', version: '0.8.1', publisher,
-      compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
+      category: 'mcp', version: '0.8.1', publisher,
+      compatibleWith: ['claude'], tags: [], downloads: 10, rating: 0, status: 'published',
       installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      configSchema: {},
-    }],
+      configSchema: { type: 'object', required: ['TOKEN'] }, transport: 'stdio', command: 'npx', serverCommand: 'npx -y fs-mcp@0.8.1',
+    }),
     installAndEnable: install,
   })
-  renderPanel()
+  renderPanel('mcp-registry:io.example/filesystem')
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByRole('button', { name: '安装' }))
+  // What installing runs, from the engine's install preview.
+  expect(screen.getAllByText('aas install mcp-registry:io.example/filesystem').length).toBeGreaterThan(1)
+  expect(screen.getByText('run · 启动 npx -y fs-mcp@0.8.1')).toBeInTheDocument()
+  expect(screen.getByText('config · 需要填写 TOKEN')).toBeInTheDocument()
+  expect(screen.getByText('↓ 1.2K')).toBeInTheDocument()
+  expect(screen.getByText('★ 3.4K')).toBeInTheDocument()
+  expect(screen.getByText('MCP Registry')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '安装' }))
-  await waitFor(() => expect(install).toHaveBeenCalledWith('filesystem'))
+  await waitFor(() => expect(install).toHaveBeenCalledWith('mcp-registry:io.example/filesystem'))
+})
+
+test('a catalog entry Agent Store cannot install says so and offers no install', async () => {
+  mockRpc({
+    list: () => [],
+    getResource: () => ({ ...catalogEntry({ slug: 'odd', name: 'odd', description: 'd', category: 'mcp', version: '1.0.0' }), install: undefined, installError: 'no launcher' }),
+  })
+  renderPanel('mcp-registry:io.example/odd')
+  fireEvent.click(screen.getByText('select'))
+  const button = await screen.findByRole('button', { name: '暂不能安装' })
+  expect(button).toBeDisabled()
+  expect(screen.getByText('这个资源没有 Agent Store 能运行的安装方式。')).toBeInTheDocument()
+})
+
+test('an installed skill shows each client with its own switch, and a refused enable offers 强制启用', async () => {
+  const calls: unknown[][] = []
+  let codexOn = false
+  mockRpc({
+    info: () => ({
+      slug: 'skills-find-skills', category: 'skill', version: 'abc123', installedAt: '', updatedAt: '', compatibleWith: ['claude', 'codex'],
+      enabledFor: { claude: true }, name: 'find-skills', description: 'Finds skills', publisher, tags: [], downloads: 0,
+      resourceId: 'github:vercel-labs/skills/find-skills',
+    }),
+    getTargetStatus: () => [
+      { target: 'claude', compatible: true, enabled: true },
+      { target: 'codex', compatible: true, enabled: codexOn },
+    ],
+    enable: (...args: unknown[]) => {
+      calls.push(args)
+      if (args.length === 2) throw new rpcModule.RpcError('Refusing to replace /h/.codex/skills/find-skills', 'SkillDeployRefusedError', { reason: 'not-managed', tool: 'codex' })
+      codexOn = true
+    },
+  })
+  renderPanel('skills-find-skills')
+  fireEvent.click(screen.getByText('select'))
+  expect(await screen.findByText('适用客户端')).toBeInTheDocument()
+  expect(screen.getByLabelText('Claude Code').getAttribute('aria-pressed')).toBe('true')
+  fireEvent.click(screen.getByLabelText('Codex'))
+  const alert = await screen.findByRole('alert')
+  expect(alert.textContent).toContain('启用 Codex 失败')
+  expect(alert.textContent).toContain('Codex 的技能目录里已经有同名的内容')
+  fireEvent.click(screen.getByRole('button', { name: '强制启用' }))
+  await waitFor(() => expect(calls).toEqual([['skills-find-skills', 'codex'], ['skills-find-skills', 'codex', { force: true }]]))
+  await waitFor(() => expect(screen.getByLabelText('Codex').getAttribute('aria-pressed')).toBe('true'))
+  expect(screen.queryByRole('alert')).toBeNull()
 })
 
 test('the 评价 tab lists user reviews', async () => {
@@ -303,7 +367,8 @@ test('installing an MCP that needs config goes straight to its config page', asy
   let installed = false
   mockRpc({
     info: () => { if (!installed) throw new Error('Item not installed: github'); return mcpInfo },
-    search: () => [{ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }],
+    list: () => (installed ? [{ ...mcpInfo, resourceId: 'mcp-registry:io.example/github' }] : []),
+    getResource: () => catalogEntry({ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }),
     installAndEnable: () => {
       installed = true
       return { slug: 'github', version: '0.6.2', installedAt: '', category: 'mcp', enabled: [], notEnabled: mcpStatus.map(s => ({ target: s.target, reason: 'needs-config', message: 'x' })) }
@@ -319,7 +384,8 @@ test('installing an MCP that needs config goes straight to its config page', asy
 test('a failed install is shown on the detail page', async () => {
   mockRpc({
     info: () => { throw new Error('Item not installed: github') },
-    search: () => [{ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }],
+    list: () => [],
+    getResource: () => catalogEntry({ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }),
     installAndEnable: () => { throw new Error('Installed github 0.6.2, but enabling it for claude failed: conflict') },
   })
   renderPanel('github')
