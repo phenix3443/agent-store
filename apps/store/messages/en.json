@@ -33,6 +33,7 @@
       "label": "Sort",
       "default": "Recommended",
       "installs": "Most installed",
+      "stars": "Most stars",
       "updated": "Recently updated",
       "name": "Name"
     },
@@ -63,6 +64,7 @@
       "copyCommand": "Copy command",
       "lede": "Every package states what runs when you install it.",
       "noInstalls": "No install count",
+      "stars": "{count} GitHub stars",
       "unknownAuthor": "Unknown author",
       "loading": "Loading packages",
       "countAll": "{count, plural, one {# package} other {# packages}}",
@@ -84,6 +86,7 @@
       "expand": "Open as full page",
       "close": "Close details",
       "installs": "{count} installs",
+      "stars": "{count} GitHub stars",
       "favorite": "Save",
       "unfavorite": "Saved",
       "runsTitle": "What it runs after install",

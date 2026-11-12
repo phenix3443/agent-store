@@ -44,6 +44,12 @@ export interface ResourceSummary {
   /** skills.sh install count; null where the source has none. */
   installs: number | null
   /**
+   * GitHub stars of the repo behind the record: an MCP server's `repository`, a
+   * skill's repo (shared by every skill in it). null when there is no GitHub repo,
+   * GitHub does not resolve it, or the sync has not checked it yet.
+   */
+  stars: number | null
+  /**
    * MCP: the publisher proved a domain to the registry (a reverse-DNS namespace
    * other than io.github.*). Providers: curated by us. Skills: false.
    */
@@ -54,8 +60,12 @@ export interface ResourceSummary {
   origin: ResourceOrigin
 }
 
-/** `default`: installs first, then verified, then most recently updated; for `kind=mcp` verified comes first (the MCP registry has no install counts). With `q`, name matches rank first. */
-export type ResourceSort = 'default' | 'installs' | 'updated' | 'name'
+/**
+ * `default`: installs first, then verified, then most recently updated; for `kind=mcp`
+ * GitHub stars first (nulls last), then verified, then updated (the MCP registry has no
+ * install counts). `stars` uses that MCP order for any kind. With `q`, name matches rank first.
+ */
+export type ResourceSort = 'default' | 'installs' | 'stars' | 'updated' | 'name'
 
 export interface ResourceListResponse {
   resources: ResourceSummary[]

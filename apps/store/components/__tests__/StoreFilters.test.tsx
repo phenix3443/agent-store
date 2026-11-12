@@ -48,10 +48,10 @@ test('choosing a category replaces the URL and keeps the other params', () => {
   expect(push).not.toHaveBeenCalled()
 })
 
-test('sort offers the four orders the catalog API supports', () => {
+test('sort offers the five orders the catalog API supports', () => {
   render(<SortSelect active="default" />)
   const options = screen.getAllByRole('option').map((o) => o.textContent)
-  expect(options).toEqual(['推荐', '最多安装', '最近更新', '名称'])
+  expect(options).toEqual(['推荐', '最多安装', '最多星标', '最近更新', '名称'])
 })
 
 test('selecting a sort writes ?sort= to the URL; the default leaves it out', () => {

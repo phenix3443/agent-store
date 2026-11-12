@@ -3,6 +3,7 @@ import type { Octokit } from '@octokit/rest'
 import type { ResourceKind } from '@as/types'
 import { countAvailable, getMeta, setMeta, CATALOG_SCHEMA_VERSION } from './db'
 import { encodeDetail } from './detail-codec'
+import { refreshStars, type StarsOptions, type StarsReport } from './stars'
 import type { CatalogRecord, CatalogSource, SourceRun } from './types'
 
 export interface SourceReport {
@@ -25,6 +26,7 @@ export interface SyncReport {
   startedAt: string
   finishedAt: string
   sources: SourceReport[]
+  stars?: StarsReport
   before: { available: number }
   after: { available: number; unavailable: number; byKind: Record<string, number> }
 }
@@ -34,6 +36,8 @@ export interface SyncOptions {
   fetch: typeof fetch
   github: Octokit
   full?: boolean
+  /** Refresh GitHub stars after the sources; needs an authenticated `github` (GraphQL has no anonymous access). */
+  stars?: StarsOptions | false
   now?: () => Date
   log?: (message: string) => void
 }
@@ -170,6 +174,17 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     log(`${source.name}: ${report.status}, +${report.added} ~${report.updated} -${report.unavailable}`)
   }
 
+  let stars: StarsReport | undefined
+  if (options.stars) {
+    log('stars: refreshing')
+    try {
+      stars = await refreshStars(db, options.github, { now: now(), full: options.full ?? false, log }, options.stars)
+      log(`stars: ${stars.queried} repos in ${stars.queries} queries, ${stars.errors.length} errors`)
+    } catch (e) {
+      log(`stars: failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   db.exec("INSERT INTO resources_fts (resources_fts) VALUES ('rebuild')")
   const finishedAt = now().toISOString()
   setMeta(db, 'schema_version', String(CATALOG_SCHEMA_VERSION))
@@ -178,7 +193,7 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     (db.query('SELECT kind, count(*) AS n FROM resources WHERE unavailable_at IS NULL GROUP BY kind').all() as { kind: string; n: number }[]).map((r) => [r.kind, r.n]),
   )
   const unavailable = (db.query('SELECT count(*) AS n FROM resources WHERE unavailable_at IS NOT NULL').get() as { n: number }).n
-  return { startedAt, finishedAt, sources: reports, before, after: { available: countAvailable(db), unavailable, byKind } }
+  return { startedAt, finishedAt, sources: reports, ...(stars ? { stars } : {}), before, after: { available: countAvailable(db), unavailable, byKind } }
 }
 
 export function formatReportMarkdown(report: SyncReport, extra: string[] = []): string {
@@ -196,6 +211,21 @@ export function formatReportMarkdown(report: SyncReport, extra: string[] = []): 
       `| ${s.source} | ${s.status} | ${s.mode ?? '-'} | ${s.fetched} | ${s.added} | ${s.updated} | ${s.restored} | ${s.unchanged} | ${s.unavailable} | ${Object.values(s.skipped).reduce((a, b) => a + b, 0)} |`,
     ),
   ]
+  const st = report.stars
+  if (st) {
+    const cov = Object.entries(st.coverage)
+      .filter(([kind]) => kind !== 'provider')
+      .map(([kind, c]) => `${kind} ${c.withRepo}/${c.rows} with a GitHub repo, ${c.withStars} with stars`)
+    lines.push(
+      '',
+      '### GitHub stars',
+      `- ${st.repos} repos known, ${st.due} due, ${st.queried} refreshed (${st.found} found, ${st.missing} not resolved) ` +
+        `in ${st.queries} GraphQL queries, ${(st.durationMs / 1000).toFixed(1)} s`,
+      `- rate limit: ${st.rateLimit ? `${st.rateLimit.remaining}/${st.rateLimit.limit} left, this run cost ${st.cost}` : 'unknown'}`,
+      ...(cov.length ? [`- ${cov.join('; ')}`] : []),
+      ...st.errors.slice(0, 10).map((e) => `- error: ${e}`),
+    )
+  }
   for (const s of report.sources) {
     const skips = Object.entries(s.skipped).sort((a, b) => b[1] - a[1])
     if (skips.length === 0 && s.errors.length === 0) continue

@@ -3,7 +3,7 @@ import type { ResourceKind, ResourceListResponse } from '@as/types'
 import { CatalogUnavailableError, type CatalogReader, type ResourceSort } from './reader'
 
 const KINDS = new Set<ResourceKind>(['skill', 'mcp', 'provider'])
-const SORTS = new Set<ResourceSort>(['default', 'installs', 'updated', 'name'])
+const SORTS = new Set<ResourceSort>(['default', 'installs', 'stars', 'updated', 'name'])
 
 /**
  * GET /api/resources?kind=&q=&sort=&limit=&offset=  list and search
@@ -22,7 +22,7 @@ export function resourceRoutes(reader: CatalogReader): Hono {
     const kind = c.req.query('kind')
     if (kind && !KINDS.has(kind as ResourceKind)) return c.json({ error: 'kind must be skill, mcp or provider' }, 400)
     const sort = c.req.query('sort') ?? 'default'
-    if (!SORTS.has(sort as ResourceSort)) return c.json({ error: 'sort must be default, installs, updated or name' }, 400)
+    if (!SORTS.has(sort as ResourceSort)) return c.json({ error: 'sort must be default, installs, stars, updated or name' }, 400)
     const num = (raw: string | undefined, fallback: number) => (raw === undefined || raw === '' ? fallback : /^\d+$/.test(raw) ? Number(raw) : NaN)
     const limit = num(c.req.query('limit'), 20)
     const offset = num(c.req.query('offset'), 0)

@@ -3,8 +3,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { McpResourceDetail, ResourceListResponse, SkillResourceDetail } from '@as/types'
-import { openCatalogForWrite } from '../catalog/db'
-import { CatalogReader } from '../catalog/reader'
+import { Database } from 'bun:sqlite'
+import { migrateCatalog, openCatalogForWrite } from '../catalog/db'
+import { CatalogReader, checkCatalogFile } from '../catalog/reader'
 import { resourceRoutes } from '../catalog/routes'
 import { normalizeServer } from '../catalog/sources/mcp-registry'
 import { builtinProvidersSource } from '../catalog/sources/providers'
@@ -12,7 +13,7 @@ import { githubSkillsSource } from '../catalog/sources/github-skills'
 import { syncCatalog } from '../catalog/sync'
 import type { CatalogSource } from '../catalog/types'
 import { CatalogUpdater } from '../catalog/updater'
-import { fakeFetch, fixtureJson, githubRoutes, json, octokitWith } from './helpers/upstream-fixtures'
+import { fakeFetch, fixtureJson, githubGraphqlRoute, githubRoutes, json, octokitWith } from './helpers/upstream-fixtures'
 
 const MCP_FIXTURES = [
   'mcp-io-github-ChromeDevTools-chrome-devtools-mcp.json',
@@ -26,8 +27,11 @@ const MCP_FIXTURES = [
 const dir = mkdtempSync(join(tmpdir(), 'catalog-api-'))
 const v1 = join(dir, 'v1.db')
 const v2 = join(dir, 'v2.db')
+// A file of schema version 2, before resources.stars, as the release held when stars shipped.
+const old = join(dir, 'schema2.db')
+const STARS = { 'github/github-mcp-server': 28_000, 'chromedevtools/chrome-devtools-mcp': 20_000, 'supabase/mcp': 2_000 }
 
-async function build(path: string, mcpFixtures: string[]) {
+async function build(path: string, mcpFixtures: string[], schema?: number) {
   const mcp: CatalogSource = {
     name: 'mcp-registry', site: 'mcp-registry', kind: 'mcp',
     async run() {
@@ -35,9 +39,20 @@ async function build(path: string, mcpFixtures: string[]) {
       return { records, removed: [], skipped: {}, errors: [], coverage: { mode: 'full' } }
     },
   }
-  const f = fakeFetch((url) => (url.hostname === 'skills.sh' ? json(fixtureJson('skills-sh-search-frontend.json')) : undefined), githubRoutes)
-  const db = openCatalogForWrite(path)
+  const f = fakeFetch(
+    (url) => (url.hostname === 'skills.sh' ? json(fixtureJson('skills-sh-search-frontend.json')) : undefined),
+    githubGraphqlRoute(STARS),
+    githubRoutes,
+  )
+  let db: Database
+  if (schema) {
+    db = new Database(path, { create: true, strict: true })
+    migrateCatalog(db, schema)
+  } else {
+    db = openCatalogForWrite(path)
+  }
   await syncCatalog(db, {
+    stars: schema ? false : {},
     sources: [builtinProvidersSource(), mcp, githubSkillsSource({ repos: ['anthropics/skills'], maxRepos: 1, skillsSh: { queries: ['frontend'] } })],
     fetch: f,
     github: octokitWith(f),
@@ -55,6 +70,7 @@ const get = async <T>(path: string) => {
 beforeAll(async () => {
   await build(v1, MCP_FIXTURES)
   await build(v2, MCP_FIXTURES.slice(0, 2))
+  await build(old, MCP_FIXTURES, 2)
 })
 afterAll(() => {
   reader.close()
@@ -67,7 +83,7 @@ describe('resource routes', () => {
     reader.open(v1)
   })
 
-  test('list: default order is installs first, but verified first within MCP', async () => {
+  test('list: default order is installs first, but stars first within MCP', async () => {
     const { body } = await get<ResourceListResponse>('/api/resources?limit=5')
     expect(body.resources).toHaveLength(5)
     expect(body.nextOffset).toBe(5)
@@ -75,9 +91,16 @@ describe('resource routes', () => {
     const installs = body.resources.map((r) => r.installs ?? -1)
     expect(installs).toEqual([...installs].sort((a, b) => b - a))
     const mcp = await get<ResourceListResponse>('/api/resources?kind=mcp&limit=20')
-    const verified = mcp.body.resources.map((r) => r.verified)
-    expect(verified).toEqual([...verified].sort((a, b) => Number(b) - Number(a)))
-    expect(verified[0]).toBe(true)
+    // Stars first, nulls last; among nulls, verified first.
+    expect(mcp.body.resources.map((r) => [r.origin.upstreamId, r.stars, r.verified])).toEqual([
+      ['io.github.github/github-mcp-server', 28_000, false],
+      ['io.github.ChromeDevTools/chrome-devtools-mcp', 20_000, false],
+      ['com.supabase/mcp', 2_000, true],
+      ...mcp.body.resources.slice(3).map((r) => [r.origin.upstreamId, null, r.verified]),
+    ])
+    const rest = mcp.body.resources.slice(3).map((r) => r.verified)
+    expect(rest).toEqual([...rest].sort((a, b) => Number(b) - Number(a)))
+    expect(rest).toContain(false)
     const skills = await get<ResourceListResponse>('/api/resources?kind=skill&limit=2')
     expect(skills.body.resources[0]!.id).toBe('github:anthropics/skills/frontend-design')
   })
@@ -91,6 +114,31 @@ describe('resource routes', () => {
     expect(cjk.body.resources.map((r) => r.id)).toEqual(['builtin:local'])
     const short = await get<ResourceListResponse>('/api/resources?q=ai&kind=mcp')
     expect(short.body.resources.length).toBeGreaterThan(0)
+  })
+
+  test('sort=stars ranks every kind by stars, skill repos included', async () => {
+    const { status, body } = await get<ResourceListResponse>('/api/resources?sort=stars&limit=5')
+    expect(status).toBe(200)
+    expect(body.resources[0]!.origin.upstreamId).toBe('io.github.github/github-mcp-server')
+    const counted = body.resources.map((r) => r.stars).filter((s) => s !== null)
+    expect(counted).toEqual([...counted].sort((a, b) => b! - a!))
+    const skill = await get<{ resource: SkillResourceDetail }>('/api/resources/github:anthropics/skills/frontend-design')
+    // anthropics/skills is not in the GraphQL fixture: unresolved, so null.
+    expect(skill.body.resource.stars).toBeNull()
+  })
+
+  test('a catalog file from before stars is still served, with stars null', async () => {
+    expect(checkCatalogFile(old).resources).toBeGreaterThan(0)
+    const r = new CatalogReader()
+    r.open(old)
+    const mcp = r.list({ kind: 'mcp', limit: 20 }).resources
+    expect(mcp).toHaveLength(6)
+    expect(mcp.every((x) => x.stars === null)).toBe(true)
+    const verified = mcp.map((x) => x.verified)
+    expect(verified).toEqual([...verified].sort((a, b) => Number(b) - Number(a)))
+    expect(r.list({ sort: 'stars', limit: 3 }).resources).toHaveLength(3)
+    expect(r.get('mcp-registry:com.supabase/mcp')!.stars).toBeNull()
+    r.close()
   })
 
   test('rejects bad parameters', async () => {

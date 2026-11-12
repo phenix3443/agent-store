@@ -45,6 +45,14 @@ test('shows skills.sh installs where the data has them, and a dash, not a zero, 
   expect(container.textContent).not.toMatch(/(^|\D)0(\D|$)/)
 })
 
+test('shows GitHub stars under the installs where the catalog has them, and nothing where it does not', () => {
+  render(<ItemTable resources={rows} />)
+  expect(screen.getAllByText('★ 152.3K').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('★ 1.3K').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('GitHub 星标 152.3K').length).toBeGreaterThan(0)
+  expect(screen.getAllByText(/★/).length).toBe(4)
+})
+
 test('verified records carry the tick, others none', () => {
   const { container } = render(<ItemTable resources={rows} />)
   expect(container.querySelectorAll('[data-tier="verified"]').length).toBe(1)

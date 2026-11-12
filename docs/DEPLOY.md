@@ -23,7 +23,7 @@
 
 skill、MCP 和 provider 的目录不在 Postgres 里，而是一个独立的 SQLite 文件 `catalog.db`，代码在 `apps/api/src/catalog/`。
 
-- **生成**：`catalog-sync` 工作流每 6 小时跑一次（也可手动触发），下载上一版 `catalog.db`，执行 `bun run sync:catalog`，再把 gzip 压缩后的 `catalog.db.gz` 和 `report.json` 覆盖上传到 `catalog` 这个 release（预发布、不标为 latest，以免影响桌面端下载页取最新版本）。同步报告写在该次运行的 job summary 里。可用条目数少于上一版的 80% 时不上传、工作流失败；确认是上游真的变少了，再手动触发并勾选 `allow-shrink`。
+- **生成**：`catalog-sync` 工作流每 6 小时跑一次（也可手动触发），下载上一版 `catalog.db`，执行 `bun run sync:catalog`，再把 gzip 压缩后的 `catalog.db.gz` 和 `report.json` 覆盖上传到 `catalog` 这个 release（预发布、不标为 latest，以免影响桌面端下载页取最新版本）。同步报告写在该次运行的 job summary 里。同步最后用 GraphQL 批量查 MCP 服务器仓库和技能仓库的 GitHub 星标（每次 100 个仓库、花 1 点额度，用工作流自带的 `GITHUB_TOKEN`），只查 20 小时内没查过的仓库，勾选 `full` 时全部重查；报告里的「GitHub stars」一节写了查了多少、剩余额度和耗时。可用条目数少于上一版的 80% 时不上传、工作流失败；确认是上游真的变少了，再手动触发并勾选 `allow-shrink`。
 - **来源**：MCP 来自官方 MCP Registry（按 `updated_since` 增量）；skill 来自 `SKILL_REPOS` 里的仓库、skills.sh 搜索发现的仓库和库里已有的仓库，用 GitHub tree API 扫描；provider 是 `sources/providers.ts` 里的内置列表。加一个来源就是在 `sources/` 下加一个模块并登记到 `sources/index.ts`。
 - **读取**：API 启动时先打开本地副本，再从 `CATALOG_URL` 下载新版，之后每 `CATALOG_REFRESH_SECONDS` 秒用 ETag 检查一次；新文件校验通过才原子替换，下载失败时继续用旧的。
 

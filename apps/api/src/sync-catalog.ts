@@ -52,6 +52,8 @@ const report = await syncCatalog(db, {
   fetch,
   github,
   full: values.full,
+  // GraphQL has no anonymous access; without a token the previous stars stay.
+  stars: process.env['GITHUB_TOKEN'] ? {} : false,
   log: (m) => console.error(m),
 })
 const after = countAvailable(db)

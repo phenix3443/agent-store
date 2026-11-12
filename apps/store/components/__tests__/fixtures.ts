@@ -28,6 +28,7 @@ export const providerResource: ProviderResourceDetail = {
   version: '1.0.0',
   homepageUrl: 'https://openrouter.ai',
   installs: null,
+  stars: null,
   verified: true,
   tags: ['router'],
   transports: [],
@@ -49,6 +50,7 @@ export const mcpResource: McpResourceDetail = {
   version: '0.8.0',
   homepageUrl: null,
   installs: null,
+  stars: 1_250,
   verified: false,
   tags: ['npm'],
   transports: ['npm'],
@@ -85,6 +87,7 @@ export const skillResource: SkillResourceDetail = {
   version: '76a98a285cb0',
   homepageUrl: 'https://github.com/obra/superpowers',
   installs: 12_400,
+  stars: 152_300,
   verified: false,
   tags: [],
   transports: [],
@@ -107,6 +110,6 @@ export const skillResource: SkillResourceDetail = {
 
 /** The list endpoint's shape: the summary fields only. */
 export function summary(r: ResourceSummary): ResourceSummary {
-  const { id, kind, name, description, author, version, homepageUrl, installs, verified, tags, transports, origin } = r
-  return { id, kind, name, description, author, version, homepageUrl, installs, verified, tags, transports, origin }
+  const { id, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin } = r
+  return { id, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin }
 }

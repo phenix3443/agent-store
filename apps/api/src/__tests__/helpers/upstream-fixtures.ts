@@ -58,3 +58,33 @@ export const githubRoutes: Route = (url) => {
 export function octokitWith(fetchImpl: typeof fetch): Octokit {
   return new Octokit({ request: { fetch: fetchImpl, retries: 0 } })
 }
+
+/**
+ * Answers POST api.github.com/graphql star queries from `stars` (lowercase
+ * owner/name); repos not listed resolve to null with a NOT_FOUND error, as GitHub does.
+ * `queries` records the repos of each query.
+ */
+export function githubGraphqlRoute(stars: Record<string, number>): Route & { queries: string[][] } {
+  const queries: string[][] = []
+  const route = ((url: URL, init?: RequestInit) => {
+    if (url.hostname !== 'api.github.com' || url.pathname !== '/graphql') return undefined
+    const { query } = JSON.parse(String(init?.body)) as { query: string }
+    const repos = [...query.matchAll(/(r\d+): repository\(owner: "([^"]+)", name: "([^"]+)"\)/g)].map((m) => ({
+      alias: m[1]!,
+      full: `${m[2]}/${m[3]}`.toLowerCase(),
+    }))
+    queries.push(repos.map((r) => r.full))
+    const data: Record<string, unknown> = { rateLimit: { limit: 1000, cost: 1, remaining: 1000 - queries.length, resetAt: '2026-11-12T01:00:00Z' } }
+    const errors: unknown[] = []
+    for (const r of repos) {
+      if (r.full in stars) data[r.alias] = { stargazerCount: stars[r.full] }
+      else {
+        data[r.alias] = null
+        errors.push({ type: 'NOT_FOUND', path: [r.alias], message: `Could not resolve to a Repository with the name '${r.full}'.` })
+      }
+    }
+    return json(errors.length ? { data, errors } : { data })
+  }) as Route & { queries: string[][] }
+  route.queries = queries
+  return route
+}

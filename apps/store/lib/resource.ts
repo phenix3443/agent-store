@@ -11,7 +11,7 @@ import type {
 } from '@as/types'
 
 export const KINDS: readonly ResourceKind[] = ['skill', 'mcp', 'provider']
-export const SORTS: readonly ResourceSort[] = ['default', 'installs', 'updated', 'name']
+export const SORTS: readonly ResourceSort[] = ['default', 'installs', 'stars', 'updated', 'name']
 
 export interface StoreQuery {
   kind: ResourceKind | null
