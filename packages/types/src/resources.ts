@@ -54,7 +54,7 @@ export interface ResourceSummary {
   origin: ResourceOrigin
 }
 
-/** `default`: verified first, then installs, then most recently updated; with `q`, name matches rank first. */
+/** `default`: installs first, then verified, then most recently updated; for `kind=mcp` verified comes first (the MCP registry has no install counts). With `q`, name matches rank first. */
 export type ResourceSort = 'default' | 'installs' | 'updated' | 'name'
 
 export interface ResourceListResponse {

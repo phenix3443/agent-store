@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 import type { ResourceDetail, ResourceKind, ResourceSite, ResourceSummary } from '@as/types'
-import { CATALOG_SCHEMA_VERSION, schemaVersion } from './db'
+import { CATALOG_READ_MIN_VERSION, CATALOG_SCHEMA_VERSION, schemaVersion } from './db'
 import { decodeDetail } from './detail-codec'
 
 export type ResourceSort = 'default' | 'installs' | 'updated' | 'name'
@@ -69,9 +69,13 @@ const SUMMARY_COLUMNS = `r.id, r.kind, r.site, r.upstream_id, r.name, r.descript
 
 // Rank: publisher proved a domain (MCP) or curated (provider), then skills.sh
 // installs, then the most recently changed upstream.
-const DEFAULT_ORDER = 'r.verified DESC, r.installs DESC, r.upstream_updated_at DESC, r.id'
-const ORDERS: Record<ResourceSort, string> = {
-  default: DEFAULT_ORDER,
+// The MCP registry has no install counts, so MCP ranks by verified first. Everywhere
+// else installs come first; verified-first there buries skills with millions of installs
+// under providers and verified MCP servers (owner, 2026-11-12).
+const MCP_DEFAULT_ORDER = 'r.verified DESC, r.installs DESC, r.upstream_updated_at DESC, r.id'
+const DEFAULT_ORDER = 'r.installs DESC, r.verified DESC, r.upstream_updated_at DESC, r.id'
+const defaultOrder = (kind: string | null | undefined) => (kind === 'mcp' ? MCP_DEFAULT_ORDER : DEFAULT_ORDER)
+const ORDERS: Record<Exclude<ResourceSort, 'default'>, string> = {
   installs: 'r.installs DESC, r.id',
   updated: 'r.upstream_updated_at DESC, r.id',
   name: 'r.name COLLATE NOCASE, r.id',
@@ -85,7 +89,9 @@ export function checkCatalogFile(path: string): { resources: number } {
   const db = new Database(path, { readonly: true })
   try {
     const version = schemaVersion(db)
-    if (version !== CATALOG_SCHEMA_VERSION) throw new Error(`catalog schema version ${version}, expected ${CATALOG_SCHEMA_VERSION}`)
+    if (version < CATALOG_READ_MIN_VERSION || version > CATALOG_SCHEMA_VERSION) {
+      throw new Error(`catalog schema version ${version}, expected ${CATALOG_READ_MIN_VERSION}..${CATALOG_SCHEMA_VERSION}`)
+    }
     const check = db.query('PRAGMA quick_check').get() as { quick_check: string }
     if (check.quick_check !== 'ok') throw new Error(`catalog failed quick_check: ${check.quick_check}`)
     const { n } = db.query('SELECT count(*) AS n FROM resources WHERE unavailable_at IS NULL').get() as { n: number }
@@ -132,7 +138,8 @@ export class CatalogReader {
     const where = ['r.unavailable_at IS NULL']
     const args: (string | number)[] = []
     let join = ''
-    let order = ORDERS[params.sort ?? 'default'] ?? DEFAULT_ORDER
+    const base = defaultOrder(params.kind)
+    let order = !params.sort || params.sort === 'default' ? base : ORDERS[params.sort] ?? base
     const orderArgs: string[] = []
     if (params.kind) {
       where.push('r.kind = ?')
@@ -157,7 +164,7 @@ export class CatalogReader {
         // the name starts with it, the name or id contains it, a match elsewhere.
         order = `CASE WHEN r.name = ? COLLATE NOCASE OR r.author_name = ? COLLATE NOCASE THEN 0
           WHEN r.name LIKE ? ESCAPE '\\' THEN 1
-          WHEN r.name LIKE ? ESCAPE '\\' OR r.upstream_id LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END, ${DEFAULT_ORDER}`
+          WHEN r.name LIKE ? ESCAPE '\\' OR r.upstream_id LIKE ? ESCAPE '\\' THEN 2 ELSE 3 END, ${base}`
         orderArgs.push(q, q, `${likeEscape(q)}%`, `%${likeEscape(q)}%`, `%${likeEscape(q)}%`)
       }
     }

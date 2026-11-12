@@ -67,11 +67,17 @@ describe('resource routes', () => {
     reader.open(v1)
   })
 
-  test('list: default order puts verified first, then installs', async () => {
+  test('list: default order is installs first, but verified first within MCP', async () => {
     const { body } = await get<ResourceListResponse>('/api/resources?limit=5')
     expect(body.resources).toHaveLength(5)
     expect(body.nextOffset).toBe(5)
-    expect(body.resources.every((r) => r.verified)).toBe(true)
+    expect(body.resources[0]!.id).toBe('github:anthropics/skills/frontend-design')
+    const installs = body.resources.map((r) => r.installs ?? -1)
+    expect(installs).toEqual([...installs].sort((a, b) => b - a))
+    const mcp = await get<ResourceListResponse>('/api/resources?kind=mcp&limit=20')
+    const verified = mcp.body.resources.map((r) => r.verified)
+    expect(verified).toEqual([...verified].sort((a, b) => Number(b) - Number(a)))
+    expect(verified[0]).toBe(true)
     const skills = await get<ResourceListResponse>('/api/resources?kind=skill&limit=2')
     expect(skills.body.resources[0]!.id).toBe('github:anthropics/skills/frontend-design')
   })

@@ -54,9 +54,21 @@ const MIGRATIONS: string[] = [
     content = 'resources', content_rowid = 'rowid', tokenize = 'trigram'
   );
   `,
+  `
+  DROP INDEX resources_by_rank;
+  CREATE INDEX resources_by_rank ON resources (installs DESC, verified DESC, upstream_updated_at DESC, id)
+    WHERE unavailable_at IS NULL;
+  CREATE INDEX resources_by_kind_installs ON resources (kind, installs DESC, verified DESC, upstream_updated_at DESC, id)
+    WHERE unavailable_at IS NULL;
+  `,
 ]
 
 export const CATALOG_SCHEMA_VERSION = MIGRATIONS.length
+
+// The oldest catalog file the reader can still query. Index-only migrations keep it;
+// raise it when a migration changes what the reader selects. Without this range the
+// API rejects whichever side (code or published file) is deployed second.
+export const CATALOG_READ_MIN_VERSION = 1
 
 export function schemaVersion(db: Database): number {
   return (db.query('PRAGMA user_version').get() as { user_version: number }).user_version
