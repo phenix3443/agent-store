@@ -98,6 +98,12 @@ export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
               <span>{t('detail.installs', { count: formatCount(r.installs) })}</span>
             </>
           )}
+          {r.stars != null && (
+            <>
+              <span aria-hidden>·</span>
+              <span>{t('detail.stars', { count: formatCount(r.stars) })}</span>
+            </>
+          )}
         </p>
         {r.description && <p className="mt-3 max-w-[62ch] text-[15px] leading-6">{r.description}</p>}
       </header>

@@ -9,6 +9,7 @@ const DETAIL = '/store/skill/github:vercel-labs/skills/find-skills'
 const PAGES = [
   { name: 'landing', path: '/' },
   { name: 'store', path: '/store' },
+  { name: 'mcp', path: '/store?category=mcp' },
   { name: 'search', path: '/store?q=github&category=mcp' },
   { name: 'detail', path: DETAIL },
   // The drawer only opens from the list (an intercepted route).

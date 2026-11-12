@@ -1,9 +1,9 @@
 import { Database } from 'bun:sqlite'
 import type { ResourceDetail, ResourceKind, ResourceSite, ResourceSummary } from '@as/types'
-import { CATALOG_READ_MIN_VERSION, CATALOG_SCHEMA_VERSION, schemaVersion } from './db'
+import { CATALOG_READ_MIN_VERSION, CATALOG_SCHEMA_VERSION, CATALOG_STARS_VERSION, schemaVersion } from './db'
 import { decodeDetail } from './detail-codec'
 
-export type ResourceSort = 'default' | 'installs' | 'updated' | 'name'
+export type ResourceSort = 'default' | 'installs' | 'stars' | 'updated' | 'name'
 
 export interface ListParams {
   kind?: ResourceKind | null
@@ -28,6 +28,7 @@ interface Row {
   upstream_version: string | null
   upstream_updated_at: string | null
   installs: number | null
+  stars: number | null
   verified: number
   tags: string
   transports: string
@@ -47,6 +48,7 @@ function toSummary(r: Row): ResourceSummary {
     version: r.version,
     homepageUrl: r.homepage_url,
     installs: r.installs,
+    stars: r.stars,
     verified: r.verified === 1,
     tags: JSON.parse(r.tags) as string[],
     transports: JSON.parse(r.transports) as string[],
@@ -63,22 +65,24 @@ function toSummary(r: Row): ResourceSummary {
   }
 }
 
-const SUMMARY_COLUMNS = `r.id, r.kind, r.site, r.upstream_id, r.name, r.description, r.author_name, r.author_url, r.version,
-  r.homepage_url, r.source_url, r.upstream_version, r.upstream_updated_at, r.installs, r.verified, r.tags, r.transports,
-  r.synced_at, r.unavailable_at, r.unavailable_reason`
+// `stars` is the expression for the stars column: r.stars, or NULL in a file older than it.
+const summaryColumns = (stars: string) => `r.id, r.kind, r.site, r.upstream_id, r.name, r.description, r.author_name,
+  r.author_url, r.version, r.homepage_url, r.source_url, r.upstream_version, r.upstream_updated_at, r.installs,
+  ${stars} AS stars, r.verified, r.tags, r.transports, r.synced_at, r.unavailable_at, r.unavailable_reason`
 
-// Rank: publisher proved a domain (MCP) or curated (provider), then skills.sh
-// installs, then the most recently changed upstream.
-// The MCP registry has no install counts, so MCP ranks by verified first. Everywhere
-// else installs come first; verified-first there buries skills with millions of installs
-// under providers and verified MCP servers (owner, 2026-11-12).
-const MCP_DEFAULT_ORDER = 'r.verified DESC, r.installs DESC, r.upstream_updated_at DESC, r.id'
+// The MCP registry has no install counts, and "verified" only means a namespace other
+// than io.github.*, which puts obscure servers above official ones such as
+// io.github.github/github-mcp-server (#124); MCP ranks by GitHub stars instead.
+// Everywhere else installs come first; verified-first there buries skills with millions
+// of installs under providers and verified MCP servers (owner, 2026-11-12).
+// Each order matches an index in db.ts column for column; change them together.
+const MCP_DEFAULT_ORDER = (stars: string) => `${stars} DESC, r.verified DESC, r.upstream_updated_at DESC, r.id`
 const DEFAULT_ORDER = 'r.installs DESC, r.verified DESC, r.upstream_updated_at DESC, r.id'
-const defaultOrder = (kind: string | null | undefined) => (kind === 'mcp' ? MCP_DEFAULT_ORDER : DEFAULT_ORDER)
-const ORDERS: Record<Exclude<ResourceSort, 'default'>, string> = {
-  installs: 'r.installs DESC, r.id',
-  updated: 'r.upstream_updated_at DESC, r.id',
-  name: 'r.name COLLATE NOCASE, r.id',
+const ORDERS: Record<Exclude<ResourceSort, 'default'>, (stars: string) => string> = {
+  installs: () => 'r.installs DESC, r.id',
+  stars: MCP_DEFAULT_ORDER,
+  updated: () => 'r.upstream_updated_at DESC, r.id',
+  name: () => 'r.name COLLATE NOCASE, r.id',
 }
 
 const likeEscape = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -108,6 +112,7 @@ export function checkCatalogFile(path: string): { resources: number } {
  */
 export class CatalogReader {
   private db: Database | null = null
+  private stars = 'NULL'
 
   get ready(): boolean {
     return this.db !== null
@@ -117,6 +122,7 @@ export class CatalogReader {
   open(path: string): void {
     const next = new Database(path, { readonly: true })
     const prev = this.db
+    this.stars = schemaVersion(next) >= CATALOG_STARS_VERSION ? 'r.stars' : 'NULL'
     this.db = next
     prev?.close()
   }
@@ -138,8 +144,8 @@ export class CatalogReader {
     const where = ['r.unavailable_at IS NULL']
     const args: (string | number)[] = []
     let join = ''
-    const base = defaultOrder(params.kind)
-    let order = !params.sort || params.sort === 'default' ? base : ORDERS[params.sort] ?? base
+    const base = params.kind === 'mcp' ? MCP_DEFAULT_ORDER(this.stars) : DEFAULT_ORDER
+    let order = !params.sort || params.sort === 'default' ? base : ORDERS[params.sort]?.(this.stars) ?? base
     const orderArgs: string[] = []
     if (params.kind) {
       where.push('r.kind = ?')
@@ -169,7 +175,7 @@ export class CatalogReader {
       }
     }
     const rows = db
-      .query(`SELECT ${SUMMARY_COLUMNS} FROM resources r ${join} WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ? OFFSET ?`)
+      .query(`SELECT ${summaryColumns(this.stars)} FROM resources r ${join} WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ? OFFSET ?`)
       .all(...args, ...orderArgs, limit + 1, offset) as Row[]
     const more = rows.length > limit
     return { resources: rows.slice(0, limit).map(toSummary), nextOffset: more ? offset + limit : null }
@@ -177,7 +183,7 @@ export class CatalogReader {
 
   /** Unavailable resources are still returned, so installed copies keep resolving. */
   get(id: string): ResourceDetail | null {
-    const row = this.handle().query(`SELECT ${SUMMARY_COLUMNS}, r.detail FROM resources r WHERE r.id = ?`).get(id) as Row | null
+    const row = this.handle().query(`SELECT ${summaryColumns(this.stars)}, r.detail FROM resources r WHERE r.id = ?`).get(id) as Row | null
     if (!row) return null
     return { ...toSummary(row), ...decodeDetail(row.kind, row.detail) } as ResourceDetail
   }

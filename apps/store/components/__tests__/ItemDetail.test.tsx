@@ -52,6 +52,7 @@ test('the drawer and the page render the same detail: name, description, author,
     expect(screen.getByRole('link', { name: 'obra' }).getAttribute('href')).toBe('https://github.com/obra')
     expect(screen.getByText('GitHub · skills.sh')).toBeInTheDocument()
     expect(screen.getByText('12.4K 次安装')).toBeInTheDocument()
+    expect(screen.getByText('GitHub 星标 152.3K')).toBeInTheDocument()
     expect(screen.getByText('安装后会执行')).toBeInTheDocument()
     cleanup()
   }
@@ -81,6 +82,12 @@ test('a provider shows its endpoint, models and the verified mark, and no instal
   expect(screen.getByText('anthropic/claude-sonnet-4')).toBeInTheDocument()
   expect(screen.getByText('已验证')).toBeInTheDocument()
   expect(container.textContent).not.toContain('次安装')
+  expect(container.textContent).not.toContain('星标')
+})
+
+test('an MCP server shows its GitHub stars', () => {
+  renderPage(mcpResource)
+  expect(screen.getByText('GitHub 星标 1.3K')).toBeInTheDocument()
 })
 
 test('an entry gone upstream says so', () => {

@@ -33,6 +33,7 @@
       "label": "排序",
       "default": "推荐",
       "installs": "最多安装",
+      "stars": "最多星标",
       "updated": "最近更新",
       "name": "名称"
     },
@@ -63,6 +64,7 @@
       "copyCommand": "复制命令",
       "lede": "每个包都写明安装后会执行的内容。",
       "noInstalls": "没有安装量数据",
+      "stars": "GitHub 星标 {count}",
       "unknownAuthor": "作者不详",
       "loading": "正在加载包",
       "countAll": "共 {count} 个包",
@@ -84,6 +86,7 @@
       "expand": "展开为整页",
       "close": "关闭详情",
       "installs": "{count} 次安装",
+      "stars": "GitHub 星标 {count}",
       "favorite": "收藏",
       "unfavorite": "取消收藏",
       "runsTitle": "安装后会执行",

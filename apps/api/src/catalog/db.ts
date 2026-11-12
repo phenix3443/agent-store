@@ -61,6 +61,25 @@ const MIGRATIONS: string[] = [
   CREATE INDEX resources_by_kind_installs ON resources (kind, installs DESC, verified DESC, upstream_updated_at DESC, id)
     WHERE unavailable_at IS NULL;
   `,
+  `
+  -- github_repo: lowercase owner/name the row's stars come from (an MCP server's
+  -- repository, a skill's repo); stars is copied from github_repos after each sync.
+  ALTER TABLE resources ADD COLUMN github_repo TEXT;
+  ALTER TABLE resources ADD COLUMN stars INTEGER;
+  -- stars is NULL for a repo GitHub does not resolve; checked_at still moves, so it waits a full interval.
+  CREATE TABLE github_repos (
+    full_name  TEXT PRIMARY KEY,
+    stars      INTEGER,
+    checked_at TEXT NOT NULL
+  );
+  -- The old MCP default (verified first); stars replaced it.
+  DROP INDEX resources_by_kind;
+  CREATE INDEX resources_by_github_repo ON resources (github_repo) WHERE github_repo IS NOT NULL;
+  CREATE INDEX resources_by_kind_stars ON resources (kind, stars DESC, verified DESC, upstream_updated_at DESC, id)
+    WHERE unavailable_at IS NULL;
+  CREATE INDEX resources_by_stars ON resources (stars DESC, verified DESC, upstream_updated_at DESC, id)
+    WHERE unavailable_at IS NULL;
+  `,
 ]
 
 export const CATALOG_SCHEMA_VERSION = MIGRATIONS.length
@@ -70,16 +89,20 @@ export const CATALOG_SCHEMA_VERSION = MIGRATIONS.length
 // API rejects whichever side (code or published file) is deployed second.
 export const CATALOG_READ_MIN_VERSION = 1
 
+/** First version with resources.stars; the reader selects NULL for older files. */
+export const CATALOG_STARS_VERSION = 3
+
 export function schemaVersion(db: Database): number {
   return (db.query('PRAGMA user_version').get() as { user_version: number }).user_version
 }
 
-export function migrateCatalog(db: Database): void {
+/** `to` below the current version only builds older files for tests. */
+export function migrateCatalog(db: Database, to = CATALOG_SCHEMA_VERSION): void {
   const from = schemaVersion(db)
   if (from > CATALOG_SCHEMA_VERSION) {
     throw new Error(`catalog schema version ${from} is newer than this code (${CATALOG_SCHEMA_VERSION})`)
   }
-  for (let v = from; v < CATALOG_SCHEMA_VERSION; v++) {
+  for (let v = from; v < to; v++) {
     db.transaction(() => {
       db.exec(MIGRATIONS[v]!)
       db.exec(`PRAGMA user_version = ${v + 1}`)

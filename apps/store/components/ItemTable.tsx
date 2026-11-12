@@ -32,6 +32,18 @@ function Installs({ value, className }: { value: number | null; className: strin
   return <span className={className}>{formatCount(value)}</span>
 }
 
+/** GitHub stars of the repo behind the row; nothing when the catalog has none. */
+function Stars({ value, className }: { value: number | null; className: string }) {
+  const t = useTranslations('store.list')
+  if (value == null) return null
+  return (
+    <span className={className}>
+      <span aria-hidden>★ {formatCount(value)}</span>
+      <span className="sr-only">{t('stars', { count: formatCount(value) })}</span>
+    </span>
+  )
+}
+
 function ItemRow({ resource }: { resource: ResourceSummary }) {
   const t = useTranslations('store')
   const pathname = usePathname()
@@ -71,11 +83,15 @@ function ItemRow({ resource }: { resource: ResourceSummary }) {
           {resource.verified && <VerifiedMark />}
         </span>
         <SourceLabel resource={resource} className="block truncate text-[13px] leading-5 text-ink-2 md:mt-0.5" />
-        <Installs value={resource.installs} className="ml-auto shrink-0 font-mono text-sm md:hidden" />
+        <span className="ml-auto flex shrink-0 items-baseline gap-3 md:hidden">
+          <Stars value={resource.stars} className="font-mono text-[13px] text-ink-2" />
+          <Installs value={resource.installs} className="font-mono text-sm" />
+        </span>
       </div>
 
       <span role="cell" className="hidden text-right md:block">
-        <Installs value={resource.installs} className="font-mono text-sm" />
+        <Installs value={resource.installs} className="block font-mono text-sm leading-5" />
+        <Stars value={resource.stars} className="mt-0.5 block font-mono text-[13px] leading-5 text-ink-2" />
       </span>
 
       <div role="cell" className="relative z-[1] col-start-2 row-start-2 self-start justify-self-end md:col-start-auto md:row-start-auto md:self-center">
