@@ -206,3 +206,12 @@ test('a Codex path the user owns is left alone and the registry says the skill i
   const reg = JSON.parse(readFileSync(join(p.to, 'registry.json'), 'utf-8'))
   expect(reg.installed.find((e: { slug: string }) => e.slug === 'sk').enabledFor).toEqual({ codex: false, claude: true })
 })
+
+test('several processes starting at once migrate once; the others find nothing to do', async () => {
+  await seedOldHome()
+  const results = await Promise.all([migrateHome(p), migrateHome(p), migrateHome(p)])
+  expect(results.filter(r => r !== null)).toHaveLength(1)
+  expect(results.find(r => r !== null)?.steps.filter(s => s.result === 'error')).toEqual([])
+  expect(readlinkSync(join(p.codexConfigDir, 'skills', 'sk'))).toBe(join(p.to, 'skills', 'sk'))
+  expect(existsSync(`${p.to}.migrate.lock`)).toBe(false)
+})

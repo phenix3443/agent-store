@@ -17,6 +17,7 @@
 // in step 2 or 3 is finished by the next one.
 import { cp, lstat, mkdir, readdir, readFile, rename, rm, rmdir, writeFile } from 'fs/promises'
 import { basename, dirname, join } from 'path'
+import lockfile from 'proper-lockfile'
 import type { InstalledItem, Paths, ToolTarget } from '@as/types'
 import { readRegistry, setDeploymentRecord, setEnabledFlag } from './registry/index'
 import { isLegacyInstall, readMarker, SkillConflictError } from './skills/store'
@@ -81,8 +82,34 @@ export async function homeMigrationPending(p: Pick<HomeMigrationPaths, 'from' | 
   return (await exists(join(p.from, 'registry.json'))) && !(await exists(p.to))
 }
 
+/**
+ * The desktop client starts several `aas` processes at once, so the run holds a
+ * lock next to the new home and checks again once it has it: the others wait,
+ * then find nothing left to do.
+ */
 export async function migrateHome(p: HomeMigrationPaths, now: Date = new Date()): Promise<HomeMigrationResult | null> {
   if (!(await homeMigrationPending(p))) return null
+  await mkdir(dirname(p.to), { recursive: true })
+  let release: () => Promise<void>
+  try {
+    release = await lockfile.lock(p.to, {
+      realpath: false,
+      lockfilePath: `${p.to}.migrate.lock`,
+      retries: { retries: 60, factor: 1.2, minTimeout: 50, maxTimeout: 1000 },
+    })
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'ELOCKED') throw new Error(`another Agent Store process is moving ${p.from} to ${p.to}; try again`)
+    throw e
+  }
+  try {
+    if (!(await homeMigrationPending(p))) return null
+    return await migrateLocked(p, now)
+  } finally {
+    await release()
+  }
+}
+
+async function migrateLocked(p: HomeMigrationPaths, now: Date): Promise<HomeMigrationResult> {
   const steps: MigrateStep[] = []
   const step = (slug: string, result: MigrateStep['result'], message: string) => steps.push({ slug, result, message })
   const stamp = now.toISOString().replace(/[:.]/g, '-')
