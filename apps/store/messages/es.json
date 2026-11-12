@@ -191,6 +191,8 @@
       "downloadMac": "Descargar para macOS",
       "downloadWin": "Descargar para Windows",
       "downloadLinux": "Descargar para Linux",
+      "osHint": "Elegido para tu sistema",
+      "otherOs": "Otros sistemas: ",
       "browse": "Explorar la tienda",
       "unsigned": "Los instaladores todavía no están firmados, así que el sistema los bloquea la primera vez que los abres.",
       "unsignedLink": "Ver cómo permitirlo",

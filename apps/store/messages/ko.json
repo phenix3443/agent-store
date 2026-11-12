@@ -191,6 +191,8 @@
       "downloadMac": "macOS용 다운로드",
       "downloadWin": "Windows용 다운로드",
       "downloadLinux": "Linux 버전 다운로드",
+      "osHint": "사용 중인 시스템에 맞춰 추천",
+      "otherOs": "다른 시스템: ",
       "browse": "스토어 둘러보기",
       "unsigned": "설치 파일이 아직 서명되지 않아 처음 열 때 시스템이 차단합니다.",
       "unsignedLink": "허용하는 방법 보기",
