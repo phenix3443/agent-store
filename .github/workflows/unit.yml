@@ -1,0 +1,45 @@
+name: unit
+
+# Type-check, lint and unit-test only the packages a change touches, plus the
+# packages that depend on them (turbo's `...[ref]` filter). apps/api is left to
+# api.yml, which brings a Postgres service.
+on:
+  pull_request:
+    paths: &paths
+      - 'apps/**'
+      - 'packages/**'
+      - '!**/*.md'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/unit.yml'
+  push:
+    branches: [main]
+    paths: *paths
+
+concurrency:
+  group: unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Affected packages
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          pnpm turbo run type-check lint test --filter="...[$BASE]" --filter='!@as/api' --continue
