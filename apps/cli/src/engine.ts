@@ -11,4 +11,3 @@ export function createEngine(): EngineImpl {
   // The desktop client enables providers through this CLI too, so enabling one starts the relay it points at.
   return new EngineImpl(undefined, storeUrl, { startRelay: async () => { await ensureRelayRunning(realRelayOps()) } })
 }
-
