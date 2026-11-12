@@ -1,3 +1,4 @@
+import { resourceSlug } from '@as/types'
 import type {
   McpArgument,
   McpKeyValueInput,
@@ -191,29 +192,12 @@ export function installCommand(r: ResourceSummary | ResourceDetail): string | nu
   return 'packages' in r ? mcpCommand(r) : null
 }
 
-const SLUG = /^[a-z0-9-]{1,128}$/
-
 /**
- * The slug the desktop client's install link carries. The client still looks
- * slugs up in /api/items; these match its slugs for the packages both catalogs
- * hold (providers: the slug; skills: `<repo>-<name>`; MCP: the server name).
+ * The slug the desktop client's install link carries: the client's own local
+ * name for the resource (`resourceSlug` in @as/types, shared with client-core).
  */
 export function desktopSlug(r: Pick<ResourceSummary, 'kind' | 'origin'>): string | null {
-  const id = r.origin.upstreamId
-  let raw = id
-  if (r.kind === 'skill') {
-    const parts = skillParts(id)
-    raw = parts ? `${parts.repo.split('/')[1]}-${parts.name}` : id
-  } else if (r.kind === 'mcp') {
-    raw = lastSegment(id)
-  }
-  const slug = raw
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 128)
-  return SLUG.test(slug) ? slug : null
+  return resourceSlug(r)
 }
 
 export type RunKind = 'command' | 'connect' | 'needs' | 'files'

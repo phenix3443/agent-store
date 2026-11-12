@@ -1,9 +1,14 @@
-import type { RegistryJson, InstalledItem, UpdateAvailable, Item } from '@as/types'
-import type { StoreClient } from '@as/sdk'
+import type { RegistryJson, UpdateAvailable } from '@as/types'
+import type { Catalog, CatalogItem } from '../catalog'
+
+/** What an installed entry updates from: its catalog id, or its slug for installs from before /api/resources. */
+export function latestFor(catalog: Catalog, entry: RegistryJson['installed'][number]): Promise<CatalogItem> {
+  return catalog.resolveItem(entry.resourceId ?? entry.slug, { kind: entry.category })
+}
 
 export async function checkUpdates(
   registry: RegistryJson,
-  client: StoreClient,
+  catalog: Catalog,
   slugs?: string[]
 ): Promise<UpdateAvailable[]> {
   const entries = slugs
@@ -12,27 +17,17 @@ export async function checkUpdates(
 
   const updates: UpdateAvailable[] = []
   for (const entry of entries) {
-    const result = await client.getItemBySlug(entry.slug)
-    if (result.error || !result.data) continue
-    if (result.data.version !== entry.version) {
-      updates.push({
-        slug: entry.slug,
-        currentVersion: entry.version,
-        latestVersion: result.data.version,
-      })
+    // Duplicated providers have no catalog entry of their own.
+    if (entry.parentSlug) continue
+    let latest: CatalogItem
+    try {
+      latest = await latestFor(catalog, entry)
+    } catch {
+      continue
+    }
+    if (latest.item.version !== entry.version) {
+      updates.push({ slug: entry.slug, currentVersion: entry.version, latestVersion: latest.item.version })
     }
   }
   return updates
-}
-
-export async function applyUpdate(
-  slug: string,
-  client: StoreClient,
-  entry: InstalledItem
-): Promise<{ latestItem: Item; fromVersion: string }> {
-  const result = await client.getItemBySlug(slug)
-  if (result.error || !result.data) {
-    throw new Error(result.error ?? `Item not found: ${slug}`)
-  }
-  return { latestItem: result.data, fromVersion: entry.version }
 }

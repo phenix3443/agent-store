@@ -1,26 +1,39 @@
-import type { Engine } from '@as/types'
+import type { Engine, ResourceKind } from '@as/types'
 import { formatDownloads } from '../utils/format'
+
+const KINDS: readonly string[] = ['skill', 'mcp', 'provider']
+
+const SOURCE: Record<string, string> = { 'mcp-registry': 'MCP Registry', github: 'GitHub', builtin: 'built-in' }
 
 export async function runSearch(
   engine: Engine,
   args: string[],
   out: (s: string) => void = console.log
 ): Promise<void> {
-  const query = args[0]
-  if (!query) {
-    out('Usage: aas search <query>')
-    return
+  const words: string[] = []
+  let kind: ResourceKind | undefined
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--kind') {
+      const k = args[++i]
+      if (!k || !KINDS.includes(k)) {
+        out('Usage: aas search [query] [--kind <skill|mcp|provider>]')
+        return
+      }
+      kind = k as ResourceKind
+    } else words.push(args[i])
   }
-  const items = await engine.search(query)
-  if (!items.length) {
+  const result = await engine.search(words.join(' '), { category: kind, limit: 20 })
+  if (result.offline) out('  (the catalog could not be reached; showing the last cached results)\n')
+  if (!result.resources.length) {
     out('No results.')
     return
   }
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i]
-    const compat = item.compatibleWith.join(' ')
-    out(`${item.slug}   ${item.publisher.tier} · ${item.category} · ${compat}   ${formatDownloads(item.downloads)} installs`)
-    out(`  ${item.description}`)
-    if (i < items.length - 1) out('')
-  }
+  result.resources.forEach((r, i) => {
+    const facts = [r.kind, SOURCE[r.origin.site] ?? r.origin.site, ...(r.verified ? ['verified'] : []), ...(r.installs != null ? [`${formatDownloads(r.installs)} installs`] : [])]
+    out(`${r.name}   ${facts.join(' · ')}`)
+    if (r.description) out(`  ${r.description.length > 160 ? `${r.description.slice(0, 157)}...` : r.description}`)
+    out(`  aas install ${r.id}`)
+    if (i < result.resources.length - 1) out('')
+  })
+  if (result.nextOffset !== null) out('\n  More results: narrow the query, or add --kind.')
 }

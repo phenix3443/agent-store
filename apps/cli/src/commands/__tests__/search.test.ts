@@ -1,41 +1,52 @@
 import { test, expect } from 'bun:test'
 import { runSearch } from '../search'
-import type { Engine, Item } from '@as/types'
+import type { CatalogResource, CatalogSearchResult, Engine, SearchOptions } from '@as/types'
 
-const publisher = { id: 'p1', slug: 'openai', name: 'OpenAI', avatarUrl: '', tier: 'official' as const }
-const mockItem = {
-  id: 'i1', slug: 'openai-provider', name: 'OpenAI Provider',
-  description: 'OpenAI API provider with GPT-4o support',
- category: 'provider' as const, version: '1.2.0',
-  publisher, compatibleWith: ['claude' as const, 'codex' as const],
-  tags: [], downloads: 1_200_000, rating: 0, status: 'published' as const,
-  installHook: { steps: [] }, createdAt: '', updatedAt: '',
-  configSchema: {}, supportedModels: ['gpt-4o'],
-} satisfies Item
+const row: CatalogResource = {
+  id: 'github:vercel-labs/skills/find-skills', kind: 'skill', name: 'find-skills',
+  description: 'Helps users discover and install agent skills.', author: { name: 'vercel-labs', url: null },
+  version: '76a98a285cb0', homepageUrl: null, installs: 1_200_000, verified: false, tags: [], transports: [],
+  origin: {
+    site: 'github', upstreamId: 'vercel-labs/skills/find-skills', url: null, upstreamVersion: null,
+    upstreamUpdatedAt: null, syncedAt: '', unavailableAt: null, unavailableReason: null,
+  },
+  slug: 'skills-find-skills',
+}
 
-function makeEngine(items: Item[]): Engine {
+function makeEngine(result: Partial<CatalogSearchResult>, calls: Array<[string, SearchOptions | undefined]> = []): Engine {
   return {
-    search: async () => items,
+    search: async (q: string, o?: SearchOptions) => {
+      calls.push([q, o])
+      return { resources: [], nextOffset: null, offline: false, ...result }
+    },
   } as unknown as Engine
 }
 
-test('runSearch prints slug + metadata + description for each result', async () => {
+test('runSearch prints name, kind, source, installs, description and the install command', async () => {
   const lines: string[] = []
-  await runSearch(makeEngine([mockItem]), ['gpt'], s => lines.push(s))
-  expect(lines.some(l => l.includes('openai-provider'))).toBe(true)
-  expect(lines.some(l => l.includes('official'))).toBe(true)
-  expect(lines.some(l => l.includes('1.2M'))).toBe(true)
-  expect(lines.some(l => l.includes('OpenAI API provider'))).toBe(true)
+  await runSearch(makeEngine({ resources: [row] }), ['find'], s => lines.push(s))
+  const out = lines.join('\n')
+  expect(out).toContain('find-skills   skill · GitHub · 1.2M installs')
+  expect(out).toContain('Helps users discover')
+  expect(out).toContain('aas install github:vercel-labs/skills/find-skills')
 })
 
-test('runSearch prints "No results." when empty', async () => {
-  const lines: string[] = []
-  await runSearch(makeEngine([]), ['gpt'], s => lines.push(s))
-  expect(lines.join('\n')).toContain('No results')
+test('runSearch passes the query words and --kind, and lists everything without a query', async () => {
+  const calls: Array<[string, SearchOptions | undefined]> = []
+  await runSearch(makeEngine({}, calls), ['github', 'issues', '--kind', 'mcp'], () => {})
+  await runSearch(makeEngine({}, calls), [], () => {})
+  expect(calls).toEqual([['github issues', { category: 'mcp', limit: 20 }], ['', { category: undefined, limit: 20 }]])
 })
 
-test('runSearch prints usage when no query provided', async () => {
+test('runSearch rejects an unknown --kind', async () => {
   const lines: string[] = []
-  await runSearch(makeEngine([]), [], s => lines.push(s))
+  await runSearch(makeEngine({}), ['x', '--kind', 'plugin'], s => lines.push(s))
   expect(lines.join('\n')).toContain('Usage')
+})
+
+test('runSearch says so when the results come from the offline cache, and when there are none', async () => {
+  const lines: string[] = []
+  await runSearch(makeEngine({ offline: true }), ['gpt'], s => lines.push(s))
+  expect(lines.join('\n')).toContain('could not be reached')
+  expect(lines.join('\n')).toContain('No results')
 })

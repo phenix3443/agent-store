@@ -1,13 +1,15 @@
-// The canonical skill store: ~/.agents/skills/<slug>/ holds the whole skill
-// directory, and `.agent-store.json` marks the ones Agent Store installed.
-// Directories without the marker belong to the user and are never replaced or
-// deleted. See docs/global-skills-mcp.md §5.3.
+// The skill library: ~/.agent-store/skills/<slug>/ holds the whole skill
+// directory, and `.agent-store.json` marks the ones Agent Store installed. No
+// tool reads the library; each tool sees a skill through its own deployment
+// (deploy.ts, adapters/skill.ts). Directories without the marker belong to the
+// user and are never replaced or deleted (issue #111).
 import { createHash } from 'crypto'
 import { lstat, mkdir, mkdtemp, readdir, readFile, readlink, rename, rm, writeFile } from 'fs/promises'
 import { join, relative } from 'path'
 import yaml from 'js-yaml'
-import type { Item, SkillItem } from '@as/types'
-import { extractSkillDir } from './tar'
+import type { Item, SkillFile, SkillItem } from '@as/types'
+import { assertSafeSlug } from '../paths'
+import { extractSkillDir, writeSkillEntries, type SkillEntry } from './tar'
 
 export const MARKER = '.agent-store.json'
 
@@ -16,20 +18,33 @@ export interface SkillMarker {
   version: string
   source: { repo: string; ref: string; resolvedSha: string; path: string } | null
   contentHash: string
-  /** Claude names a skill by its directory, Codex by its frontmatter `name`. */
+  /**
+   * Claude names a skill by its directory, Codex by its frontmatter `name`.
+   * `claude` is the directory name deployments use in every tool.
+   */
   runtimeNames: { claude: string; codex: string }
   /** The store item as installed (what manifest.json holds for other categories). */
   manifest: Item
 }
 
+/**
+ * `modified`: the library copy was edited since install; `not-ours`: a directory
+ * without our marker sits where the skill goes; `name-clash`: Codex already sees
+ * another skill with this name.
+ */
 export class SkillConflictError extends Error {
-  constructor(message: string) {
+  constructor(message: string, readonly reason: 'modified' | 'not-ours' | 'name-clash' = 'modified') {
     super(message)
     this.name = 'SkillConflictError'
   }
 }
 
-const SLUG = /^[a-z0-9-]{1,60}$/
+const DIR_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
+
+/** The directory name a skill is deployed under: its frontmatter name, so both tools call it the same, else the slug. */
+export function deployDirName(slug: string, frontmatterName: string | undefined): string {
+  return frontmatterName && DIR_NAME.test(frontmatterName) ? frontmatterName : slug
+}
 
 export function skillStoreDir(aasHome: string): string {
   return join(aasHome, 'skills')
@@ -123,7 +138,7 @@ async function download(url: string): Promise<Uint8Array> {
 }
 
 /** Every SKILL.md Codex can see, with its frontmatter name (§5.3 step 4), apart from `skip`. */
-async function codexVisibleNames(roots: string[], skip: Set<string>): Promise<Map<string, string>> {
+export async function codexVisibleNames(roots: string[], skip: Set<string>): Promise<Map<string, string>> {
   const names = new Map<string, string>()
   for (const root of roots) {
     let entries: string[]
@@ -150,31 +165,40 @@ export async function isLoneSkillMd(dir: string, body: string): Promise<boolean>
   }
 }
 
-/**
- * The copy an older Agent Store wrote to <codex>/skills/<slug>: exactly one SKILL.md
- * equal to the legacy store's skill.md. Anything else there is the user's.
- */
-async function isOldCodexCopy(copy: string, legacyStore: string): Promise<boolean> {
-  try {
-    return await isLoneSkillMd(copy, await readFile(join(legacyStore, 'skill.md'), 'utf-8'))
-  } catch {
-    return false
-  }
-}
-
 export interface InstallSkillContext {
   aasHome: string
-  /** Codex's own (deprecated) user skill root, also checked for name clashes. */
-  codexConfigDir: string
 }
 
 export interface InstallSkillOptions {
-  /** Replace locally edited content and ignore a Codex name clash. */
+  /** Replace locally edited content. */
   force?: boolean
 }
 
+const MAX_FILES = 2000
+const FETCH_CONCURRENCY = 8
+
+/** Downloads the catalog's file list (pinned raw URLs) instead of the whole repo tarball. */
+async function fetchFiles(files: SkillFile[], dest: string): Promise<void> {
+  if (files.length > MAX_FILES) throw new Error(`the skill has ${files.length} files, over the ${MAX_FILES} limit`)
+  const entries: SkillEntry[] = new Array(files.length)
+  let next = 0
+  const worker = async () => {
+    while (next < files.length) {
+      const i = next++
+      const f = files[i]
+      if (!/^https:\/\//.test(f.downloadUrl)) throw new Error(`${f.path}: download URL must be https`)
+      const data = await download(f.downloadUrl)
+      entries[i] = f.type === 'symlink'
+        ? { rel: f.path, type: 'symlink', mode: 0o777, linkname: Buffer.from(data).toString('utf-8'), data: new Uint8Array() }
+        : { rel: f.path, type: 'file', mode: f.mode === '100755' ? 0o755 : 0o644, linkname: '', data }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, files.length) }, worker))
+  await writeSkillEntries(entries, dest, 'skill files')
+}
+
 /**
- * Stages the skill's full directory and renames it to ~/.agents/skills/<slug>.
+ * Stages the skill's full directory and renames it to ~/.agent-store/skills/<slug>.
  * A failure before the rename leaves nothing behind.
  */
 export async function installSkillContent(
@@ -182,23 +206,26 @@ export async function installSkillContent(
   item: SkillItem,
   options: InstallSkillOptions = {}
 ): Promise<SkillMarker> {
-  if (!SLUG.test(item.slug)) throw new Error(`invalid skill slug ${JSON.stringify(item.slug)}`)
+  assertSafeSlug(item.slug)
   const store = skillStoreDir(ctx.aasHome)
   const dest = join(store, item.slug)
   const current = await exists(dest)
   const marker = current ? await readMarker(dest) : undefined
   if (current && !marker && !(await isLegacyInstall(dest, item.slug))) {
-    throw new SkillConflictError(`${dest} exists and was not installed by Agent Store; move it away first`)
+    throw new SkillConflictError(`${dest} exists and was not installed by Agent Store; move it away first`, 'not-ours')
   }
   if (marker && !options.force && (await contentHash(dest)) !== marker.contentHash) {
-    throw new SkillConflictError(`${dest} was changed locally since it was installed; pass --force to replace it`)
+    throw new SkillConflictError(`${dest} was changed locally since it was installed; pass --force to replace it`, 'modified')
   }
 
   await mkdir(store, { recursive: true })
   const stage = await mkdtemp(join(store, `.as-stage-${item.slug}-`))
   try {
     let source: SkillMarker['source'] = null
-    if (item.source) {
+    if (item.source && item.files?.length && /^[0-9a-f]{40}$/.test(item.source.ref)) {
+      await fetchFiles(item.files, stage)
+      source = { repo: item.source.repo, ref: item.source.ref, resolvedSha: item.source.ref, path: item.source.dir }
+    } else if (item.source) {
       const sha = await resolveRef(item.source.repo, item.source.ref)
       const gz = await download(`${codeloadUrl()}/${item.source.repo}/tar.gz/${sha}`)
       await extractSkillDir(gz, item.source.dir, stage)
@@ -214,23 +241,13 @@ export async function installSkillContent(
     const fm = parseFrontmatter(text)
     if (!fm?.name || !fm.description) throw new Error(`${item.slug}: SKILL.md frontmatter needs name and description`)
 
-    if (!options.force) {
-      // Only the store copy we are replacing is ours to ignore, plus an old Codex copy we can prove we wrote.
-      const skip = new Set([dest])
-      const codexCopy = join(ctx.codexConfigDir, 'skills', item.slug)
-      if (current && !marker && (await isOldCodexCopy(codexCopy, dest))) skip.add(codexCopy)
-      const clash = (await codexVisibleNames([store, join(ctx.codexConfigDir, 'skills')], skip)).get(fm.name)
-      if (clash) {
-        throw new SkillConflictError(`Codex already sees a skill named "${fm.name}" at ${clash}; pass --force to install anyway`)
-      }
-    }
-
     const result: SkillMarker = {
       slug: item.slug,
       version: item.version,
       source,
       contentHash: await contentHash(stage),
-      runtimeNames: { claude: item.slug, codex: fm.name },
+      // A reinstall keeps the directory name the skill is already deployed under.
+      runtimeNames: { claude: marker?.runtimeNames.claude ?? deployDirName(item.slug, fm.name), codex: fm.name },
       manifest: item,
     }
     await writeFile(join(stage, MARKER), JSON.stringify(result, null, 2))
@@ -254,15 +271,15 @@ export async function installSkillContent(
   }
 }
 
-/** Removes ~/.agents/skills/<slug> only when it carries our marker and is unchanged (or `force`). */
+/** Removes ~/.agent-store/skills/<slug> only when it carries our marker and is unchanged (or `force`). */
 export async function removeSkillContent(aasHome: string, slug: string, force = false): Promise<void> {
   const dest = join(skillStoreDir(aasHome), slug)
   if (!(await exists(dest))) return
   const marker = await readMarker(dest)
   if (!marker) {
-    if (!(await isLegacyInstall(dest, slug))) throw new SkillConflictError(`${dest} was not installed by Agent Store; it is left in place`)
+    if (!(await isLegacyInstall(dest, slug))) throw new SkillConflictError(`${dest} was not installed by Agent Store; it is left in place`, 'not-ours')
   } else if (!force && (await contentHash(dest)) !== marker.contentHash) {
-    throw new SkillConflictError(`${dest} was changed locally since it was installed; pass --force to remove it`)
+    throw new SkillConflictError(`${dest} was changed locally since it was installed; pass --force to remove it`, 'modified')
   }
   await rm(dest, { recursive: true, force: true })
 }

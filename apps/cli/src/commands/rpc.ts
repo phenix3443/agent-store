@@ -1,9 +1,10 @@
-import type { Engine, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
+import type { Engine, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
 
 const RPC_METHODS: Record<string, RpcHandler> = {
   search: (e, a) => e.search(a[0] as string, a[1] as SearchOptions | undefined),
+  getResource: (e, a) => e.getResource(a[0] as string, a[1] as { kind?: ResourceKind } | undefined),
   install: (e, a) => e.install(a[0] as string, a[1] as InstallOptions | undefined),
   installAndEnable: (e, a) => e.installAndEnable(a[0] as string, a[1] as InstallOptions | undefined),
   getTargetStatus: (e, a) => e.getTargetStatus(a[0] as string),
@@ -45,13 +46,13 @@ const RPC_METHODS: Record<string, RpcHandler> = {
 }
 
 /**
- * `code` is the error class name; `reason` / `tool` / `target` are the engine error's own
+ * `code` is the error class name; `reason` / `tool` / `target` / `state` are the engine error's own
  * fields. The desktop client turns them into what the user should do next.
  */
 function errorFields(err: unknown): Record<string, string> {
   if (!(err instanceof Error)) return {}
   const fields: Record<string, string> = { code: err.name }
-  for (const key of ['reason', 'tool', 'target'] as const) {
+  for (const key of ['reason', 'tool', 'target', 'state'] as const) {
     const value = (err as unknown as Record<string, unknown>)[key]
     if (typeof value === 'string') fields[key] = value
   }

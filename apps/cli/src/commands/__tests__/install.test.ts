@@ -43,7 +43,7 @@ test('runInstall rejects more than one slug', async () => {
   const engine = makeEngine({ installAndEnable: async () => { installed = true; return outcome } })
   expect(await runInstall(engine, ['a', 'b'], s => lines.push(s))).toBe(2)
   expect(installed).toBe(false)
-  expect(lines.join('\n')).toContain('one slug')
+  expect(lines.join('\n')).toContain('one item')
 })
 
 test('runInstall rejects unknown options', async () => {
@@ -94,4 +94,20 @@ test('runInstall of a provider without a key exits 0 and says how to finish', as
   })
   expect(await runInstall(engine, ['p'], s => lines.push(s))).toBe(0)
   expect(lines.join('\n')).toContain('Not enabled for claude: p has no API key configured; run: aas config p; then: aas enable p --for claude')
+})
+
+test('runInstall of a remote SSE MCP says Codex cannot run it, with no enable hint', async () => {
+  const lines: string[] = []
+  const engine = makeEngine({
+    installAndEnable: async () => ({
+      ...outcome, slug: 'sse-mcp', enabled: ['claude'],
+      notEnabled: [{ target: 'codex', reason: 'unsupported', message: "sse-mcp can't be enabled for Codex: Codex does not support SSE MCP servers" }],
+    }),
+  })
+  expect(await runInstall(engine, ['mcp-registry:io.example/sse-mcp'], s => lines.push(s))).toBe(0)
+  const out = lines.join('\n')
+  expect(out).toContain('Installed sse-mcp 1.2.0')
+  expect(out).toContain('Not enabled for codex: sse-mcp can\'t be enabled for Codex')
+  expect(out).not.toContain('aas enable sse-mcp')
+  expect(out).toContain('Writing to ~/.agent-store/mcps/sse-mcp/')
 })

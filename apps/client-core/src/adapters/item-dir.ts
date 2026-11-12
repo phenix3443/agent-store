@@ -1,5 +1,5 @@
 // Shared by kinds whose files come from the catalog's install hook into
-// ~/.agents/<kind>/<slug> (manifest.json, config.json, fetched files).
+// ~/.agent-store/<kind>/<slug> (manifest.json, config.json, fetched files).
 import { cp, readFile, rename, rm } from 'fs/promises'
 import { join } from 'path'
 import type { DisableOptions, EnableBlocker, EnableOptions, InstalledItem, Item, ToolTarget } from '@as/types'
@@ -66,7 +66,7 @@ export abstract class ItemDirAdapter implements KindAdapter {
           stuck.push(`${target} (${(restoreError as Error).message})`)
         }
       }
-      if (stuck.length) throw new Error(`${(e as Error).message}; these tools still have the new version: ${stuck.join('; ')}. Run \`as sync\` to retry`)
+      if (stuck.length) throw new Error(`${(e as Error).message}; these tools still have the new version: ${stuck.join('; ')}. Run \`aas sync\` to retry`)
       throw e
     }
     await rm(backup, { recursive: true, force: true })

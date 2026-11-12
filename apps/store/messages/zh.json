@@ -205,9 +205,9 @@
         "package": "目录里的包",
         "placeholder": "目录暂时取不到",
         "skill": {
-          "claude": "软链接，指向 ~/.agents/skills 里的那一份",
-          "codex": "Codex 直接读取 ~/.agents/skills，不另写文件",
-          "store": "技能目录只存这一份；标记文件说明它由 Agent Store 安装，卸载时只删带标记的"
+          "claude": "软链接，指向技能库里的那一份，以技能名命名；停用只删这个链接",
+          "codex": "Codex 技能目录里单独的一个软链接，和 Claude Code 分开启停",
+          "store": "技能库：技能只存这一份，任何工具都不直接读这里；标记文件说明它由 Agent Store 安装，卸载时只删带标记的"
         },
         "mcp": {
           "claude": "user 级别的 MCP 条目；本机装了 claude 命令时经 claude mcp add-json 写入",
@@ -280,7 +280,7 @@
         },
         "keys": {
           "q": "API 密钥存在哪？",
-          "a": "存在本机 ~/.agents/providers/ 下该供应商目录的 config.json 里，文件权限 0600。写进 Claude Code 和 Codex 配置的只有本地代理的地址和代理 token，不是你的密钥；转发请求时由本地代理附上密钥。"
+          "a": "存在本机 ~/.agent-store/providers/ 下该供应商目录的 config.json 里，文件权限 0600。写进 Claude Code 和 Codex 配置的只有本地代理的地址和代理 token，不是你的密钥；转发请求时由本地代理附上密钥。"
         },
         "relay": {
           "q": "本地代理会把请求发到别处吗？",
@@ -363,10 +363,10 @@
         {
           "id": "where",
           "title": "三类资源装到哪里",
-          "body": "安装会把资源下载到本机的 ~/.agents 目录（技能、MCP、供应商各有子目录），再按类型接入你选择的工具。启用资源时要指定它对哪个工具生效（Claude Code 或 Codex）。",
+          "body": "安装会把资源下载到本机的 ~/.agent-store 目录（技能、MCP、供应商各有子目录），再按类型接入你选择的工具：技能以软链接放进各工具的技能目录，MCP 和供应商写进各工具的配置。启用资源时要指定它对哪个工具生效（Claude Code 或 Codex）。",
           "bullets": [
-            "技能：写入对应工具的 skills 目录，例如 ~/.claude/skills/<名称>.md",
-            "MCP：把服务条目写进工具配置，Claude Code 写入 ~/.claude/settings.json 的 mcpServers，Codex 写入 ~/.codex/config.toml 的 mcp_servers",
+            "技能：整个技能目录只在 ~/.agent-store/skills/<slug>/ 存一份，对哪个工具启用就在它的技能目录放一个软链接：Claude Code 是 ~/.claude/skills/<名称>，Codex 是 ~/.codex/skills/<名称>",
+            "MCP：把服务条目写进工具配置，Claude Code 写入 ~/.claude.json 的 mcpServers，Codex 写入 ~/.codex/config.toml 的 mcp_servers",
             "供应商：登记为一份可编辑的接入配置（API Key、上游地址、模型映射等），启用后经本地代理生效"
           ]
         },
@@ -396,7 +396,7 @@
           "id": "cli",
           "title": "命令行",
           "body": "不打开桌面客户端也能安装和管理：用 install 安装资源，用 enable 让它对指定工具生效，再用 sync 把已启用的资源写入工具配置。",
-          "code": "aas install <slug>              # 安装资源\naas list                        # 查看已安装\naas search <query>              # 搜索商店\naas info <slug>                 # 查看资源详情\naas enable <slug> --for claude  # 对 Claude Code 启用\naas disable <slug> --for codex  # 对 Codex 停用\naas sync                        # 把已启用资源写入工具配置\naas relay start|stop|status     # 管理本地代理\naas usage --days 7              # 查看用量与费用\naas update [slug]               # 更新已安装资源"
+          "code": "aas install <id|slug>           # 从目录安装\naas list                        # 查看已安装\naas search <query>              # 搜索目录\naas info <slug>                 # 查看资源详情\naas enable <slug> --for claude  # 对 Claude Code 启用\naas disable <slug> --for codex  # 对 Codex 停用\naas sync                        # 把已启用资源写入工具配置\naas relay start|stop|status     # 管理本地代理\naas usage --days 7              # 查看用量与费用\naas update [slug]               # 更新已安装资源"
         },
         {
           "id": "usage",

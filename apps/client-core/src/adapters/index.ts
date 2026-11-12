@@ -6,7 +6,6 @@ import type { AdapterContext, KindAdapter } from './types'
 
 export type { AdapterContext, KindAdapter } from './types'
 export { ProviderNotReadyError } from './provider'
-export { CodexSkillDisableUnsupported } from './skill'
 
 /** A new kind of item is one more entry here and one adapter file. */
 export function createAdapters(ctx: AdapterContext): Record<Category, KindAdapter> {

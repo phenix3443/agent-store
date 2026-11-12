@@ -4,6 +4,7 @@ import { mkdtemp, rm, readFile, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { EngineImpl, IncompatibleTargetError, UpdateFailedError } from '../engine'
+import { ItemCatalog } from './helpers/item-catalog'
 import type { MCPItem, ProviderItem, RegistryJson } from '@as/types'
 
 process.env['AS_CLAUDE_BIN'] = ''
@@ -48,7 +49,7 @@ beforeEach(async () => {
   aasHome = await mkdtemp('/tmp/as-policy-home-')
   claudeDir = await mkdtemp('/tmp/as-policy-claude-')
   codexDir = await mkdtemp('/tmp/as-policy-codex-')
-  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000')
+  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog('http://localhost:3000') })
 })
 
 afterEach(async () => {

@@ -1,5 +1,5 @@
 // Which tool entries Agent Store wrote for an MCP item, and what it replaced:
-// ~/.agents/mcps/<slug>/targets.json (docs/global-skills-mcp.md §5.5).
+// ~/.agent-store/mcps/<slug>/targets.json (docs/global-skills-mcp.md §5.5).
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import type { ToolTarget } from '@as/types'

@@ -41,9 +41,9 @@ test('settings.json writes are backed up, keep other keys and are 0600', async (
   expect(settings.model).toBe('opus')
   expect(settings.env.ANTHROPIC_AUTH_TOKEN).toBe(readFileSync(join(aasHome, 'relay-token'), 'utf-8'))
   expect(await modeOf(join(claudeDir, 'settings.json'))).toBe(0o600)
-  const backups = await readdir(join(aasHome, 'agent-store', 'backups'))
+  const backups = await readdir(join(aasHome, 'backups'))
   expect(backups.length).toBeGreaterThan(0)
-  expect(await readFile(join(aasHome, 'agent-store', 'backups', backups[0], 'settings.json'), 'utf-8'))
+  expect(await readFile(join(aasHome, 'backups', backups[0], 'settings.json'), 'utf-8'))
     .toBe(JSON.stringify({ model: 'opus' }))
 })
 

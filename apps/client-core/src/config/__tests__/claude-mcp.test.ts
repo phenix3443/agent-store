@@ -342,7 +342,7 @@ test('without the binary: safe file edit with a backup, 0600', async () => {
   await enableClaudeMcp(ctx, 'probe', OURS)
   const json = JSON.parse(await readFile(ctx.claudeJsonPath, 'utf-8'))
   expect(json.mcpServers).toEqual({ other: OTHER, probe: OURS })
-  const backups = await readdir(join(ctx.aasHome, 'agent-store', 'backups'))
+  const backups = await readdir(join(ctx.aasHome, 'backups'))
   expect(backups.length).toBe(1)
   const { statSync } = await import('fs')
   expect(statSync(ctx.claudeJsonPath).mode & 0o777).toBe(0o600)

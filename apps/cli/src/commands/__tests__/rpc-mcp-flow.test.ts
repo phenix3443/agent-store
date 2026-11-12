@@ -6,25 +6,42 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { EngineImpl } from '@as/client-core'
-import type { MCPItem } from '@as/types'
 import { runRpc } from '../rpc'
 
 process.env['AS_CLAUDE_BIN'] = ''
 process.env['AS_CODEX_BIN'] = ''
 
-const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'community' as const }
-const base = {
-  id: 'i1', name: 'Test', description: 'desc', version: '1.0.0', publisher,
-  compatibleWith: ['claude' as const, 'codex' as const],
-  tags: [], downloads: 0, rating: 0, status: 'published' as const,
-  createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
-  installHook: { steps: [] },
+// Catalog rows as GET /api/resources/<id> returns them: two npm MCP servers, one needing a token.
+function mcpResource(name: string, env: Array<{ name: string; isRequired: boolean }> = []) {
+  const input = { description: null, isRequired: false, isSecret: false, default: null, value: null, placeholder: null, choices: [], format: null }
+  return {
+    id: `mcp-registry:io.example/${name}`, kind: 'mcp', name, description: `${name} server`, author: { name: 'io.example', url: null },
+    version: '1.0.0', homepageUrl: null, installs: null, verified: false, tags: [], transports: ['npm'],
+    origin: { site: 'mcp-registry', upstreamId: `io.example/${name}`, url: null, upstreamVersion: '1.0.0', upstreamUpdatedAt: null, syncedAt: '', unavailableAt: null, unavailableReason: null },
+    title: null, status: 'active', statusMessage: null, publishedAt: null, repository: null, icons: [], remotes: [],
+    packages: [{
+      registryType: 'npm', identifier: `@example/${name}-server`, version: '1.0.0', registryBaseUrl: null, runtimeHint: null, fileSha256: null,
+      transport: { type: 'stdio', url: null, headers: [], variables: {} }, runtimeArguments: [], packageArguments: [],
+      environmentVariables: env.map(e => ({ ...input, ...e, isSecret: true, variables: {} })),
+    }],
+  }
 }
-const tokenMcp: MCPItem = {
-  ...base, slug: 'token-mcp', category: 'mcp', transport: 'stdio', serverCommand: 'npx -y token-server',
-  configSchema: { type: 'object', properties: { token: { type: 'string', description: 'API token', 'x-env': 'TOKEN' } }, required: ['token'] },
+const tokenMcp = mcpResource('token-mcp', [{ name: 'TOKEN', isRequired: true }])
+const otherMcp = mcpResource('other-mcp')
+
+function serve(resources: Array<ReturnType<typeof mcpResource>>) {
+  globalThis.fetch = (async (input: string) => {
+    const url = new URL(String(input))
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+    if (url.pathname === '/api/resources') {
+      const q = url.searchParams.get('q') ?? ''
+      return json({ resources: resources.filter(r => r.name.includes(q)), nextOffset: null })
+    }
+    const id = decodeURIComponent(url.pathname.replace('/api/resources/', ''))
+    const r = resources.find(x => x.id === id)
+    return r ? json({ resource: r }) : json({ error: 'Not found' }, 404)
+  }) as typeof fetch
 }
-const otherMcp: MCPItem = { ...base, slug: 'other-mcp', category: 'mcp', transport: 'stdio', serverCommand: 'npx other', configSchema: { type: 'object' } }
 
 let root: string
 let aasHome: string
@@ -40,11 +57,7 @@ beforeEach(async () => {
   codexDir = join(root, 'codex')
   for (const d of [aasHome, claudeDir, codexDir]) await mkdir(d, { recursive: true })
   engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000')
-  globalThis.fetch = (async (url: string) => {
-    const item = [tokenMcp, otherMcp].find(i => String(url).includes(`/api/items/${i.slug}`))
-    if (item) return new Response(JSON.stringify({ item }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    return new Response('{}', { status: 200 })
-  }) as typeof fetch
+  serve([tokenMcp, otherMcp])
 })
 
 afterEach(async () => {
@@ -98,8 +111,8 @@ test('desktop flow: install an MCP that needs config, configure, enable Claude, 
 
   // 2. Configure.
   const schema = await rpc<{ schema: { required: string[] } }>('getConfigSchema', 'token-mcp')
-  expect(schema.data!.schema.required).toEqual(['token'])
-  expect((await rpc('setConfig', 'token-mcp', { token: 'secret-1' })).ok).toBe(true)
+  expect(schema.data!.schema.required).toEqual(['TOKEN'])
+  expect((await rpc('setConfig', 'token-mcp', { TOKEN: 'secret-1' })).ok).toBe(true)
   const status = await rpc<Array<{ target: string; blocker?: unknown }>>('getTargetStatus', 'token-mcp')
   expect(status.data!.every(s => !s.blocker)).toBe(true)
 
@@ -107,7 +120,7 @@ test('desktop flow: install an MCP that needs config, configure, enable Claude, 
   expect((await rpc('enable', 'token-mcp', 'claude')).ok).toBe(true)
   expect((await rpc('enable', 'token-mcp', 'codex')).ok).toBe(true)
   const claudeCfg = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
-  expect(claudeCfg.mcpServers['token-mcp'].env).toEqual({ TOKEN: 'secret-1' })
+  expect(claudeCfg.mcpServers['token-mcp']).toEqual({ type: 'stdio', command: 'npx', args: ['-y', '@example/token-mcp-server@1.0.0'], env: { TOKEN: 'secret-1' } })
   expect(claudeCfg.mcpServers.mine).toBeDefined()
   expect(await readFile(join(codexDir, 'config.toml'), 'utf-8')).toContain('[mcp_servers.token-mcp]')
 
@@ -141,13 +154,9 @@ test('rpc errors carry the error class so the desktop client can offer --force',
 })
 
 test('rpc errors carry the engine reason and tool, also when installAndEnable wraps them', async () => {
-  const conflicting = { ...otherMcp, slug: 'conflict-mcp' }
-  globalThis.fetch = (async (url: string) => {
-    if (String(url).includes('/api/items/conflict-mcp')) return new Response(JSON.stringify({ item: conflicting }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    return new Response('{}', { status: 200 })
-  }) as typeof fetch
+  serve([mcpResource('conflict-mcp')])
   await writeFile(join(claudeDir, '.claude.json'), JSON.stringify({ mcpServers: { 'conflict-mcp': { type: 'stdio', command: 'mine', args: [] } } }, null, 2))
-  const res = await rpc('installAndEnable', 'conflict-mcp')
+  const res = await rpc('installAndEnable', 'mcp-registry:io.example/conflict-mcp')
   expect(res).toMatchObject({ ok: false, code: 'McpConflictError', tool: 'claude' })
   expect(res.error).toContain('Installed conflict-mcp')
 })

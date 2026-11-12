@@ -1,14 +1,17 @@
-// `as migrate`: converts skills installed by older Agent Store versions to the
-// current layout (docs/global-skills-mcp.md §7, PR7). Anything it moves or
-// rewrites is copied into ~/.agents/agent-store/backups/migrate-<stamp>/ first.
-// Directories it cannot prove it wrote are reported and left alone.
+// `aas migrate`: converts skills installed by older Agent Store versions to the
+// current layout (docs/global-skills-mcp.md §7, PR7) and gives them per-tool
+// deployments (#111). Anything it moves or rewrites is copied into
+// ~/.agent-store/backups/migrate-<stamp>/ first. Directories it cannot prove it
+// wrote are reported and left alone. Moving from ~/.agents is home-migrate.ts.
 import { cp, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'fs/promises'
 import { basename, dirname, join } from 'path'
 import type { InstalledItem, Item } from '@as/types'
-import { patchEntry, readRegistry } from './registry'
-import { itemDir } from './paths'
+import { readRegistry, setEnabledFlag } from './registry'
+import { itemDir, resolvePaths } from './paths'
 import { contentHash, isLegacyInstall, isLoneSkillMd, MARKER, parseFrontmatter, readMarker, type SkillMarker } from './skills/store'
-import { linkClaudeSkill } from './skills/claude-link'
+import { standaloneSkillAdapter } from './adapters/skill'
+import { SkillDeployRefusedError } from './skills/deploy'
+import { SkillConflictError } from './skills/store'
 import { retirePackageInstalls } from './migrate-packages'
 
 export interface MigratePaths {
@@ -42,7 +45,7 @@ async function isRealDir(path: string): Promise<boolean> {
 }
 
 /** Rewrites a legacy store dir (manifest.json + skill.md) as SKILL.md + marker, in place. */
-async function convertStoreDir(dir: string, entry: InstalledItem): Promise<SkillMarker> {
+export async function convertStoreDir(dir: string, entry: InstalledItem): Promise<SkillMarker> {
   const body = await readFile(join(dir, 'skill.md'), 'utf-8')
   const fm = parseFrontmatter(body)
   if (!fm?.name || !fm.description) throw new Error('skill.md frontmatter needs name and description; reinstall it instead: as install ' + entry.slug + ' --force')
@@ -84,7 +87,7 @@ async function convertStoreDir(dir: string, entry: InstalledItem): Promise<Skill
 }
 
 export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promise<MigrateResult> {
-  const backupDir = join(p.aasHome, 'agent-store', 'backups', `migrate-${now.toISOString().replace(/[:.]/g, '-')}`)
+  const backupDir = join(p.aasHome, 'backups', `migrate-${now.toISOString().replace(/[:.]/g, '-')}`)
   const steps: MigrateStep[] = []
   const backup = async (from: string, rel: string): Promise<void> => {
     const to = join(backupDir, rel)
@@ -93,13 +96,15 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
   }
 
   const registry = await readRegistry(p.aasHome)
+  const skills = standaloneSkillAdapter(resolvePaths({ ...p, claudeJsonPath: p.claudeJsonPath ?? join(p.claudeConfigDir, '.claude.json') }))
   for (const entry of registry.installed.filter(e => e.category === 'skill')) {
     const slug = entry.slug
     const dir = itemDir(p.aasHome, 'skill', slug)
     const step = (result: MigrateStep['result'], message: string) => steps.push({ slug, result, message })
     try {
       let body: string | undefined
-      if (await isLegacyInstall(dir, slug)) {
+      const legacy = await isLegacyInstall(dir, slug)
+      if (legacy) {
         body = await readFile(join(dir, 'skill.md'), 'utf-8')
         await backup(dir, join('store', slug))
         await convertStoreDir(dir, entry)
@@ -113,7 +118,7 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
         body = await readFile(join(dir, 'SKILL.md'), 'utf-8')
       }
 
-      // Old per-tool copies. Codex now reads the store; Claude gets the symlink back below.
+      // Old per-tool copies; each tool gets a deployment of the library copy below.
       for (const [tool, root] of [['claude', p.claudeConfigDir], ['codex', p.codexConfigDir]] as const) {
         const copy = join(root, 'skills', slug)
         if (!(await isRealDir(copy))) continue
@@ -126,13 +131,18 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
         step('done', `${copy}: old copy moved to the backup`)
       }
 
-      if (entry.enabledFor.claude === true) {
-        await linkClaudeSkill(p.claudeConfigDir, slug, dir)
-      }
-      if (entry.enabledFor.codex !== true) {
-        // Codex reads the store directly, so the registry has to say so (§5.4).
-        await patchEntry(p.aasHome, slug, e => ({ ...e, enabledFor: { ...e.enabledFor, codex: true } }))
-        step('done', 'registry: enabledFor.codex set to true; Codex reads ~/.agents/skills directly')
+      for (const target of ['claude', 'codex'] as const) {
+        if (entry.deployments?.[target]) continue
+        // Before markers Codex read every installed skill, whatever the registry said.
+        if (entry.enabledFor[target] !== true && !(legacy && target === 'codex')) continue
+        try {
+          await skills.migrateDeployment(slug, target, dir)
+          step('done', `${target}: deployed from ${dir}`)
+        } catch (e) {
+          if (!(e instanceof SkillDeployRefusedError || e instanceof SkillConflictError)) throw e
+          await setEnabledFlag(p.aasHome, slug, target, false)
+          step('skipped', `${target}: ${e.message}`)
+        }
       }
     } catch (e) {
       step('error', (e as Error).message)

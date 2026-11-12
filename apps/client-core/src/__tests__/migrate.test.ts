@@ -42,9 +42,9 @@ function oldInstall(slug: string, body = BODY) {
   file(join(p.codexConfigDir, 'skills', slug, 'SKILL.md'), body)
 }
 
-const backupOf = () => join(root, 'agents', 'agent-store', 'backups', 'migrate-2026-10-22T00-00-00-000Z')
+const backupOf = () => join(root, 'agents', 'backups', 'migrate-2026-10-22T00-00-00-000Z')
 
-test('converts the old layout, backs up first, links Claude and leaves doctor clean', async () => {
+test('converts the old layout, backs up first, deploys to both tools and leaves doctor clean', async () => {
   oldInstall('s')
   registry(entry('s', { claude: true, codex: false }))
 
@@ -62,15 +62,17 @@ test('converts the old layout, backs up first, links Claude and leaves doctor cl
 
   expect(lstatSync(join(p.claudeConfigDir, 'skills', 's')).isSymbolicLink()).toBe(true)
   expect(readlinkSync(join(p.claudeConfigDir, 'skills', 's'))).toBe(dir)
-  expect(existsSync(join(p.codexConfigDir, 'skills', 's'))).toBe(false)
+  // Before markers Codex read every installed skill, so it gets a deployment too.
+  expect(readlinkSync(join(p.codexConfigDir, 'skills', 's'))).toBe(dir)
 
   for (const rel of ['store/s/skill.md', 'store/s/manifest.json', 'claude/s/SKILL.md', 'codex/s/SKILL.md']) {
     expect(existsSync(join(backup, rel))).toBe(true)
   }
   const reg = JSON.parse(readFileSync(join(p.aasHome, 'registry.json'), 'utf-8'))
   expect(reg.installed[0].enabledFor).toEqual({ claude: true, codex: true })
+  expect(Object.keys(reg.installed[0].deployments).sort()).toEqual(['claude', 'codex'])
 
-  expect(await runDoctor({ ...p, claudeJsonPath: join(p.claudeConfigDir, '.claude.json') })).toEqual([])
+  expect(await runDoctor({ ...p, claudeJsonPath: join(p.claudeConfigDir, '.claude.json'), legacyHome: join(root, 'none') })).toEqual([])
 })
 
 test('running it again changes nothing', async () => {
@@ -89,10 +91,12 @@ test('copies the user changed and directories without our layout are left alone'
   registry(entry('s', { claude: true, codex: true }), entry('mine', { claude: false, codex: true }))
 
   const res = await runMigrate(p, NOW)
-  expect(res.steps.map(s => `${s.result}:${s.slug}`)).toEqual(['done:s', 'skipped:s', 'done:s', 'error:s', 'skipped:mine'])
-  // The user's Claude copy is untouched, so the symlink cannot be created.
+  expect(res.steps.map(s => `${s.result}:${s.slug}`)).toEqual(['done:s', 'skipped:s', 'done:s', 'skipped:s', 'done:s', 'skipped:mine'])
+  // The user's Claude copy is untouched, so Claude gets no deployment and the registry says so.
   expect(readFileSync(join(p.claudeConfigDir, 'skills', 's', 'SKILL.md'), 'utf-8')).toContain('my notes')
-  expect(res.steps.find(s => s.result === 'error')?.message).toContain('not Agent Store')
+  expect(res.steps[3].message).toStartWith('claude: Refusing to replace')
+  const reg = JSON.parse(readFileSync(join(p.aasHome, 'registry.json'), 'utf-8'))
+  expect(reg.installed[0].enabledFor).toEqual({ claude: false, codex: true })
   expect(readFileSync(join(p.aasHome, 'skills', 'mine', 'SKILL.md'), 'utf-8')).toBe(BODY)
   expect(existsSync(join(p.aasHome, 'skills', 'mine', MARKER))).toBe(false)
 })

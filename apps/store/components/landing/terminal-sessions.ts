@@ -8,17 +8,18 @@ export interface TerminalSession {
   steps: TerminalStep[]
 }
 
-// Verbatim output of the aas sidecar from the Linux .deb (test/desktop-linux) against
-// the test catalog, 2026-11-12. Spacing is the CLI's own (formatStep pads to 38
-// columns, so a long label runs into "done"). Re-capture it when the CLI output changes.
+// aas output for the test catalog, 2026-11-12, in the format apps/cli prints it
+// (commands/search.ts, commands/install.ts; formatStep pads to 38 columns, so a
+// long label runs into "done"). Re-capture it from a real run when the CLI output changes.
 export const TERMINAL_SESSIONS: TerminalSession[] = [
   {
     id: 'search',
     steps: [
       {
-        command: 'aas search brainstorming',
-        output: `superpowers-brainstorming   verified · skill · claude codex   248.1K installs
-  You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.`,
+        command: 'aas search brainstorming --kind skill',
+        output: `brainstorming   skill · GitHub
+  You MUST use this before any creative work - creating features, building components, adding functionality, modifying behavior, or planning anything...
+  aas install github:obra/superpowers/brainstorming`,
       },
     ],
   },
@@ -27,13 +28,12 @@ export const TERMINAL_SESSIONS: TerminalSession[] = [
     steps: [
       {
         command: 'aas install superpowers-brainstorming',
-        output: `  Fetching superpowers-brainstorming@1.0.0...done
-  Running install hooks...            done
-  Writing to ~/.agents/skills/superpowers-brainstorming/
-  Syncing to claude...                done
-  Syncing to codex...                 done
+        output: `  Fetching superpowers-brainstorming@ebd5b1afb600...done
+  Writing to ~/.agent-store/skills/superpowers-brainstorming/
+  Deploying to claude...              done
+  Deploying to codex...               done
 
-  Installed superpowers-brainstorming 1.0.0`,
+  Installed superpowers-brainstorming ebd5b1afb600`,
       },
     ],
   },
@@ -42,12 +42,11 @@ export const TERMINAL_SESSIONS: TerminalSession[] = [
     steps: [
       {
         command: 'aas install context7 --target claude',
-        output: `  Fetching context7@1.0.0...          done
-  Running install hooks...            done
-  Writing to ~/.agents/mcps/context7/
+        output: `  Fetching context7@4.7.0...          done
+  Writing to ~/.agent-store/mcps/context7/
   Syncing to claude...                done
 
-  Installed context7 1.0.0`,
+  Installed context7 4.7.0`,
       },
       { command: 'aas enable context7 --for codex', output: '  context7 enabled for codex' },
     ],

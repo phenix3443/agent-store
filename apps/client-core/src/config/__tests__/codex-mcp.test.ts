@@ -344,7 +344,7 @@ test('without the binary: text edit keeps comments, backs up, round-trips', asyn
   const text = await readFile(configFile(), 'utf-8')
   expect(text.startsWith(before)).toBe(true)
   expect(await readCodexMcpEntry(ctx, 'probe')).toEqual({ command: 'node', args: ['a b'], env: { K: 'v' } })
-  expect((await readdir(join(ctx.aasHome, 'agent-store', 'backups'))).length).toBe(1)
+  expect((await readdir(join(ctx.aasHome, 'backups'))).length).toBe(1)
   await disableCodexMcp(ctx, 'probe')
   expect(await readFile(configFile(), 'utf-8')).toBe(before)
 })

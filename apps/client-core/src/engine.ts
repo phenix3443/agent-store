@@ -2,7 +2,8 @@ import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
-  ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview, ItemVersion,
+  ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, JsonSchema, UserReview, ItemVersion,
+  CatalogSearchResult, CatalogResourceDetail, ResourceKind, SkillDeployment,
   EnableOptions, DisableOptions, UninstallOptions, InstallOptions,
   InstallOutcome, TargetStatus, EnableBlocker,
   UsageSummaryRow, UsageSummaryOptions, LocalRelayConfig,
@@ -10,10 +11,10 @@ import type {
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
-import { readCatalogCache, writeCatalogCache } from './catalog-cache'
-import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry } from './registry/index'
+import { ResourceCatalog, type Catalog } from './catalog'
+import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
 import { createAdapters, type KindAdapter } from './adapters'
-import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
+import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
 import { getDailySummary, getRecentRequests } from './usage/queries'
@@ -28,7 +29,7 @@ import {
   toggleLocalConfig as _toggleLocalConfig,
 } from './relay/local-configs'
 
-export { ProviderNotReadyError, CodexSkillDisableUnsupported } from './adapters'
+export { ProviderNotReadyError } from './adapters'
 
 export class IncompatibleTargetError extends Error {
   constructor(slug: string, readonly target: ToolTarget, compatibleWith: ToolTarget[]) {
@@ -49,6 +50,8 @@ const TARGETS: ToolTarget[] = ['claude', 'codex']
 export interface EngineOptions {
   /** Starts the local relay daemon; without it, enabling a provider needs a relay that is already running. */
   startRelay?: () => Promise<void>
+  /** Where install and search read from; /api/resources on `storeUrl` by default. */
+  catalog?: Catalog
 }
 
 /**
@@ -60,14 +63,17 @@ export class EngineImpl implements Engine {
   private readonly paths: Required<Paths>
   private readonly client: StoreClient
   private readonly adapters: Record<Category, KindAdapter>
+  private readonly catalog: Catalog
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
-    this.client = new StoreClient(storeUrl, { timeoutMs: 4000 })
+    this.client = new StoreClient(storeUrl, { timeoutMs: 8000 })
+    this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
     this.adapters = createAdapters({
       paths: this.paths,
       startRelay: options.startRelay,
       setEnabled: (slug, target, enabled) => this._setEnabled(slug, target, enabled),
+      setDeployment: (slug, target, record) => this._setDeployment(slug, target, record),
     })
   }
 
@@ -83,46 +89,43 @@ export class EngineImpl implements Engine {
     return entry
   }
 
-  async search(query: string, options?: SearchOptions): Promise<Item[]> {
-    const result = await this.client.getItems({ limit: 1000 })
-    let items: Item[]
-    if (result.data) {
-      await writeCatalogCache(this.paths.aasHome, result.data)
-      items = result.data
-    } else {
-      // API-down fallback: serve the last-known-good catalog, filtered locally. No throw.
-      const cache = await readCatalogCache(this.paths.aasHome)
-      items = cache?.items ?? []
-    }
-
-    if (options?.category) items = items.filter(item => item.category === options.category)
-    if (query) {
-      const q = query.toLowerCase()
-      items = items.filter(item =>
-        item.name.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        item.tags.some(tag => tag.toLowerCase().includes(q))
-      )
-    }
-    if (options?.offset != null || options?.limit != null) {
-      const offset = options?.offset ?? 0
-      items = options?.limit != null ? items.slice(offset, offset + options.limit) : items.slice(offset)
-    }
-    return items
+  async search(query: string, options?: SearchOptions): Promise<CatalogSearchResult> {
+    return this.catalog.search(query, options)
   }
 
-  async install(slug: string, options: InstallOptions = {}): Promise<InstallResult> {
-    assertSafeSlug(slug)
-    const itemResult = await this.client.getItemBySlug(slug)
-    if (itemResult.error || !itemResult.data) {
-      throw new Error(itemResult.error ?? `Item not found: ${slug}`)
+  async getResource(ref: string, options: { kind?: ResourceKind } = {}): Promise<CatalogResourceDetail> {
+    const installed = ref.includes(':') ? undefined : findEntry(await readRegistry(this.paths.aasHome), ref)
+    if (installed?.resourceId) return this.catalog.get(installed.resourceId)
+    return this.catalog.get(ref, installed ? { kind: installed.category } : options)
+  }
+
+  /**
+   * `ref` is a catalog id or a slug. An installed slug reinstalls what it was
+   * installed from. A new resource gets its short slug unless another resource
+   * already holds it, then its long one.
+   */
+  async install(ref: string, options: InstallOptions = {}): Promise<InstallResult> {
+    if (!ref.includes(':')) assertSafeSlug(ref)
+    const before = await readRegistry(this.paths.aasHome)
+    const byRef = ref.includes(':') ? undefined : findEntry(before, ref)
+    const source = await this.catalog.resolveItem(byRef?.resourceId ?? ref, byRef ? { kind: byRef.category } : {})
+    const byResource = source.resourceId ? before.installed.find(e => e.resourceId === source.resourceId) : undefined
+    let slug = byResource?.slug ?? source.item.slug
+    const holder = findEntry(before, slug)
+    if (!byResource && holder && (holder.category !== source.item.category || (holder.resourceId && holder.resourceId !== source.resourceId))) {
+      if (!source.longSlug || findEntry(before, source.longSlug)) {
+        throw new Error(`${slug} is already installed from ${holder.resourceId ?? 'another catalog entry'}; uninstall it first`)
+      }
+      slug = source.longSlug
     }
-    const item = itemResult.data
+    assertSafeSlug(slug)
+    const item = slug === source.item.slug ? source.item : { ...source.item, slug }
     const installed = await this.adapter(item.category).install(slug, item, options)
     let entry!: InstalledItem
     await updateRegistry(this.paths.aasHome, registry => {
       const existing = findEntry(registry, slug)
       const now = new Date().toISOString()
+      const resourceId = source.resourceId ?? existing?.resourceId
       entry = {
         slug,
         category: item.category,
@@ -131,17 +134,18 @@ export class EngineImpl implements Engine {
         updatedAt: now,
         compatibleWith: item.compatibleWith,
         enabledFor: installed.enabledFor ?? existing?.enabledFor ?? {},
+        ...(resourceId ? { resourceId } : {}),
+        ...(existing?.deployments ? { deployments: existing.deployments } : {}),
       }
       return upsertEntry(registry, entry)
     })
-    // Bump the catalog's real install count (best-effort, non-blocking).
-    void this.client.recordInstall(slug)
     await installed.afterRegistered?.()
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
 
-  async installAndEnable(slug: string, options: InstallOptions = {}): Promise<InstallOutcome> {
-    const result = await this.install(slug, options)
+  async installAndEnable(ref: string, options: InstallOptions = {}): Promise<InstallOutcome> {
+    const result = await this.install(ref, options)
+    const slug = result.slug
     const entry = await this._entry(slug)
     const outcome: InstallOutcome = { ...result, category: entry.category, enabled: [], notEnabled: [] }
     if (this.adapter(entry.category).enabledByInstall) {
@@ -199,12 +203,12 @@ export class EngineImpl implements Engine {
     await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
   }
 
+  private async _setDeployment(slug: string, target: ToolTarget, record: SkillDeployment | null): Promise<void> {
+    await setDeploymentRecord(this.paths.aasHome, slug, target, record)
+  }
+
   private async _setEnabled(slug: string, target: ToolTarget, enabled: boolean): Promise<void> {
-    await patchEntry(this.paths.aasHome, slug, e => ({
-      ...e,
-      enabledFor: { ...e.enabledFor, [target]: enabled },
-      updatedAt: new Date().toISOString(),
-    }))
+    await setEnabledFlag(this.paths.aasHome, slug, target, enabled)
   }
 
   async enable(slug: string, target: ToolTarget, options: EnableOptions = {}): Promise<void> {
@@ -265,7 +269,7 @@ export class EngineImpl implements Engine {
         }
       }
       if (stuck.length) {
-        throw new Error(`${(e as Error).message}; the previous config was put back in ${configPath}, but these tools still have the new values: ${stuck.join('; ')}. Run \`as sync\` to retry`)
+        throw new Error(`${(e as Error).message}; the previous config was put back in ${configPath}, but these tools still have the new values: ${stuck.join('; ')}. Run \`aas sync\` to retry`)
       }
       throw e
     }
@@ -292,7 +296,7 @@ export class EngineImpl implements Engine {
 
   async checkUpdates(slugs?: string[]): Promise<UpdateAvailable[]> {
     const registry = await readRegistry(this.paths.aasHome)
-    return _checkUpdates(registry, this.client, slugs)
+    return _checkUpdates(registry, this.catalog, slugs)
   }
 
   async update(slug?: string): Promise<UpdateResult[]> {
@@ -304,10 +308,13 @@ export class EngineImpl implements Engine {
     const failures: Array<{ slug: string; error: string }> = []
     for (const entry of entries) {
       try {
-        const { latestItem, fromVersion } = await applyUpdate(entry.slug, this.client, entry)
+        if (entry.parentSlug) continue
+        const fromVersion = entry.version
+        const latest = await latestFor(this.catalog, entry)
+        const latestItem = { ...latest.item, slug: entry.slug }
         if (latestItem.version === fromVersion) continue
         await this.adapter(entry.category).update(entry, latestItem)
-        await this._setVersion(entry.slug, latestItem.version)
+        await this._setVersion(entry.slug, latestItem.version, latest.resourceId)
         results.push({ slug: entry.slug, fromVersion, toVersion: latestItem.version })
       } catch (e) {
         failures.push({ slug: entry.slug, error: e instanceof Error ? e.message : String(e) })
@@ -317,8 +324,10 @@ export class EngineImpl implements Engine {
     return results
   }
 
-  private async _setVersion(slug: string, version: string): Promise<void> {
-    await patchEntry(this.paths.aasHome, slug, e => ({ ...e, version, updatedAt: new Date().toISOString() }))
+  private async _setVersion(slug: string, version: string, resourceId: string | null): Promise<void> {
+    await patchEntry(this.paths.aasHome, slug, e => ({
+      ...e, version, ...(resourceId ? { resourceId } : {}), updatedAt: new Date().toISOString(),
+    }))
   }
 
   async list(options?: ListOptions): Promise<InstalledItem[]> {

@@ -49,10 +49,10 @@
 
 | 类别 | Claude Code | Codex | 代码 |
 |---|---|---|---|
-| 技能 | `~/.claude/skills/<slug>` 软链接到 `~/.agents/skills/<slug>/` | 直接读 `~/.agents/skills/<slug>/` | `client-core/src/adapters/skill.ts`、`skills/claude-link.ts`、`skills/store.ts` |
+| 技能 | `~/.claude/skills/<name>` 软链接到技能库 `~/.agent-store/skills/<slug>/` | `~/.codex/skills/<name>` 软链接到同一份 | `client-core/src/adapters/skill.ts`、`skills/deploy.ts`、`skills/store.ts` |
 | MCP | `~/.claude.json` 的 `mcpServers.<name>`（user scope） | `~/.codex/config.toml` 的 `[mcp_servers.<name>]` | `config/claude-mcp.ts`、`config/codex-mcp.ts` |
 | 供应商 | `~/.claude/settings.json` 的 `env.ANTHROPIC_BASE_URL`、`env.ANTHROPIC_AUTH_TOKEN`（值是本地代理地址和代理 token） | `~/.codex/config.toml` 的 `model_provider = "aas-relay"` 与 `[model_providers.aas-relay]` | `config/claude.ts`、`config/codex.ts`、`adapters/provider.ts` |
-| 供应商密钥 | 不写进工具配置，存在 `~/.agents/providers/<slug>/config.json`（0600） | 同左 | `engine.ts`、`config/safe-file.ts` |
+| 供应商密钥 | 不写进工具配置，存在 `~/.agent-store/providers/<slug>/config.json`（0600） | 同左 | `engine.ts`、`config/safe-file.ts` |
 
 ## 状态
 

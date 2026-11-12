@@ -16,13 +16,25 @@ beforeEach(() => {
     claudeConfigDir: join(root, 'claude'),
     claudeJsonPath: join(root, 'claude', '.claude.json'),
     codexConfigDir: join(root, 'codex'),
+    legacyHome: join(root, 'legacy-agents'),
   }
   mkdirSync(p.aasHome, { recursive: true })
 })
 afterEach(() => rmSync(root, { recursive: true, force: true }))
 
-function entry(slug: string, category: InstalledItem['category'], enabledFor: InstalledItem['enabledFor']): InstalledItem {
-  return { slug, category, version: '1.0.0', installedAt: '', updatedAt: '', compatibleWith: ['claude', 'codex'], enabledFor }
+function entry(slug: string, category: InstalledItem['category'], enabledFor: InstalledItem['enabledFor'], deployments?: InstalledItem['deployments']): InstalledItem {
+  return { slug, category, version: '1.0.0', installedAt: '', updatedAt: '', compatibleWith: ['claude', 'codex'], enabledFor, ...(deployments ? { deployments } : {}) }
+}
+
+/** Both tools linked and recorded, as an install leaves them. */
+function deployed(slug: string, dir: string): InstalledItem['deployments'] {
+  const out: InstalledItem['deployments'] = {}
+  for (const [tool, root] of [['claude', p.claudeConfigDir], ['codex', p.codexConfigDir]] as const) {
+    mkdirSync(join(root, 'skills'), { recursive: true })
+    symlinkSync(dir, join(root, 'skills', slug), 'dir')
+    out[tool] = { path: join(root, 'skills', slug), mode: 'symlink', sourceHash: 'h' }
+  }
+  return out
 }
 
 function registry(...items: InstalledItem[]) {
@@ -50,13 +62,13 @@ function link(slug: string, target: string) {
 const codes = async () => (await runDoctor(p)).map(f => `${f.level}:${f.code}${f.slug ? `:${f.slug}` : ''}`).sort()
 
 test('a healthy skill and MCP report nothing', async () => {
-  link('s', await storeSkill('s'))
+  const deployments = deployed('s', await storeSkill('s'))
   const written = { type: 'stdio', command: 'node', args: ['x.mjs'] }
   mkdirSync(join(p.aasHome, 'mcps', 'm'), { recursive: true })
   writeFileSync(join(p.aasHome, 'mcps', 'm', 'targets.json'), JSON.stringify({ claude: { name: 'm', written, previous: null } }))
   mkdirSync(p.claudeConfigDir, { recursive: true })
   writeFileSync(p.claudeJsonPath, JSON.stringify({ mcpServers: { m: written } }))
-  registry(entry('s', 'skill', { claude: true, codex: true }), entry('m', 'mcp', { claude: true, codex: false }))
+  registry(entry('s', 'skill', { claude: true, codex: true }, deployments), entry('m', 'mcp', { claude: true, codex: false }))
   expect(await codes()).toEqual([])
 })
 
@@ -65,9 +77,12 @@ test('skill drift: missing link, modified content, Codex name clash, orphan mark
   writeFileSync(join(dir, 'extra.md'), 'local edit')
   skillMd(join(p.codexConfigDir, 'skills', 'hand-made'), 'shared-name')
   await storeSkill('orphan')
+  skillMd(join(p.legacyHome!, 'skills', 'shared'), 'shared-name')
   registry(entry('s', 'skill', { claude: true, codex: true }))
   expect(await codes()).toEqual([
     'error:claude-link-missing:s',
+    'error:codex-link-missing:s',
+    'warn:codex-shadowed:s',
     'warn:codex-shadowed:s',
     'warn:skill-modified:s',
     'warn:skill-orphan:orphan',
@@ -78,8 +93,26 @@ test('a user directory in the Claude skills dir shadows ours; a stale link is re
   await storeSkill('s')
   skillMd(join(p.claudeConfigDir, 'skills', 's'), 's')
   link('t', await storeSkill('t'))
-  registry(entry('s', 'skill', { claude: true, codex: true }), entry('t', 'skill', { claude: false, codex: true }))
+  registry(entry('s', 'skill', { claude: true, codex: false }), entry('t', 'skill', { claude: false, codex: false }))
   expect(await codes()).toEqual(['error:claude-shadowed:s', 'warn:claude-link-stale:t'])
+})
+
+test('a link without a record, a copy deployment and a stale copy', async () => {
+  const dir = await storeSkill('s')
+  link('s', dir)
+  const copy = join(p.codexConfigDir, 'skills', 's')
+  skillMd(copy, 's')
+  registry(entry('s', 'skill', { claude: true, codex: true }, { codex: { path: copy, mode: 'copy', sourceHash: 'old' } }))
+  expect(await codes()).toEqual(['warn:claude-unrecorded:s', 'warn:codex-copy-stale:s'])
+})
+
+test('a recorded link the user replaced with a directory is reported as shadowing', async () => {
+  const dir = await storeSkill('s')
+  const path = join(p.codexConfigDir, 'skills', 's')
+  skillMd(path, 's')
+  registry(entry('s', 'skill', { claude: false, codex: true }, { codex: { path, mode: 'symlink', sourceHash: 'h' } }))
+  expect(dir).toBeTruthy()
+  expect(await codes()).toEqual(['error:codex-shadowed:s'])
 })
 
 test('old layout: single-file store dir and a copy under $CODEX_HOME/skills', async () => {

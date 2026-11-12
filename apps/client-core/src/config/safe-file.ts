@@ -1,6 +1,6 @@
 // Config-file writes that never make things worse: a file that does not parse
 // aborts the write, writes are atomic (temp file + rename), and the previous
-// content is copied to ~/.agents/agent-store/backups/<ts>/ first.
+// content is copied to ~/.agent-store/backups/<ts>/ first.
 import { copyFile, mkdir, readFile, stat } from 'fs/promises'
 import { basename, dirname, join } from 'path'
 import writeFileAtomic from 'write-file-atomic'
@@ -62,7 +62,7 @@ export async function replaceSecretJsonFile(aasHome: string | undefined, path: s
 export async function backupFile(aasHome: string, path: string): Promise<string | undefined> {
   try { await stat(path) } catch { return undefined }
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const dir = join(aasHome, 'agent-store', 'backups', stamp)
+  const dir = join(aasHome, 'backups', stamp)
   await mkdir(dir, { recursive: true, mode: 0o700 })
   const dest = join(dir, basename(path))
   await copyFile(path, dest)

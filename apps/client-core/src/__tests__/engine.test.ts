@@ -3,6 +3,7 @@ import { chmod, mkdtemp, rm, readFile, mkdir, stat, writeFile } from 'fs/promise
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { EngineImpl } from '../engine'
+import { ItemCatalog } from './helpers/item-catalog'
 import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
 
 // Unit tests use the safe file-edit path, not the installed claude CLI.
@@ -69,7 +70,7 @@ beforeEach(async () => {
   engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000',
-    { startRelay: markRelayRunning }
+    { startRelay: markRelayRunning, catalog: new ItemCatalog() }
   )
 })
 
@@ -476,7 +477,7 @@ for (const target of ['claude', 'codex'] as const) {
   })
 
   test(`enabling a provider for ${target} while the relay is down and cannot be started fails without touching configs`, async () => {
-    const noRelay = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000')
+    const noRelay = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog('http://localhost:3000') })
     mockFetch({ '/api/items/test-provider': { item: providerItem } })
     await noRelay.install('test-provider')
     await noRelay.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
@@ -495,7 +496,7 @@ test('enabling a configured provider starts the relay when it is not running', a
   const withStarter = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000',
-    { startRelay: async () => { started++; await markRelayRunning() } }
+    { startRelay: async () => { started++; await markRelayRunning() }, catalog: new ItemCatalog() }
   )
   mockFetch({ '/api/items/test-provider': { item: providerItem } })
   await withStarter.install('test-provider')

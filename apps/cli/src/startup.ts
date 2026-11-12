@@ -14,3 +14,24 @@ export async function refreshRelayOnStartup(
     warn(`warning: could not refresh the Claude Code / Codex relay config: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+/**
+ * Moves Agent Store's state from ~/.agents to ~/.agent-store once (#111). Only for
+ * the default home: an explicit AS_HOME is left as it is. Like the relay refresh,
+ * a failure is reported and the command still runs; the next one tries again.
+ */
+export async function migrateHomeOnStartup(
+  migrate: () => Promise<{ steps: Array<{ slug: string; result: string; message: string }>; relayStopped: boolean } | null>,
+  restartRelay: () => Promise<unknown>,
+  warn: (s: string) => void = console.error
+): Promise<void> {
+  try {
+    const result = await migrate()
+    if (!result) return
+    warn('Agent Store moved its files from ~/.agents to ~/.agent-store:')
+    for (const s of result.steps) warn(`  ${s.result.padEnd(7)} ${s.slug}: ${s.message}`)
+    if (result.relayStopped) await restartRelay()
+  } catch (err) {
+    warn(`warning: could not move Agent Store's files from ~/.agents to ~/.agent-store: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}

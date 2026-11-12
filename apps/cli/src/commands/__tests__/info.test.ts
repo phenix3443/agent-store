@@ -19,6 +19,32 @@ function makeEngine(d: ItemDetail): Engine {
   return { info: async () => d } as unknown as Engine
 }
 
+test('runInfo of something not installed shows the catalog entry and how to install it', async () => {
+  const lines: string[] = []
+  const engine = {
+    info: async () => { throw new Error('Item not installed: find-skills') },
+    getResource: async () => ({
+      id: 'github:vercel-labs/skills/find-skills', kind: 'skill', name: 'find-skills', description: 'Finds skills',
+      author: { name: 'vercel-labs', url: null }, version: 'abc', homepageUrl: null, verified: false,
+      repo: { fullName: 'vercel-labs/skills', dir: 'skills/find-skills', commit: 'e781cb4d07433dfe1d19e924ed45cc61738c55ec' },
+    }),
+  } as unknown as Engine
+  await runInfo(engine, ['find-skills'], s => lines.push(s))
+  const out = lines.join('\n')
+  expect(out).toContain('Source       vercel-labs/skills/skills/find-skills @ e781cb4d0743')
+  expect(out).toContain('Install with: aas install github:vercel-labs/skills/find-skills')
+})
+
+test('runInfo shows where a skill is deployed per tool', async () => {
+  const lines: string[] = []
+  const skill: ItemDetail = {
+    ...detail, slug: 's', category: 'skill', enabledFor: { claude: true, codex: false },
+    deployments: { claude: { path: '/home/u/.claude/skills/s', mode: 'symlink', sourceHash: 'h' } },
+  }
+  await runInfo(makeEngine(skill), ['s'], s => lines.push(s))
+  expect(lines.join('\n')).toContain('claude: enabled (symlink /home/u/.claude/skills/s)  |  codex: disabled')
+})
+
 test('runInfo prints slug, version, tier', async () => {
   const lines: string[] = []
   await runInfo(makeEngine(detail), ['openai-provider'], s => lines.push(s))

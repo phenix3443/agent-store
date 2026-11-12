@@ -18,7 +18,7 @@ import { McpChangedOutsideError, McpConflictError, McpNotRestorableError, McpRes
 
 export interface McpEntryStore {
   tool: ToolTarget
-  /** ~/.agents/mcps/<slug> */
+  /** ~/.agent-store/mcps/<slug> */
   itemDir: string
   read(name: string): Promise<unknown>
   add(name: string, entry: unknown): Promise<void>

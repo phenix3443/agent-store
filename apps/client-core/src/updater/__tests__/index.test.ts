@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
-import { checkUpdates, applyUpdate } from '../index'
-import type { RegistryJson, Item, InstalledItem } from '@as/types'
-import type { StoreClient } from '@as/sdk'
+import { checkUpdates } from '../index'
+import type { RegistryJson, Item, InstalledItem, ResourceKind } from '@as/types'
+import type { Catalog } from '../../catalog'
 
 const installedEntry: InstalledItem = {
   slug: 'openai-provider',
@@ -15,62 +15,37 @@ const installedEntry: InstalledItem = {
 
 const registry: RegistryJson = { installed: [installedEntry] }
 
-const storeItemV2 = { slug: 'openai-provider', version: '2.0.0' } as unknown as Item
-const storeItemV1 = { slug: 'openai-provider', version: '1.0.0' } as unknown as Item
-
-function makeClient(item: Item | null, error: string | null = null): StoreClient {
+function makeCatalog(version: string | null, asked: Array<{ ref: string; kind?: ResourceKind }> = []): Catalog {
   return {
-    getItemBySlug: async () =>
-      error ? { data: null, error } : { data: item, error: null },
-  } as unknown as StoreClient
+    resolveItem: async (ref: string, options?: { kind?: ResourceKind }) => {
+      asked.push({ ref, kind: options?.kind })
+      if (version === null) throw new Error('Not in the catalog')
+      return { item: { slug: 'openai-provider', version } as unknown as Item, resourceId: null, longSlug: null }
+    },
+  } as unknown as Catalog
 }
 
-test('checkUpdates returns UpdateAvailable when store version is newer', async () => {
-  const updates = await checkUpdates(registry, makeClient(storeItemV2))
-  expect(updates).toHaveLength(1)
-  expect(updates[0]).toEqual({
-    slug: 'openai-provider',
-    currentVersion: '1.0.0',
-    latestVersion: '2.0.0',
-  })
+test('checkUpdates returns UpdateAvailable when the catalog version differs', async () => {
+  const updates = await checkUpdates(registry, makeCatalog('2.0.0'))
+  expect(updates).toEqual([{ slug: 'openai-provider', currentVersion: '1.0.0', latestVersion: '2.0.0' }])
 })
 
-test('checkUpdates returns empty array when already up to date', async () => {
-  const updates = await checkUpdates(registry, makeClient(storeItemV1))
-  expect(updates).toHaveLength(0)
+test('checkUpdates returns nothing when already up to date', async () => {
+  expect(await checkUpdates(registry, makeCatalog('1.0.0'))).toHaveLength(0)
 })
 
-test('checkUpdates filters to specified slugs', async () => {
-  const registry2: RegistryJson = {
-    installed: [
-      installedEntry,
-      { ...installedEntry, slug: 'other-mcp', category: 'mcp' },
-    ],
-  }
-  const updates = await checkUpdates(registry2, makeClient(storeItemV2), ['openai-provider'])
-  expect(updates).toHaveLength(1)
-  expect(updates[0].slug).toBe('openai-provider')
+test('checkUpdates skips entries the catalog no longer resolves', async () => {
+  expect(await checkUpdates(registry, makeCatalog(null))).toHaveLength(0)
 })
 
-test('checkUpdates skips entries when store returns error', async () => {
-  const updates = await checkUpdates(registry, makeClient(null, 'Not found'))
-  expect(updates).toHaveLength(0)
+test('checkUpdates looks an entry up by its catalog id when it has one, else by slug, within its kind', async () => {
+  const asked: Array<{ ref: string; kind?: ResourceKind }> = []
+  const withId: RegistryJson = { installed: [installedEntry, { ...installedEntry, slug: 'b', resourceId: 'builtin:b' }] }
+  await checkUpdates(withId, makeCatalog('1.0.0', asked))
+  expect(asked).toEqual([{ ref: 'openai-provider', kind: 'provider' }, { ref: 'builtin:b', kind: 'provider' }])
 })
 
-test('applyUpdate returns latestItem and fromVersion', async () => {
-  const result = await applyUpdate('openai-provider', makeClient(storeItemV2), installedEntry)
-  expect(result.fromVersion).toBe('1.0.0')
-  expect(result.latestItem.version).toBe('2.0.0')
-})
-
-test('applyUpdate throws when store returns error', async () => {
-  await expect(
-    applyUpdate('openai-provider', makeClient(null, 'Not found'), installedEntry)
-  ).rejects.toThrow('Not found')
-})
-
-test('applyUpdate throws when store returns null without error string', async () => {
-  await expect(
-    applyUpdate('openai-provider', makeClient(null), installedEntry)
-  ).rejects.toThrow('openai-provider')
+test('checkUpdates filters by slug and skips duplicated providers', async () => {
+  const two: RegistryJson = { installed: [installedEntry, { ...installedEntry, slug: 'copy', parentSlug: 'openai-provider' }] }
+  expect(await checkUpdates(two, makeCatalog('2.0.0'), ['copy'])).toHaveLength(0)
 })

@@ -1,14 +1,14 @@
 // `as doctor`: compares what Agent Store recorded (registry.json, skill markers,
 // MCP targets.json) with what each tool actually reads, without changing
 // anything. See docs/global-skills-mcp.md §7 (PR7).
-import { lstat, readdir, readFile } from 'fs/promises'
+import { lstat, readdir, readFile, realpath } from 'fs/promises'
 import { join } from 'path'
 import { parse } from '@iarna/toml'
 import type { InstalledItem, ToolTarget } from '@as/types'
 import { readRegistry } from './registry'
-import { itemDir } from './paths'
+import { itemDir, legacyAasHome } from './paths'
 import { contentHash, isLegacyInstall, parseFrontmatter, readMarker, skillStoreDir } from './skills/store'
-import { claudeSkillLink, hasClaudeSkillLink } from './skills/claude-link'
+import { classifyTarget } from './skills/deploy'
 import { readMcpTargets } from './config/mcp-targets'
 import { readClaudeMcpEntry } from './config/claude-mcp'
 import { readCodexMcpEntry } from './config/codex-mcp'
@@ -19,6 +19,8 @@ export interface DoctorPaths {
   claudeConfigDir: string
   claudeJsonPath: string
   codexConfigDir: string
+  /** ~/.agents, whose skills/ Codex also reads; defaults to the real one. */
+  legacyHome?: string
 }
 
 export interface DoctorFinding {
@@ -47,6 +49,8 @@ async function sameNamedSkills(roots: string[], name: string, own: string): Prom
       const dir = join(root, entry)
       if (dir === own || entry.startsWith('.')) continue
       try {
+        // Our own deployment of the same skill is not a clash.
+        if ((await lstat(dir)).isSymbolicLink() && (await realpath(dir)) === (await realpath(own).catch(() => ''))) continue
         if (parseFrontmatter(await readFile(join(dir, 'SKILL.md'), 'utf-8'))?.name === name) found.push(dir)
       } catch { /* not a skill */ }
     }
@@ -54,51 +58,52 @@ async function sameNamedSkills(roots: string[], name: string, own: string): Prom
   return found
 }
 
+const TOOL = { claude: 'Claude Code', codex: 'Codex' } as const
+
 async function checkSkill(p: DoctorPaths, entry: InstalledItem, out: DoctorFinding[]): Promise<void> {
   const slug = entry.slug
   const dir = itemDir(p.aasHome, 'skill', slug)
   const add = (level: DoctorFinding['level'], code: string, message: string) => out.push({ level, code, slug, message })
 
-  const legacyClaude = join(p.claudeConfigDir, 'skills', slug)
-  const legacyCodex = join(p.codexConfigDir, 'skills', slug)
-  if (await isRealDir(legacyCodex)) {
-    add('warn', 'legacy-copy', `${legacyCodex} is a copy written by an older Agent Store; run: as migrate`)
-  }
-
   if (!(await exists(dir))) {
-    add('error', 'skill-content-missing', `${dir} is missing; neither tool can see the skill. Reinstall: as install ${slug} --force`)
+    add('error', 'skill-content-missing', `${dir} is missing; no tool can see the skill. Reinstall: aas install ${slug} --force`)
     return
   }
   const marker = await readMarker(dir)
   if (!marker || marker.slug !== slug) {
-    if (await isLegacyInstall(dir, slug)) add('warn', 'legacy-layout', `${dir} uses the old single-file layout; run: as migrate`)
+    if (await isLegacyInstall(dir, slug)) add('warn', 'legacy-layout', `${dir} uses the old single-file layout; run: aas migrate`)
     else add('error', 'skill-marker-missing', `${dir} has no Agent Store marker for ${slug}; it is treated as the user's and left alone`)
+    const legacyCodex = join(p.codexConfigDir, 'skills', slug)
+    if (await isRealDir(legacyCodex)) add('warn', 'legacy-copy', `${legacyCodex} is a copy written by an older Agent Store; run: aas migrate`)
     return
   }
   if ((await contentHash(dir)) !== marker.contentHash) {
     add('warn', 'skill-modified', `${dir} changed since install; updates need --force and will overwrite the changes`)
   }
 
-  const linked = await hasClaudeSkillLink(p.claudeConfigDir, slug, dir)
-  if (entry.enabledFor.claude === true && !linked) {
-    if (await exists(legacyClaude)) {
-      add(
-        (await isLegacyInstall(legacyClaude, slug)) ? 'warn' : 'error',
-        'claude-shadowed',
-        `${legacyClaude} is not Agent Store's symlink, so Claude reads it instead of ${dir}`,
-      )
-    } else {
-      add('error', 'claude-link-missing', `${claudeSkillLink(p.claudeConfigDir, slug)} is missing; run: as sync --for claude`)
+  for (const tool of ['claude', 'codex'] as ToolTarget[]) {
+    const record = entry.deployments?.[tool]
+    const root = join(tool === 'claude' ? p.claudeConfigDir : p.codexConfigDir, 'skills')
+    const path = record?.path ?? join(root, marker.runtimeNames.claude)
+    const state = await classifyTarget(path, dir)
+    const deployed = record?.mode === 'copy' ? state === 'real-dir' : state === 'link-to-source'
+    if (entry.enabledFor[tool] === true) {
+      if (!deployed) {
+        if (state === 'absent') add('error', `${tool}-link-missing`, `${path} is missing; run: aas sync --for ${tool}`)
+        else add('error', `${tool}-shadowed`, `${path} is not Agent Store's deployment, so ${TOOL[tool]} reads it instead of ${dir}`)
+      } else if (!record) {
+        add('warn', `${tool}-unrecorded`, `${path} links to the skill but Agent Store has no record of it; run: aas migrate`)
+      } else if (record.mode === 'copy' && record.sourceHash !== marker.contentHash) {
+        add('warn', `${tool}-copy-stale`, `${path} is a copy of an older version of the skill; run: aas sync --for ${tool}`)
+      }
+    } else if (deployed) {
+      add('warn', `${tool}-link-stale`, `skill is disabled for ${TOOL[tool]} but ${path} still deploys it; run: aas disable ${slug} --for ${tool}`)
     }
-  } else if (entry.enabledFor.claude !== true && linked) {
-    add('warn', 'claude-link-stale', `skill is disabled for Claude but ${legacyClaude} still links to it; run: as disable ${slug} --for claude`)
   }
 
-  const others = await sameNamedSkills(
-    [skillStoreDir(p.aasHome), join(p.codexConfigDir, 'skills')],
-    marker.runtimeNames.codex,
-    dir,
-  )
+  // Codex finds skills by frontmatter name in its own root and in the shared ~/.agents/skills.
+  const codexPath = entry.deployments?.codex?.path ?? join(p.codexConfigDir, 'skills', marker.runtimeNames.claude)
+  const others = await sameNamedSkills([join(p.codexConfigDir, 'skills'), join(p.legacyHome ?? legacyAasHome(), 'skills')], marker.runtimeNames.codex, codexPath)
   for (const other of others) {
     add('warn', 'codex-shadowed', `Codex also finds a skill named "${marker.runtimeNames.codex}" at ${other}`)
   }
@@ -151,7 +156,7 @@ async function checkMcp(p: DoctorPaths, entry: InstalledItem, out: DoctorFinding
       continue
     }
     if (!record || record.written === null) {
-      add('error', 'mcp-target-missing', `enabled for ${tool} but targets.json has no completed write; run: as enable ${slug} --for ${tool}`)
+      add('error', 'mcp-target-missing', `enabled for ${tool} but targets.json has no completed write; run: aas enable ${slug} --for ${tool}`)
       continue
     }
     for (const where of await mcpShadows(p, tool, record.name)) {
@@ -167,7 +172,7 @@ async function checkMcp(p: DoctorPaths, entry: InstalledItem, out: DoctorFinding
       continue
     }
     if (actual === undefined) {
-      add('error', 'mcp-missing', `${tool} has no MCP server "${record.name}"; run: as sync --for ${tool}`)
+      add('error', 'mcp-missing', `${tool} has no MCP server "${record.name}"; run: aas sync --for ${tool}`)
       continue
     }
     const diff = mcpEntryDiff(tool, record.written, actual)
@@ -183,7 +188,7 @@ async function checkOrphans(p: DoctorPaths, slugs: Set<string>, out: DoctorFindi
     if (slugs.has(entry)) continue
     const marker = await readMarker(join(skillStoreDir(p.aasHome), entry))
     if (marker?.slug === entry) {
-      out.push({ level: 'warn', code: 'skill-orphan', slug: entry, message: `${join(skillStoreDir(p.aasHome), entry)} has an Agent Store marker but is not in registry.json; Codex still sees it` })
+      out.push({ level: 'warn', code: 'skill-orphan', slug: entry, message: `${join(skillStoreDir(p.aasHome), entry)} has an Agent Store marker but is not in registry.json; no tool sees it, remove it or reinstall` })
     }
   }
 }
