@@ -46,12 +46,23 @@ export function Banner({ tone, children }: { tone: 'warn' | 'error'; children: R
   return (
     <div
       role={error ? 'alert' : 'status'}
-      className={`mx-7 mb-3.5 mt-3.5 flex items-start gap-2 rounded-lg border px-3.5 py-2.5 ${
+      className={`flex items-start gap-2 rounded-lg border px-3.5 py-2.5 ${
         error ? 'border-store-red bg-store-red-soft' : 'border-store-amber bg-store-amber-soft'
       }`}
     >
       <span className={error ? 'text-store-red' : 'text-store-amber'}>{error ? '✕' : '⚠'}</span>
       <span className="min-w-0 break-words text-[11.5px] text-store-text-2">{children}</span>
+    </div>
+  )
+}
+
+/** Error above warning, spaced like the mockup's single banner (margin 0 28px 14px). */
+export function Banners({ error, warn }: { error?: string | null; warn?: string | null }) {
+  if (!error && !warn) return null
+  return (
+    <div className="mx-7 my-3.5 flex flex-col gap-2">
+      {error && <Banner tone="error">{error}</Banner>}
+      {warn && <Banner tone="warn">{warn}</Banner>}
     </div>
   )
 }

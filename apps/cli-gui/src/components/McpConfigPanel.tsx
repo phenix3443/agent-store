@@ -3,7 +3,7 @@ import type { ItemDetail, TargetStatus, ToolTarget } from '@as/types'
 import { Check } from 'lucide-react'
 import { callRpc, errorText } from '../lib/rpc'
 import { useT } from '../i18n'
-import { Banner, TargetPicker, TARGET_LABEL } from './ConfigParts'
+import { Banners, TargetPicker, TARGET_LABEL } from './ConfigParts'
 
 interface SchemaProperty {
   description?: string
@@ -112,10 +112,9 @@ export function McpConfigPanel({ slug, onClose }: { slug: string; onClose: () =>
         </button>
       </div>
 
-      {error && <Banner tone="error">{error}</Banner>}
-      {warnText && <Banner tone="warn">{warnText}</Banner>}
+      <Banners error={error} warn={warnText} />
 
-      <div className="mt-3.5 grid max-w-[620px] grid-cols-2 items-start gap-x-5 gap-y-3.5 px-7">
+      <div className={`grid max-w-[620px] grid-cols-2 items-start gap-x-5 gap-y-3.5 px-7 ${error || warnText ? '' : 'mt-3.5'}`}>
         <div className="col-span-2">
           <p className="mb-1.5 text-[11px] font-semibold text-store-text-2">{t('cfg.applicableClients')}</p>
           <TargetPicker

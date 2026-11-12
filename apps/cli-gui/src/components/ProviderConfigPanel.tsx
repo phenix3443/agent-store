@@ -3,7 +3,7 @@ import type { ItemDetail, ToolTarget } from '@as/types'
 import { Check, HelpCircle } from 'lucide-react'
 import { callRpc, errorText } from '../lib/rpc'
 import { ProGate } from './ProGate'
-import { Banner, TargetPicker, TARGET_LABEL } from './ConfigParts'
+import { Banners, TargetPicker, TARGET_LABEL } from './ConfigParts'
 import { useT } from '../i18n'
 
 function MultiKeyEditor({ keys, onChange }: { keys: string[]; onChange: (keys: string[]) => void }) {
@@ -267,8 +267,7 @@ export function ProviderConfigPanel({ slug, onClose }: ProviderConfigPanelProps)
         </button>
       </div>
 
-      {error && <Banner tone="error">{error}</Banner>}
-      {showWarn && <Banner tone="warn">{warnText}</Banner>}
+      <Banners error={error} warn={showWarn ? warnText : null} />
 
       <div className="grid max-w-[620px] grid-cols-2 items-start gap-x-5 gap-y-3.5 px-7">
         <div className="col-span-2">
