@@ -80,7 +80,7 @@ test('a catalog skill shows its id, its tree version as it is, and links to its 
       detail={{
         ...installedDetail({ category: 'skill', version: 'ebd5b1afb600', resourceId: 'github:obra/superpowers/brainstorming' }),
         installed: false,
-        resource: { kind: 'skill', repo: { url: 'https://github.com/obra/superpowers/tree/c/skills/brainstorming' }, homepageUrl: 'https://github.com/obra/superpowers' },
+        resource: { kind: 'skill', origin: { site: 'github' }, repo: { url: 'https://github.com/obra/superpowers/tree/c/skills/brainstorming' }, homepageUrl: 'https://github.com/obra/superpowers' },
       } as unknown as SelectedDetail}
     />
   )
@@ -88,4 +88,5 @@ test('a catalog skill shows its id, its tree version as it is, and links to its 
   expect(screen.getByText('ebd5b1afb600')).toBeInTheDocument()
   expect(screen.getByText('源码仓库')).toBeInTheDocument()
   expect(screen.getByText('主页')).toBeInTheDocument()
+  expect(screen.getByText('GitHub')).toBeInTheDocument()
 })
