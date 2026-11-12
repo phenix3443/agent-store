@@ -22,6 +22,7 @@
   --amber: #f0b34a;
   --amber-soft: rgba(240, 179, 74, 0.16);
   --red: #f3675f;
+  --red-soft: rgba(243, 103, 95, 0.14);
   --provider: #58a6f0;
   --provider-soft: rgba(88, 166, 240, 0.16);
   --purple: #a874e0;
@@ -50,6 +51,7 @@
   --amber: #cf8a16;
   --amber-soft: rgba(207, 138, 22, 0.14);
   --red: #e0483f;
+  --red-soft: rgba(224, 72, 63, 0.1);
   --provider: #2f6fb8;
   --provider-soft: rgba(47, 111, 184, 0.12);
   --purple: #8654c9;

@@ -1,9 +1,10 @@
-import { readFile, rm } from 'fs/promises'
+import { cp, readFile, rename, rm } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema, UserReview, ItemVersion,
   EnableOptions, DisableOptions, UninstallOptions, InstallOptions, SkillItem,
+  InstallOutcome, TargetStatus, EnableBlocker, MCPItem,
   UsageSummaryRow, UsageSummaryOptions, RegistryJson, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
 } from '@as/types'
@@ -21,6 +22,8 @@ import { hasClaudeSkillLink, linkClaudeSkill, unlinkClaudeSkill } from './skills
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection, readProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
+import { buildMcpServerSpec, McpConfigMissingError } from './config/mcp'
+import { readMcpTargets } from './config/mcp-targets'
 import { getDailySummary, getRecentRequests } from './usage/queries'
 import { readProviderHealth, resetProviderHealth } from './usage/provider-health'
 import { exportUsageToFile } from './usage/export'
@@ -46,6 +49,22 @@ export class ProviderNotReadyError extends Error {
     this.name = 'ProviderNotReadyError'
   }
 }
+
+export class IncompatibleTargetError extends Error {
+  constructor(slug: string, readonly target: ToolTarget, compatibleWith: ToolTarget[]) {
+    super(`${slug} does not support ${target} (it supports: ${compatibleWith.join(', ') || 'none'})`)
+    this.name = 'IncompatibleTargetError'
+  }
+}
+
+export class UpdateFailedError extends Error {
+  constructor(readonly updated: UpdateResult[], readonly failures: Array<{ slug: string; error: string }>) {
+    super(`Update failed for ${failures.map(f => `${f.slug} (${f.error})`).join('; ')}; those items keep their previous version`)
+    this.name = 'UpdateFailedError'
+  }
+}
+
+const TARGETS: ToolTarget[] = ['claude', 'codex']
 
 export interface EngineOptions {
   /** Starts the local relay daemon; without it, enabling a provider needs a relay that is already running. */
@@ -123,6 +142,78 @@ export class EngineImpl implements Engine {
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
 
+  async installAndEnable(slug: string, options: InstallOptions = {}): Promise<InstallOutcome> {
+    const result = await this.install(slug, options)
+    const entry = findEntry(await readRegistry(this.paths.aasHome), slug)!
+    const outcome: InstallOutcome = { ...result, category: entry.category, enabled: [], notEnabled: [] }
+    if (entry.category === 'skill') {
+      // Skills are enabled by install itself (§5.4).
+      outcome.enabled = TARGETS.filter(t => entry.enabledFor[t])
+      return outcome
+    }
+    const targets = options.target ? [options.target] : entry.compatibleWith
+    for (const target of targets) {
+      const blocker = await this._blocker(entry, target)
+      if (blocker) {
+        outcome.notEnabled.push({ target, ...blocker })
+        continue
+      }
+      try {
+        await this.enable(slug, target)
+      } catch (e) {
+        // Keep the error class and its fields: callers map them to what the user should do.
+        if (e instanceof Error) {
+          e.message = `Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${e.message}`
+          throw e
+        }
+        throw new Error(`Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${String(e)}`)
+      }
+      outcome.enabled.push(target)
+    }
+    return outcome
+  }
+
+  async getTargetStatus(slug: string): Promise<TargetStatus[]> {
+    const entry = findEntry(await readRegistry(this.paths.aasHome), slug)
+    if (!entry) throw new Error(`Item not installed: ${slug}`)
+    const status: TargetStatus[] = []
+    for (const target of TARGETS) {
+      const blocker = await this._blocker(entry, target)
+      status.push({
+        target,
+        compatible: entry.compatibleWith.includes(target),
+        enabled: entry.enabledFor[target] === true,
+        ...(blocker ? { blocker } : {}),
+      })
+    }
+    return status
+  }
+
+  /** What would make enabling `target` fail before anything is written; the relay is started on enable, so it is not a blocker. */
+  private async _blocker(entry: InstalledItem, target: ToolTarget): Promise<{ reason: EnableBlocker; message: string } | undefined> {
+    if (!entry.compatibleWith.includes(target)) {
+      return { reason: 'incompatible', message: new IncompatibleTargetError(entry.slug, target, entry.compatibleWith).message }
+    }
+    const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
+    if (entry.category === 'mcp') {
+      const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
+      let config: Record<string, unknown> = {}
+      try { config = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
+      try {
+        buildMcpServerSpec(manifest, dir, config)
+      } catch (e) {
+        if (e instanceof McpConfigMissingError) return { reason: 'needs-config', message: e.message }
+        throw e
+      }
+    } else if (entry.category === 'provider') {
+      const connection = await readProviderConnection(dir)
+      if (!connection.apiKey && !(connection.apiKeys?.length)) {
+        return { reason: 'no-key', message: `${entry.slug} has no API key configured; run: aas config ${entry.slug}` }
+      }
+    }
+    return undefined
+  }
+
   /**
    * §5.4: content → registry {codex:true, claude:false} → Claude symlink →
    * claude:true, so a failed symlink leaves the registry truthful.
@@ -190,16 +281,19 @@ export class EngineImpl implements Engine {
       await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
       return
     }
-    for (const target of entry.compatibleWith) {
-      if (entry.enabledFor[target]) {
-        if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(await readRegistry(this.paths.aasHome), slug, target)) {
-          await this._syncToTarget(slug, entry.category, target, 'remove', options)
-        }
-        // Record each removed target, so a later failure leaves the registry truthful.
-        await this._setEnabled(slug, target, false)
+    const dir = itemDir(this.paths.aasHome, entry.category, slug)
+    // What was actually enabled, not what the catalog says is supported: compatibleWith can
+    // change, and an interrupted enable leaves an MCP record without the registry flag.
+    const recorded = entry.category === 'mcp' ? Object.keys(await readMcpTargets(dir)) as ToolTarget[] : []
+    for (const target of TARGETS) {
+      if (!entry.enabledFor[target] && !recorded.includes(target)) continue
+      if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(await readRegistry(this.paths.aasHome), slug, target)) {
+        await this._syncToTarget(slug, entry.category, target, 'remove', options)
       }
+      // Record each removed target, so a later failure leaves the registry truthful.
+      await this._setEnabled(slug, target, false)
     }
-    await rm(itemDir(this.paths.aasHome, entry.category, slug), { recursive: true, force: true })
+    await rm(dir, { recursive: true, force: true })
     await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
   }
 
@@ -215,6 +309,7 @@ export class EngineImpl implements Engine {
     const registry = await readRegistry(this.paths.aasHome)
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
+    if (!entry.compatibleWith.includes(target)) throw new IncompatibleTargetError(slug, target, entry.compatibleWith)
     if (entry.category === 'provider') await this._assertProviderReady(slug)
     await this._syncToTarget(slug, entry.category, target, 'add', options)
     await this._setEnabled(slug, target, true)
@@ -277,7 +372,7 @@ export class EngineImpl implements Engine {
       if (previous === undefined) await rm(configPath, { force: true })
       else await atomicWriteSecretFile(configPath, previous)
     }
-    const targets = entry.compatibleWith.filter(t => entry.enabledFor[t])
+    const targets = TARGETS.filter(t => entry.enabledFor[t])
     await atomicWriteSecretFile(configPath, JSON.stringify(values, null, 2))
     const synced: ToolTarget[] = []
     try {
@@ -338,6 +433,7 @@ export class EngineImpl implements Engine {
       ? registry.installed.filter(e => e.slug === slug)
       : registry.installed
     const results: UpdateResult[] = []
+    const failures: Array<{ slug: string; error: string }> = []
     for (const entry of entries) {
       try {
         const { latestItem, fromVersion } = await applyUpdate(entry.slug, this.client, entry)
@@ -345,27 +441,54 @@ export class EngineImpl implements Engine {
         if (latestItem.category === 'skill') {
           // The whole directory is replaced; local edits make this fail (needs install --force).
           await installSkillContent(this._skillStoreContext, latestItem)
-          await this._setVersion(entry.slug, latestItem.version)
-          results.push({ slug: entry.slug, fromVersion, toVersion: latestItem.version })
-          continue
+        } else {
+          await this._updateFiles(entry, latestItem)
         }
-        const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
-        await runHook(latestItem.installHook.steps, dir)
-        if (latestItem.category === 'provider') await providerPostInstall(dir)
-        else if (latestItem.category === 'mcp') await mcpPostInstall(dir)
-        await writeManifest(dir, latestItem)
         await this._setVersion(entry.slug, latestItem.version)
-        for (const target of entry.compatibleWith) {
-          if (entry.enabledFor[target]) {
-            await this._syncToTarget(entry.slug, entry.category, target, 'add')
-          }
-        }
         results.push({ slug: entry.slug, fromVersion, toVersion: latestItem.version })
-      } catch {
-        // Skip failed entries; allow the rest to proceed
+      } catch (e) {
+        failures.push({ slug: entry.slug, error: e instanceof Error ? e.message : String(e) })
       }
     }
+    if (failures.length) throw new UpdateFailedError(results, failures)
     return results
+  }
+
+  /** New files, then every enabled tool; any failure puts the old files and tool entries back. */
+  private async _updateFiles(entry: InstalledItem, latestItem: Item): Promise<void> {
+    const dir = itemDir(this.paths.aasHome, entry.category, entry.slug)
+    const backup = `${dir}.update-backup`
+    await rm(backup, { recursive: true, force: true })
+    await cp(dir, backup, { recursive: true })
+    const targets = TARGETS.filter(t => entry.enabledFor[t])
+    const synced: ToolTarget[] = []
+    try {
+      await runHook(latestItem.installHook.steps, dir)
+      if (latestItem.category === 'provider') await providerPostInstall(dir)
+      else if (latestItem.category === 'mcp') await mcpPostInstall(dir)
+      await writeManifest(dir, latestItem)
+      if (entry.category === 'mcp') {
+        for (const target of targets) await this._syncToTarget(entry.slug, entry.category, target, 'add', { dryRun: true })
+      }
+      for (const target of targets) {
+        await this._syncToTarget(entry.slug, entry.category, target, 'add')
+        synced.push(target)
+      }
+    } catch (e) {
+      await rm(dir, { recursive: true, force: true })
+      await rename(backup, dir)
+      const stuck: string[] = []
+      for (const target of synced) {
+        try {
+          await this._syncToTarget(entry.slug, entry.category, target, 'add')
+        } catch (restoreError) {
+          stuck.push(`${target} (${(restoreError as Error).message})`)
+        }
+      }
+      if (stuck.length) throw new Error(`${(e as Error).message}; these tools still have the new version: ${stuck.join('; ')}. Run \`as sync\` to retry`)
+      throw e
+    }
+    await rm(backup, { recursive: true, force: true })
   }
 
   private async _setVersion(slug: string, version: string): Promise<void> {

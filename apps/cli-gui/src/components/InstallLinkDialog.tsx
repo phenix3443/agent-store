@@ -1,7 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useRef, useState } from 'react'
-import type { Item, ItemDetail } from '@as/types'
+import type { InstallOutcome, Item, ItemDetail } from '@as/types'
 import { callRpc } from '../lib/rpc'
+import { needsSetup } from '../lib/installPolicy'
 import { onDeepLink, getLaunchDeepLinks } from '../lib/deepLink'
 import { routeDeepLink } from '../lib/deepLinkRoute'
 import { focusMainWindow } from '../lib/focusWindow'
@@ -138,11 +139,11 @@ export function InstallLinkDialog() {
     setPhase({ kind: 'confirm', item, installing: true })
     appendLine(`$ aas install ${item.slug}`)
     try {
-      const result = await callRpc<{ version: string }>('install', [item.slug])
+      const result = await callRpc<InstallOutcome>('installAndEnable', [item.slug])
       appendLine(`✓ ${t('common.installed')} ${item.slug} ${result.version}`, 'green')
       bumpInstalledVersion()
       if (seq.current !== mine) return
-      if (item.category === 'provider') {
+      if (item.category === 'provider' || needsSetup(result)) {
         setEditingConfigSlug(item.slug)
         setSelectedSlug(item.slug)
       }

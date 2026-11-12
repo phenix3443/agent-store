@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Copy, Heart } from 'lucide-react'
-import type { InstalledItem, PackageReview, UserReview, ItemVersion } from '@as/types'
-import { callRpc } from '../lib/rpc'
+import type { InstalledItem, InstallOutcome, PackageReview, UserReview, ItemVersion } from '@as/types'
+import { callRpc, errorText } from '../lib/rpc'
+import { needsSetup } from '../lib/installPolicy'
+import { describeError, type FriendlyError } from '../lib/errors'
+import { ErrorDetail } from './ConfigParts'
+import { McpConfigPanel } from './McpConfigPanel'
 import { useAppState } from '../state/AppState'
 import { useT } from '../i18n'
 import { useTerminalLog } from '../state/TerminalLog'
@@ -36,6 +40,7 @@ export function DetailPanel() {
   const [childCount, setChildCount] = useState(0)
   const [userReviews, setUserReviews] = useState<UserReview[]>([])
   const [versions, setVersions] = useState<ItemVersion[]>([])
+  const [installError, setInstallError] = useState<FriendlyError | null>(null)
 
   useEffect(() => {
     if (!detail) return
@@ -52,13 +57,22 @@ export function DetailPanel() {
       setChildCount(0)
       return
     }
-    callRpc<InstalledItem[]>('list').then((items) => {
-      setChildCount(items.filter((i) => i.parentSlug === detail.slug).length)
-    })
+    callRpc<InstalledItem[]>('list').then(
+      (items) => setChildCount(items.filter((i) => i.parentSlug === detail.slug).length),
+      () => setChildCount(0)
+    )
   }, [detail])
 
+  useEffect(() => setInstallError(null), [detail?.slug])
+
   if (editingConfigSlug) {
-    return <ProviderConfigPanel slug={editingConfigSlug} onClose={() => setEditingConfigSlug(null)} />
+    // Opening the editor also selects the slug; until its detail loads, don't guess the kind.
+    if (detail?.slug !== editingConfigSlug) return <div className="flex-1" />
+    return detail.category === 'mcp' ? (
+      <McpConfigPanel slug={editingConfigSlug} onClose={() => setEditingConfigSlug(null)} />
+    ) : (
+      <ProviderConfigPanel slug={editingConfigSlug} onClose={() => setEditingConfigSlug(null)} />
+    )
   }
 
   if (!detail) {
@@ -72,12 +86,16 @@ export function DetailPanel() {
   async function install() {
     if (!detail || detail.installed) return
     appendLine(`$ aas install ${detail.slug}`)
+    setInstallError(null)
     try {
-      const result = await callRpc<{ version: string }>('install', [detail.slug])
+      const result = await callRpc<InstallOutcome>('installAndEnable', [detail.slug])
       appendLine(`✓ ${t('detail.installedPrefix')} ${detail.slug} ${result.version}`, 'green')
       bumpInstalledVersion()
+      if (needsSetup(result)) setEditingConfigSlug(detail.slug)
     } catch (err) {
-      appendLine(`✗ ${err instanceof Error ? err.message : String(err)}`, 'red')
+      appendLine(`✗ ${errorText(err)}`, 'red')
+      setInstallError(describeError(err, t))
+      bumpInstalledVersion()
     }
   }
 
@@ -117,9 +135,20 @@ export function DetailPanel() {
             <p className="mt-3 max-w-[620px] text-sm leading-relaxed text-store-text-2">{detail.description}</p>
             <div className="mt-4 flex items-center gap-2">
               {detail.installed ? (
-                <span className="flex items-center gap-1.5 rounded-lg border border-store-green bg-store-green-soft px-3 py-1.5 text-xs font-semibold text-store-green">
-                  ✓ {t('common.installed')}
-                </span>
+                <>
+                  <span className="flex items-center gap-1.5 rounded-lg border border-store-green bg-store-green-soft px-3 py-1.5 text-xs font-semibold text-store-green">
+                    ✓ {t('common.installed')}
+                  </span>
+                  {detail.category === 'mcp' && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingConfigSlug(detail.slug)}
+                      className="rounded-lg border border-store-border-strong px-3 py-1.5 text-xs font-semibold text-store-text-2 hover:bg-store-panel hover:text-store-text"
+                    >
+                      {t('policy.configure')}
+                    </button>
+                  )}
+                </>
               ) : (
                 <button
                   type="button"
@@ -140,6 +169,16 @@ export function DetailPanel() {
                 <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
               </button>
             </div>
+            {installError && (
+              <p role="alert" className="mt-2 max-w-[620px] text-xs text-store-red">
+                {t('policy.installFailed')}：{installError.message}
+              </p>
+            )}
+            {installError && (
+              <div className="max-w-[620px]">
+                <ErrorDetail detail={installError.detail} />
+              </div>
+            )}
             {childCount > 0 && (
               <p className="mt-2 text-xs text-store-text-2">
                 {childCount} {t('detail.configCountSuffix')}

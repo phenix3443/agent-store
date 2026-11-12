@@ -87,15 +87,14 @@ test('theme toggle switches the displayed label', async () => {
   expect(screen.getByText('当前：亮色')).toBeInTheDocument()
 })
 
-test('language dropdown lists all five locales, none disabled', async () => {
+test('language dropdown lists only Chinese and English', async () => {
   renderModal()
   fireEvent.click(await screen.findByText('通用'))
   fireEvent.click(screen.getByText('中文')) // the dropdown trigger shows the active locale
-  expect(screen.getByText('English')).toBeInTheDocument()
-  expect(screen.getByText('日本語')).toBeInTheDocument()
-  expect(screen.getByText('한국어')).toBeInTheDocument()
-  expect(screen.getByText('Español')).toBeInTheDocument()
-  expect(screen.getByText('日本語').closest('button')).not.toBeDisabled()
+  expect(screen.getByText('English').closest('button')).not.toBeDisabled()
+  expect(screen.queryByText('日本語')).toBeNull()
+  expect(screen.queryByText('한국어')).toBeNull()
+  expect(screen.queryByText('Español')).toBeNull()
 })
 
 test('switching to the about tab shows app name, version, and links', async () => {

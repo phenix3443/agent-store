@@ -38,3 +38,12 @@ test('callRpc defaults args to an empty array', async () => {
   await callRpc('list')
   expect(capturedArgs).toEqual(['__rpc', 'list', '[]'])
 })
+
+test('callRpc rejects with the engine error class as code', async () => {
+  mockSidecar(JSON.stringify({ ok: false, error: 'changed outside', code: 'McpChangedOutsideError' }))
+  const { callRpc, RpcError } = await import('../rpc')
+  const err = (await callRpc('uninstall', ['x']).catch((e: unknown) => e)) as InstanceType<typeof RpcError>
+  expect(err).toBeInstanceOf(RpcError)
+  expect(err.code).toBe('McpChangedOutsideError')
+  expect(err.message).toBe('changed outside')
+})

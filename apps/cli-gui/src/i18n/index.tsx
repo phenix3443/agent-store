@@ -8,17 +8,18 @@ export { LOCALES }
 export const LOCALE_NAMES: Record<Locale, string> = {
   zh: '中文',
   en: 'English',
-  ja: '日本語',
-  ko: '한국어',
-  es: 'Español',
 }
 
 const STORAGE_KEY = 'as-locale'
+
+// Languages the client used to offer (#95); a saved choice of one of them now reads as English.
+const DROPPED_LOCALES = ['ja', 'ko', 'es']
 
 function readStored(): Locale | null {
   try {
     const v = localStorage.getItem(STORAGE_KEY)
     if (v && (LOCALES as readonly string[]).includes(v)) return v as Locale
+    if (v && DROPPED_LOCALES.includes(v)) return 'en'
   } catch {
     /* localStorage unavailable */
   }
