@@ -1,4 +1,4 @@
-import { readFile, rm, writeFile } from 'fs/promises'
+import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
@@ -10,7 +10,7 @@ import type {
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir } from './paths'
 import { readCatalogCache, writeCatalogCache } from './catalog-cache'
-import { readRegistry, writeRegistry, findEntry, upsertEntry, removeEntry } from './registry/index'
+import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry } from './registry/index'
 import { runHook, writeManifest } from './installer/hook-runner'
 import { postInstall as providerPostInstall } from './installer/provider'
 import { postInstall as mcpPostInstall } from './installer/mcp'
@@ -20,6 +20,7 @@ import { installSkillContent, readMarker, removeSkillContent } from './skills/st
 import { hasClaudeSkillLink, linkClaudeSkill, unlinkClaudeSkill } from './skills/claude-link'
 import { checkUpdates as _checkUpdates, applyUpdate } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
+import { atomicWriteSecretFile } from './config/safe-file'
 import { getDailySummary, getRecentRequests } from './usage/queries'
 import { readProviderHealth, resetProviderHealth } from './usage/provider-health'
 import { exportUsageToFile } from './usage/export'
@@ -88,19 +89,21 @@ export class EngineImpl implements Engine {
     if (item.category === 'provider') await providerPostInstall(dir)
     else if (item.category === 'mcp') await mcpPostInstall(dir)
     await writeManifest(dir, item)
-    const registry = await readRegistry(this.paths.aasHome)
-    const existing = findEntry(registry, slug)
-    const now = new Date().toISOString()
-    const entry: InstalledItem = {
-      slug,
-      category: item.category,
-      version: item.version,
-      installedAt: existing?.installedAt ?? now,
-      updatedAt: now,
-      compatibleWith: item.compatibleWith,
-      enabledFor: existing?.enabledFor ?? {},
-    }
-    await writeRegistry(this.paths.aasHome, upsertEntry(registry, entry))
+    let entry!: InstalledItem
+    await updateRegistry(this.paths.aasHome, registry => {
+      const existing = findEntry(registry, slug)
+      const now = new Date().toISOString()
+      entry = {
+        slug,
+        category: item.category,
+        version: item.version,
+        installedAt: existing?.installedAt ?? now,
+        updatedAt: now,
+        compatibleWith: item.compatibleWith,
+        enabledFor: existing?.enabledFor ?? {},
+      }
+      return upsertEntry(registry, entry)
+    })
     // Bump the catalog's real install count (best-effort, non-blocking).
     void this.client.recordInstall(slug)
     return { slug, version: item.version, installedAt: entry.installedAt }
@@ -124,20 +127,22 @@ export class EngineImpl implements Engine {
     await installSkillContent(this._skillStoreContext, item, { force: options.force })
 
     const content = this._skillDir(slug)
-    let registry = await readRegistry(this.paths.aasHome)
-    const existing = findEntry(registry, slug)
-    const now = new Date().toISOString()
-    let entry: InstalledItem = {
-      slug,
-      category: 'skill',
-      version: item.version,
-      installedAt: existing?.installedAt ?? now,
-      updatedAt: now,
-      compatibleWith: item.compatibleWith,
-      enabledFor: { codex: true, claude: await hasClaudeSkillLink(this.paths.claudeConfigDir, slug, content) },
-    }
-    registry = upsertEntry(registry, entry)
-    await writeRegistry(this.paths.aasHome, registry)
+    const claudeLinked = await hasClaudeSkillLink(this.paths.claudeConfigDir, slug, content)
+    let entry!: InstalledItem
+    await updateRegistry(this.paths.aasHome, registry => {
+      const existing = findEntry(registry, slug)
+      const now = new Date().toISOString()
+      entry = {
+        slug,
+        category: 'skill',
+        version: item.version,
+        installedAt: existing?.installedAt ?? now,
+        updatedAt: now,
+        compatibleWith: item.compatibleWith,
+        enabledFor: { codex: true, claude: claudeLinked },
+      }
+      return upsertEntry(registry, entry)
+    })
     void this.client.recordInstall(slug)
 
     if (options.target !== 'codex' && item.compatibleWith.includes('claude') && !entry.enabledFor.claude) {
@@ -146,8 +151,7 @@ export class EngineImpl implements Engine {
       } catch (e) {
         throw new Error(`installed for Codex, but the Claude symlink step failed: ${e instanceof Error ? e.message : String(e)}`)
       }
-      entry = { ...entry, enabledFor: { ...entry.enabledFor, claude: true } }
-      await writeRegistry(this.paths.aasHome, upsertEntry(registry, entry))
+      await this._setEnabled(slug, 'claude', true)
     }
     return { slug, version: item.version, installedAt: entry.installedAt }
   }
@@ -161,34 +165,36 @@ export class EngineImpl implements Engine {
   }
 
   async uninstall(slug: string, options: UninstallOptions = {}): Promise<void> {
-    let registry = await readRegistry(this.paths.aasHome)
-    let entry = findEntry(registry, slug)
+    const registry = await readRegistry(this.paths.aasHome)
+    const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     if (entry.category === 'skill') {
       // Our Claude symlink, then the content (only with our marker), then the entry.
       await unlinkClaudeSkill(this.paths.claudeConfigDir, slug, this._skillDir(slug))
-      if (entry.enabledFor['claude']) {
-        entry = { ...entry, enabledFor: { ...entry.enabledFor, claude: false }, updatedAt: new Date().toISOString() }
-        registry = upsertEntry(registry, entry)
-        await writeRegistry(this.paths.aasHome, registry)
-      }
+      if (entry.enabledFor['claude']) await this._setEnabled(slug, 'claude', false)
       await removeSkillContent(this.paths.aasHome, slug, options.force)
-      await writeRegistry(this.paths.aasHome, removeEntry(registry, slug))
+      await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
       return
     }
     for (const target of entry.compatibleWith) {
       if (entry.enabledFor[target]) {
-        if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
+        if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(await readRegistry(this.paths.aasHome), slug, target)) {
           await this._syncToTarget(slug, entry.category, target, 'remove', options)
         }
         // Record each removed target, so a later failure leaves the registry truthful.
-        entry = { ...entry, enabledFor: { ...entry.enabledFor, [target]: false }, updatedAt: new Date().toISOString() }
-        registry = upsertEntry(registry, entry)
-        await writeRegistry(this.paths.aasHome, registry)
+        await this._setEnabled(slug, target, false)
       }
     }
     await rm(itemDir(this.paths.aasHome, entry.category, slug), { recursive: true, force: true })
-    await writeRegistry(this.paths.aasHome, removeEntry(registry, slug))
+    await updateRegistry(this.paths.aasHome, r => removeEntry(r, slug))
+  }
+
+  private async _setEnabled(slug: string, target: ToolTarget, enabled: boolean): Promise<void> {
+    await patchEntry(this.paths.aasHome, slug, e => ({
+      ...e,
+      enabledFor: { ...e.enabledFor, [target]: enabled },
+      updatedAt: new Date().toISOString(),
+    }))
   }
 
   async enable(slug: string, target: ToolTarget, options: EnableOptions = {}): Promise<void> {
@@ -196,14 +202,7 @@ export class EngineImpl implements Engine {
     const entry = findEntry(registry, slug)
     if (!entry) throw new Error(`Item not installed: ${slug}`)
     await this._syncToTarget(slug, entry.category, target, 'add', options)
-    await writeRegistry(
-      this.paths.aasHome,
-      upsertEntry(registry, {
-        ...entry,
-        enabledFor: { ...entry.enabledFor, [target]: true },
-        updatedAt: new Date().toISOString(),
-      })
-    )
+    await this._setEnabled(slug, target, true)
   }
 
   async disable(slug: string, target: ToolTarget, options: DisableOptions = {}): Promise<void> {
@@ -213,14 +212,7 @@ export class EngineImpl implements Engine {
     if (entry.category !== 'provider' || !this._hasOtherEnabledProvider(registry, slug, target)) {
       await this._syncToTarget(slug, entry.category, target, 'remove', options)
     }
-    await writeRegistry(
-      this.paths.aasHome,
-      upsertEntry(registry, {
-        ...entry,
-        enabledFor: { ...entry.enabledFor, [target]: false },
-        updatedAt: new Date().toISOString(),
-      })
-    )
+    await this._setEnabled(slug, target, false)
   }
 
   async getConfigSchema(slug: string): Promise<{ schema: JsonSchema; current: Record<string, unknown> }> {
@@ -246,10 +238,10 @@ export class EngineImpl implements Engine {
     try { previous = await readFile(configPath, 'utf-8') } catch { /* not configured yet */ }
     const restoreConfig = async () => {
       if (previous === undefined) await rm(configPath, { force: true })
-      else await writeFile(configPath, previous)
+      else await atomicWriteSecretFile(configPath, previous)
     }
     const targets = entry.compatibleWith.filter(t => entry.enabledFor[t])
-    await writeFile(configPath, JSON.stringify(values, null, 2))
+    await atomicWriteSecretFile(configPath, JSON.stringify(values, null, 2))
     const synced: ToolTarget[] = []
     try {
       // Check every MCP target before writing any, so one refusing leaves all of them as they were.
@@ -304,7 +296,7 @@ export class EngineImpl implements Engine {
   }
 
   async update(slug?: string): Promise<UpdateResult[]> {
-    let registry = await readRegistry(this.paths.aasHome)
+    const registry = await readRegistry(this.paths.aasHome)
     const entries = slug
       ? registry.installed.filter(e => e.slug === slug)
       : registry.installed
@@ -316,9 +308,7 @@ export class EngineImpl implements Engine {
         if (latestItem.category === 'skill') {
           // The whole directory is replaced; local edits make this fail (needs install --force).
           await installSkillContent(this._skillStoreContext, latestItem)
-          const updated = upsertEntry(registry, { ...entry, version: latestItem.version, updatedAt: new Date().toISOString() })
-          await writeRegistry(this.paths.aasHome, updated)
-          registry = updated
+          await this._setVersion(entry.slug, latestItem.version)
           results.push({ slug: entry.slug, fromVersion, toVersion: latestItem.version })
           continue
         }
@@ -327,10 +317,7 @@ export class EngineImpl implements Engine {
         if (latestItem.category === 'provider') await providerPostInstall(dir)
         else if (latestItem.category === 'mcp') await mcpPostInstall(dir)
         await writeManifest(dir, latestItem)
-        const now = new Date().toISOString()
-        const updatedRegistry = upsertEntry(registry, { ...entry, version: latestItem.version, updatedAt: now })
-        await writeRegistry(this.paths.aasHome, updatedRegistry)
-        registry = updatedRegistry
+        await this._setVersion(entry.slug, latestItem.version)
         for (const target of entry.compatibleWith) {
           if (entry.enabledFor[target]) {
             await this._syncToTarget(entry.slug, entry.category, target, 'add')
@@ -342,6 +329,10 @@ export class EngineImpl implements Engine {
       }
     }
     return results
+  }
+
+  private async _setVersion(slug: string, version: string): Promise<void> {
+    await patchEntry(this.paths.aasHome, slug, e => ({ ...e, version, updatedAt: new Date().toISOString() }))
   }
 
   async list(options?: ListOptions): Promise<InstalledItem[]> {
@@ -388,36 +379,38 @@ export class EngineImpl implements Engine {
   }
 
   async duplicateProvider(slug: string): Promise<{ newSlug: string }> {
-    const registry = await readRegistry(this.paths.aasHome)
-    const entry = findEntry(registry, slug)
-    if (!entry) throw new Error(`Item not installed: ${slug}`)
-    if (entry.category !== 'provider') throw new Error(`Only providers can be duplicated: ${slug}`)
+    let newSlug = ''
+    // Picking the free slug and copying run under the lock so two duplicates can't pick the same one.
+    await updateRegistry(this.paths.aasHome, async registry => {
+      const entry = findEntry(registry, slug)
+      if (!entry) throw new Error(`Item not installed: ${slug}`)
+      if (entry.category !== 'provider') throw new Error(`Only providers can be duplicated: ${slug}`)
 
-    const rootSlug = entry.parentSlug ?? slug
+      const rootSlug = entry.parentSlug ?? slug
 
-    let newSlug = `${slug}-copy`
-    let suffix = 2
-    while (findEntry(registry, newSlug)) {
-      newSlug = `${slug}-copy-${suffix}`
-      suffix += 1
-    }
+      newSlug = `${slug}-copy`
+      let suffix = 2
+      while (findEntry(registry, newSlug)) {
+        newSlug = `${slug}-copy-${suffix}`
+        suffix += 1
+      }
 
-    const sourceDir = itemDir(this.paths.aasHome, 'provider', slug)
-    const targetDir = itemDir(this.paths.aasHome, 'provider', newSlug)
-    await duplicateProviderConnection(sourceDir, targetDir, newSlug)
+      const sourceDir = itemDir(this.paths.aasHome, 'provider', slug)
+      const targetDir = itemDir(this.paths.aasHome, 'provider', newSlug)
+      await duplicateProviderConnection(sourceDir, targetDir, newSlug)
 
-    const now = new Date().toISOString()
-    const newEntry: InstalledItem = {
-      slug: newSlug,
-      category: 'provider',
-      version: entry.version,
-      installedAt: now,
-      updatedAt: now,
-      compatibleWith: entry.compatibleWith,
-      enabledFor: {},
-      parentSlug: rootSlug,
-    }
-    await writeRegistry(this.paths.aasHome, upsertEntry(registry, newEntry))
+      const now = new Date().toISOString()
+      return upsertEntry(registry, {
+        slug: newSlug,
+        category: 'provider',
+        version: entry.version,
+        installedAt: now,
+        updatedAt: now,
+        compatibleWith: entry.compatibleWith,
+        enabledFor: {},
+        parentSlug: rootSlug,
+      })
+    })
     return { newSlug }
   }
 

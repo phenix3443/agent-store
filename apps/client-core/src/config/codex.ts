@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rm } from 'fs/promises'
+import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
 import { parse, stringify } from '@iarna/toml'
 import type { JsonMap } from '@iarna/toml'
@@ -6,7 +6,7 @@ import { load } from 'js-yaml'
 import type { McpServerConfig } from './mcp'
 import { resolveCodexCli, syncCodexMcp, type CodexMcpCli } from './codex-mcp'
 import { readProviderConnection } from './provider'
-import { atomicWriteFile, ConfigParseError } from './safe-file'
+import { atomicWriteFile, backupFile, ConfigParseError, readJsonObject, replaceSecretJsonFile } from './safe-file'
 import { readRelayState, writeRelayState, clearRelayState } from '../relay/relay-state'
 import { RELAY_PORT } from '../relay/server'
 
@@ -73,20 +73,18 @@ async function writeConfig(codexConfigDir: string, config: Record<string, unknow
 }
 
 async function readAuth(codexConfigDir: string): Promise<Record<string, unknown>> {
-  try {
-    return JSON.parse(await readFile(join(codexConfigDir, 'auth.json'), 'utf-8')) as Record<string, unknown>
-  } catch {
-    return {}
-  }
+  return (await readJsonObject(join(codexConfigDir, 'auth.json'))) ?? {}
 }
 
-async function writeAuth(codexConfigDir: string, auth: Record<string, unknown>): Promise<void> {
-  await mkdir(codexConfigDir, { recursive: true })
+/** Backs up the previous auth.json when `aasHome` is given. */
+async function writeAuth(codexConfigDir: string, auth: Record<string, unknown>, aasHome?: string): Promise<void> {
+  const path = join(codexConfigDir, 'auth.json')
   if (Object.keys(auth).length === 0) {
-    await rm(join(codexConfigDir, 'auth.json'), { force: true })
+    if (aasHome) await backupFile(aasHome, path)
+    await rm(path, { force: true })
     return
   }
-  await writeFile(join(codexConfigDir, 'auth.json'), JSON.stringify(auth, null, 2))
+  await replaceSecretJsonFile(aasHome, path, auth)
 }
 
 export async function upsertCodexMcpServer(
@@ -121,7 +119,8 @@ interface CodexProviderConfigInput {
 
 export async function upsertCodexProviderConnection(
   codexConfigDir: string,
-  input: CodexProviderConfigInput
+  input: CodexProviderConfigInput,
+  aasHome?: string
 ): Promise<void> {
   const config = await readConfig(codexConfigDir)
   const auth = await readAuth(codexConfigDir)
@@ -143,12 +142,13 @@ export async function upsertCodexProviderConnection(
 
   auth['OPENAI_API_KEY'] = input.apiKey
   await writeConfig(codexConfigDir, config)
-  await writeAuth(codexConfigDir, auth)
+  await writeAuth(codexConfigDir, auth, aasHome)
 }
 
 export async function removeCodexProviderConnection(
   codexConfigDir: string,
-  providerKey: string
+  providerKey: string,
+  aasHome?: string
 ): Promise<void> {
   const config = await readConfig(codexConfigDir)
   const auth = await readAuth(codexConfigDir)
@@ -166,7 +166,7 @@ export async function removeCodexProviderConnection(
   else delete config['model_providers']
 
   await writeConfig(codexConfigDir, config)
-  await writeAuth(codexConfigDir, auth)
+  await writeAuth(codexConfigDir, auth, aasHome)
 }
 
 export interface CodexSyncOptions {
@@ -205,10 +205,10 @@ export async function syncItemToCodex(
           name: slug,
           baseUrl: connection.baseUrl,
           apiKey: connection.apiKey,
-        })
+        }, aasHome)
       }
     } else {
-      await removeCodexProviderConnection(codexConfigDir, slug)
+      await removeCodexProviderConnection(codexConfigDir, slug, aasHome)
     }
   }
 }
@@ -241,7 +241,7 @@ export async function enableRelayForCodex(aasHome: string, codexConfigDir: strin
   auth['OPENAI_API_KEY'] = RELAY_PROVIDER_KEY
 
   await writeConfig(codexConfigDir, config)
-  await writeAuth(codexConfigDir, auth)
+  await writeAuth(codexConfigDir, auth, aasHome)
 }
 
 export async function disableRelayForCodex(
@@ -265,7 +265,7 @@ export async function disableRelayForCodex(
 
   if (!options?.preserveOfficialAuthOnSwitch) {
     const restoredAuth = snapshot?.originalAuth ?? {}
-    await writeAuth(codexConfigDir, restoredAuth)
+    await writeAuth(codexConfigDir, restoredAuth, aasHome)
   }
 
   await clearRelayState(aasHome, 'codex')

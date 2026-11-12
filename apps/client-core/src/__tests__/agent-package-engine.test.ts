@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, rm, mkdir, writeFile, readFile } from 'fs/promises'
+import { mkdtemp, rm, mkdir, writeFile, readFile, stat } from 'fs/promises'
 import { join } from 'path'
 import { parse } from '@iarna/toml'
 import { AgentPackageEngine } from '../agent-package-engine'
@@ -411,4 +411,28 @@ test('enablePackage validates all components before mutating host config', async
   await expect(engine.enablePackage('local.broken-composite', 'codex')).rejects.toThrow('Missing MCP url')
   await expect(readFile(join(codexDir, 'config.toml'), 'utf-8')).rejects.toThrow()
   await expect(readFile(join(codexDir, 'auth.json'), 'utf-8')).rejects.toThrow()
+})
+
+test('a Claude settings.json that does not parse aborts the provider sync and is left untouched', async () => {
+  const packageDir = await createProviderPackage()
+  const engine = new AgentPackageEngine({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir })
+  await writeFile(join(claudeDir, 'settings.json'), '{"permissions": {')
+  await engine.installFromPath(packageDir)
+  await engine.setPackageConfig('local.yls-me-provider', {
+    'yls-me': { apiKey: 'yls-key', baseUrl: 'https://code.ylsagi.com/codex' },
+  })
+  await expect(engine.enablePackage('local.yls-me-provider', 'claude')).rejects.toThrow(/settings\.json could not be parsed/)
+  expect(await readFile(join(claudeDir, 'settings.json'), 'utf-8')).toBe('{"permissions": {')
+})
+
+test('package config and Claude settings that hold a key are written 0600', async () => {
+  const packageDir = await createProviderPackage()
+  const engine = new AgentPackageEngine({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir })
+  const installed = await engine.installFromPath(packageDir)
+  await engine.setPackageConfig('local.yls-me-provider', {
+    'yls-me': { apiKey: 'yls-key', baseUrl: 'https://code.ylsagi.com/codex' },
+  })
+  await engine.enablePackage('local.yls-me-provider', 'claude')
+  expect((await stat(join(claudeDir, 'settings.json'))).mode & 0o777).toBe(0o600)
+  expect((await stat(join(installed.packageDir, 'package-config.json'))).mode & 0o777).toBe(0o600)
 })

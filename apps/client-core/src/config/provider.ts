@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import type { ModelPricing } from '@as/types'
+import { atomicWriteSecretFile } from './safe-file'
 
 export type { ModelPricing } from '@as/types'
 
@@ -146,5 +147,5 @@ export async function duplicateProviderConnection(
   if ('apiKey' in config) config['apiKey'] = ''
   delete config['apiKeys']
   delete config['token']
-  await writeFile(join(targetDir, 'config.json'), JSON.stringify(config, null, 2))
+  await atomicWriteSecretFile(join(targetDir, 'config.json'), JSON.stringify(config, null, 2))
 }

@@ -5,7 +5,7 @@
 import { cp, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'fs/promises'
 import { basename, dirname, join } from 'path'
 import type { InstalledItem, Item } from '@as/types'
-import { readRegistry, upsertEntry, writeRegistry } from './registry'
+import { patchEntry, readRegistry } from './registry'
 import { itemDir } from './paths'
 import { contentHash, isLegacyInstall, isLoneSkillMd, MARKER, parseFrontmatter, readMarker, type SkillMarker } from './skills/store'
 import { linkClaudeSkill } from './skills/claude-link'
@@ -92,7 +92,7 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
     await cp(from, to, { recursive: true, verbatimSymlinks: true, errorOnExist: true, force: false })
   }
 
-  let registry = await readRegistry(p.aasHome)
+  const registry = await readRegistry(p.aasHome)
   for (const entry of registry.installed.filter(e => e.category === 'skill')) {
     const slug = entry.slug
     const dir = itemDir(p.aasHome, 'skill', slug)
@@ -131,8 +131,7 @@ export async function runMigrate(p: MigratePaths, now: Date = new Date()): Promi
       }
       if (entry.enabledFor.codex !== true) {
         // Codex reads the store directly, so the registry has to say so (§5.4).
-        registry = upsertEntry(registry, { ...entry, enabledFor: { ...entry.enabledFor, codex: true } })
-        await writeRegistry(p.aasHome, registry)
+        await patchEntry(p.aasHome, slug, e => ({ ...e, enabledFor: { ...e.enabledFor, codex: true } }))
         step('done', 'registry: enabledFor.codex set to true; Codex reads ~/.agents/skills directly')
       }
     } catch (e) {

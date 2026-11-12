@@ -1,6 +1,7 @@
 import { mkdir, writeFile, readFile } from 'fs/promises'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'path'
 import type { InstallHook, Item } from '@as/types'
+import { atomicWriteSecretFile } from '../config/safe-file'
 
 type Step = InstallHook['steps'][number]
 type PlannedStep =
@@ -68,7 +69,7 @@ export async function runHook(steps: InstallHook['steps'], itemDir: string): Pro
         existing = JSON.parse(await readFile(configPath, 'utf-8')) as Record<string, unknown>
       } catch { /* file may not exist */ }
       // Patch values are defaults: reinstall and update must not reset what the user configured (e.g. apiKey).
-      await writeFile(configPath, JSON.stringify({ ...step.patch, ...existing }, null, 2))
+      await atomicWriteSecretFile(configPath, JSON.stringify({ ...step.patch, ...existing }, null, 2))
     }
   }
 }

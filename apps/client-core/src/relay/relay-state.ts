@@ -1,22 +1,18 @@
-import { readFile, writeFile, mkdir, rm } from 'fs/promises'
+import { rm } from 'fs/promises'
 import { join } from 'path'
+import { atomicWriteSecretFile, readJsonObject } from '../config/safe-file'
 
 function statePath(aasHome: string, platform: 'claude' | 'codex'): string {
   return join(aasHome, 'relay-state', `${platform}.json`)
 }
 
+/** `null` when no snapshot exists; a snapshot that does not parse throws, so it is never re-taken over the relay's own values. */
 export async function readRelayState<T>(aasHome: string, platform: 'claude' | 'codex'): Promise<T | null> {
-  try {
-    return JSON.parse(await readFile(statePath(aasHome, platform), 'utf-8')) as T
-  } catch {
-    return null
-  }
+  return ((await readJsonObject(statePath(aasHome, platform))) as T | undefined) ?? null
 }
 
 export async function writeRelayState<T>(aasHome: string, platform: 'claude' | 'codex', state: T): Promise<void> {
-  const path = statePath(aasHome, platform)
-  await mkdir(join(aasHome, 'relay-state'), { recursive: true })
-  await writeFile(path, JSON.stringify(state, null, 2))
+  await atomicWriteSecretFile(statePath(aasHome, platform), JSON.stringify(state, null, 2))
 }
 
 export async function clearRelayState(aasHome: string, platform: 'claude' | 'codex'): Promise<void> {
