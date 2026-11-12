@@ -224,7 +224,7 @@
       "terminal": {
         "title": "也可以在终端里装",
         "lede": "桌面客户端自带 aas 命令，和客户端读写同一份安装记录。Linux 安装包把它放在 /usr/bin/aas，macOS 和 Windows 在客户端的安装目录里。",
-        "note": "上面是 Linux 安装包里的 aas 在 2026-11-12 实际运行的输出。",
+        "note": "上面是 aas 的输出格式，命令和数据取自 2026-11-12 的测试目录。",
         "tabsLabel": "命令"
       },
       "features": {

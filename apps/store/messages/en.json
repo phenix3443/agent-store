@@ -224,7 +224,7 @@
       "terminal": {
         "title": "From the terminal too",
         "lede": "The desktop client ships the aas command, which reads and writes the same install records. The Linux packages put it at /usr/bin/aas; on macOS and Windows it is in the client's install folder.",
-        "note": "Above is the actual output of aas from the Linux package, run on 2026-11-12.",
+        "note": "Above is the output format of aas; the commands and data are from the test catalog on 2026-11-12.",
         "tabsLabel": "Command"
       },
       "features": {
