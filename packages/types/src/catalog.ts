@@ -1,4 +1,5 @@
 import type { ResourceDetail, ResourceListResponse, ResourceSummary } from './resources'
+import type { Item } from './items'
 
 const SLUG = /^[a-z0-9-]{1,128}$/
 
@@ -43,7 +44,13 @@ export function resourceLongSlug(r: Pick<ResourceSummary, 'id'>): string | null 
 /** A catalog row as the clients see it: the API's summary plus the local slug. */
 export type CatalogResource = ResourceSummary & { slug: string | null }
 
-export type CatalogResourceDetail = ResourceDetail & { slug: string | null }
+export type CatalogResourceDetail = ResourceDetail & {
+  slug: string | null
+  /** What installing it would write, as the client builds it (the install preview); absent when it can't be installed. */
+  install?: Item
+  /** Why it can't be installed, when `install` is absent. */
+  installError?: string
+}
 
 export interface CatalogSearchResult extends ResourceListResponse {
   resources: CatalogResource[]

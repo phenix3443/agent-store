@@ -183,3 +183,13 @@ test('an MCP with nothing Agent Store can launch is refused before anything is w
   expect(err.name).toBe('McpNotInstallableError')
   expect(await engine.list()).toEqual([])
 })
+
+test('getResource carries the install preview, or why there is none', async () => {
+  const preview = await engine.getResource('mcp-registry:com.example/bearer')
+  expect(preview.install).toMatchObject({ slug: 'bearer', category: 'mcp', transport: 'http', url: 'https://mcp.example.com/{tenant}/mcp', templated: true })
+  const odd = mcpResource('com.example/odd', { packages: [npmPackage('x', { registryType: 'mcpb' })] })
+  globalThis.fetch = serveCatalog([odd])
+  const none = await engine.getResource(odd.id)
+  expect(none.install).toBeUndefined()
+  expect(none.installError).toContain('none of them has a launcher')
+})

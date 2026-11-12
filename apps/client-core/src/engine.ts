@@ -11,7 +11,8 @@ import type {
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
-import { ResourceCatalog, type Catalog } from './catalog'
+import { ResourceCatalog, toItem, type Catalog } from './catalog'
+import { resourceLongSlug } from '@as/types'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
 import { createAdapters, type KindAdapter } from './adapters'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
@@ -95,8 +96,16 @@ export class EngineImpl implements Engine {
 
   async getResource(ref: string, options: { kind?: ResourceKind } = {}): Promise<CatalogResourceDetail> {
     const installed = ref.includes(':') ? undefined : findEntry(await readRegistry(this.paths.aasHome), ref)
-    if (installed?.resourceId) return this.catalog.get(installed.resourceId)
-    return this.catalog.get(ref, installed ? { kind: installed.category } : options)
+    const detail = installed?.resourceId
+      ? await this.catalog.get(installed.resourceId)
+      : await this.catalog.get(ref, installed ? { kind: installed.category } : options)
+    const slug = installed?.slug ?? detail.slug ?? resourceLongSlug(detail)
+    try {
+      if (!slug) throw new Error(`${detail.id} has no usable local name`)
+      return { ...detail, install: toItem(detail, slug) }
+    } catch (e) {
+      return { ...detail, installError: e instanceof Error ? e.message : String(e) }
+    }
   }
 
   /**
