@@ -1,0 +1,89 @@
+name: catalog-sync
+
+# Scrapes the upstream catalogs (MCP Registry, GitHub skill repos found directly
+# and through skills.sh, built-in providers) into catalog.db and publishes it as
+# catalog.db.gz, an asset of the `catalog` release, which the API downloads (CATALOG_URL).
+# The previous catalog.db is the starting point, so MCP syncs are incremental.
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Re-read every source from scratch instead of incrementally
+        type: boolean
+        default: false
+      allow-shrink:
+        description: Publish even if the catalog shrank below 80% of the previous one
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-sync
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: catalog
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @as/api...
+
+      - name: Download the previous catalog
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work
+          if gh release download "$RELEASE_TAG" --pattern catalog.db.gz --dir work; then
+            gunzip work/catalog.db.gz
+            ls -l work/catalog.db
+          else
+            echo "No previous catalog.db; this run builds one from scratch."
+          fi
+
+      - name: Sync
+        working-directory: apps/api
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FULL: ${{ inputs.full && '--full' || '' }}
+          MIN_RATIO: ${{ inputs.allow-shrink && '0' || '0.8' }}
+        run: |
+          set +e
+          # shellcheck disable=SC2086
+          bun run sync:catalog --db ../../work/catalog.db --min-ratio "$MIN_RATIO" \
+            --report-md ../../work/report.md --report-json ../../work/report.json $FULL
+          status=$?
+          set -e
+          if [ -f ../../work/report.md ]; then cat ../../work/report.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [ -f ../../work/catalog.db ]; then
+            echo "catalog.db: $(du -h ../../work/catalog.db | cut -f1) before compression" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$status" -eq 2 ]; then echo "::error::The new catalog shrank below the guard; not published."; fi
+          exit "$status"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Never "latest": the store's download page resolves the desktop app from the latest release.
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Catalog data" \
+              --notes "Machine-published catalog.db.gz for the API (CATALOG_URL). Rebuilt by the catalog-sync workflow; do not edit."
+          fi
+          gzip -9 --keep work/catalog.db
+          ls -l work/catalog.db work/catalog.db.gz
+          gh release upload "$RELEASE_TAG" work/catalog.db.gz work/report.json --clobber

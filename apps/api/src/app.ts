@@ -12,6 +12,8 @@ import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type Waffo
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { submitReview } from './review-queries'
+import { resourceRoutes } from './catalog/routes'
+import { catalogReader } from './catalog/runtime'
 import {
   isWebhookProcessed,
   recordWebhook,
@@ -65,6 +67,9 @@ app.get('/readyz', async (c) => {
     return fail(c, 503, 'Database unavailable', e)
   }
 })
+
+// Aggregated catalog, read from catalog.db (see src/catalog).
+app.route('/', resourceRoutes(catalogReader))
 
 app.get('/api/items', async (c) => {
   const rawCategory = c.req.query('category')

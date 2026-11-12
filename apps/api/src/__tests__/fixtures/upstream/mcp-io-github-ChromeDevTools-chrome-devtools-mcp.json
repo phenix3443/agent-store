@@ -1,0 +1,33 @@
+{
+  "server": {
+    "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+    "name": "io.github.ChromeDevTools/chrome-devtools-mcp",
+    "description": "MCP server for Chrome DevTools",
+    "title": "Chrome DevTools MCP",
+    "repository": {
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "source": "github"
+    },
+    "version": "1.13.0",
+    "packages": [
+      {
+        "registryType": "npm",
+        "registryBaseUrl": "https://registry.npmjs.org",
+        "identifier": "chrome-devtools-mcp",
+        "version": "1.13.0",
+        "transport": {
+          "type": "stdio"
+        }
+      }
+    ]
+  },
+  "_meta": {
+    "io.modelcontextprotocol.registry/official": {
+      "status": "active",
+      "statusChangedAt": "2026-11-11T12:47:40.155483Z",
+      "publishedAt": "2026-11-11T12:47:40.155483Z",
+      "updatedAt": "2026-11-11T12:47:40.155483Z",
+      "isLatest": true
+    }
+  }
+}

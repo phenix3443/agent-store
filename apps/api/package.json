@@ -12,14 +12,18 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun src/migrate.ts",
     "test:integration": "bun test integration",
-    "db:seed": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f ../../db/seed.sql"
+    "db:seed": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f ../../db/seed.sql",
+    "sync:catalog": "bun src/sync-catalog.ts"
   },
   "dependencies": {
     "@as/types": "workspace:*",
+    "@octokit/rest": "^22.0.1",
     "@waffo/pancake-ts": "^0.11.0",
     "drizzle-orm": "^0.44.5",
+    "gray-matter": "^4.0.3",
     "hono": "^4.6.0",
     "jose": "^6.2.3",
+    "p-map": "^7.1.1",
     "postgres": "4.1.0"
   },
   "devDependencies": {

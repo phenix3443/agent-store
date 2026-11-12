@@ -33,3 +33,23 @@ export type { RegistryJson } from './registry'
 export type { Plan, SubscriptionStatus, Entitlements } from './entitlement'
 export { PRICING, formatPrice } from './pricing'
 export type { BillingPeriod } from './pricing'
+export type {
+  ResourceKind,
+  ResourceSite,
+  ResourceAuthor,
+  ResourceOrigin,
+  ResourceSummary,
+  ResourceListResponse,
+  McpInput,
+  McpKeyValueInput,
+  McpArgument,
+  McpTransport,
+  McpPackage,
+  McpRemote,
+  McpResourceDetail,
+  SkillFile,
+  SkillResourceDetail,
+  ProviderConnection,
+  ProviderResourceDetail,
+  ResourceDetail,
+} from './resources'
