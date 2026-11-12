@@ -10,8 +10,7 @@ import { syncGithubUsername } from './github-username'
 //
 // The API never sees the session cookie. Browsers and the desktop app call
 // /api/auth/token for a short-lived JWT (EdDSA), and the API verifies it against
-// /api/auth/jwks. `username` is the GitHub login, carried in the token so the
-// API can sign user reviews with it.
+// /api/auth/jwks. `username` is the GitHub login, carried in the token.
 export function createAuth() {
   const baseURL = process.env.BETTER_AUTH_URL
   const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 })

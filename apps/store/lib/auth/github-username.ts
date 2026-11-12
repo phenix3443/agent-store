@@ -8,8 +8,8 @@ interface Queryable {
   query: (text: string, values: unknown[]) => Promise<unknown>
 }
 
-// The GitHub login names the user on their reviews and dashboard, so it has to
-// come from GitHub itself.
+// The GitHub login names the user on their dashboard, so it has to come from
+// GitHub itself.
 // `username` is declared `input: false` to keep clients from setting it, and
 // Better Auth drops such fields from the provider profile too — on sign-up and
 // on account linking alike — so mapProfileToUser cannot fill it.

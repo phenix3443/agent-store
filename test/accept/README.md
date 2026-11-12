@@ -19,8 +19,8 @@ required item was skipped, for example `--use` without credentials).
   was installed.
 - `fixtures/as-probe-mcp.mjs` is a dependency-free stdio MCP server whose `probe`
   tool returns a token, the `PROBE_TOKEN` value, and its argv.
-- `probes.ts` defines the probe packages; `../e2e/fixture-store.ts` serves them
-  through the API's `mapItem`.
+- `probes.ts` defines the probe resources; `../e2e/fixture-store.ts` serves them
+  in the `/api/resources` shape.
 
 `--use` (U1–U4) needs model credentials: `ANTHROPIC_API_KEY` or
 `ANTHROPIC_AUTH_TOKEN` (+ `ANTHROPIC_BASE_URL`) for Claude, and an `auth.json`

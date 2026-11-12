@@ -464,7 +464,6 @@ test('selecting another item while a provider config page is open switches the d
   mockRpc(defaultHandlers({
     info: (slug: unknown) => (slug === 'yls-copy' ? childInfo : infoBySlug[slug as string]),
     duplicateProvider: () => ({ newSlug: 'yls-copy' }),
-    getReviews: () => [], getVersions: () => [],
     getEntitlements: () => ({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }),
   }))
   render(

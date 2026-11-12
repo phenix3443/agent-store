@@ -308,7 +308,7 @@ components:
 
 ### Detail drawer
 
-Radix Dialog。顶栏 56px：左侧面包屑（单行，超长截断），右侧收藏、展开为整页、关闭。640px 以下「展开为整页」只留图标，文字放进 `aria-label`。内容顺序固定：包名、作者、已验证、来源、安装量与 GitHub 星标（有数据才显示）→ 简介 →（上游已下架或弃用时一条墨线框提示）→ 安装后会执行（上方一条墨线）→ 安装命令与按钮 → 规格 → README。作者名链接到目录记录里的 `author.url`，没有就只显示名字。「安装后会执行」：MCP 列出每个包按 registry 惯例的启动命令（npx / uvx / docker）、要用户填写的变量和远程地址；技能列出 GitHub 目录和文件，可执行文件和符号链接标出来；供应商列出接入地址。安装命令按数据能支持的写：技能用 skills.sh 的 `npx skills add <owner/repo> --skill <name>`，MCP 用 `claude mcp add`，供应商用 `aas install <slug>`。版本历史和评价 2026-11-12（#120）去掉：聚合目录每条只有一个版本，评价接口还挂在旧的 `/api/items` 上。整页地址是 `/store/<类别>/<id>`，id 里的 `/` 拆成路径段，旧的 `/store/<类别>/<slug>` 跳到以 slug 为关键词的搜索。
+Radix Dialog。顶栏 56px：左侧面包屑（单行，超长截断），右侧收藏、展开为整页、关闭。640px 以下「展开为整页」只留图标，文字放进 `aria-label`。内容顺序固定：包名、作者、已验证、来源、安装量与 GitHub 星标（有数据才显示）→ 简介 →（上游已下架或弃用时一条墨线框提示）→ 安装后会执行（上方一条墨线）→ 安装命令与按钮 → 规格 → README。作者名链接到目录记录里的 `author.url`，没有就只显示名字。「安装后会执行」：MCP 列出每个包按 registry 惯例的启动命令（npx / uvx / docker）、要用户填写的变量和远程地址；技能列出 GitHub 目录和文件，可执行文件和符号链接标出来；供应商列出接入地址。安装命令按数据能支持的写：技能用 skills.sh 的 `npx skills add <owner/repo> --skill <name>`，MCP 用 `claude mcp add`，供应商用 `aas install <slug>`。版本历史和评价 2026-11-12（#120）去掉：聚合目录每条只有一个版本；评价暂时去掉，以后按 resource id 重做。整页地址是 `/store/<类别>/<id>`，id 里的 `/` 拆成路径段，旧的 `/store/<类别>/<slug>` 跳到以 slug 为关键词的搜索。
 
 ### Verified
 

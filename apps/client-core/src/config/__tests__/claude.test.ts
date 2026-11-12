@@ -15,7 +15,7 @@ const publisher = { id: 'p1', slug: 'test', name: 'Test', avatarUrl: '', tier: '
 const baseItem = {
   id: 'i1', name: 'Test', description: '',
   version: '1.0.0', publisher, compatibleWith: ['claude' as const], tags: [],
-  downloads: 0, rating: 0, status: 'published' as const, createdAt: '', updatedAt: '',
+  downloads: 0, status: 'published' as const, createdAt: '', updatedAt: '',
   installHook: { steps: [] },
 }
 

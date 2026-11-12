@@ -14,7 +14,7 @@ const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'co
 const base = {
   id: 'i1', name: 'Test', description: 'desc', version: '1.0.0', publisher,
   compatibleWith: ['claude' as const, 'codex' as const],
-  tags: [], downloads: 0, rating: 0, status: 'published' as const,
+  tags: [], downloads: 0, status: 'published' as const,
   createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
   installHook: { steps: [] },
 }
@@ -66,13 +66,7 @@ const origFetch = globalThis.fetch
 function serve() {
   globalThis.fetch = (async (url: string) => {
     const u = String(url)
-    for (const item of [mcp, provider, skill]) {
-      if (u.includes(`/api/items/${item.slug}`)) {
-        return new Response(JSON.stringify({ item }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-      }
-    }
     if (u === skill.contentUrl) return new Response(SKILL_MD, { status: 200 })
-    if (u.includes('/install')) return new Response('{}', { status: 200 })
     throw new Error(`Unmocked URL: ${u}`)
   }) as typeof fetch
 }
@@ -96,7 +90,7 @@ beforeEach(async () => {
   engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000',
-    { startRelay: async () => { await writeFile(join(aasHome, 'relay.pid'), String(process.pid)) }, catalog: new ItemCatalog() },
+    { startRelay: async () => { await writeFile(join(aasHome, 'relay.pid'), String(process.pid)) }, catalog: new ItemCatalog(() => [mcp, provider, skill]) },
   )
 })
 

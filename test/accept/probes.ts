@@ -11,7 +11,8 @@ const FIXTURES = join(HERE, 'fixtures')
 const PROBE_MCP = join(FIXTURES, 'as-probe-mcp.mjs')
 const PROBES_REPO_DIR = join(FIXTURES, 'probes-repo')
 
-export const PROBE_REPO = 'agent-store-accept/probes'
+// The client names a skill `<repo name>-<skill id>`: as-probe + skill → as-probe-skill.
+export const PROBE_REPO = 'agent-store-accept/as-probe'
 
 export const SKILL = {
   slug: 'as-probe-skill',
@@ -19,14 +20,12 @@ export const SKILL = {
   runtimeNames: { claude: 'as-probe-skill', codex: 'as-probe-codeword' },
   /** Only in references/token.md, so finding it proves the whole directory was installed. */
   token: 'AS_PROBE_SKILL_TOKEN_5b2e',
-  sourceFile: join(PROBES_REPO_DIR, 'skills', 'as-probe-skill', 'SKILL.md'),
 }
 
 export const MCP = { slug: 'as-probe-mcp', tool: 'probe', token: 'AS_PROBE_MCP_OK' }
 export const MCP_ENV = {
   slug: 'as-probe-mcp-env',
   tool: 'probe',
-  configKey: 'probe_token',
   env: 'PROBE_TOKEN',
   /** Contains a space, so it also checks the value survives as one env value. */
   configValue: 'probe tok 42',
@@ -56,60 +55,41 @@ export function startProbeStore(runtimeDir: string, port = 0): ProbeStore {
 
   const store = startFixtureStore({
     port,
-    publisher: { slug: 'agent-store-accept', name: 'Agent Store Acceptance', tier: 'official' },
-    files: { 'as-probe-skill/SKILL.md': SKILL.sourceFile },
+    author: 'agent-store-accept',
     repos: [{ repo: PROBE_REPO, ref: 'main', dir: PROBES_REPO_DIR }],
-    packages: base => [
+    resources: [
       {
+        kind: 'skill',
         slug: SKILL.slug,
         name: 'Agent Store probe skill',
         description: 'Acceptance probe: a multi-file skill whose token lives in references/token.md.',
-        category: 'skill',
-        version: '1.0.0',
-        compatibleWith: ['claude', 'codex'],
-        // Same shape as the registry's skills: a single-file step plus a file-shaped source path.
-        installHook: { steps: [{ type: 'file', url: `${base}/files/as-probe-skill/SKILL.md`, dest: 'skill.md' }] },
-        metadata: {
-          contentUrl: `${base}/files/as-probe-skill/SKILL.md`,
-          source: { repo: PROBE_REPO, ref: 'main', path: 'skills/as-probe-skill/SKILL.md' },
-        },
+        repo: PROBE_REPO,
+        skillId: 'skill',
+        dir: 'skills/as-probe-skill',
       },
       {
+        kind: 'mcp',
         slug: MCP.slug,
         name: 'Agent Store probe MCP',
         description: 'Acceptance probe: a stdio MCP server with one `probe` tool.',
-        category: 'mcp',
-        version: '1.0.0',
-        compatibleWith: ['claude', 'codex'],
-        metadata: { transport: 'stdio', serverCommand: `node ${plain}`, configSchema: {} },
+        script: plain,
       },
       {
+        kind: 'mcp',
         slug: MCP_ENV.slug,
         name: 'Agent Store probe MCP (env + quoted args)',
         description: 'Acceptance probe for G10: a path with a space, a quoted argument and a required config value.',
-        category: 'mcp',
-        version: '1.0.0',
-        compatibleWith: ['claude', 'codex'],
-        metadata: {
-          transport: 'stdio',
-          serverCommand: `node "${spaced}" --greeting "${MCP_ENV.greeting}"`,
-          configSchema: {
-            type: 'object',
-            properties: {
-              [MCP_ENV.configKey]: { type: 'string', description: 'Probe token', 'x-env': MCP_ENV.env },
-            },
-            required: [MCP_ENV.configKey],
-          },
-        },
+        script: spaced,
+        args: ['--greeting', MCP_ENV.greeting],
+        env: [{ name: MCP_ENV.env, description: 'Probe token' }],
       },
       {
+        kind: 'mcp',
         slug: MCP_BROKEN.slug,
         name: 'Agent Store probe MCP (exits at start)',
         description: 'Acceptance probe whose server exits before speaking MCP.',
-        category: 'mcp',
-        version: '1.0.0',
-        compatibleWith: ['claude', 'codex'],
-        metadata: { transport: 'stdio', serverCommand: `node ${plain} --exit-immediately`, configSchema: {} },
+        script: plain,
+        args: ['--exit-immediately'],
       },
     ],
   })

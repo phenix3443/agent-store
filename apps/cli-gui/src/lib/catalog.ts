@@ -62,7 +62,6 @@ export function resourceItem(r: CatalogResourceDetail): Item {
     compatibleWith: ['claude', 'codex'],
     tags: r.tags,
     downloads: r.installs ?? 0,
-    rating: 0,
     status: 'published',
     installHook: { steps: [] },
     createdAt: when,

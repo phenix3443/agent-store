@@ -22,7 +22,7 @@ test('splitCommandLine: rejects unbalanced quotes and shell operators', () => {
 
 const base = {
   id: 'i', slug: 'probe', name: 'p', description: '', version: '1', compatibleWith: ['claude', 'codex'] as Array<'claude' | 'codex'>,
-  tags: [], downloads: 0, rating: 0, status: 'published' as const, createdAt: '', updatedAt: '',
+  tags: [], downloads: 0, status: 'published' as const, createdAt: '', updatedAt: '',
   installHook: { steps: [] }, category: 'mcp' as const,
   publisher: { id: 'p', slug: 'p', name: 'p', avatarUrl: '', tier: 'community' as const },
 }

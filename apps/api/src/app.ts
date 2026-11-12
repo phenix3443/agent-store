@@ -2,16 +2,13 @@ import { Hono, type Context } from 'hono'
 import { cors } from 'hono/cors'
 import { requestId, type RequestIdVariables } from 'hono/request-id'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
-import { desc, eq, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
-import { getItems, getItemBySlug } from './queries'
 import { getDb, type DbEnv } from './db/client'
-import { itemVersions, items, reviews } from './db/schema'
 import type { AuthEnv } from './auth-token'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
-import { submitReview } from './review-queries'
 import { resourceRoutes } from './catalog/routes'
 import { catalogReader } from './catalog/runtime'
 import {
@@ -47,12 +44,6 @@ function fail(c: Context<Env>, status: ContentfulStatusCode, message: string, ca
   return c.json({ error: message, requestId: id }, status)
 }
 
-// Absent → fallback; present but not a non-negative integer → null (caller returns 400).
-function intQuery(raw: string | undefined, fallback: number): number | null {
-  if (raw === undefined || raw === '') return fallback
-  return /^\d+$/.test(raw) ? Number(raw) : null
-}
-
 app.get('/', (c) => c.json({ ok: true, service: 'as-api' }))
 
 // Liveness: the process answers. Readiness: it can also reach Postgres. Kept
@@ -70,122 +61,6 @@ app.get('/readyz', async (c) => {
 
 // Aggregated catalog, read from catalog.db (see src/catalog).
 app.route('/', resourceRoutes(catalogReader))
-
-app.get('/api/items', async (c) => {
-  const rawCategory = c.req.query('category')
-  const category =
-    rawCategory === 'provider' || rawCategory === 'skill' || rawCategory === 'mcp' ? rawCategory : null
-
-  // Default to the weighted "recommended" ranking; ?sort=downloads / ?sort=created
-  // remain explicitly available.
-  const rawSort = c.req.query('sort')
-  const sort = rawSort === 'downloads' || rawSort === 'created' ? rawSort : 'recommended'
-
-  const limit = intQuery(c.req.query('limit'), 20)
-  const offset = intQuery(c.req.query('offset'), 0)
-  if (limit === null || limit < 1) return c.json({ error: 'limit must be a positive integer' }, 400)
-  if (offset === null) return c.json({ error: 'offset must be a non-negative integer' }, 400)
-
-  const { data, error } = await getItems(c.env, {
-    category,
-    q: c.req.query('q') ?? undefined,
-    limit: Math.min(limit, 100),
-    offset,
-    sort,
-  })
-
-  if (error) return fail(c, 500, 'Failed to fetch items', error)
-  return c.json({ items: data })
-})
-
-app.get('/api/items/:slug', async (c) => {
-  const { data, error } = await getItemBySlug(c.env, c.req.param('slug'))
-  if (error) return fail(c, 500, 'Failed to fetch item', error)
-  if (!data) return c.json({ error: 'Not found' }, 404)
-  return c.json({ item: data })
-})
-
-// Bump the real install count (called by the client after a successful install).
-app.post('/api/items/:slug/install', async (c) => {
-  const slug = c.req.param('slug')
-  try {
-    const db = getDb(c.env)
-    const updated = await db
-      .update(items)
-      .set({ downloads: sql`${items.downloads} + 1` })
-      .where(eq(items.slug, slug))
-      .returning({ downloads: items.downloads })
-    if (updated.length === 0) return c.json({ error: 'Not found' }, 404)
-    return c.json({ ok: true })
-  } catch (e) {
-    return fail(c, 500, 'Failed to record install', e)
-  }
-})
-
-// ── User reviews ─────────────────────────────────────────────────────────────
-
-// Public list of an item's reviews (most recent first).
-app.get('/api/items/:slug/reviews', async (c) => {
-  const slug = c.req.param('slug')
-  try {
-    const db = getDb(c.env)
-    const data = await db
-      .select({
-        author_name: reviews.authorName,
-        rating: reviews.rating,
-        body: reviews.body,
-        updated_at: reviews.updatedAt,
-      })
-      .from(reviews)
-      .where(eq(reviews.itemSlug, slug))
-      .orderBy(desc(reviews.updatedAt))
-      .limit(50)
-    return c.json({ reviews: data })
-  } catch (e) {
-    return fail(c, 500, 'Failed to load reviews', e)
-  }
-})
-
-// Submit (or update) the caller's review, then recompute the item's aggregate
-// rating + review_count. One review per user per item (upsert).
-app.post('/api/items/:slug/reviews', async (c) => {
-  const slug = c.req.param('slug')
-  const user = await getAuthUser(c.env, c.req.header('Authorization'))
-  if (!user) return c.json({ error: 'Unauthorized' }, 401)
-  const body = (await c.req.json().catch(() => ({}))) as { rating?: number; body?: string }
-  const rating = Math.round(Number(body.rating))
-  if (!(rating >= 1 && rating <= 5)) return c.json({ error: 'rating must be an integer 1-5' }, 400)
-  try {
-    const result = await submitReview(c.env, {
-      slug,
-      userId: user.id,
-      authorName: user.username ?? null,
-      rating,
-      body: typeof body.body === 'string' ? body.body.slice(0, 2000) : null,
-    })
-    if (!result) return c.json({ error: 'Not found' }, 404)
-    return c.json({ ok: true, ...result })
-  } catch (e) {
-    return fail(c, 500, 'Failed to submit review', e)
-  }
-})
-
-// Version history for an item (most recent first). Recorded by the registry sync.
-app.get('/api/items/:slug/versions', async (c) => {
-  const slug = c.req.param('slug')
-  try {
-    const db = getDb(c.env)
-    const data = await db
-      .select({ version: itemVersions.version, published_at: itemVersions.publishedAt })
-      .from(itemVersions)
-      .where(eq(itemVersions.itemSlug, slug))
-      .orderBy(desc(itemVersions.publishedAt))
-      .limit(50)
-    return c.json({ versions: data })
-  } catch (e) {
-    return fail(c, 500, 'Failed to load versions', e)
-  }
-})
 
 // ── Billing (Waffo Pancake, Merchant of Record) ──────────────────────────────
 

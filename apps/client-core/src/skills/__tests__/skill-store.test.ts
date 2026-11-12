@@ -20,7 +20,7 @@ let claudeDir: string
 let codexDir: string
 let engine: EngineImpl
 let tarball: Uint8Array
-let fetched: string[]
+let served: SkillItem | null = null
 const origFetch = globalThis.fetch
 
 /** A codeload-shaped tarball: everything under `<name>-<sha>/`. */
@@ -66,7 +66,7 @@ function rawTarGz(...entries: Buffer[]): Uint8Array {
 const item = (over: Partial<SkillItem> = {}): SkillItem => ({
   id: 'i1', slug: 'probe-skill', name: 'Probe', description: 'd', category: 'skill', version: '1.0.0',
   publisher: { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'community' },
-  compatibleWith: ['claude', 'codex'], tags: [], downloads: 0, rating: 0, status: 'published',
+  compatibleWith: ['claude', 'codex'], tags: [], downloads: 0, status: 'published',
   createdAt: '2026-10-22T00:00:00Z', updatedAt: '2026-10-22T00:00:00Z', installHook: { steps: [] },
   contentUrl: 'https://files.test/SKILL.md',
   source: { repo: 'acme/probes', ref: 'main', dir: 'skills/probe' },
@@ -74,11 +74,9 @@ const item = (over: Partial<SkillItem> = {}): SkillItem => ({
 })
 
 function serve(it: SkillItem) {
+  served = it
   globalThis.fetch = (async (input: string | URL | Request) => {
     const u = String(input instanceof Request ? input.url : input)
-    fetched.push(u)
-    if (u.endsWith(`/api/items/${it.slug}`)) return Response.json({ item: it })
-    if (u.endsWith('/install')) return new Response(null, { status: 204 })
     if (u === 'https://gh.test/repos/acme/probes/commits/main') return Response.json({ sha: SHA })
     if (u === `https://codeload.test/acme/probes/tar.gz/${SHA}`) return new Response(tarball)
     if (u === 'https://files.test/SKILL.md') return new Response(SKILL_MD)
@@ -100,8 +98,8 @@ beforeEach(() => {
   codexDir = join(root, 'codex')
   process.env['AS_GITHUB_API_URL'] = 'https://gh.test'
   process.env['AS_CODELOAD_URL'] = 'https://codeload.test'
-  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://store.test', { catalog: new ItemCatalog('http://store.test') })
-  fetched = []
+  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://store.test', { catalog: new ItemCatalog(() => (served ? [served] : [])) })
+  served = null
   tarball = codeload({
     'skills/probe/SKILL.md': SKILL_MD,
     'skills/probe/references/token.md': 'TOKEN_42\n',

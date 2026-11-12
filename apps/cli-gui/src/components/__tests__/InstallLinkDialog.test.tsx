@@ -21,7 +21,7 @@ const { InstallLinkDialog, resetLaunchLinksForTest } = await import('../InstallL
 
 const publisher = { id: 'p', slug: 'anthropic', name: 'anthropic', avatarUrl: '', tier: 'official' as const }
 const base = {
-  id: 'i', version: '0.8.1', publisher, compatibleWith: ['claude'], tags: [], downloads: 10, rating: 0,
+  id: 'i', version: '0.8.1', publisher, compatibleWith: ['claude'], tags: [], downloads: 10,
   status: 'published', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
 }
 const mcpItem = {

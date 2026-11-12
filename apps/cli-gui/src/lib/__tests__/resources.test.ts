@@ -23,7 +23,7 @@ const itemDetail: ItemDetail = {
 const catalogItem: Item = {
   id: 'i1', slug: 'context7', name: 'context7', description: '文档上下文',
  category: 'mcp', version: '1.0.0', publisher,
-  compatibleWith: ['claude'], tags: [], downloads: 118000, rating: 4.7,
+  compatibleWith: ['claude'], tags: [], downloads: 118000,
   status: 'published', installHook: { steps: [] },
   createdAt: '2026-05-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z',
   configSchema: {}, transport: 'stdio', serverCommand: './server',
@@ -42,13 +42,12 @@ test('matchesText: empty query matches everything, otherwise matches name or des
   expect(matchesText('filesystem', '读写本地文件系统', 'nope')).toBe(false)
 })
 
-test('enrichInstalled: merges detail fields onto the installed entry with rating defaulted to 0', () => {
+test('enrichInstalled: merges detail fields onto the installed entry', () => {
   const enriched = enrichInstalled(installedItem, itemDetail)
   expect(enriched.slug).toBe('filesystem')
   expect(enriched.name).toBe('filesystem')
   expect(enriched.description).toBe('读写本地文件系统')
   expect(enriched.downloads).toBe(388000)
-  expect(enriched.rating).toBe(0)
   expect(enriched.enabledFor).toEqual({ claude: true, codex: false })
 })
 

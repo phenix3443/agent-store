@@ -81,7 +81,7 @@
     ],
     "rules": [
       { "name": "The One Colour Rule", "body": "淡紫是唯一的彩色，只出现在选区上。状态靠形状和文字区分，不靠加色。", "section": "colors" },
-      { "name": "The Honest State Rule", "body": "没有评价的包不显示零分；网页端不显示它无法确认的「已安装」状态，也不显示没有依据的安全结论。", "section": "colors" },
+      { "name": "The Honest State Rule", "body": "网页端不显示它无法确认的「已安装」状态，也不显示没有依据的安全结论。", "section": "colors" },
       { "name": "The No Eyebrow Rule", "body": "标题上方不放类别小标签或 kicker。类别已在面包屑里出现，标题自己承担层级。", "section": "typography" },
       { "name": "The Flat Plate Rule", "body": "底面是平涂色，不加纸纹、斜面、浮雕来模仿实物材质。", "section": "elevation" }
     ],

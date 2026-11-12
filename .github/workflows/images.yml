@@ -10,7 +10,6 @@ on:
       - 'apps/api/**'
       - 'apps/store/**'
       - 'packages/**'
-      - 'db/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/images.yml'
   push:
@@ -19,7 +18,6 @@ on:
       - 'apps/api/**'
       - 'apps/store/**'
       - 'packages/**'
-      - 'db/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/images.yml'
   workflow_dispatch:

@@ -25,7 +25,6 @@ function base(r: ResourceDetail, slug: string): Omit<BaseItem, 'category' | 'com
     },
     tags: r.tags,
     downloads: r.installs ?? 0,
-    rating: 0,
     status: 'published',
     installHook: { steps: [] },
     createdAt: when,

@@ -13,8 +13,7 @@ RUN pnpm --filter @as/api deploy --legacy --prod /out
 FROM oven/bun:1.3.14-alpine
 WORKDIR /app
 COPY --from=build --chown=bun /out ./
-COPY --from=build --chown=bun /repo/db/seed.sql ./seed.sql
-ENV HOST=:: PORT=3001 SEED_FILE=/app/seed.sql
+ENV HOST=:: PORT=3001
 USER bun
 EXPOSE 3001
 CMD ["bun", "src/index.ts"]

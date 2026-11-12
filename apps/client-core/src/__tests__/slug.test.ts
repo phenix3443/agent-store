@@ -22,31 +22,38 @@ test('itemDir refuses an unsafe slug', () => {
 
 let aasHome: string
 let engine: EngineImpl
-const origFetch = globalThis.fetch
-let fetched: string[]
+let asked: string[]
+let served: MCPItem | null = null
+
+// Answers every ref with the served item, so the catalog can hand back a slug other than the one asked for.
+class AnyRefCatalog extends ItemCatalog {
+  constructor() { super(() => []) }
+  override async resolveItem(ref: string) {
+    asked.push(ref)
+    if (!served) throw new Error(`Item not found: ${ref}`)
+    return { item: served, resourceId: null, longSlug: null }
+  }
+}
 
 beforeEach(async () => {
   aasHome = await mkdtemp('/tmp/as-slug-')
-  fetched = []
-  engine = new EngineImpl({ aasHome, claudeConfigDir: join(aasHome, 'claude'), codexConfigDir: join(aasHome, 'codex') }, 'http://localhost:3000', { catalog: new ItemCatalog() })
+  asked = []
+  served = null
+  engine = new EngineImpl({ aasHome, claudeConfigDir: join(aasHome, 'claude'), codexConfigDir: join(aasHome, 'codex') }, 'http://localhost:3000', { catalog: new AnyRefCatalog() })
 })
 
 afterEach(async () => {
-  globalThis.fetch = origFetch
   await rm(aasHome, { recursive: true, force: true })
 })
 
 function serve(item: MCPItem) {
-  globalThis.fetch = (async (url: string) => {
-    fetched.push(String(url))
-    return new Response(JSON.stringify({ item }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-  }) as typeof fetch
+  served = item
 }
 
 const item: MCPItem = {
   id: 'i1', slug: 'ok-mcp', name: 'T', description: 'd', version: '1.0.0', category: 'mcp',
   publisher: { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'community' }, compatibleWith: ['claude'],
-  tags: [], downloads: 0, rating: 0, status: 'published', createdAt: '', updatedAt: '',
+  tags: [], downloads: 0, status: 'published', createdAt: '', updatedAt: '',
   installHook: { steps: [] }, transport: 'stdio', serverCommand: 'npx x', configSchema: {},
 }
 
@@ -55,7 +62,7 @@ test('install refuses an unsafe slug before asking the store', async () => {
   const err = await engine.install('../../escape').catch(e => e)
   expect(err).toBeInstanceOf(InvalidSlugError)
   expect(err.reason).toBe('invalid-slug')
-  expect(fetched).toEqual([])
+  expect(asked).toEqual([])
   expect(await readdir(aasHome)).toEqual([])
 })
 
