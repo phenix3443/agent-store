@@ -1,15 +1,5 @@
 import type { Item } from '@as/types'
 
-export type ReviewVerdict = 'passed' | 'flagged' | 'pending'
-
-/** No review data is "pending", never "passed": only a clean low-risk review earns the stamp. */
-export function reviewVerdict(item: Pick<Item, 'review'>): ReviewVerdict {
-  const review = item.review
-  if (!review) return 'pending'
-  if (review.risk === 'low' && (review.concerns?.length ?? 0) === 0) return 'passed'
-  return 'flagged'
-}
-
 export function installCommand(item: Pick<Item, 'slug'>): string {
   return `aas install ${item.slug}`
 }

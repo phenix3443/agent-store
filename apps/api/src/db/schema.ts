@@ -125,22 +125,6 @@ export const itemVersions = pgTable('item_versions', {
   index('item_versions_item_slug_idx').on(t.itemSlug),
 ])
 
-// Curated groupings of packages, written by the registry sync from topic/*.json.
-// `packages` is an ordered list of item slugs without a foreign key: a topic may
-// outlive a package, and the API skips slugs that no longer resolve.
-export const topics = pgTable('topics', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  slug: text('slug').notNull().unique(),
-  title: text('title').notNull(),
-  description: text('description').notNull(),
-  intro: text('intro').notNull(),
-  capabilities: text('capabilities').array().notNull().default(sql`'{}'`),
-  packages: text('packages').array().notNull().default(sql`'{}'`),
-  related: text('related').array().notNull().default(sql`'{}'`),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
-
 // ── Better Auth ──────────────────────────────────────────────────────────────
 // Tables owned by the store's self-hosted Better Auth (apps/store/lib/auth/server.ts).
 // Columns keep Better Auth's camelCase names: its Kysely adapter queries them

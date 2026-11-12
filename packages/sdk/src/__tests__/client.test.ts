@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test'
 import { StoreClient } from '../client'
-import type { Item, Topic, TopicSummary } from '@as/types'
+import type { Item } from '@as/types'
 
 describe('StoreClient constructor', () => {
   test('uses provided baseUrl', () => {
@@ -185,80 +185,6 @@ describe('StoreClient.getItemBySlug', () => {
   })
 })
 
-import type { Publisher } from '@as/types'
-
-const fakePublisher: Publisher = {
-  id: 'pub-1',
-  slug: 'openai',
-  name: 'OpenAI',
-  avatarUrl: 'https://example.com/avatar.png',
-  tier: 'official',
-}
-
-describe('StoreClient.getPublisher', () => {
-  test('calls GET /api/publishers/:slug and returns publisher + items', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async (url: RequestInfo | URL) => {
-      expect(String(url)).toBe('http://localhost:3000/api/publishers/openai')
-      return new Response(
-        JSON.stringify({ publisher: fakePublisher, items: [fakeItem] }),
-        { status: 200 }
-      )
-    }
-
-    const client = new StoreClient()
-    const result = await client.getPublisher('openai')
-    expect(result.error).toBeNull()
-    expect(result.data?.publisher.slug).toBe('openai')
-    expect(result.data?.items).toHaveLength(1)
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error on 404', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
-
-    const client = new StoreClient()
-    const result = await client.getPublisher('no-such-publisher')
-    expect(result.data).toBeNull()
-    expect(result.error).toBe('Not found')
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('StoreClient.getMyItems', () => {
-  test('sends the bearer token to GET /api/me/items and returns items', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
-      expect(String(url)).toBe('http://localhost:3000/api/me/items')
-      expect((init?.headers as Record<string, string>)['Authorization']).toBe('Bearer tok-1')
-      return new Response(JSON.stringify({ items: [fakeItem] }), { status: 200 })
-    }
-
-    const client = new StoreClient()
-    const result = await client.getMyItems('tok-1')
-    expect(result.error).toBeNull()
-    expect(result.data).toHaveLength(1)
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error on 401', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
-
-    const client = new StoreClient()
-    const result = await client.getMyItems('bad')
-    expect(result.data).toBeNull()
-    expect(result.error).toBe('Unauthorized')
-
-    globalThis.fetch = originalFetch
-  })
-})
-
 describe('StoreClient.getMyEntitlements', () => {
   test('sends the bearer token and returns the plan', async () => {
     const originalFetch = globalThis.fetch
@@ -315,61 +241,6 @@ describe('StoreClient.createCheckout', () => {
     const result = await client.createCheckout({ period: 'monthly' })
     expect(result.data).toBeNull()
     expect(result.error).toBe('Billing not configured')
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('StoreClient.getTopics', () => {
-  test('calls GET /api/topics and returns the topics', async () => {
-    const originalFetch = globalThis.fetch
-    const topics: TopicSummary[] = [{ slug: 'docs', title: '文档', description: '查文档。', packageCount: 2 }]
-    globalThis.fetch = async (url: RequestInfo | URL) => {
-      expect(String(url)).toBe('http://localhost:3000/api/topics')
-      return new Response(JSON.stringify({ topics }), { status: 200 })
-    }
-
-    const result = await new StoreClient().getTopics()
-    expect(result).toEqual({ data: topics, error: null })
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error string on non-200 response', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Failed to fetch topics' }), { status: 500 })
-
-    const result = await new StoreClient().getTopics()
-    expect(result).toEqual({ data: null, error: 'Failed to fetch topics' })
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('StoreClient.getTopic', () => {
-  test('calls GET /api/topics/:slug and returns the topic', async () => {
-    const originalFetch = globalThis.fetch
-    const topic: Topic = {
-      slug: 'docs', title: '文档', description: '查文档。', intro: '一段话。',
-      capabilities: ['查最新文档'], packages: [fakeItem], related: [{ slug: 'agent-workflow', title: 'Agent 工作流' }],
-    }
-    globalThis.fetch = async (url: RequestInfo | URL) => {
-      expect(String(url)).toBe('http://localhost:3000/api/topics/docs%20x')
-      return new Response(JSON.stringify({ topic }), { status: 200 })
-    }
-
-    const result = await new StoreClient().getTopic('docs x')
-    expect(result).toEqual({ data: topic, error: null })
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error string on 404', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
-
-    const result = await new StoreClient().getTopic('nope')
-    expect(result).toEqual({ data: null, error: 'Not found' })
 
     globalThis.fetch = originalFetch
   })

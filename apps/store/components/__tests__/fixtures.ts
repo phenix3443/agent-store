@@ -1,4 +1,4 @@
-import type { Item, PackageReview } from '@as/types'
+import type { Item, SkillItem } from '@as/types'
 
 export const providerItem: Item = {
   id: 'item-1',
@@ -34,18 +34,22 @@ export const mcpItem: Item = {
   serverCommand: 'npx -y @ankimcp/anki-mcp-server',
 }
 
-export const cleanReview: PackageReview = {
-  tier: 'auto',
-  quality: 4,
-  risk: 'low',
-  summary: 'Does what the manifest says.',
-  concerns: [],
-}
-
-export const flaggedReview: PackageReview = {
-  tier: 'auto',
-  quality: 3,
-  risk: 'medium',
-  summary: 'Runs third-party code.',
-  concerns: ['Downloads and runs code through npx'],
+export const skillItem: SkillItem = {
+  id: 'item-3',
+  slug: 'brainstorming',
+  name: 'brainstorming',
+  description: 'Explore intent before building',
+  category: 'skill',
+  version: '1.0.0',
+  publisher: { id: 'pub-3', slug: 'obra', name: 'obra', avatarUrl: '', tier: 'community' },
+  compatibleWith: ['claude'],
+  tags: [],
+  downloads: 12,
+  rating: 0,
+  reviewCount: 0,
+  status: 'published',
+  installHook: { steps: [] },
+  createdAt: '2026-06-18T00:00:00Z',
+  updatedAt: '2026-06-18T00:00:00Z',
+  contentUrl: '',
 }

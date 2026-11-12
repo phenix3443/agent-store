@@ -4,15 +4,13 @@ import { requestId, type RequestIdVariables } from 'hono/request-id'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { desc, eq, sql } from 'drizzle-orm'
 import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/pancake-ts'
-import { getItems, getItemBySlug, getPublisherBySlug, getPublisherItems } from './queries'
-import { getTopics, getTopicBySlug } from './topic-queries'
+import { getItems, getItemBySlug } from './queries'
 import { getDb, type DbEnv } from './db/client'
 import { itemVersions, items, reviews } from './db/schema'
 import type { AuthEnv } from './auth-token'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
-import { getMyItems } from './publisher-items'
 import { submitReview } from './review-queries'
 import {
   isWebhookProcessed,
@@ -182,45 +180,6 @@ app.get('/api/items/:slug/versions', async (c) => {
   } catch (e) {
     return fail(c, 500, 'Failed to load versions', e)
   }
-})
-
-app.get('/api/publishers/:slug', async (c) => {
-  const slug = c.req.param('slug')
-  const [publisherResult, itemsResult] = await Promise.all([
-    getPublisherBySlug(c.env, slug),
-    getPublisherItems(c.env, slug),
-  ])
-
-  if (publisherResult.error) return fail(c, 500, 'Failed to fetch publisher', publisherResult.error)
-  if (!publisherResult.data) return c.json({ error: 'Not found' }, 404)
-  return c.json({ publisher: publisherResult.data, items: itemsResult.data })
-})
-
-// ── Topics (curated in the registry, written by its sync) ────────────────────
-
-app.get('/api/topics', async (c) => {
-  const { data, error } = await getTopics(c.env)
-  if (error) return fail(c, 500, 'Failed to fetch topics', error)
-  return c.json({ topics: data })
-})
-
-app.get('/api/topics/:slug', async (c) => {
-  const { data, error } = await getTopicBySlug(c.env, c.req.param('slug'))
-  if (error) return fail(c, 500, 'Failed to fetch topic', error)
-  if (!data) return c.json({ error: 'Not found' }, 404)
-  return c.json({ topic: data })
-})
-
-// ── Publisher (authenticated) ────────────────────────────────────────────────
-
-// The authenticated publisher's own items (any status), for their dashboard.
-app.get('/api/me/items', async (c) => {
-  const user = await getAuthUser(c.env, c.req.header('Authorization'))
-  if (!user) return c.json({ error: 'Unauthorized' }, 401)
-  if (!user.username) return c.json({ error: 'GitHub username not found' }, 422)
-  const { data, error } = await getMyItems(c.env, user.username)
-  if (error) return fail(c, 500, 'Failed to fetch items', error)
-  return c.json({ items: data })
 })
 
 // ── Billing (Waffo Pancake, Merchant of Record) ──────────────────────────────

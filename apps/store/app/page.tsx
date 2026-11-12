@@ -4,13 +4,11 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { formatPrice } from '@as/types'
-import { getFeaturedItems, getItems, getTopics } from '@/lib/catalog'
+import { getFeaturedItems, getItems } from '@/lib/catalog'
 import { desktopOsFromUserAgent } from '@/lib/desktop-os'
 import { leadSentence } from '@/lib/item-meta'
-import { reviewVerdict } from '@/lib/review'
 import { FeaturedPlate } from '@/components/FeaturedPlate'
 import { ItemTable } from '@/components/ItemTable'
-import { TopicList } from '@/components/TopicList'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('site.home')
@@ -27,12 +25,11 @@ const DOWNLOADS = [
 
 export default async function LandingPage() {
   const t = await getTranslations('site.home')
-  const [featured, all, topics, requestHeaders] = await Promise.all([getFeaturedItems(), getItems({}), getTopics(), headers()])
+  const [featured, all, requestHeaders] = await Promise.all([getFeaturedItems(), getItems({}), headers()])
   const visitorOs = desktopOsFromUserAgent(requestHeaders.get('user-agent'))
   const recommended = DOWNLOADS.find((d) => d.os === visitorOs)
 
-  // The plate shows the stamp only when a package really passed review.
-  const lead = featured.find((item) => reviewVerdict(item) === 'passed') ?? featured[0]
+  const lead = featured[0]
   const rest = featured
     .filter((item) => item !== lead)
     .slice(0, 5)
@@ -40,7 +37,7 @@ export default async function LandingPage() {
 
   return (
     <div className="px-4 lg:px-10">
-      <section className="grid gap-x-16 gap-y-12 border-b border-ink pb-14 pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:pb-16 lg:pt-20 xl:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
+      <section className="grid gap-x-16 gap-y-12 pb-14 pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:pb-16 lg:pt-20 xl:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
         <div>
           <h1 className="text-[44px] leading-[1.02] tracking-[-0.035em] [text-wrap:balance] [word-break:keep-all] sm:text-[56px] lg:text-[clamp(60px,5.4vw,88px)] lg:leading-[1]">
             <span className="block">{t('titleA')}</span>
@@ -99,21 +96,6 @@ export default async function LandingPage() {
           </p>
         </section>
       </section>
-
-      {topics.length > 0 && (
-        <section aria-labelledby="home-topics" className="py-14 lg:py-20">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-line pb-6">
-            <h2 id="home-topics" className="text-[28px] leading-9 tracking-[-0.02em] sm:text-[40px] sm:leading-[1.1]">
-              {t('topicsTitle')}
-            </h2>
-            <Link href="/topics" className="link inline-flex items-center gap-1.5 text-sm">
-              {t('topicsAll', { count: topics.length })}
-              <ArrowRight size={14} aria-hidden />
-            </Link>
-          </div>
-          <TopicList topics={topics} label={t('topicsTitle')} />
-        </section>
-      )}
 
       {lead && (
         <section aria-labelledby="home-featured" className="store-shell border-t border-ink py-14 lg:py-20">

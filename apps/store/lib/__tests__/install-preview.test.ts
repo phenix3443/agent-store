@@ -1,17 +1,6 @@
 import { test, expect } from 'bun:test'
-import { installCommand, reviewVerdict, runEntries } from '../review'
-import { cleanReview, flaggedReview, mcpItem, providerItem } from '../../components/__tests__/fixtures'
-
-test('a package without review data is pending, not passed', () => {
-  expect(reviewVerdict(providerItem)).toBe('pending')
-})
-
-test('only a low-risk review without concerns passes', () => {
-  expect(reviewVerdict({ review: cleanReview })).toBe('passed')
-  expect(reviewVerdict({ review: flaggedReview })).toBe('flagged')
-  expect(reviewVerdict({ review: { ...cleanReview, concerns: ['x'] } })).toBe('flagged')
-  expect(reviewVerdict({ review: { ...cleanReview, risk: 'high' } })).toBe('flagged')
-})
+import { installCommand, runEntries } from '../install-preview'
+import { mcpItem, providerItem } from '../../components/__tests__/fixtures'
 
 test('install command uses the slug', () => {
   expect(installCommand(mcpItem)).toBe('aas install anki-mcp')

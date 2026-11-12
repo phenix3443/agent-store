@@ -1,5 +1,7 @@
 # 发布文案（可直接粘贴，按需微调）
 
+> [!warning] 2026-11-12（#101）起不再维护自己的 registry，网页端的发布、主题和 LLM 审查都已去掉。本文讲 registry、PR 发布、安全审查的段落已过时，重写前不要直接使用。
+
 > 换掉占位链接：商店 `https://agent-store-alpha.vercel.app`、registry `https://github.com/awesome-agent-store/registry`。有域名后统一替换。
 
 ---

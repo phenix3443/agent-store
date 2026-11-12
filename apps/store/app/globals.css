@@ -6,15 +6,10 @@
   --on-ink: #f5f4f6;
   --line: #c9c7c4;
   --line-strong: #8e8c89;
-  --lilac: #dcddf3;
   --sel: #eaeaf4;
   --fill: #eceaec;
   --selection-bg: #dcddf3;
   --selection-fg: #16181a;
-  /* The stamp is a pale seal with ink lettering in both themes. */
-  --stamp-bg: #dcddf3;
-  --stamp-ink: #16181a;
-  --stamp-blend: multiply;
   --red: #b3261e;
   --scrim: rgba(22, 24, 26, 0.4);
 
@@ -33,8 +28,6 @@
   --fill: #24272b;
   --selection-bg: #3d4070;
   --selection-fg: #f0eff2;
-  /* multiply would dissolve the pale seal into a dark ground */
-  --stamp-blend: normal;
   --red: #f28b82;
   --scrim: rgba(0, 0, 0, 0.6);
 
@@ -273,40 +266,10 @@
     width: 15px;
   }
 
-  .chop {
-    background: var(--stamp-bg);
-    color: var(--stamp-ink);
-    mix-blend-mode: var(--stamp-blend);
-  }
-
-  .stamp {
-    mix-blend-mode: var(--stamp-blend);
-    transform: rotate(-13deg);
-    transition:
-      transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
-      filter 320ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .stamp:hover {
-    transform: rotate(-9deg) translateY(-5px) scale(1.03);
-    filter: drop-shadow(0 10px 10px rgba(22, 24, 26, 0.22));
-  }
-
-  .stamp-ring {
-    transform-origin: 74px 74px;
-    animation: stamp-turn 48s linear infinite;
-  }
-
   /* While a filter or search navigation is in flight (set by useStoreQuery). */
   [data-store-pending] .store-results {
     opacity: 0.55;
     transition: opacity 150ms 120ms;
-  }
-}
-
-@keyframes stamp-turn {
-  to {
-    transform: rotate(360deg);
   }
 }
 
@@ -319,17 +282,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stamp,
-  .stamp:hover {
-    transition: none;
-    transform: rotate(-13deg);
-    filter: none;
-  }
-
-  .stamp-ring {
-    animation: none;
-  }
-
   *,
   *::before,
   *::after {

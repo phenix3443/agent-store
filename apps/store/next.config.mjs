@@ -11,8 +11,12 @@ const nextConfig = {
   // Trace workspace packages (@as/sdk, @as/types) from the monorepo root.
   outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '../..'),
   async redirects() {
-    // Topics (#61) replaced the collections page.
-    return [{ source: '/collections', destination: '/topics', permanent: true }]
+    // Topics and the collections page they replaced were removed in #101.
+    return ['/collections', '/topics', '/topics/:path*'].map((source) => ({
+      source,
+      destination: '/store',
+      permanent: true,
+    }))
   },
 }
 

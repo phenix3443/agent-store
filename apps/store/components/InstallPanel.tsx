@@ -3,7 +3,7 @@
 import type { Item } from '@as/types'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { installCommand } from '@/lib/review'
+import { installCommand } from '@/lib/install-preview'
 import { usePhone } from '@/lib/use-phone'
 import { CopyCommandButton } from './CopyCommandButton'
 import { InstallButton } from './InstallButton'

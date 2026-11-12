@@ -2,12 +2,9 @@
   "store": {
     "nav": {
       "store": "商店",
-      "topics": "主题",
       "docs": "文档",
       "pricing": "定价",
-      "publish": "发布",
       "login": "登录",
-      "myHome": "我的主页",
       "settings": "设置",
       "menu": "菜单",
       "account": "账号菜单",
@@ -54,7 +51,6 @@
       "title": "商店",
       "colCategory": "类别",
       "colPackage": "包",
-      "colReview": "审查",
       "colPublisher": "发布者",
       "colInstalls": "安装量",
       "copied": "已复制",
@@ -66,22 +62,7 @@
       "emptyBody": "换个关键词，或清除搜索和筛选后再看。",
       "colInstall": "安装",
       "copyCommand": "复制命令",
-      "lede": "每个包都写明审查结论和安装后会执行的内容。"
-    },
-    "review": {
-      "title": "审查结论",
-      "passed": "已审",
-      "flagged": "有提醒",
-      "pending": "待审",
-      "pendingBody": "这个包还没有审查结论。安装前请核对下面列出的执行内容。",
-      "automated": "自动审查",
-      "quality": "质量 {score}/5",
-      "riskLow": "低风险",
-      "riskMedium": "中等风险",
-      "riskHigh": "高风险",
-      "concerns": "提醒",
-      "stampLabel": "审查章：已审，Agent Store",
-      "chop": "审"
+      "lede": "每个包都写明安装后会执行的内容。"
     },
     "tier": {
       "official": "官方",
@@ -130,12 +111,6 @@
       "submitting": "提交中…",
       "anonymous": "匿名"
     },
-    "publisher": {
-      "items": "{count} 个已发布的包",
-      "empty": "还没有发布任何包。",
-      "close": "关闭",
-      "breadcrumb": "商店"
-    },
     "lang": {
       "zh": "中文",
       "en": "English"
@@ -169,11 +144,9 @@
       "resources": "资源",
       "legal": "条款",
       "store": "商店",
-      "topics": "主题",
       "docs": "文档",
       "pricing": "定价",
       "download": "下载",
-      "registry": "包目录（registry）",
       "source": "源代码",
       "releases": "版本发布",
       "privacy": "隐私政策",
@@ -184,7 +157,7 @@
       "metaTitle": "Agent Store：Claude Code / Codex 的技能、MCP 与供应商",
       "titleA": "找技能、MCP",
       "titleB": "和模型供应商",
-      "lede": "按要做的事浏览 Claude Code / Codex 能用的技能、MCP 服务和模型供应商。详情页写明每个包要运行的命令、连接的地址、下载的文件和写入的配置；还没审查的包标为「待审」。",
+      "lede": "浏览 Claude Code / Codex 能用的技能、MCP 服务和模型供应商。详情页写明每个包要运行的命令、连接的地址、下载的文件和写入的配置。",
       "downloadMac": "下载 macOS 版",
       "downloadWin": "下载 Windows 版",
       "downloadLinux": "下载 Linux 版",
@@ -201,23 +174,7 @@
       "plateOpen": "查看详情",
       "relayTitle": "本地代理：一个地址，多家上游",
       "relayBody": "Claude Code / Codex 的请求先发到本机，再按你定的顺序转给已配置的供应商；前一家连不上或返回 5xx 时，换下一家。每次请求的 Token 和费用记在本机。",
-      "relayDocs": "端口、优先级和切换条件见文档",
-      "topicsTitle": "按要做的事找",
-      "topicsAll": "全部 {count} 个主题"
-    },
-    "topics": {
-      "metaTitle": "主题",
-      "title": "主题",
-      "lede": "按要做的事把包放在一起。一个主题里可以同时有技能、MCP 和供应商，按推荐的顺序排列。",
-      "count": "{count} 个包",
-      "listLabel": "全部主题",
-      "empty": "还没有主题。",
-      "breadcrumb": "主题",
-      "capabilitiesTitle": "装上之后，agent 可以",
-      "packagesTitle": "这个主题里的包",
-      "packagesCount": "{count} 个包",
-      "packagesEmpty": "这个主题里的包暂时都没有上架。",
-      "relatedTitle": "相关主题"
+      "relayDocs": "端口、优先级和切换条件见文档"
     },
     "docs": {
       "metaTitle": "文档",
@@ -229,7 +186,7 @@
         {
           "id": "about",
           "title": "什么是 Agent Store",
-          "body": "Agent Store 是 Claude Code / Codex 的「应用商店 + 本地管理客户端」。浏览器里的 Web 商店用于发现、搜索和发布；本机的桌面客户端统一管理已安装的资源、显示用量，并运行内置的本地代理。这里可以安装三类资源：",
+          "body": "Agent Store 是 Claude Code / Codex 的「应用商店 + 本地管理客户端」。浏览器里的 Web 商店用于发现和搜索；本机的桌面客户端统一管理已安装的资源、显示用量，并运行内置的本地代理。这里可以安装三类资源：",
           "bullets": [
             "技能（skill）：为 Claude Code / Codex 补充的工作流与专长",
             "MCP 服务：通过 Model Context Protocol 接入的外部工具与数据源",
@@ -250,12 +207,10 @@
         {
           "id": "browse",
           "title": "在商店里浏览与安装",
-          "body": "商店页是一张表，每行一个包，列出类别、审查状态、发布者和安装量。顶部可以按类别切换、只看已验证发布者的包、按安装量 / 新增时间 / 评分排序；按 / 键直接搜索。",
+          "body": "商店页是一张表，每行一个包，列出类别、发布者和安装量。顶部可以按类别切换、只看已验证发布者的包、按安装量 / 新增时间 / 评分排序；按 / 键直接搜索。",
           "bullets": [
-            "点一行，右侧打开详情：审查结论、安装后会执行的内容、安装命令、规格、README、版本历史和评价",
-            "「安装」先尝试唤起桌面客户端；没有检测到客户端时，复制安装命令并提示下载",
-            "审查通过（低风险且没有提醒）的包盖一枚「已审」章；还没有审查结论的显示「待审」",
-            "主题页把同一类工作用得上的包放在一起，技能、MCP 和供应商可以出现在同一个主题里"
+            "点一行，右侧打开详情：安装后会执行的内容、安装命令、规格、README、版本历史和评价",
+            "「安装」先尝试唤起桌面客户端；没有检测到客户端时，复制安装命令并提示下载"
           ]
         },
         {
@@ -300,11 +255,6 @@
           "id": "usage",
           "title": "用量仪表盘",
           "body": "桌面客户端的概览页汇总本地代理记下的用量：消耗趋势（今日 / 近 7 天 / 近 30 天）、总费用、总 Token、总请求数与模型分布，以及本地代理的监听地址、今日请求、成功率和开关。最近的请求按应用、模型 → 供应商、耗时和状态码逐条列出。命令行用 aas usage 查看同样的汇总，可以按天数、供应商或工具过滤。"
-        },
-        {
-          "id": "publish",
-          "title": "发布你的资源",
-          "body": "登录后在商店页点「发布」，选择类型（供应商 / 技能 / MCP）并填写信息。提交会在 GitHub 上打开一份预填好的清单文件，由你向 registry 提交 PR；CI 校验清单和安装地址，合并后包出现在商店里。"
         },
         {
           "id": "pro",
@@ -404,58 +354,14 @@
       "planPro": "Pro",
       "planTeam": "Team",
       "upgrade": "升级 Pro",
-      "upgradeNote": "解锁预算告警与用量分析",
       "proActive": "Pro 权益已生效",
-      "statsLabel": "发布概况",
-      "statItems": "我的资源",
-      "statInstalls": "总安装量",
-      "statPending": "审核中",
-      "statPublished": "已发布",
-      "submissions": "我的提交",
-      "publish": "发布资源",
-      "colName": "名称",
-      "colCategory": "类别",
-      "colVersion": "版本",
-      "colInstalls": "安装量",
-      "colRating": "评分",
-      "colStatus": "状态",
-      "statusPublished": "已发布",
-      "statusPending": "审核中",
-      "statusRejected": "未通过",
-      "emptyTitle": "还没有提交",
-      "emptyBody": "发布第一个供应商、技能或 MCP，让别人在 Agent Store 里找到并安装它。",
-      "noUsernameTitle": "个人面板",
-      "noUsernameBody": "个人面板按 GitHub 用户名统计你发布的内容。请用 GitHub 登录一次，账号会自动关联。",
       "redirecting": "正在跳转…",
       "loginFirst": "请先登录",
       "checkoutFailed": "没能打开支付页"
     },
-    "publish": {
-      "title": "发布资源",
-      "body": "填好信息后，会在 GitHub 上打开一份预填的清单文件，由你向 registry 提交 PR。CI 校验通过并合并后，包出现在商店里。",
-      "type": "类型",
-      "choose": "请选择",
-      "cancel": "取消",
-      "submit": "在 GitHub 上继续",
-      "submitting": "正在打开…",
-      "failed": "发布失败",
-      "fields": {
-        "name": "名称",
-        "homepage": "主页",
-        "baseUrl": "Base URL",
-        "supportedModels": "支持的模型（逗号分隔）",
-        "repo": "仓库地址",
-        "contentUrl": "SKILL.md 原始链接",
-        "transport": "传输方式",
-        "command": "启动命令",
-        "url": "远程地址",
-        "headers": "Headers（JSON）",
-        "env": "环境变量（JSON）"
-      }
-    },
     "login": {
       "title": "登录 Agent Store",
-      "body": "登录后可以发布资源、发表评价，并在不同设备间同步已安装的技能、MCP 和供应商。",
+      "body": "登录后可以发表评价，并在不同设备间同步已安装的技能、MCP 和供应商。",
       "github": "使用 GitHub 登录",
       "google": "使用 Google 登录",
       "consent": "继续即表示同意<terms>服务条款</terms>和<privacy>隐私政策</privacy>。",

@@ -50,7 +50,3 @@ export const MOCK_PUBLISHERS: Publisher[] = [
     bio: '稳定线路、免翻墙接入 Claude Code 的第三方接入服务。',
   },
 ]
-
-export function getPublisherBySlug(slug: string): Publisher | null {
-  return MOCK_PUBLISHERS.find((p) => p.slug === slug) ?? null
-}

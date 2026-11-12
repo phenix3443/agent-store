@@ -1,7 +1,7 @@
 import { test, expect, mock, afterEach } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
 import { intlMock } from '../../test-intl'
-import { cleanReview, flaggedReview, mcpItem, providerItem } from './fixtures'
+import { mcpItem, providerItem } from './fixtures'
 
 mock.module('next/link', () => ({
   default: ({ href, children, scroll: _scroll, ...rest }: { href: string; children: React.ReactNode; scroll?: boolean }) => (
@@ -70,19 +70,10 @@ test('the install column has a visible header', () => {
   expect(screen.getByRole('columnheader', { name: '安装' })).toBeInTheDocument()
 })
 
-test('review column: no data is pending without a seal', () => {
-  const { container } = render(<ItemTable items={[providerItem]} />)
-  expect(screen.getByText('待审')).toBeInTheDocument()
-  expect(container.querySelector('.chop')).toBeNull()
-})
-
-test('review column: a clean review gets the seal, a flagged one a warning', () => {
-  const { container } = render(
-    <ItemTable items={[{ ...providerItem, review: cleanReview }, { ...mcpItem, review: flaggedReview }]} />
-  )
-  expect(screen.getByText('已审')).toBeInTheDocument()
-  expect(screen.getByText('有提醒')).toBeInTheDocument()
-  expect(container.querySelectorAll('.chop').length).toBe(1)
+test('there is no review column or verdict', () => {
+  render(<ItemTable items={[providerItem, mcpItem]} />)
+  expect(screen.queryByRole('columnheader', { name: '审查' })).toBeNull()
+  expect(screen.queryByText('待审')).toBeNull()
 })
 
 test('a package without ratings shows no zero score', () => {
