@@ -86,23 +86,27 @@ test('shows an install button for a not-yet-installed item and installs it', asy
   await waitFor(() => expect(install).toHaveBeenCalledWith('filesystem'))
 })
 
-test('switching to the 审查 tab shows the automated review verdict', async () => {
+test('the 评价 tab lists user reviews', async () => {
   mockRpc({
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
       name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
-      review: { tier: 'verified', quality: 4, risk: 'medium', summary: '实用的文件系统 MCP', concerns: ['执行 npx 远程包'] },
     }),
+    getReviews: () => [
+      { rating: 4, body: '好用', authorName: 'alice', updatedAt: '2026-06-01T00:00:00Z' },
+      { rating: 5, authorName: null, updatedAt: '2026-06-02T00:00:00Z' },
+    ],
   })
   renderPanel()
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
-  fireEvent.click(screen.getByText('审查'))
-  expect(screen.getByText('4/5')).toBeInTheDocument()
-  expect(screen.getByText('中等风险')).toBeInTheDocument()
-  expect(screen.getByText('实用的文件系统 MCP')).toBeInTheDocument()
-  expect(screen.getByText('执行 npx 远程包')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '评价' }))
+  await waitFor(() => screen.getByText('alice'))
+  expect(screen.getByText('好用')).toBeInTheDocument()
+  expect(screen.getByText('★★★★')).toBeInTheDocument()
+  expect(screen.getByText('匿名')).toBeInTheDocument()
+  expect(screen.getByText('在网页版商店可发表评价')).toBeInTheDocument()
 })
 
 test('switching to the 版本 tab shows the real version history', async () => {
@@ -165,7 +169,7 @@ test('clicking the heart button toggles favorite state', async () => {
   expect(screen.getByLabelText('取消收藏')).toBeInTheDocument()
 })
 
-test('shows 官方 and 已发布 badges together for an installed official-tier item (status is always visible)', async () => {
+test('shows the 官方 tier badge and no publication status badge for an installed official-tier item', async () => {
   mockRpc({
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
@@ -177,7 +181,7 @@ test('shows 官方 and 已发布 badges together for an installed official-tier 
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
   expect(screen.getByText('官方')).toBeInTheDocument()
-  expect(screen.getByText('已发布')).toBeInTheDocument()
+  expect(screen.queryByText('已发布')).not.toBeInTheDocument()
 })
 
 test('shows a 已验证 tier badge for a verified-tier publisher', async () => {
@@ -195,7 +199,7 @@ test('shows a 已验证 tier badge for a verified-tier publisher', async () => {
   expect(screen.getByText('已验证')).toBeInTheDocument()
 })
 
-test('does not show a tier badge for a community-tier publisher, but still shows the status badge', async () => {
+test('does not show a tier badge for a community-tier publisher', async () => {
   const communityPublisher = { ...publisher, tier: 'community' as const }
   mockRpc({
     info: () => ({
@@ -209,42 +213,6 @@ test('does not show a tier badge for a community-tier publisher, but still shows
   await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
   expect(screen.queryByText('官方')).not.toBeInTheDocument()
   expect(screen.queryByText('已验证')).not.toBeInTheDocument()
-  expect(screen.getByText('已发布')).toBeInTheDocument()
-})
-
-test('shows a 已发布 badge for a not-yet-installed published catalog item', async () => {
-  mockRpc({
-    info: () => { throw new Error('Item not installed: filesystem') },
-    search: () => [{
-      id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
- category: 'mcp', version: '0.8.1', publisher,
-      compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
-      installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      configSchema: {},
-    }],
-  })
-  renderPanel()
-  fireEvent.click(screen.getByText('select'))
-  await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
-  expect(screen.getByText('已发布')).toBeInTheDocument()
-})
-
-test('shows the automated quality score in the meta line when a review exists', async () => {
-  mockRpc({
-    info: () => { throw new Error('Item not installed: filesystem') },
-    search: () => [{
-      id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
-      category: 'mcp', version: '0.8.1', publisher,
-      compatibleWith: ['claude'], tags: [], downloads: 10, rating: 0, status: 'published',
-      installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-      configSchema: {},
-      review: { tier: 'verified', quality: 4, risk: 'low', summary: 's', concerns: [] },
-    }],
-  })
-  renderPanel()
-  fireEvent.click(screen.getByText('select'))
-  await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
-  expect(screen.getByText('质量 4/5')).toBeInTheDocument()
 })
 
 test('clicking the copy button copies the install command to the clipboard', async () => {

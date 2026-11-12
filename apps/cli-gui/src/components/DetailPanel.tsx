@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, Heart } from 'lucide-react'
-import type { InstalledItem, InstallOutcome, PackageReview, UserReview, ItemVersion } from '@as/types'
+import type { InstalledItem, InstallOutcome, UserReview, ItemVersion } from '@as/types'
 import { callRpc, errorText } from '../lib/rpc'
 import { needsSetup } from '../lib/installPolicy'
 import { describeError, type FriendlyError } from '../lib/errors'
@@ -16,19 +16,11 @@ import { CategoryIcon } from './CategoryIcon'
 import {
   TYPE_META,
   TIER_META,
-  STATUS_META,
-  statusOf,
   buildReadme,
   installCmdOf,
 } from '../lib/detailContent'
 
 type Tab = 'overview' | 'reviews' | 'versions'
-
-const RISK_META: Record<string, { labelKey: string; cls: string }> = {
-  low: { labelKey: 'riskLow', cls: 'text-store-green bg-store-green-soft' },
-  medium: { labelKey: 'riskMedium', cls: 'text-store-amber bg-store-amber-soft' },
-  high: { labelKey: 'riskHigh', cls: 'text-store-red border border-store-red' },
-}
 
 export function DetailPanel() {
   const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, editingConfigSlug, setEditingConfigSlug } =
@@ -102,9 +94,7 @@ export function DetailPanel() {
   const isFavorite = favoriteSlugs.has(detail.slug)
   const type = TYPE_META[detail.category]
   const tier = TIER_META[detail.publisher.tier] ?? TIER_META.community
-  const status = STATUS_META[statusOf(detail)]
   const readme = buildReadme(detail, detail.description, t)
-  const review: PackageReview | undefined = 'review' in detail ? detail.review : undefined
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -119,17 +109,11 @@ export function DetailPanel() {
                   {t(`tier.${detail.publisher.tier}`)}
                 </span>
               )}
-              <span
-                className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.textClass} ${status.borderClass}`}
-              >
-                {t(`status.${statusOf(detail)}`)}
-              </span>
             </div>
             <div className="mt-1.5 flex items-center gap-3 text-xs text-store-text-2">
               <span className="font-semibold">{detail.publisher.name}</span>
               <span className="text-store-border-strong">|</span>
               <span className="text-store-text-3">↓ {detail.downloads}</span>
-              {review && <span className="text-store-amber">{t('detail.quality')} {review.quality}/5</span>}
               <span className={`font-semibold ${type.textClass}`}>{t(`categories.${detail.category}`)}</span>
             </div>
             <p className="mt-3 max-w-[620px] text-sm leading-relaxed text-store-text-2">{detail.description}</p>
@@ -204,7 +188,7 @@ export function DetailPanel() {
           {(
             [
               { key: 'overview', label: t('nav.overview') },
-              { key: 'reviews', label: t('detail.tabReview') },
+              { key: 'reviews', label: t('detail.tabReviews') },
               { key: 'versions', label: t('detail.tabVersion') },
             ] as const
           ).map((opt) => (
@@ -255,59 +239,19 @@ export function DetailPanel() {
 
         {tab === 'reviews' && (
           <div className="mt-5 flex flex-col gap-3">
-            {review ? (
-              <>
-                <div className="flex items-center gap-4 rounded-xl border border-store-border bg-store-panel px-4 py-4">
-                  <div className="text-center">
-                    <div className="font-mono text-2xl font-extrabold leading-none text-store-text">{review.quality}/5</div>
-                    <div className="mt-1 text-[11px] text-store-text-3">{t('detail.qualityScore')}</div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${(RISK_META[review.risk] ?? RISK_META.medium).cls}`}
-                    >
-                      {t(`detail.${(RISK_META[review.risk] ?? RISK_META.medium).labelKey}`)}
-                    </span>
-                    <p className="mt-2 text-xs leading-relaxed text-store-text-2">{review.summary}</p>
-                  </div>
+            {userReviews.map((r, i) => (
+              <div key={i} className="rounded-xl border border-store-border bg-store-panel px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-store-text">{r.authorName ?? t('detail.anon')}</span>
+                  <span className="text-[11px] text-store-amber">{'★'.repeat(r.rating)}</span>
+                  <span className="ml-auto text-[10.5px] text-store-text-3">
+                    {new Date(r.updatedAt).toLocaleDateString()}
+                  </span>
                 </div>
-                {review.concerns.length > 0 && (
-                  <div className="flex flex-col gap-1.5 rounded-xl border border-store-border bg-store-panel px-4 py-3.5">
-                    <p className="text-xs font-semibold text-store-text-2">{t('detail.reviewPoints')}</p>
-                    {review.concerns.map((c, i) => (
-                      <div key={i} className="flex gap-2 text-xs leading-relaxed text-store-text-2">
-                        <span className="text-store-amber">⚠</span>
-                        <span>{c}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <p className="text-[11px] text-store-text-3">{t('detail.autoReviewNote')}</p>
-              </>
-            ) : (
-              <div className="rounded-xl border border-dashed border-store-border bg-store-panel px-4 py-8 text-center text-sm text-store-text-3">
-                {t('detail.noReview')}
+                {r.body && <p className="mt-1.5 text-xs leading-relaxed text-store-text-2">{r.body}</p>}
               </div>
-            )}
-
-            {userReviews.length > 0 && (
-              <div className="mt-2 flex flex-col gap-2">
-                <p className="text-xs font-semibold text-store-text-2">{t('detail.userReviews')}（{userReviews.length}）</p>
-                {userReviews.map((r, i) => (
-                  <div key={i} className="rounded-xl border border-store-border bg-store-panel px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-store-text">{r.authorName ?? t('detail.anon')}</span>
-                      <span className="text-[11px] text-store-amber">{'★'.repeat(r.rating)}</span>
-                      <span className="ml-auto text-[10.5px] text-store-text-3">
-                        {new Date(r.updatedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {r.body && <p className="mt-1.5 text-xs leading-relaxed text-store-text-2">{r.body}</p>}
-                  </div>
-                ))}
-                <p className="text-[11px] text-store-text-3">{t('detail.reviewOnWeb')}</p>
-              </div>
-            )}
+            ))}
+            <p className="text-[11px] text-store-text-3">{t('detail.reviewOnWeb')}</p>
           </div>
         )}
 

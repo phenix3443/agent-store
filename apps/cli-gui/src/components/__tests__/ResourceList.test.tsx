@@ -408,7 +408,7 @@ test('installing an MCP that needs config opens its config page', async () => {
   await waitFor(() => expect(screen.getByTestId('editing-config-slug').textContent).toBe('context7'))
 })
 
-// #97 review: the detail pane must follow the list. Selecting another item while a
+// #97: the detail pane must follow the list. Selecting another item while a
 // config page is open shows that item; switching only the category keeps the open page,
 // as the mockup's setCliFilter does (it leaves cliEditId alone).
 test('selecting another item while a provider config page is open switches the detail pane to it', async () => {
