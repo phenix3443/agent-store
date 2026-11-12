@@ -139,3 +139,11 @@ test('the package name opens the header, with no category label above it', () =>
   const heading = screen.getByRole('heading', { level: 1 })
   expect(heading.parentElement?.firstElementChild).toBe(heading)
 })
+
+test('a semver version gets a "v", a skill\'s tree sha does not', () => {
+  renderPage(skillResource)
+  expect(screen.getByText('76a98a285cb0')).toBeInTheDocument()
+  cleanup()
+  renderPage()
+  expect(screen.getByText('v1.0.0')).toBeInTheDocument()
+})

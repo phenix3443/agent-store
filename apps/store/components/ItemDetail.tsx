@@ -44,7 +44,8 @@ export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
   const dateFormat = new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
 
   const specs: Spec[] = []
-  if (r.version) specs.push({ label: t('detail.version'), value: /^\d/.test(r.version) ? `v${r.version}` : r.version })
+  // Skills carry a git tree sha as their version; only semver-like versions get a 'v'.
+  if (r.version) specs.push({ label: t('detail.version'), value: /^\d+\.\d+/.test(r.version) ? `v${r.version}` : r.version })
   specs.push({ label: t('detail.upstreamId'), value: r.origin.upstreamId, href: r.origin.url ?? undefined })
   if (r.kind === 'mcp') {
     if (r.repository?.url) specs.push({ label: t('detail.repository'), value: r.repository.url.replace(/^https?:\/\//, ''), href: r.repository.url })
