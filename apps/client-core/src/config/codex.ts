@@ -262,8 +262,10 @@ export async function disableRelayForCodex(aasHome: string, codexConfigDir: stri
   const snapshot = await readRelayState<CodexRelayState>(aasHome, 'codex')
   const config = await readConfig(codexConfigDir)
 
+  // A snapshot taken while a takeover was already in place holds relay values as "originals".
   if (config['model_provider'] === RELAY_PROVIDER_KEY) {
-    if (snapshot?.originalModelProvider != null) config['model_provider'] = snapshot.originalModelProvider
+    const original = snapshot?.originalModelProvider
+    if (original != null && original !== RELAY_PROVIDER_KEY) config['model_provider'] = original
     else delete config['model_provider']
   }
 
@@ -284,11 +286,26 @@ export async function disableRelayForCodex(aasHome: string, codexConfigDir: stri
     const auth = await readAuth(codexConfigDir)
     if (auth['OPENAI_API_KEY'] === LEGACY_RELAY_API_KEY) {
       const original = snapshot.originalAuth?.['OPENAI_API_KEY']
-      if (original !== undefined) auth['OPENAI_API_KEY'] = original
+      if (original !== undefined && original !== LEGACY_RELAY_API_KEY) auth['OPENAI_API_KEY'] = original
       else delete auth['OPENAI_API_KEY']
       await writeAuth(codexConfigDir, auth, aasHome)
     }
   }
 
   await clearRelayState(aasHome, 'codex')
+}
+
+/**
+ * Rewrites a takeover still in place so it carries the current relay token (older
+ * versions sent none). Writes nothing when Codex is not on the relay or already
+ * sends the token. The existing snapshot is kept.
+ */
+export async function refreshRelayForCodex(aasHome: string, codexConfigDir: string): Promise<boolean> {
+  if (!(await readRelayState<CodexRelayState>(aasHome, 'codex'))) return false
+  const config = await readConfig(codexConfigDir)
+  if (config['model_provider'] !== RELAY_PROVIDER_KEY) return false
+  const relayProvider = readRecord(readRecord(config['model_providers'])?.[RELAY_PROVIDER_KEY])
+  if (readRecord(relayProvider?.['http_headers'])?.[RELAY_TOKEN_HEADER] === ensureRelayToken(aasHome)) return false
+  await enableRelayForCodex(aasHome, codexConfigDir)
+  return true
 }

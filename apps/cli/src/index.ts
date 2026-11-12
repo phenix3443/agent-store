@@ -15,7 +15,8 @@ import { realRelayOps } from './relay-ops'
 import { runUsage } from './commands/usage'
 import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
-import { runRelayDaemon, resolvePaths, runDoctor, runMigrate } from '@as/client-core'
+import { runRelayDaemon, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover } from '@as/client-core'
+import { refreshRelayOnStartup } from './startup'
 
 const USAGE = `aas — AI Agent Store CLI
 
@@ -45,6 +46,9 @@ async function main(): Promise<void> {
     console.log(USAGE)
     return
   }
+
+  // The daemon refreshes on its own start; `__rpc` writes JSON to stdout, so warnings go to stderr.
+  if (command !== '__relay-daemon') await refreshRelayOnStartup(() => refreshRelayTakeover(resolvePaths()))
 
   const engine = createEngine()
 

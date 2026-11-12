@@ -1,6 +1,8 @@
 import type { LocalRelayConfig } from '@as/types'
 import { listLocalConfigs } from './local-configs'
 import { startRelayServer } from './server'
+import { refreshRelayTakeover, type RelayTakeoverPaths } from './refresh'
+import { resolvePaths } from '../paths'
 
 export interface RunningRelayInstance {
   id: string
@@ -36,9 +38,16 @@ export function reconcileRelayInstances(
 
 export async function runRelayDaemon(
   aasHome: string,
-  options: { pollIntervalMs?: number; signal?: AbortSignal } = {}
+  options: { pollIntervalMs?: number; signal?: AbortSignal; paths?: RelayTakeoverPaths } = {}
 ): Promise<void> {
   const { pollIntervalMs = 3000, signal } = options
+  // Every relay start, however it was triggered, first brings configs taken over by
+  // an older version up to the token this relay will require.
+  try {
+    await refreshRelayTakeover(options.paths ?? resolvePaths({ aasHome }))
+  } catch (err) {
+    console.error('[relay-daemon] could not refresh the Claude Code / Codex relay config:', err)
+  }
   const running = new Map<string, RunningRelayInstance>()
   const start = (config: LocalRelayConfig): RunningRelayInstance => {
     const server = startRelayServer({ aasHome, port: config.port })

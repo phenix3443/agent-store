@@ -147,12 +147,31 @@ export async function disableRelayForClaude(aasHome: string, claudeConfigDir: st
     if (original != null) env[key] = original
     else delete env[key]
   }
-  restore('ANTHROPIC_BASE_URL', [relayBaseUrl()], snapshot?.originalBaseUrl)
-  restore('ANTHROPIC_AUTH_TOKEN', [token, LEGACY_RELAY_AUTH_TOKEN], snapshot?.originalAuthToken)
+  const baseUrls = [relayBaseUrl()]
+  const tokens = [token, LEGACY_RELAY_AUTH_TOKEN]
+  // A snapshot taken while a takeover was already in place holds relay values as "originals".
+  const notOurs = (value: string | null | undefined, ours: Array<string | undefined>) =>
+    value != null && !ours.includes(value) ? value : null
+  restore('ANTHROPIC_BASE_URL', baseUrls, notOurs(snapshot?.originalBaseUrl, baseUrls))
+  restore('ANTHROPIC_AUTH_TOKEN', tokens, notOurs(snapshot?.originalAuthToken, tokens))
 
   if (Object.keys(env).length > 0) settings['env'] = env
   else delete settings['env']
 
   await writeSettings(aasHome, claudeConfigDir, settings)
   await clearRelayState(aasHome, 'claude')
+}
+
+/**
+ * Rewrites a takeover still in place so it carries the current relay token (older
+ * versions wrote a fixed value the relay now refuses). Writes nothing when Claude
+ * is not on the relay or already has the token. The existing snapshot is kept.
+ */
+export async function refreshRelayForClaude(aasHome: string, claudeConfigDir: string): Promise<boolean> {
+  if (!(await readRelayState<ClaudeRelayState>(aasHome, 'claude'))) return false
+  const env = ((await readSettings(claudeConfigDir))['env'] ?? {}) as Record<string, unknown>
+  if (env['ANTHROPIC_BASE_URL'] !== relayBaseUrl()) return false
+  if (env['ANTHROPIC_AUTH_TOKEN'] === ensureRelayToken(aasHome)) return false
+  await enableRelayForClaude(aasHome, claudeConfigDir)
+  return true
 }
