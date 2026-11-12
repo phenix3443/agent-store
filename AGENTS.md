@@ -54,7 +54,7 @@ Required steps before calling UI work complete:
 2. Compare rendered screens against the design reference side by side, screen by screen:
    `apps/store/DESIGN.md` for the web store, `docs/ui/Agent Store.dc.html` for the
    desktop client. For the web store, check every changed screen at 390px, 820px and
-   1440px, in light and dark, and with a long locale (e.g. `es`).
+   1440px, in light and dark, in both Chinese and English (the only two locales).
 3. For the desktop client specifically, take a real screenshot of the native window
    (e.g. via `screencapture` on macOS) rather than only checking the underlying dev-server
    page in a browser — a plain browser tab has no Tauri IPC bridge, so RPC-backed data and
