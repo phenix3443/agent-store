@@ -78,7 +78,8 @@ eval "$(xdotool getwindowgeometry --shell "$WIN")"
 xdotool mousemove $((X + 58 + 150)) $((Y + 44 + 34)) click 1
 sleep 1
 xdotool type --delay 60 'playwright'
-sleep 6
+# Each RPC is a fresh sidecar process; the search waits for one plus the API.
+sleep 15
 shot 03-search-playwright
 stop_app
 

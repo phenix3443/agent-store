@@ -75,5 +75,5 @@ export function resourceItem(r: CatalogResourceDetail): Item {
 /** `v1.2.0` for semver-like versions; a skill's tree hash is shown as it is. */
 export function formatVersion(version: string | null | undefined): string {
   if (!version) return '—'
-  return /^\d/.test(version) ? `v${version}` : version
+  return /^\d+(\.\d+)+/.test(version) ? `v${version}` : version
 }

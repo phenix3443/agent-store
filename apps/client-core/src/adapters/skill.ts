@@ -57,9 +57,9 @@ export class SkillAdapter implements KindAdapter {
   }
 
   /** Codex finds skills by frontmatter name in its own root and in ~/.agents/skills; another one with ours would shadow it. */
-  private async checkCodexName(slug: string, marker: SkillMarker, target: string): Promise<void> {
+  private async checkCodexName(slug: string, marker: SkillMarker, target: string, alsoOurs: string[] = []): Promise<void> {
     const roots = [this.toolSkillsDir('codex'), join(legacyAasHome(), 'skills')]
-    const clash = (await codexVisibleNames(roots, new Set([target]))).get(marker.runtimeNames.codex)
+    const clash = (await codexVisibleNames(roots, new Set([target, ...alsoOurs]))).get(marker.runtimeNames.codex)
     if (clash) {
       throw new SkillConflictError(`Codex already sees a skill named "${marker.runtimeNames.codex}" at ${clash}; pass --force to deploy ${slug} anyway`, 'name-clash')
     }
@@ -94,7 +94,8 @@ export class SkillAdapter implements KindAdapter {
     const marker = await this.marker(slug)
     const path = join(this.toolSkillsDir(target), deployDirName(slug, marker.runtimeNames.claude))
     const ours = (await classifyTarget(path, oldSource)) === 'link-to-source'
-    if (target === 'codex') await this.checkCodexName(slug, marker, path)
+    // The old copy is this skill itself; it is removed once every deployment is in place.
+    if (target === 'codex') await this.checkCodexName(slug, marker, path, [oldSource])
     const used = await deploySkillDir(this.dir(slug), path, preferredMode(), ours ? recorded('symlink') : NO_CLOBBER, target, slug)
     await this.ctx.setDeployment(slug, target, { path, mode: used, sourceHash: marker.contentHash })
   }

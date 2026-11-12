@@ -4,7 +4,7 @@ import type { Paths } from '@as/types'
 
 /** Agent Store's own home before 2026-11-12; `~/.agents` is a convention directory other tools read too. */
 export function legacyAasHome(): string {
-  return join(homedir(), '.agents')
+  return join(process.env['HOME'] || homedir(), '.agents')
 }
 
 export function resolvePaths(overrides?: Partial<Paths>): Required<Paths> {
