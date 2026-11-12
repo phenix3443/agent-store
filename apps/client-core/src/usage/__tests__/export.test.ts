@@ -40,9 +40,12 @@ test('formatUsageExport emits pretty JSON of the rows', () => {
 test('exportUsageToFile writes a file under exports/ and returns its path', async () => {
   aasHome = await mkdtemp('/tmp/as-export-')
   const db = openUsageDb(aasHome)
+  // The export covers the last 30 days, so a fixed date falls out of it as time passes.
+  const today = new Date().toISOString().slice(0, 10)
   db.run(
     `INSERT INTO daily_rollups (date, provider_slug, target, model, request_count, success_count, unpriced_request_count, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd)
-     VALUES ('2026-07-06', 'openai', 'claude', 'gpt-4o', 3, 3, 0, 100, 50, 0, 0, 0.05)`
+     VALUES (?, 'openai', 'claude', 'gpt-4o', 3, 3, 0, 100, 50, 0, 0, 0.05)`,
+    [today]
   )
 
   const path = await exportUsageToFile(aasHome, 'csv')
