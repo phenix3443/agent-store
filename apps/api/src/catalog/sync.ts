@@ -220,7 +220,8 @@ export function formatReportMarkdown(report: SyncReport, extra: string[] = []): 
       '',
       '### GitHub stars',
       `- ${st.repos} repos known, ${st.due} due, ${st.queried} refreshed (${st.found} found, ${st.missing} not resolved) ` +
-        `in ${st.queries} GraphQL queries, ${(st.durationMs / 1000).toFixed(1)} s`,
+        `in ${st.queries} GraphQL queries, ${(st.durationMs / 1000).toFixed(1)} s` +
+        (st.waitedMs ? ` (${(st.waitedMs / 1000).toFixed(0)} s of it waiting out rate limits)` : ''),
       `- rate limit: ${st.rateLimit ? `${st.rateLimit.remaining}/${st.rateLimit.limit} left, this run cost ${st.cost}` : 'unknown'}`,
       ...(cov.length ? [`- ${cov.join('; ')}`] : []),
       ...st.errors.slice(0, 10).map((e) => `- error: ${e}`),

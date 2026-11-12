@@ -83,7 +83,9 @@ const STARS = {
 let dir: string
 let db: Database
 let clock: number
+let slept: number[]
 beforeEach(() => {
+  slept = []
   dir = mkdtempSync(join(tmpdir(), 'catalog-stars-'))
   db = openCatalogForWrite(join(dir, 'catalog.db'))
   clock = Date.parse('2026-11-12T00:00:00Z')
@@ -103,7 +105,7 @@ const stars = (id: string) => (db.query('SELECT stars, github_repo FROM resource
 const run = (routes: Route[], opts: { full?: boolean; batchSize?: number; advanceMs?: number } = {}) => {
   clock += opts.advanceMs ?? 1000
   const f = fakeFetch(...routes)
-  return refreshStars(db, octokitWith(f), { now: new Date(clock), full: opts.full ?? false, log: () => {} }, { batchSize: opts.batchSize ?? 100, concurrency: 1 })
+  return refreshStars(db, octokitWith(f), { now: new Date(clock), full: opts.full ?? false, log: () => {} }, { batchSize: opts.batchSize ?? 100, sleep: async (ms) => { slept.push(ms) } })
 }
 
 describe('refreshStars', () => {
@@ -143,7 +145,7 @@ describe('refreshStars', () => {
     expect(full).toMatchObject({ due: 5, queries: 1 })
     expect(stars(`mcp-registry:${SUPABASE.upstreamId}`).stars).toBe(2_500)
     const later = githubGraphqlRoute(STARS)
-    expect(await run([later], { advanceMs: 21 * 3600_000 })).toMatchObject({ due: 5 })
+    expect(await run([later], { advanceMs: 73 * 3600_000 })).toMatchObject({ due: 5 })
   })
 
   test('a failed batch keeps the previous stars; a 401 stops the run', async () => {
@@ -153,6 +155,21 @@ describe('refreshStars', () => {
     expect(report.failedBatches).toBe(1)
     expect(report.queries).toBe(1)
     expect(report.errors.at(-1)).toMatch(/401; stopped/)
+    expect(stars(`mcp-registry:${GITHUB.upstreamId}`).stars).toBe(28_000)
+  })
+
+  test('a secondary rate limit is waited out and the batch retried', async () => {
+    const gql = githubGraphqlRoute(STARS)
+    let limited = 1
+    const secondary: Route = (url) => {
+      if (url.pathname !== '/graphql' || limited-- <= 0) return undefined
+      return new Response(JSON.stringify({ message: 'You have exceeded a secondary rate limit. Please wait a few minutes.' }), {
+        status: 403, headers: { 'content-type': 'application/json', 'retry-after': '7' },
+      })
+    }
+    const report = await run([secondary, gql], { batchSize: 2 })
+    expect(slept).toEqual([7000])
+    expect(report).toMatchObject({ queried: 5, failedBatches: 0, waitedMs: 7000, errors: [] })
     expect(stars(`mcp-registry:${GITHUB.upstreamId}`).stars).toBe(28_000)
   })
 
