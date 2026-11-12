@@ -1,0 +1,15 @@
+ok: seeded the old ~/.agents layout
+ok: migration moved the registry
+ok: migrated skill is in the library
+ok: Claude link points at the library
+ok: Codex got its own link (it used to read ~/.agents/skills)
+ok: another tool's skill in ~/.agents was left alone
+ok: skill library copy has the marker
+ok: Claude deployment links to the library
+ok: Codex deployment links to the library
+ok: nothing went into the shared ~/.agents/skills
+ok: aas disable --for codex removed only the Codex link
+ok: context7 written to Claude as npx
+ok: SSE server written to Claude
+ok: SSE server not written to Codex
+result: PASS

@@ -1,0 +1,93 @@
+$ aas disable skills-find-skills --for codex
+  skills-find-skills disabled for codex
+
+$ aas search find-skills --kind skill
+find-skills   skill · GitHub · 4.3M installs · 39.1K stars
+  Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express ...
+  aas install github:vercel-labs/skills/find-skills
+
+huawei-cloud-find-skills   skill · GitHub · 18.7K installs · 59 stars
+  Invoke this skill to search, list, query, discover, browse, find and install any Huawei Cloud (华为云) agent skill. Triggers include: "华为云", "华为云有什么skill", "华为云...
+  aas install github:huaweicloud/huaweicloud-skills/huawei-cloud-find-skills
+
+huawei-cloud-agentorchard-find-skills   skill · GitHub · 59 stars
+  Search, discover, browse and install AI Gallery Agent skills via natural language. Triggers include: "AI Gallery", "AI Gallery有什么skill", "有什么skill", "AI Gall...
+  aas install github:huaweicloud/huaweicloud-skills/huawei-cloud-agentorchard-find-skills
+
+agent-skill-stack   skill · GitHub · 41K stars
+  Find, evaluate, and assemble the smallest compatible set of AI Agent Skills for an end-to-end natural-language goal. Use when a user wants Skills for a multi...
+  aas install github:github/awesome-copilot/agent-skill-stack
+
+$ aas info github:vercel-labs/skills/find-skills
+
+  find-skills  76a98a285cb0   skill
+  Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.
+
+  Id           github:vercel-labs/skills/find-skills
+  Author       vercel-labs (https://github.com/vercel-labs)
+  Homepage     https://github.com/vercel-labs/skills
+  Source       vercel-labs/skills/skills/find-skills @ e781cb4d0743
+
+  Not installed. Install with: aas install github:vercel-labs/skills/find-skills
+
+$ aas info skills-find-skills
+
+  skills-find-skills  76a98a285cb0   community
+  Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.
+
+  Id           github:vercel-labs/skills/find-skills
+  Publisher    vercel-labs (vercel-labs)
+  Compatible   claude · codex
+  Installed    2026-11-12  (updated 2026-11-12)
+  Status       claude: enabled (symlink /home/tester/.claude/skills/find-skills)  |  codex: disabled
+
+$ aas enable textarttools-mcp --for codex
+  Error: textarttools-mcp can't be enabled for Codex: Codex does not support SSE MCP servers
+
+$ aas list
+NAME                 VERSION    CLAUDE   CODEX   TYPE       STATUS
+──────────────────── ────────── ──────── ─────── ────────── ────────────────────
+legacy-skill         1.0.0      ✓        ✓       skill
+skills-find-skills   76a98a285… ✓        ✗       skill
+context7             4.7.0      ✓        ✓       mcp
+admux                0.1.0      ✗        ✗       mcp
+textarttools-mcp     1.0.0      ✓        ✗       mcp
+openrouter           1.0.0               ✗       provider
+
+$ aas doctor
+  No problems found
+
+$ ls -l ~/.claude/skills ~/.codex/skills ~/.agents/skills
+/home/tester/.agents/skills:
+total 4
+drwxr-xr-x 2 tester tester 4096 Nov 12 16:58 users-own
+
+/home/tester/.claude/skills:
+total 0
+lrwxrwxrwx 1 tester tester 51 Nov 12 16:58 find-skills -> /home/tester/.agent-store/skills/skills-find-skills
+lrwxrwxrwx 1 tester tester 45 Nov 12 16:58 legacy-skill -> /home/tester/.agent-store/skills/legacy-skill
+
+/home/tester/.codex/skills:
+total 0
+lrwxrwxrwx 1 tester tester 45 Nov 12 16:58 legacy-skill -> /home/tester/.agent-store/skills/legacy-skill
+
+$ ~/.claude.json mcpServers
+{
+  "context7": {
+    "type": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@upstash/context7-mcp@4.7.0"
+    ]
+  },
+  "textarttools-mcp": {
+    "type": "sse",
+    "url": "https://humanjesse.github.io/textarttools-mcp/sse"
+  }
+}
+
+$ cat ~/.codex/config.toml
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp@4.7.0"]
