@@ -1,20 +1,20 @@
 'use client'
 
-import type { Item } from '@as/types'
+import type { ResourceSummary } from '@as/types'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useTranslations } from 'next-intl'
 import { FavoriteButton } from './FavoriteButton'
 import { noticeInUse } from './InstallNotice'
-import { itemHref } from '@/lib/item-href'
+import { resourceHref } from '@/lib/resource'
 
 interface DetailDrawerProps {
-  item: Item
+  resource: Pick<ResourceSummary, 'id' | 'kind'>
   open: boolean
   onOpenChange: (open: boolean) => void
   children: React.ReactNode
 }
 
-export function DetailDrawer({ item, open, onOpenChange, children }: DetailDrawerProps) {
+export function DetailDrawer({ resource, open, onOpenChange, children }: DetailDrawerProps) {
   const t = useTranslations('store')
 
   return (
@@ -32,7 +32,7 @@ export function DetailDrawer({ item, open, onOpenChange, children }: DetailDrawe
           onCloseAutoFocus={(event) => {
             // Radix would hand focus back to whatever was focused when the drawer
             // mounted; after an intercepted navigation that is not reliably the row.
-            const row = document.querySelector<HTMLElement>(`[data-item-link="${CSS.escape(item.slug)}"]`)
+            const row = document.querySelector<HTMLElement>(`[data-item-link="${CSS.escape(resource.id)}"]`)
             if (row) {
               event.preventDefault()
               row.focus()
@@ -42,13 +42,13 @@ export function DetailDrawer({ item, open, onOpenChange, children }: DetailDrawe
         >
           <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line pl-5 pr-3 sm:pl-6">
             <span className="label min-w-0 truncate whitespace-nowrap">
-              {t('detail.breadcrumb')} / {t(`category.${item.category}`)}
+              {t('detail.breadcrumb')} / {t(`category.${resource.kind}`)}
             </span>
             <div className="flex shrink-0 items-center gap-1">
-              <FavoriteButton itemId={item.id} />
+              <FavoriteButton itemId={resource.id} />
               {/* A plain anchor: a full load skips the intercepting route and renders the page. */}
               <a
-                href={itemHref(item)}
+                href={resourceHref(resource)}
                 aria-label={t('detail.expand')}
                 className="flex h-8 min-w-8 items-center justify-center gap-1.5 whitespace-nowrap px-2 text-[13px] hover:bg-sel"
               >

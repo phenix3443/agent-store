@@ -40,6 +40,7 @@ export type {
   ResourceOrigin,
   ResourceSummary,
   ResourceListResponse,
+  ResourceSort,
   McpInput,
   McpKeyValueInput,
   McpArgument,

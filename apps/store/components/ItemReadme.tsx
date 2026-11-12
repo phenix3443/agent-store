@@ -1,11 +1,11 @@
-import type { Item } from '@as/types'
+import type { ResourceDetail } from '@as/types'
 import { getTranslations } from 'next-intl/server'
-import { getItemDoc } from '@/lib/item-doc'
+import { getResourceDoc } from '@/lib/resource-doc'
 import { MarkdownContent } from './MarkdownContent'
 
 /** Streams in after the rest of the detail, since it waits on GitHub or npm. */
-export async function ItemReadme({ item }: { item: Item }) {
-  const doc = await getItemDoc(item)
+export async function ItemReadme({ resource }: { resource: ResourceDetail }) {
+  const doc = await getResourceDoc(resource)
   if (!doc) return null
   const t = await getTranslations('store.detail')
   return (

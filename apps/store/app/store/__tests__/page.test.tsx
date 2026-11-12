@@ -1,8 +1,13 @@
 import { describe, test, expect, mock, afterEach } from 'bun:test'
 import { render, screen, cleanup } from '@testing-library/react'
+import type { ResourceSummary } from '@as/types'
 import { intlMock } from '../../../test-intl'
+import { mcpResource, providerResource, skillResource, summary } from '../../../components/__tests__/fixtures'
 
-afterEach(() => { cleanup() })
+afterEach(() => {
+  cleanup()
+  calls.length = 0
+})
 
 mock.module('next/link', () => ({
   default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
@@ -17,15 +22,27 @@ mock.module('next/navigation', () => ({
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND')
   },
+  redirect: () => {
+    throw new Error('NEXT_REDIRECT')
+  },
 }))
 mock.module('next-intl', () => intlMock)
 
-// The store page now fetches its catalog from the API server via @/lib/catalog.
-// Back the mock with the offline mock catalog so the page renders deterministic
-// data without hitting the network.
-const { getItems: mockGetItems } = await import('../../../lib/mock/items')
+const all: ResourceSummary[] = [summary(skillResource), summary(mcpResource), summary(providerResource)]
+const calls: unknown[][] = []
+let fail = false
+
+// The API searches and filters; the mock answers the way it would, so the test
+// can check the page sends the query instead of filtering itself.
 mock.module('@/lib/catalog', () => ({
-  getItems: async (opts: Parameters<typeof mockGetItems>[0]) => mockGetItems(opts),
+  PAGE_SIZE: 50,
+  listResources: async (query: { kind: string | null; q: string }, offset = 0) => {
+    calls.push([query, offset])
+    if (fail) return { ok: false, error: 'HTTP 503' }
+    const resources = all.filter((r) => (!query.kind || r.kind === query.kind) && (!query.q || r.name.includes(query.q)))
+    return { ok: true, resources, nextOffset: null }
+  },
+  getResource: async () => null,
 }))
 
 const { default: StorePage } = await import('../page')
@@ -38,32 +55,53 @@ describe('StorePage', () => {
     )
   }
 
-  test('renders items from the mock catalog under a page heading', async () => {
+  test('renders the first page from /api/resources under a page heading', async () => {
     await renderPage()
     expect(screen.getByRole('heading', { level: 1, name: '商店' })).toBeInTheDocument()
-    expect(screen.getByText('Superpowers')).toBeInTheDocument()
+    expect(screen.getByText('brainstorming')).toBeInTheDocument()
+    expect(screen.getByText('共 3 个包')).toBeInTheDocument()
+    expect(calls).toEqual([[{ kind: null, q: '', sort: 'default' }, 0]])
   })
 
-  test('has no carousel: each package appears once', async () => {
-    await renderPage()
-    expect(screen.getAllByText('Superpowers').length).toBe(1)
-  })
-
-  test('filters by category search param', async () => {
-    await renderPage({ category: 'mcp' })
-    expect(screen.getByText('Filesystem MCP')).toBeInTheDocument()
-    expect(screen.getByText('Web Search MCP')).toBeInTheDocument()
-    expect(screen.queryByText('Superpowers')).toBeNull()
-  })
-
-  test('category counts stay for all categories while one is selected', async () => {
-    await renderPage({ category: 'mcp' })
-    expect(screen.getByRole('button', { name: /^技能 [1-9]/ })).toBeInTheDocument()
+  test('kind, search and sort go to the API', async () => {
+    await renderPage({ category: 'mcp', q: 'Anki', sort: 'name' })
+    expect(calls).toEqual([[{ kind: 'mcp', q: 'Anki', sort: 'name' }, 0]])
+    expect(screen.getByText('Anki MCP')).toBeInTheDocument()
+    expect(screen.queryByText('brainstorming')).toBeNull()
   })
 
   test('an empty search result is explained and can be cleared', async () => {
     await renderPage({ q: 'zzz-no-such-package' })
     expect(screen.getByText('没有符合条件的包')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: '清除搜索和筛选' })[0]?.getAttribute('href')).toBe('/store')
+  })
+
+  test('an API failure shows the error state, not "no matches"', async () => {
+    fail = true
+    try {
+      await renderPage({ q: 'git' })
+    } finally {
+      fail = false
+    }
+    expect(screen.getByRole('alert').textContent).toContain('目录暂时不可用')
+    expect(screen.queryByText('没有符合条件的包')).toBeNull()
+    expect(screen.getByRole('link', { name: '重试' }).getAttribute('href')).toBe('/store?q=git')
+  })
+
+  test('?state= opens the loading, empty and error states without calling the API', async () => {
+    await renderPage({ state: 'loading' })
+    expect(screen.getByRole('status', { name: '正在加载包' })).toBeInTheDocument()
+    cleanup()
+    await renderPage({ state: 'empty' })
+    expect(screen.getByText('没有符合条件的包')).toBeInTheDocument()
+    cleanup()
+    await renderPage({ state: 'error' })
+    expect(screen.getByText('目录暂时不可用')).toBeInTheDocument()
+    expect(calls).toEqual([])
+  })
+
+  test('there is no verified-only switch the API cannot filter on', async () => {
+    await renderPage()
+    expect(screen.queryByRole('switch')).toBeNull()
   })
 })
