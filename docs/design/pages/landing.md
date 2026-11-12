@@ -29,16 +29,17 @@
 
 - 截图来自 `test/desktop-linux/Dockerfile` 构建的 Linux 原生窗口（Xvfb + xdotool），不是浏览器开发页。
 - 桌面端是深色界面，放进浅色页面时：外框 1px 墨线、图版底留白（`plate` 面 + 内边距），首屏截图加四角套准十字；不加阴影、不加圆角，和 Flat Plate Rule 一致。
-- 截图文件在 `apps/store/public/landing/`，WebP，裁成局部。
+- 截图文件在 `apps/store/public/landing/`，WebP，裁成局部，`next/image` 用 `unoptimized` 直接输出。
+- 用量截图里的数字来自截图时经本地代理发给容器内测试上游的请求（真实代理、真实记账，上游是假的），页面文案写明了这一点。
 
 ## 字段映射
 
 | 显示位 | 字段 | 格式 |
 |---|---|---|
 | 首屏 · 推荐下载按钮 | `desktopOsFromUserAgent(user-agent)` | 识别出 mac / win / linux 时一个按钮，其余系统列成文字链接；识别不出时三个按钮并列 |
-| 第 2 节 · 左侧包 | `getItems({ category })` 第一项的 `name`、`slug`、`publisher.name` | 包名正文，slug 等宽；取不到时显示 `<slug>` 占位，路径照常显示 |
+| 第 2 节 · 左侧包 | `getItems({ category })` 第一项的 `name`、`slug`、`compatibleWith` | 包名正文，slug 等宽；只列它声明支持的工具，不支持的工具写一行「不支持」；取不到时显示 `<slug>` 占位，三行路径照常显示 |
 | 第 2 节 · 写入路径 | 静态，来自 `apps/client-core`（见下表） | 等宽，完整显示，可换行 |
-| 第 3 节 · 终端输出 | 静态，Linux 容器里真实运行 `aas` 的输出 | 等宽，原样保留空格 |
+| 第 3 节 · 终端输出 | 静态（`components/landing/terminal-sessions.ts`），2026-11-12 在 `test/desktop-linux` 容器里对测试目录真实运行 `aas` 的输出 | 等宽，原样保留空格；CLI 输出格式变了要重新采集 |
 | 第 7 节 · 文件名、大小 | GitHub `releases/latest` 的 `assets[].name`、`assets[].size` | 大小按 MiB，十以下保留一位小数 |
 | 第 7 节 · 推荐文件 | `lib/latest-release.ts` 的 `recommended`：`.dmg`、`-setup.exe`，与 `/download/<target>` 跳转的文件一致 | 文字「推荐」 |
 | 第 7 节 · 推荐系统 | `desktopOsFromUserAgent` | 该栏标「根据你的系统推荐」 |
