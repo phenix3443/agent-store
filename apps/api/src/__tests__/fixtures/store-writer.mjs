@@ -26,6 +26,11 @@ const insertSession = db.prepare(
 
 process.stdout.write('ready\n')
 
+// SQLite's lock is not fair: a writer that retakes it with no gap can starve the
+// other side past busy_timeout. Real traffic (sign-ins, webhooks) has gaps; a
+// 1 ms pause still means hundreds of writes a second.
+const pause = new Int32Array(new SharedArrayBuffer(4))
+
 let sawApiWrites = 0
 let writes = 0
 for (let i = 0; i < cap && (i < min || sawApiWrites < overlap); i++) {
@@ -36,6 +41,7 @@ for (let i = 0; i < cap && (i < min || sawApiWrites < overlap); i++) {
   insertSession.run(`s${i}`, now, `t${i}`, now, now, `u${i}`)
   commit.run()
   writes++
+  Atomics.wait(pause, 0, 0, 1)
 }
 db.close()
 process.stdout.write(`${JSON.stringify({ writes, sawApiWrites })}\n`)

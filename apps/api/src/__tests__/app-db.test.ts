@@ -165,7 +165,8 @@ test('the store and the API write to app.db at the same time without SQLITE_BUSY
   }
 
   // Write as the API until the store is done. Yielding each round lets the exit
-  // event through; bun:sqlite calls themselves are synchronous.
+  // event through; bun:sqlite calls themselves are synchronous. The 1 ms pause
+  // is the gap real traffic has; see fixtures/store-writer.mjs.
   let exited = false
   void store.exited.then(() => (exited = true))
   let apiWrites = 0
@@ -173,7 +174,7 @@ test('the store and the API write to app.db at the same time without SQLITE_BUSY
   while (!exited && Date.now() < deadline) {
     await recordWebhook(env, `race-${apiWrites}`, 'subscription.activated', record({ waffoOrderId: `RACE_${apiWrites}` }))
     apiWrites++
-    await Bun.sleep(0)
+    await Bun.sleep(1)
   }
 
   const exitCode = await store.exited
