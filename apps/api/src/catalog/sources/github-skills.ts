@@ -21,6 +21,7 @@ const CONTAINERS = [
   '.zcode/skills/', '.zencoder/skills/', '.neovate/skills/', '.pochi/skills/', '.adal/skills/',
 ]
 const MAX_DEPTH = 3
+const DOWNLOAD_FAILED = 'SKILL.md could not be downloaded'
 const MAX_SKILLS_PER_REPO = 500
 
 export interface TreeEntry {
@@ -125,7 +126,7 @@ export async function scanRepo(
   const records: CatalogRecord[] = []
   const names = new Set<string>()
   for (const { dir, fm } of parsed) {
-    if (fm === undefined) { addSkip(skipped, 'SKILL.md could not be downloaded'); continue }
+    if (fm === undefined) { addSkip(skipped, DOWNLOAD_FAILED); continue }
     const name = fm ? str(fm['name']) : null
     const description = fm ? str(fm['description']) : null
     if (!fm || !name || !description) { addSkip(skipped, 'SKILL.md frontmatter lacks name or description'); continue }
@@ -214,8 +215,15 @@ export function githubSkillsSource(options: { repos?: string[]; maxRepos?: numbe
             const scan = await scanRepo(ctx.github, ctx.fetch, fullName, installs)
             run.records.push(...scan.records)
             for (const [k, v] of Object.entries(scan.skipped)) run.skipped[k] = (run.skipped[k] ?? 0) + v
-            scopes.push(scan.scope)
-            run.attempted!.push({ repo: scan.scope, status: scan.records.length ? 'scanned' : 'no skills' })
+            const failed = scan.skipped[DOWNLOAD_FAILED] ?? 0
+            if (failed) {
+              // Not reconciled: a skill whose SKILL.md did not download is not gone.
+              run.errors.push(`${fullName}: ${failed} SKILL.md downloads failed; its skills keep their previous state`)
+              run.attempted!.push({ repo: scan.scope, status: 'partial' })
+            } else {
+              scopes.push(scan.scope)
+              run.attempted!.push({ repo: scan.scope, status: scan.records.length ? 'scanned' : 'no skills' })
+            }
           } catch (e) {
             if (isRateLimit(e)) {
               rateLimited = true

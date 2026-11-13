@@ -76,6 +76,16 @@ describe('githubSkillsSource', () => {
     expect(run.skipped).toEqual({ 'repo over the per-run repo cap': 1 })
   })
 
+  test('a SKILL.md that fails to download leaves the repo unreconciled, so none of its skills is marked gone', async () => {
+    const flaky: Route = (url) => (url.hostname === 'raw.githubusercontent.com' && url.pathname.endsWith('/skills/pdf/SKILL.md') ? new Response('', { status: 500 }) : undefined)
+    const f = fakeFetch(flaky, githubRoutes)
+    const run = await githubSkillsSource({ repos: ['anthropics/skills'] }).run(ctx(f))
+    expect(run.records).toHaveLength(18)
+    expect(run.coverage).toEqual({ mode: 'scoped', scopes: [] })
+    expect(run.attempted).toEqual([{ repo: 'anthropics/skills', status: 'partial' }])
+    expect(run.errors).toEqual(['anthropics/skills: 1 SKILL.md downloads failed; its skills keep their previous state'])
+  })
+
   test('a repo that is gone is covered with nothing; known repos are revisited', async () => {
     const f = fakeFetch(githubRoutes)
     const run = await githubSkillsSource().run(ctx(f, ['gone/repo']))
