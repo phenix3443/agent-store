@@ -93,7 +93,7 @@ test('an MCP server shows its GitHub stars', () => {
 
 test('an entry gone upstream says so', () => {
   renderPage({ ...mcpResource, origin: { ...mcpResource.origin, unavailableAt: '2026-11-11T00:00:00Z' } })
-  expect(screen.getByRole('note').textContent).toContain('这个包已下架')
+  expect(screen.getByRole('note').textContent).toContain('这个包已从目录中下架。')
 })
 
 test('an MCP record with nothing to install explains instead of showing a command', () => {
