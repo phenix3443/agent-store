@@ -42,7 +42,7 @@ function serve(...items: Array<MCPItem | ProviderItem>) {
   served = items
   globalThis.fetch = (async (url: string) => {
     throw new Error(`Unmocked URL: ${url}`)
-  }) as typeof fetch
+  }) as unknown as typeof fetch
 }
 
 beforeEach(async () => {
