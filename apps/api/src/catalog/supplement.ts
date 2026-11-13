@@ -291,6 +291,7 @@ export class SearchSupplement {
       // When every site asked us to back off, retrying before the first of them is due is pointless.
       const waits = [...this.cooldown.values()].map((until) => until - now.getTime()).filter((ms) => ms > 0)
       const limited = asked.every((a) => 'failed' in a && (a.failed === 'rate limited' || a.failed === 'cooling down'))
+      for (const [k, until] of this.unavailable) if (until <= now.getTime()) this.unavailable.delete(k)
       this.unavailable.set(key, now.getTime() + (limited && waits.length ? Math.min(...waits) : this.c.unavailableTtlMs))
       this.log({ level: 'warn', message: 'search supplement: no site answered', key: key.slice(0, 12), sources: outcome })
       return
