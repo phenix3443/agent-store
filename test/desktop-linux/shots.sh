@@ -40,7 +40,16 @@ eval "$(dbus-launch --sh-syntax)"
 export XDG_DATA_HOME=$HOME/.local/share XDG_CONFIG_HOME=$HOME/.config
 mkdir -p "$XDG_DATA_HOME/applications"
 
+# Up to 0.2.1 the package was agent-store-cli, owning the same /usr/bin/app and
+# /usr/bin/aas. A stand-in for it must give way when the new package is installed.
+old=$(mktemp -d)
+mkdir -p "$old/DEBIAN" "$old/usr/bin"
+printf '#!/bin/sh\n' > "$old/usr/bin/app"; cp "$old/usr/bin/app" "$old/usr/bin/aas"; chmod 755 "$old/usr/bin/app" "$old/usr/bin/aas"
+printf 'Package: agent-store-cli\nVersion: 0.2.1\nArchitecture: amd64\nMaintainer: test\nDescription: stand-in for the old package\n' > "$old/DEBIAN/control"
+dpkg-deb --build "$old" "$old.deb" >/dev/null && sudo dpkg -i "$old.deb" >"$OUT/install-old.log" 2>&1 || { log "FAIL: installing the agent-store-cli stand-in"; exit 1; }
 sudo dpkg -i /bundles/*.deb >"$OUT/install.log" 2>&1 || { log "FAIL: dpkg -i"; exit 1; }
+check "the deb replaces the old agent-store-cli package" '! dpkg -s agent-store-cli >/dev/null 2>&1'
+check "the rpm obsoletes agent-store-cli" 'rpm -qp --obsoletes /bundles/*.rpm 2>/dev/null | grep -q "^agent-store-cli"'
 PKG=$(dpkg-deb -f /bundles/*.deb Package)
 APP=$(dpkg -L "$PKG" | grep -m1 -E '^/usr/bin/app$')
 SIDECAR=$(dpkg -L "$PKG" | grep -m1 -E '^/usr/bin/aas$')
