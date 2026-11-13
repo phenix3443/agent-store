@@ -190,7 +190,7 @@ select.inp option{background:#16142a}
 .row-meta{font:500 11.5px var(--mono);color:var(--fg3);white-space:nowrap;text-align:right;min-width:64px}
 .cols-h{display:flex;align-items:center;gap:12px;padding:0 12px 6px;font-size:11.5px;color:var(--fg3)}
 .cols-h .sp{flex:1}
-.col-ag{width:78px;display:flex;justify-content:center;flex:none;text-align:center}
+.col-ag{width:78px;display:flex;justify-content:center;flex:none;text-align:center;white-space:nowrap}
 .col-act{width:112px;display:flex;justify-content:flex-end;gap:6px;flex:none}
 .more{display:flex;justify-content:center;padding:12px 0 0}
 .empty{display:grid;justify-items:center;gap:8px;padding:56px 20px;text-align:center;color:var(--fg2);border:1px dashed var(--line-strong);border-radius:12px}
@@ -237,7 +237,7 @@ select.inp option{background:#16142a}
 .ag-r{display:flex;align-items:center;gap:10px;padding:9px 11px;border-bottom:1px solid var(--line);min-height:48px}
 .ag-r:last-child{border-bottom:0}
 .ag-r.soon{color:var(--fg3);border-top:1px dashed var(--line-strong);border-bottom:0;margin-top:-1px}
-.ag-ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex:none;font:700 11px var(--mono);background:var(--panel-2);border:1px solid var(--line-strong)}
+.ag-ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex:none;font:700 10px var(--mono);background:var(--panel-2);border:1px solid var(--line-strong)}
 .ag-ic.soon{border-style:dashed}
 .ag-t{flex:1;min-width:0;line-height:1.3}
 .ag-t b{font-size:13px;font-weight:600;display:flex;gap:8px;align-items:center}
@@ -291,7 +291,7 @@ details.fold>div{padding:4px 11px 2px;border-top:1px solid var(--line);padding-t
 .tbl .num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12px}
 .tbl-wrap{overflow-x:auto}
 .chart{display:block;width:100%;height:150px;margin-top:10px}
-.chart .b{fill:rgba(var(--mcp-rgb),.75);transition:fill .15s}
+.chart .b{fill:rgba(var(--mcp-rgb),.5);transition:fill .15s}
 .chart .b:hover{fill:var(--mcp)}
 .chart text{fill:var(--fg3);font:500 10px var(--mono)}
 .chart line{stroke:var(--line)}
@@ -321,7 +321,7 @@ details.fold>div{padding:4px 11px 2px;border-top:1px solid var(--line);padding-t
 .sb i.d.off{background:var(--warn)}
 
 /* 首次启动 */
-.ob{position:absolute;inset:44px 0 0 0;z-index:20;display:grid;place-items:center;padding:24px;overflow-y:auto;background:
+.ob{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:24px;overflow-y:auto;background:
   radial-gradient(40% 50% at 20% 0%,rgba(139,108,255,.22),transparent 70%),radial-gradient(40% 50% at 80% 0%,rgba(34,184,137,.16),transparent 70%),var(--bg-2)}
 .ob-card{width:min(560px,100%)}
 .ob-steps{display:flex;gap:6px;margin-bottom:22px}
@@ -330,6 +330,7 @@ details.fold>div{padding:4px 11px 2px;border-top:1px solid var(--line);padding-t
 .ob h1{font-size:26px;font-weight:800;line-height:1.25}
 .ob .lede{color:var(--fg2);margin:8px 0 20px;font-size:14px;max-width:52ch}
 .ob .acts{margin-top:22px}
+.ob h1 .grad{display:block}
 .grad{background:var(--brand);-webkit-background-clip:text;background-clip:text;color:transparent}
 
 /* 对话框 */
@@ -407,6 +408,11 @@ dialog.wide{width:min(680px,calc(100vw - 32px))}
 .pc-r .seg{flex-wrap:wrap}
 .pc-r .seg button{height:24px;padding:0 8px;font-size:11.5px}
 .pc-r .fld-row select{flex:1;min-width:0;height:28px;font-size:12px}
+
+/* 详情栏打开时列表收紧 */
+.has-pane .col-act,.has-pane .vh .sub,.has-pane .row-meta{display:none}
+.has-pane .col-ag{width:74px}
+.has-pane .vh .btn-sm svg+*{display:none}
 
 /* 窄窗口 */
 @container app (max-width:1040px){

@@ -2,8 +2,8 @@
 (function () {
   var KEY = 'as-client-proto';
   var AGENTS = [
-    { id: 'claude', name: 'Claude Code', dir: '~/.claude', skills: '~/.claude/skills', mcp: '~/.claude.json', mcpKey: 'mcpServers', env: 'CLAUDE_CONFIG_DIR', color: '#e0906f' },
-    { id: 'codex', name: 'Codex', dir: '~/.codex', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', mcpKey: 'mcp_servers', env: 'CODEX_HOME', color: '#5fd6a4' }
+    { id: 'claude', name: 'Claude Code', mark: 'Cc', dir: '~/.claude', skills: '~/.claude/skills', mcp: '~/.claude.json', mcpKey: 'mcpServers', env: 'CLAUDE_CONFIG_DIR', color: '#e0906f' },
+    { id: 'codex', name: 'Codex', mark: 'Cx', dir: '~/.codex', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', mcpKey: 'mcp_servers', env: 'CODEX_HOME', color: '#5fd6a4' }
   ];
 
   function seed() {
@@ -12,13 +12,12 @@
       signedIn: false, plan: 'free', agents: 'both', platform: 'mac', offline: false, size: 'auto',
       onboarded: false, legacy: true, usage: 'sample', relay: true, budget: null, favs: [], log: [],
       installed: [
-        { slug: 'skills-find-skills', id: 'github:vercel-labs/skills/find-skills', kind: 'skill', deploy: 'find-skills', version: '76a98a285cb0', on: { claude: true, codex: true } },
-        { slug: 'skills-grill-me', id: 'github:mattpocock/skills/grill-me', kind: 'skill', deploy: 'grill-me', version: '3df14e2d3a89', on: { claude: true, codex: false } },
-        { slug: 'skills-tdd', id: 'github:mattpocock/skills/tdd', kind: 'skill', deploy: 'tdd', version: '41c0be7d92aa', latest: '667dbdd00c09', on: { claude: true, codex: true }, edited: true },
+        { slug: 'skills-find-skills', id: 'github:vercel-labs/skills/find-skills', kind: 'skill', deploy: 'find-skills', version: '76a98a285cb0', on: { claude: true, codex: true }, edited: true },
+        { slug: 'skills-grill-me', id: 'github:mattpocock/skills/grill-me', kind: 'skill', deploy: 'grill-me', version: '3df14e2d3a89', on: { claude: true, codex: false }, clash: 'codex' },
+        { slug: 'skills-tdd', id: 'github:mattpocock/skills/tdd', kind: 'skill', deploy: 'tdd', version: '41c0be7d92aa', latest: '667dbdd00c09', on: { claude: true, codex: true } },
         { slug: 'legacy-skill', id: null, kind: 'skill', name: 'legacy-skill', deploy: 'legacy-skill', version: '—', on: { claude: true, codex: true }, migrated: true },
         { slug: 'context7', id: 'mcp-registry:io.github.upstash/context7', kind: 'mcp', version: '4.6.2', latest: '4.7.0', on: { claude: true, codex: true }, cfg: { CONTEXT7_API_KEY: 'ctx7sk-2f9a71c04be8' } },
         { slug: 'mcp-server', id: 'mcp-registry:io.github.netdata/mcp-server', kind: 'mcp', version: '2.12.3', on: { claude: true, codex: false }, cfg: {}, changed: 'claude' },
-        { slug: 'textarttools-mcp', id: 'mcp-registry:io.github.humanjesse/textarttools-mcp', kind: 'mcp', version: '1.0.0', on: { claude: true, codex: false }, cfg: {} },
         { slug: 'local', id: 'builtin:local', kind: 'provider', version: '1.0.0', on: { claude: true, codex: true }, cfg: { name: 'local', baseUrl: 'http://127.0.0.1:18100' } },
         { slug: 'skyapi', id: 'builtin:skyapi', kind: 'provider', version: '1.0.0', on: { claude: true, codex: false }, cfg: { name: 'SkyAPI', apiKey: 'sk-sky-4c81d09e27aa51f3', level: 1 } },
         { slug: 'openrouter', id: 'builtin:openrouter', kind: 'provider', version: '1.0.0', on: { claude: false, codex: true }, cfg: { name: 'OpenRouter', apiKey: 'sk-or-v1-93be5d1c7740a2e8', level: 1 } },
@@ -30,6 +29,7 @@
   var S;
   try { S = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
   if (!S || !S.installed) S = seed();
+  var ql = /[?&]lang=(zh|en)/.exec(location.search); if (ql) S.lang = ql[1];
 
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
   function reset() { var lang = S.lang; S = seed(); S.lang = lang; window.AS.state = S; save(); }
