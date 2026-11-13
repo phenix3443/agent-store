@@ -10,6 +10,11 @@ const nextConfig = {
   output: 'standalone',
   // Trace workspace packages (@as/sdk, @as/types) from the monorepo root.
   outputFileTracingRoot: path.join(path.dirname(fileURLToPath(import.meta.url)), '../..'),
+  webpack(config, { isServer, nextRuntime }) {
+    // webpack 5 in Next 15 does not list node:sqlite among Node's builtins.
+    if (isServer && nextRuntime === 'nodejs') config.externals.push({ 'node:sqlite': 'commonjs node:sqlite' })
+    return config
+  },
   async redirects() {
     // Topics and the collections page they replaced were removed in #101.
     return ['/collections', '/topics', '/topics/:path*'].map((source) => ({
