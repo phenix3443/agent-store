@@ -1,6 +1,6 @@
 {
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Agent Store CLI",
+  "productName": "Agent Store",
   "version": "0.2.1",
   "identifier": "com.aas.cli-gui",
   "build": {
@@ -12,7 +12,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "Agent Store CLI",
+        "title": "Agent Store",
         "width": 1200,
         "height": 764,
         "resizable": true,
@@ -36,6 +36,11 @@
     "active": true,
     "targets": "all",
     "externalBin": ["binaries/aas"],
+    "shortDescription": "Desktop client for Agent Store: install and manage skills, MCP servers and model providers for Claude Code and Codex",
+    "linux": {
+      "deb": { "conflicts": ["agent-store-cli"], "replaces": ["agent-store-cli"] },
+      "rpm": { "obsoletes": ["agent-store-cli"] }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

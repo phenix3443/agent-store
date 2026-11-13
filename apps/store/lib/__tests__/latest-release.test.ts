@@ -65,7 +65,7 @@ test('sizes are binary megabytes', () => {
 })
 
 test('lists the AppImage under Linux after deb and rpm, not as the recommended file', () => {
-  const release = parseRelease({ ...v021, assets: [...v021.assets, asset('Agent.Store.CLI_0.2.2_amd64.AppImage', 61000000)] })!
+  const release = parseRelease({ ...v021, assets: [...v021.assets, asset('Agent.Store_0.2.2_amd64.AppImage', 61000000)] })!
   const linux = release.platforms.find((p) => p.os === 'linux')!
   expect(linux.files.map((f) => [f.kind, f.recommended])).toEqual([
     ['deb', false],

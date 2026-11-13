@@ -1,6 +1,6 @@
 {
   "$schema": "../../../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Agent Store CLI Dev",
+  "productName": "Agent Store Dev",
   "identifier": "com.aas.cli-gui.dev",
   "plugins": {
     "deep-link": {

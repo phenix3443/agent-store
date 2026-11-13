@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."   # apps/cli-gui
 
-APP="src-tauri/target/debug/bundle/macos/Agent Store CLI Dev.app"
+APP="src-tauri/target/debug/bundle/macos/Agent Store Dev.app"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 
 echo "▸ building frontend (store=$VITE_STORE_URL, scheme=agent-store-dev)…"
