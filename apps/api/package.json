@@ -12,7 +12,6 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun src/migrate.ts",
     "test:integration": "bun test integration",
-    "db:seed": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f ../../db/seed.sql",
     "sync:catalog": "bun src/sync-catalog.ts"
   },
   "dependencies": {

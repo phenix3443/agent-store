@@ -17,7 +17,7 @@ writeFileSync(join(dir, 'references', 'notes.md'), 'moved, not copied twice\n')
 const manifest = {
   id: 'legacy-skill', slug: 'legacy-skill', name: 'legacy-skill', description: 'Installed by an older Agent Store',
   category: 'skill', version: '1.0.0', publisher: { id: 'p', slug: 'p', name: 'someone', avatarUrl: '', tier: 'community' },
-  compatibleWith: ['claude', 'codex'], tags: [], downloads: 0, rating: 0, status: 'published',
+  compatibleWith: ['claude', 'codex'], tags: [], downloads: 0, status: 'published',
   installHook: { steps: [] }, createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-01T00:00:00Z', contentUrl: '',
 }
 const marker = {

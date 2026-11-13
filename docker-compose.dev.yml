@@ -1,4 +1,4 @@
-# Local Postgres for `make dev-env`, `make e2e` and the API's DB-backed tests.
+# Local Postgres for `make dev-env` and the API's DB-backed tests.
 # Same major version as the k3s test deployment (home-lab projects/agent-store).
 services:
   db:

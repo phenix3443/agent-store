@@ -1,6 +1,5 @@
 import { describe, test, expect } from 'bun:test'
 import { StoreClient } from '../client'
-import type { Item } from '@as/types'
 
 describe('StoreClient constructor', () => {
   test('uses provided baseUrl', () => {
@@ -19,121 +18,17 @@ describe('StoreClient constructor', () => {
   })
 })
 
-// Minimal valid Item fixture for mocking
-const fakeItem: Item = {
-  id: 'item-1',
-  slug: 'test-provider',
-  name: 'Test Provider',
-  description: 'A test provider',
-
-
-  category: 'provider',
-  version: '1.0.0',
-  publisher: {
-    id: 'pub-1',
-    slug: 'test-publisher',
-    name: 'Test Publisher',
-    avatarUrl: 'https://example.com/avatar.png',
-    tier: 'official',
-  },
-  compatibleWith: ['claude'],
-  tags: ['ai'],
-  downloads: 100,
-  rating: 0,
-  status: 'published',
-  installHook: { steps: [] },
-  createdAt: '2026-06-18T00:00:00Z',
-  updatedAt: '2026-06-18T00:00:00Z',
-  configSchema: {},
-  supportedModels: ['gpt-4o'],
-}
-
-describe('StoreClient.getItems', () => {
-  test('calls GET /api/items and returns items on success', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async (url: RequestInfo | URL) => {
-      expect(String(url)).toBe('http://localhost:3000/api/items')
-      return new Response(JSON.stringify({ items: [fakeItem] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    const client = new StoreClient()
-    const result = await client.getItems()
-    expect(result.error).toBeNull()
-    expect(result.data).toHaveLength(1)
-    expect(result.data![0].slug).toBe('test-provider')
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('appends query params when provided', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async (url: RequestInfo | URL) => {
-      const u = new URL(String(url))
-      expect(u.searchParams.get('category')).toBe('provider')
-      expect(u.searchParams.get('q')).toBe('gpt')
-      expect(u.searchParams.get('limit')).toBe('5')
-      expect(u.searchParams.get('offset')).toBe('10')
-      expect(u.searchParams.get('sort')).toBe('created')
-      return new Response(JSON.stringify({ items: [] }), { status: 200 })
-    }
-
-    const client = new StoreClient()
-    await client.getItems({ category: 'provider', q: 'gpt', limit: 5, offset: 10, sort: 'created' })
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error string on non-200 response', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ error: 'Failed to fetch items' }), { status: 500 })
-
-    const client = new StoreClient()
-    const result = await client.getItems()
-    expect(result.data).toBeNull()
-    expect(result.error).toBe('Failed to fetch items')
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error string on network failure', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () => { throw new Error('Network error') }
-
-    const client = new StoreClient()
-    const result = await client.getItems()
-    expect(result.data).toBeNull()
-    expect(result.error).toBe('Network error')
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error when response has no items field', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({}), { status: 200 })
-
-    const client = new StoreClient()
-    const result = await client.getItems()
-    expect(result.data).toBeNull()
-    expect(result.error).toBe('No items in response')
-
-    globalThis.fetch = originalFetch
-  })
-
+describe('StoreClient fetch options', () => {
   test('merges a passed fetchInit (e.g. custom header) into the fetch call', async () => {
     const originalFetch = globalThis.fetch
     let capturedInit: RequestInit | undefined
     globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
       capturedInit = init
-      return new Response(JSON.stringify({ items: [] }), { status: 200 })
+      return new Response(JSON.stringify({ resources: [], nextOffset: null }), { status: 200 })
     }) as typeof fetch
 
     const client = new StoreClient('http://localhost:3000', { fetchInit: { headers: { 'X-Test': 'yes' } } })
-    await client.getItems()
+    await client.listResources()
     expect((capturedInit?.headers as Record<string, string> | undefined)?.['X-Test']).toBe('yes')
 
     globalThis.fetch = originalFetch
@@ -147,39 +42,9 @@ describe('StoreClient.getItems', () => {
       })) as typeof fetch
 
     const client = new StoreClient('http://localhost:3000', { timeoutMs: 10 })
-    const result = await client.getItems()
+    const result = await client.listResources()
     expect(result.data).toBeNull()
     expect(result.error).toBeTruthy()
-
-    globalThis.fetch = originalFetch
-  })
-})
-
-describe('StoreClient.getItemBySlug', () => {
-  test('calls GET /api/items/:slug and returns item on success', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async (url: RequestInfo | URL) => {
-      expect(String(url)).toBe('http://localhost:3000/api/items/test-provider')
-      return new Response(JSON.stringify({ item: fakeItem }), { status: 200 })
-    }
-
-    const client = new StoreClient()
-    const result = await client.getItemBySlug('test-provider')
-    expect(result.error).toBeNull()
-    expect(result.data?.slug).toBe('test-provider')
-
-    globalThis.fetch = originalFetch
-  })
-
-  test('returns error string on 404', async () => {
-    const originalFetch = globalThis.fetch
-    globalThis.fetch = async () =>
-      new Response(JSON.stringify({ error: 'Not found' }), { status: 404 })
-
-    const client = new StoreClient()
-    const result = await client.getItemBySlug('no-such-slug')
-    expect(result.data).toBeNull()
-    expect(result.error).toBe('Not found')
 
     globalThis.fetch = originalFetch
   })

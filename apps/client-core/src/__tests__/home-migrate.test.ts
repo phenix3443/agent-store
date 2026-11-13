@@ -19,7 +19,7 @@ process.env['AS_CODEX_BIN'] = ''
 const publisher = { id: 'p', slug: 'p', name: 'P', avatarUrl: '', tier: 'community' as const }
 const base = {
   id: 'i', name: 'T', description: 'd', version: '1.0.0', publisher, compatibleWith: ['claude' as const, 'codex' as const],
-  tags: [], downloads: 0, rating: 0, status: 'published' as const, createdAt: '', updatedAt: '',
+  tags: [], downloads: 0, status: 'published' as const, createdAt: '', updatedAt: '',
 }
 // Its command is relative, so the tool entries hold an absolute path into the item directory.
 const localMcp: MCPItem = {
@@ -41,7 +41,7 @@ const origFetch = globalThis.fetch
 
 const engineAt = (aasHome: string) => new EngineImpl(
   { aasHome, claudeConfigDir: p.claudeConfigDir, claudeJsonPath: p.claudeJsonPath, codexConfigDir: p.codexConfigDir },
-  'http://localhost:3000', { catalog: new ItemCatalog() },
+  'http://localhost:3000', { catalog: new ItemCatalog(() => [localMcp, npxMcp, provider]) },
 )
 
 function file(path: string, body: string) {
@@ -108,9 +108,6 @@ beforeEach(() => {
   }
   globalThis.fetch = (async (url: string) => {
     const u = String(url)
-    for (const item of [localMcp, npxMcp, provider]) {
-      if (u.endsWith(`/api/items/${item.slug}`)) return Response.json({ item })
-    }
     if (u === 'https://files.test/server') return new Response('#!/bin/sh\necho server\n')
     throw new Error(`Unmocked URL: ${u}`)
   }) as typeof fetch

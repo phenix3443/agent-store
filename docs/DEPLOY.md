@@ -15,7 +15,7 @@
 1. PR 合入 `main`。
 2. `images` 工作流在 GitHub 托管的 runner 上构建两个镜像，推到 ghcr，tag 为 `main-<UTC 时间戳>`。
 3. home-lab 的 Flux 扫到新 tag，提交回 home-lab 并滚动更新。
-4. API Pod 启动前，初始化容器先跑 `src/migrate.ts`（迁移），再跑 `src/seed.ts`（只在目录为空时导入 `db/seed.sql`）。迁移失败时新版本不会开始接流量。
+4. API Pod 启动前，初始化容器先跑 `src/migrate.ts`（迁移），再跑 `src/seed.ts`。目录早已改由 `catalog.db` 提供，`seed.ts` 现在什么都不做，只为兼容初始化容器的命令而保留，home-lab 去掉这一步后一起删除。迁移失败时新版本不会开始接流量。
 
 商店的 `NEXT_PUBLIC_API_URL`、`NEXT_PUBLIC_SITE_URL` 在构建镜像时写进浏览器端代码，改地址要改 `.github/workflows/images.yml` 并重新构建。
 
@@ -67,9 +67,9 @@ cd apps/api && WAFFO_MERCHANT_ID=… WAFFO_PRIVATE_KEY_BASE64=… bun run script
 ## 本地开发
 
 ```sh
-make setup     # 起本地 Postgres（Docker），迁移并导入种子数据，生成 apps/store/.env.local
+make setup     # 起本地 Postgres（Docker）并迁移，生成 apps/store/.env.local
 make dev-env   # API + 商店 + 桌面端
-make seed      # 清空本地库，回到种子数据
+make db-reset  # 清空本地库
 ```
 
 `apps/store/.env.local` 要填 `BETTER_AUTH_SECRET` 和一个回调指向 `http://localhost:3000/api/auth/callback/github` 的 GitHub OAuth App。

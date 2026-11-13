@@ -4,7 +4,7 @@ import { join } from 'path'
 import { existsSync } from 'fs'
 import { EngineImpl } from '../engine'
 import { ItemCatalog } from './helpers/item-catalog'
-import type { MCPItem, ProviderItem, SkillItem } from '@as/types'
+import type { Item, MCPItem, ProviderItem, SkillItem } from '@as/types'
 
 // Unit tests use the safe file-edit path, not the installed claude CLI.
 process.env['AS_CLAUDE_BIN'] = ''
@@ -14,7 +14,7 @@ const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'co
 const baseItem = {
   id: 'i1', name: 'Test', description: 'desc',
   version: '1.0.0', publisher, compatibleWith: ['claude' as const, 'codex' as const],
-  tags: [], downloads: 0, rating: 0, status: 'published' as const,
+  tags: [], downloads: 0, status: 'published' as const,
   createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
   installHook: { steps: [] },
 }
@@ -47,20 +47,15 @@ let codexDir: string
 let engine: EngineImpl
 const origFetch = globalThis.fetch
 
-function mockFetch(items: Record<string, unknown>) {
+let served: Item[] = []
+
+// What the catalog answers, and the files (skill content) fetch serves, for one test.
+function serve(items: Item[], files: Record<string, string> = {}) {
+  served = items
   globalThis.fetch = (async (url: string) => {
-    const u = String(url)
-    // Longest pattern first, so /api/items/x-2 is not answered by /api/items/x.
-    for (const [pattern, body] of Object.entries(items).sort(([a], [b]) => b.length - a.length)) {
-      if (u.includes(pattern)) {
-        if (typeof body === 'string') return new Response(body, { status: 200 })
-        return new Response(JSON.stringify(body), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-    }
-    throw new Error(`Unmocked URL: ${u}`)
+    const body = files[String(url)]
+    if (body !== undefined) return new Response(body, { status: 200 })
+    throw new Error(`Unmocked URL: ${url}`)
   }) as typeof fetch
 }
 
@@ -71,7 +66,7 @@ beforeEach(async () => {
   engine = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000',
-    { startRelay: markRelayRunning, catalog: new ItemCatalog() }
+    { startRelay: markRelayRunning, catalog: new ItemCatalog(() => served) }
   )
 })
 
@@ -82,13 +77,14 @@ async function markRelayRunning(): Promise<void> {
 
 afterEach(async () => {
   globalThis.fetch = origFetch
+  served = []
   await rm(aasHome, { recursive: true, force: true })
   await rm(claudeDir, { recursive: true, force: true })
   await rm(codexDir, { recursive: true, force: true })
 })
 
 test('install mcp: creates item dir, manifest, registry entry', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   const result = await engine.install('test-mcp')
   expect(result.slug).toBe('test-mcp')
   expect(result.version).toBe('1.0.0')
@@ -102,13 +98,12 @@ test('install mcp: creates item dir, manifest, registry entry', async () => {
 })
 
 test('install throws when store returns error', async () => {
-  mockFetch({ '/api/items/unknown': { error: 'not found' } })
-  globalThis.fetch = (async () => new Response(JSON.stringify({ error: 'not found' }), { status: 404 })) as unknown as typeof fetch
+  serve([])
   await expect(engine.install('unknown')).rejects.toThrow()
 })
 
 test('enable mcp: writes mcpServers to claude settings', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
   const config = JSON.parse(await readFile(join(claudeDir, '.claude.json'), 'utf-8'))
@@ -118,7 +113,7 @@ test('enable mcp: writes mcpServers to claude settings', async () => {
 })
 
 test('enable mcp: writes mcp server to codex config', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'codex')
   const config = await readFile(join(codexDir, 'config.toml'), 'utf-8')
@@ -129,7 +124,7 @@ test('enable mcp: writes mcp server to codex config', async () => {
 })
 
 test('enable remote mcp: writes the claude entry; codex refuses non-bearer headers', async () => {
-  mockFetch({ '/api/items/remote-mcp': { item: remoteMcpItem } })
+  serve([remoteMcpItem])
   await engine.install('remote-mcp')
   await engine.enable('remote-mcp', 'claude')
   await expect(engine.enable('remote-mcp', 'codex')).rejects.toThrow('HTTP headers')
@@ -147,7 +142,7 @@ test('enable remote mcp: writes the claude entry; codex refuses non-bearer heade
 
 test('enable remote mcp for codex: url only, no type/headers', async () => {
   const plain = { ...remoteMcpItem, headers: undefined }
-  mockFetch({ '/api/items/remote-mcp': { item: plain } })
+  serve([plain])
   await engine.install('remote-mcp')
   await engine.enable('remote-mcp', 'codex')
   const config = await readFile(join(codexDir, 'config.toml'), 'utf-8')
@@ -155,7 +150,7 @@ test('enable remote mcp for codex: url only, no type/headers', async () => {
 })
 
 test('disable mcp: removes mcpServers entry and sets enabledFor false', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
   await engine.disable('test-mcp', 'claude')
@@ -166,7 +161,7 @@ test('disable mcp: removes mcpServers entry and sets enabledFor false', async ()
 })
 
 test('uninstall: removes item dir and registry entry', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.uninstall('test-mcp')
   const reg = JSON.parse(await readFile(join(aasHome, 'registry.json'), 'utf-8'))
@@ -176,7 +171,7 @@ test('uninstall: removes item dir and registry entry', async () => {
 })
 
 test('list returns all installed items', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   const items = await engine.list()
   expect(items).toHaveLength(1)
@@ -184,10 +179,7 @@ test('list returns all installed items', async () => {
 })
 
 test('list filters by category', async () => {
-  mockFetch({
-    '/api/items/test-mcp': { item: mcpItem },
-    '/api/items/test-provider': { item: providerItem },
-  })
+  serve([mcpItem, providerItem])
   await engine.install('test-mcp')
   await engine.install('test-provider')
   const mcps = await engine.list({ category: 'mcp' })
@@ -196,7 +188,7 @@ test('list filters by category', async () => {
 })
 
 test('info returns ItemDetail with manifest data', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   const detail = await engine.info('test-mcp')
   expect(detail.slug).toBe('test-mcp')
@@ -205,7 +197,7 @@ test('info returns ItemDetail with manifest data', async () => {
 })
 
 test('info returns remote MCP detail fields', async () => {
-  mockFetch({ '/api/items/remote-mcp': { item: remoteMcpItem } })
+  serve([remoteMcpItem])
   await engine.install('remote-mcp')
   const detail = await engine.info('remote-mcp')
   expect(detail.slug).toBe('remote-mcp')
@@ -216,7 +208,7 @@ test('info returns remote MCP detail fields', async () => {
 })
 
 test('getConfigSchema returns schema and current values', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await engine.setConfig('test-provider', { apiKey: 'sk-test' })
   const { schema, current } = await engine.getConfigSchema('test-provider')
@@ -225,7 +217,7 @@ test('getConfigSchema returns schema and current values', async () => {
 })
 
 test('setConfig writes config.json', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await engine.setConfig('test-provider', { apiKey: 'sk-test' })
   const config = JSON.parse(
@@ -240,10 +232,7 @@ test('enabling a second provider for the same target does not disable the first'
     slug: 'test-provider-2',
     name: 'Second Provider',
   }
-  mockFetch({
-    '/api/items/test-provider': { item: providerItem },
-    '/api/items/test-provider-2': { item: secondProviderItem },
-  })
+  serve([providerItem, secondProviderItem])
   await engine.install('test-provider')
   await engine.install('test-provider-2')
   await engine.setConfig('test-provider', {
@@ -280,10 +269,7 @@ test('list and info report enabledFor from the registry without needing config-f
     ...providerItem,
     compatibleWith: ['codex'],
   }
-  mockFetch({
-    '/api/items/test-provider': { item: firstCodexProvider },
-    '/api/items/test-provider-2': { item: secondProviderItem },
-  })
+  serve([firstCodexProvider, secondProviderItem])
   await engine.install('test-provider')
   await engine.install('test-provider-2')
   await engine.setConfig('test-provider', { apiKey: 'shared-key', baseUrl: 'https://api.shared.example/v1' })
@@ -302,7 +288,7 @@ test('list and info report enabledFor from the registry without needing config-f
 })
 
 test('sync adds all enabled items to target configs', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
   // Clear .claude.json to verify sync rewrites the MCP entry
@@ -331,7 +317,7 @@ test('info throws for unknown slug', async () => {
 })
 
 test('enable on a provider item points Claude at the relay instead of writing the real apiKey', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await writeFile(
     join(aasHome, 'providers', 'test-provider', 'config.json'),
@@ -348,7 +334,7 @@ test('enable on a provider item points Claude at the relay instead of writing th
 })
 
 test('disable on a provider item restores Claude settings via the relay snapshot', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await mkdir(claudeDir, { recursive: true })
   await writeFile(join(claudeDir, 'settings.json'), JSON.stringify({
@@ -374,10 +360,7 @@ test('disabling one of two enabled providers keeps the relay connected for the s
     slug: 'test-provider-2',
     name: 'Second Provider',
   }
-  mockFetch({
-    '/api/items/test-provider': { item: providerItem },
-    '/api/items/test-provider-2': { item: secondProviderItem },
-  })
+  serve([providerItem, secondProviderItem])
   await engine.install('test-provider')
   await engine.install('test-provider-2')
   await engine.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
@@ -405,10 +388,7 @@ test('uninstalling one of two enabled providers keeps the relay connected for th
     slug: 'test-provider-2',
     name: 'Second Provider',
   }
-  mockFetch({
-    '/api/items/test-provider': { item: providerItem },
-    '/api/items/test-provider-2': { item: secondProviderItem },
-  })
+  serve([providerItem, secondProviderItem])
   await engine.install('test-provider')
   await engine.install('test-provider-2')
   await engine.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
@@ -429,7 +409,7 @@ test('uninstalling one of two enabled providers keeps the relay connected for th
 })
 
 test('enable on a provider item points Codex at the relay instead of writing the real apiKey', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await writeFile(
     join(aasHome, 'providers', 'test-provider', 'config.json'),
@@ -465,7 +445,7 @@ async function seedToolConfigs(): Promise<void> {
 
 for (const target of ['claude', 'codex'] as const) {
   test(`enabling a provider without an API key for ${target} fails and leaves every tool config byte-identical`, async () => {
-    mockFetch({ '/api/items/test-provider': { item: providerItem } })
+    serve([providerItem])
     await engine.install('test-provider')
     await seedToolConfigs()
     const before = await snapshotToolConfigs()
@@ -478,8 +458,8 @@ for (const target of ['claude', 'codex'] as const) {
   })
 
   test(`enabling a provider for ${target} while the relay is down and cannot be started fails without touching configs`, async () => {
-    const noRelay = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog('http://localhost:3000') })
-    mockFetch({ '/api/items/test-provider': { item: providerItem } })
+    const noRelay = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog(() => served) })
+    serve([providerItem])
     await noRelay.install('test-provider')
     await noRelay.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
     await seedToolConfigs()
@@ -497,9 +477,9 @@ test('enabling a configured provider starts the relay when it is not running', a
   const withStarter = new EngineImpl(
     { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
     'http://localhost:3000',
-    { startRelay: async () => { started++; await markRelayRunning() }, catalog: new ItemCatalog() }
+    { startRelay: async () => { started++; await markRelayRunning() }, catalog: new ItemCatalog(() => served) }
   )
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await withStarter.install('test-provider')
   await withStarter.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://api.one.example/v1' })
 
@@ -513,7 +493,7 @@ test('enabling a configured provider starts the relay when it is not running', a
 const SKILL_MD = '---\nname: test-skill\ndescription: d\n---\n# Test Skill\n'
 
 test('enable/disable on a skill item is unaffected by the relay change', async () => {
-  mockFetch({ '/api/items/test-skill': { item: skillItem }, 'https://s.com/SKILL.md': SKILL_MD })
+  serve([skillItem], { 'https://s.com/SKILL.md': SKILL_MD })
   await engine.install('test-skill')
   await engine.disable('test-skill', 'claude')
   await engine.enable('test-skill', 'claude')
@@ -528,7 +508,7 @@ test('enable/disable on a skill item is unaffected by the relay change', async (
 })
 
 test('duplicateProvider: copies config into a new slug and registers it disabled', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await writeFile(
     join(aasHome, 'providers', 'test-provider', 'config.json'),
@@ -555,7 +535,7 @@ test('duplicateProvider: copies config into a new slug and registers it disabled
 })
 
 test('duplicateProvider: increments the suffix when the copy slug is taken', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await engine.duplicateProvider('test-provider')
   const second = await engine.duplicateProvider('test-provider')
@@ -563,7 +543,7 @@ test('duplicateProvider: increments the suffix when the copy slug is taken', asy
 })
 
 test('duplicateProvider: throws for a non-provider item', async () => {
-  mockFetch({ '/api/items/test-skill': { item: skillItem }, 'https://s.com/SKILL.md': SKILL_MD })
+  serve([skillItem], { 'https://s.com/SKILL.md': SKILL_MD })
   await engine.install('test-skill')
   await expect(engine.duplicateProvider('test-skill')).rejects.toThrow('Only providers can be duplicated')
 })
@@ -573,7 +553,7 @@ test('duplicateProvider: throws when the slug is not installed', async () => {
 })
 
 test('duplicateProvider: the first duplicate is registered with parentSlug set to the root', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
 
   const result = await engine.duplicateProvider('test-provider')
@@ -586,7 +566,7 @@ test('duplicateProvider: the first duplicate is registered with parentSlug set t
 })
 
 test('duplicateProvider: duplicating an existing child attaches the new sibling to the same root, not to the child', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   const first = await engine.duplicateProvider('test-provider')
 
@@ -682,7 +662,7 @@ test('enable mcp with a missing required config value fails before writing', asy
     ...mcpItem, slug: 'token-mcp',
     configSchema: { type: 'object', properties: { token: { type: 'string', 'x-env': 'TOKEN' } }, required: ['token'] },
   }
-  mockFetch({ '/api/items/token-mcp': { item: needsToken } })
+  serve([needsToken])
   await engine.install('token-mcp')
   await expect(engine.enable('token-mcp', 'claude')).rejects.toThrow(/as config token-mcp/)
   await expect(readFile(join(claudeDir, '.claude.json'), 'utf-8')).rejects.toThrow()
@@ -693,7 +673,7 @@ test('enable mcp with a missing required config value fails before writing', asy
 })
 
 test('uninstall refuses an entry changed outside Agent Store and keeps the registry truthful', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.enable('test-mcp', 'claude')
   const path = join(claudeDir, '.claude.json')
@@ -708,7 +688,7 @@ test('uninstall refuses an entry changed outside Agent Store and keeps the regis
 })
 
 test('a setConfig whose resync is refused keeps the previous config.json', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await engine.install('test-mcp')
   await engine.setConfig('test-mcp', { token: 'old' })
   await engine.enable('test-mcp', 'claude')
@@ -723,7 +703,7 @@ test('a setConfig whose resync is refused keeps the previous config.json', async
 
 test('a setConfig refused by one tool leaves the other tool on the previous values', async () => {
   const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
-  mockFetch({ '/api/items/test-mcp': { item } })
+  serve([item])
   await engine.install('test-mcp')
   await engine.setConfig('test-mcp', { token: 'old' })
   await engine.enable('test-mcp', 'claude')
@@ -744,7 +724,7 @@ test('a setConfig refused by one tool leaves the other tool on the previous valu
 // chmod does not stop root, so the injected Codex failure needs a normal user.
 test.skipIf(process.getuid?.() === 0)('a setConfig that fails while writing the second tool puts the first tool back', async () => {
   const item: MCPItem = { ...mcpItem, configSchema: { type: 'object', properties: { token: { type: 'string' } } } }
-  mockFetch({ '/api/items/test-mcp': { item } })
+  serve([item])
   await engine.install('test-mcp')
   await engine.setConfig('test-mcp', { token: 'old' })
   await engine.enable('test-mcp', 'claude')
@@ -777,13 +757,13 @@ async function providerConfig(): Promise<Record<string, unknown>> {
 }
 
 test('first install writes the config step patch as the initial config', async () => {
-  mockFetch({ '/api/items/test-provider': { item: hookedProvider } })
+  serve([hookedProvider])
   await engine.install('test-provider')
   expect(await providerConfig()).toEqual({ apiKey: '', baseUrl: 'https://api.default.example/v1' })
 })
 
 test('reinstall keeps an apiKey the user already configured', async () => {
-  mockFetch({ '/api/items/test-provider': { item: hookedProvider } })
+  serve([hookedProvider])
   await engine.install('test-provider')
   await engine.setConfig('test-provider', { apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1' })
   await engine.install('test-provider')
@@ -791,7 +771,7 @@ test('reinstall keeps an apiKey the user already configured', async () => {
 })
 
 test('update keeps an apiKey the user already configured and adds new default keys', async () => {
-  mockFetch({ '/api/items/test-provider': { item: hookedProvider } })
+  serve([hookedProvider])
   await engine.install('test-provider')
   await engine.setConfig('test-provider', { apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1' })
   const newer: ProviderItem = {
@@ -799,7 +779,7 @@ test('update keeps an apiKey the user already configured and adds new default ke
     version: '1.1.0',
     installHook: { steps: [{ type: 'config', patch: { apiKey: '', baseUrl: 'https://api.default.example/v2', model: 'm2' } }] },
   }
-  mockFetch({ '/api/items/test-provider': { item: newer } })
+  serve([newer])
   const results = await engine.update('test-provider')
   expect(results).toEqual([{ slug: 'test-provider', fromVersion: '1.0.0', toVersion: '1.1.0' }])
   expect(await providerConfig()).toEqual({ apiKey: 'sk-user', baseUrl: 'https://api.mine.example/v1', model: 'm2' })
@@ -810,7 +790,7 @@ test('install of an item with a script step fails and writes nothing', async () 
     ...mcpItem,
     installHook: { steps: [{ type: 'script', command: 'touch pwned' }] },
   } as unknown as MCPItem
-  mockFetch({ '/api/items/test-mcp': { item: scripted } })
+  serve([scripted])
   await expect(engine.install('test-mcp')).rejects.toThrow(/script/)
   expect(existsSync(join(aasHome, 'mcps', 'test-mcp'))).toBe(false)
   await expect(readFile(join(aasHome, 'registry.json'))).rejects.toThrow()
@@ -821,17 +801,14 @@ async function modeOf(path: string): Promise<number> {
 }
 
 test('install fails on a registry.json that does not parse and leaves it as it was', async () => {
-  mockFetch({ '/api/items/test-mcp': { item: mcpItem } })
+  serve([mcpItem])
   await writeFile(join(aasHome, 'registry.json'), '{"installed": [{"slug": "kept"')
   await expect(engine.install('test-mcp')).rejects.toThrow(/registry\.json could not be parsed/)
   expect(await readFile(join(aasHome, 'registry.json'), 'utf-8')).toBe('{"installed": [{"slug": "kept"')
 })
 
 test('concurrent enables of different items both land in the registry', async () => {
-  mockFetch({
-    '/api/items/test-mcp': { item: mcpItem },
-    '/api/items/remote-mcp': { item: remoteMcpItem },
-  })
+  serve([mcpItem, remoteMcpItem])
   await engine.install('test-mcp')
   await engine.install('remote-mcp')
   await Promise.all([engine.enable('test-mcp', 'claude'), engine.enable('remote-mcp', 'claude')])
@@ -845,7 +822,7 @@ test('provider config.json is 0600 after install, a config hook step and setConf
     ...providerItem,
     installHook: { steps: [{ type: 'config', patch: { baseUrl: 'https://api.example/v1' } }] },
   }
-  mockFetch({ '/api/items/test-provider': { item: hooked } })
+  serve([hooked])
   await engine.install('test-provider')
   const configPath = join(aasHome, 'providers', 'test-provider', 'config.json')
   expect(await modeOf(configPath)).toBe(0o600)
@@ -855,13 +832,13 @@ test('provider config.json is 0600 after install, a config hook step and setConf
 })
 
 test('a new provider without a config hook still gets a 0600 config.json', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   expect(await modeOf(join(aasHome, 'providers', 'test-provider', 'config.json'))).toBe(0o600)
 })
 
 test('a duplicated provider config.json is 0600', async () => {
-  mockFetch({ '/api/items/test-provider': { item: providerItem } })
+  serve([providerItem])
   await engine.install('test-provider')
   await engine.setConfig('test-provider', { apiKey: 'sk-test', baseUrl: 'https://api.example/v1' })
   const { newSlug } = await engine.duplicateProvider('test-provider')

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, Heart } from 'lucide-react'
-import type { InstalledItem, InstallOutcome, UserReview, ItemVersion } from '@as/types'
+import type { InstalledItem, InstallOutcome } from '@as/types'
 import { callRpc, errorText } from '../lib/rpc'
 import { needsSetup } from '../lib/installPolicy'
 import { describeError, type FriendlyError } from '../lib/errors'
@@ -20,10 +20,8 @@ import {
   installCmdOf,
   installRefOf,
 } from '../lib/detailContent'
-import { formatInstalls, formatVersion } from '../lib/catalog'
+import { formatInstalls } from '../lib/catalog'
 import { SkillTargets } from './SkillTargets'
-
-type Tab = 'overview' | 'reviews' | 'versions'
 
 export function DetailPanel() {
   const { favoriteSlugs, toggleFavorite, bumpInstalledVersion, editingConfigSlug, setEditingConfigSlug, setSelectedSlug } =
@@ -31,21 +29,8 @@ export function DetailPanel() {
   const { appendLine } = useTerminalLog()
   const detail = useSelectedDetail()
   const t = useT()
-  const [tab, setTab] = useState<Tab>('overview')
   const [childCount, setChildCount] = useState(0)
-  const [userReviews, setUserReviews] = useState<UserReview[]>([])
-  const [versions, setVersions] = useState<ItemVersion[]>([])
   const [installError, setInstallError] = useState<FriendlyError | null>(null)
-
-  useEffect(() => {
-    if (!detail) return
-    callRpc<UserReview[]>('getReviews', [detail.slug])
-      .then((r) => setUserReviews(r ?? []))
-      .catch(() => setUserReviews([]))
-    callRpc<ItemVersion[]>('getVersions', [detail.slug])
-      .then((v) => setVersions(v ?? []))
-      .catch(() => setVersions([]))
-  }, [detail])
 
   useEffect(() => {
     if (!detail || detail.category !== 'provider' || !detail.installed) {
@@ -202,96 +187,40 @@ export function DetailPanel() {
         </div>
 
         <div className="mt-5 flex gap-5 border-b border-store-border text-sm">
-          {(
-            [
-              { key: 'overview', label: t('nav.overview') },
-              { key: 'reviews', label: t('detail.tabReviews') },
-              { key: 'versions', label: t('detail.tabVersion') },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setTab(opt.key)}
-              className={`pb-2.5 font-semibold ${tab === opt.key ? 'border-b-2 border-store-accent text-store-text' : 'text-store-text-3'}`}
-            >
-              {opt.label}
-            </button>
-          ))}
+          <span className="border-b-2 border-store-accent pb-2.5 font-semibold text-store-text">{t('nav.overview')}</span>
         </div>
 
-        {tab === 'overview' && (
-          <div className="mt-5 flex flex-col gap-3">
-            {readme.map((block, i) => {
-              if (block.type === 'h') {
-                return (
-                  <h3 key={i} className="mt-1 border-b border-store-border pb-2 text-[15px] font-bold text-store-text">
-                    {block.text}
-                  </h3>
-                )
-              }
-              if (block.type === 'p') {
-                return (
-                  <p key={i} className="text-sm leading-relaxed text-store-text-2">
-                    {block.text}
-                  </p>
-                )
-              }
-              if (block.type === 'code') {
-                return (
-                  <div key={i} className="rounded-lg border border-store-border bg-store-term-bg px-3.5 py-3 font-mono text-xs text-store-text-2">
-                    {block.text}
-                  </div>
-                )
-              }
+        <div className="mt-5 flex flex-col gap-3">
+          {readme.map((block, i) => {
+            if (block.type === 'h') {
               return (
-                <div key={i} className="flex gap-2 text-sm leading-relaxed text-store-text-2">
-                  <span className={type.textClass}>▹</span>
-                  <span>{block.text}</span>
+                <h3 key={i} className="mt-1 border-b border-store-border pb-2 text-[15px] font-bold text-store-text">
+                  {block.text}
+                </h3>
+              )
+            }
+            if (block.type === 'p') {
+              return (
+                <p key={i} className="text-sm leading-relaxed text-store-text-2">
+                  {block.text}
+                </p>
+              )
+            }
+            if (block.type === 'code') {
+              return (
+                <div key={i} className="rounded-lg border border-store-border bg-store-term-bg px-3.5 py-3 font-mono text-xs text-store-text-2">
+                  {block.text}
                 </div>
               )
-            })}
-          </div>
-        )}
-
-        {tab === 'reviews' && (
-          <div className="mt-5 flex flex-col gap-3">
-            {userReviews.map((r, i) => (
-              <div key={i} className="rounded-xl border border-store-border bg-store-panel px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-store-text">{r.authorName ?? t('detail.anon')}</span>
-                  <span className="text-[11px] text-store-amber">{'★'.repeat(r.rating)}</span>
-                  <span className="ml-auto text-[10.5px] text-store-text-3">
-                    {new Date(r.updatedAt).toLocaleDateString()}
-                  </span>
-                </div>
-                {r.body && <p className="mt-1.5 text-xs leading-relaxed text-store-text-2">{r.body}</p>}
+            }
+            return (
+              <div key={i} className="flex gap-2 text-sm leading-relaxed text-store-text-2">
+                <span className={type.textClass}>▹</span>
+                <span>{block.text}</span>
               </div>
-            ))}
-            <p className="text-[11px] text-store-text-3">{t('detail.reviewOnWeb')}</p>
-          </div>
-        )}
-
-        {tab === 'versions' && (
-          <div className="mt-5 flex flex-col gap-px overflow-hidden rounded-lg border border-store-border">
-            {(versions.length > 0 ? versions : [{ version: detail.version, publishedAt: '' }]).map((v, i) => (
-              <div key={v.version} className="flex items-center gap-3 bg-store-panel px-3.5 py-3">
-                <span className="font-mono text-xs font-semibold text-store-text">{formatVersion(v.version)}</span>
-                {i === 0 && (
-                  <span className="rounded bg-store-green-soft px-1.5 py-0.5 text-[9.5px] font-bold text-store-green">
-                    latest
-                  </span>
-                )}
-                <span className="flex-1 text-xs text-store-text-2">{i === 0 ? t('detail.currentVersion') : ''}</span>
-                {v.publishedAt && (
-                  <span className="font-mono text-[11px] text-store-text-3">
-                    {new Date(v.publishedAt).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+            )
+          })}
+        </div>
       </div>
       <InfoSidebar detail={detail} />
     </div>

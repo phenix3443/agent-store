@@ -1,10 +1,10 @@
 # Makefile — Local development workflow for agent-store
 # Requires: pnpm, Bun, Docker (local Postgres via docker-compose.dev.yml)
 #
-# Local dev and e2e run against a Postgres container. `make db` starts it and
-# applies the migrations and the seed; `make seed` wipes it back to the seed.
+# Local dev runs against a Postgres container. `make db` starts it and applies
+# the migrations; `make db-reset` wipes it.
 
-.PHONY: setup db seed dev-env dev-api dev-store dev-client build-cli e2e e2e-docker-build e2e-docker stop status
+.PHONY: setup db db-reset dev-env dev-api dev-store dev-client build-cli e2e-docker-build e2e-docker stop status
 
 DEV_DB_PORT ?= 55432
 DEV_DATABASE_URL ?= postgres://postgres:dev@127.0.0.1:$(DEV_DB_PORT)/agent_store
@@ -22,13 +22,13 @@ setup: db
 	@echo ""
 	@echo "Next: fill apps/store/.env.local (Better Auth secret, GitHub OAuth app), then: make dev-env"
 
-## Start the local Postgres, apply migrations, load the seed into an empty catalog
+## Start the local Postgres and apply migrations
 db:
 	$(COMPOSE) up -d --wait db
-	cd apps/api && DATABASE_URL="$(DEV_DATABASE_URL)" bun src/migrate.ts && DATABASE_URL="$(DEV_DATABASE_URL)" bun src/seed.ts
+	cd apps/api && DATABASE_URL="$(DEV_DATABASE_URL)" bun src/migrate.ts
 
-## Wipe the local database back to the seed (drops everything, including sign-ins)
-seed:
+## Wipe the local database (drops everything, including sign-ins)
+db-reset:
 	$(COMPOSE) down -v
 	$(MAKE) --no-print-directory db
 
@@ -78,10 +78,6 @@ dev-client:
 build-cli:
 	pnpm --filter=@as/cli build:bin
 
-## Run full E2E test in isolated /tmp dirs (builds CLI first)
-e2e: build-cli db
-	@DEV_DATABASE_URL="$(DEV_DATABASE_URL)" ./scripts/local-e2e.sh
-
 ## Build the real-agent e2e image (claude + codex CLIs, the `as` CLI, fixtures).
 ## Builds the @as/* libs on the host first — their dist/ is copied into the image.
 e2e-docker-build:
@@ -93,7 +89,7 @@ e2e-docker-build:
 e2e-docker: e2e-docker-build
 	docker run --rm -v "$(PWD)/test/provider:/secrets:ro" agent-store-e2e
 
-## Stop the local Postgres (keeps its data; `make seed` wipes it)
+## Stop the local Postgres (keeps its data; `make db-reset` wipes it)
 stop:
 	$(COMPOSE) down
 

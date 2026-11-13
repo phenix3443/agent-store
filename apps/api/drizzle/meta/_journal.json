@@ -29,6 +29,13 @@
       "when": 1794460346388,
       "tag": "0003_drop_topics_and_package_review",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794500000000,
+      "tag": "0004_drop_items",
+      "breakpoints": true
     }
   ]
 }

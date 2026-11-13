@@ -14,7 +14,7 @@ const publisher = { id: 'p1', slug: 'pub', name: 'Pub', avatarUrl: '', tier: 'co
 const base = {
   id: 'i1', name: 'Test', description: 'desc', version: '1.0.0', publisher,
   compatibleWith: ['claude' as const, 'codex' as const],
-  tags: [], downloads: 0, rating: 0, status: 'published' as const,
+  tags: [], downloads: 0, status: 'published' as const,
   createdAt: '2026-06-18T00:00:00Z', updatedAt: '2026-06-18T00:00:00Z',
   installHook: { steps: [] },
 }
@@ -36,24 +36,25 @@ let codexDir: string
 let engine: EngineImpl
 const origFetch = globalThis.fetch
 
+let served: Array<MCPItem | ProviderItem> = []
+
 function serve(...items: Array<MCPItem | ProviderItem>) {
+  served = items
   globalThis.fetch = (async (url: string) => {
-    const item = items.find(i => String(url).includes(`/api/items/${i.slug}`))
-    if (item) return new Response(JSON.stringify({ item }), { status: 200, headers: { 'Content-Type': 'application/json' } })
-    if (String(url).includes('/install')) return new Response('{}', { status: 200 })
     throw new Error(`Unmocked URL: ${url}`)
-  }) as typeof fetch
+  }) as unknown as typeof fetch
 }
 
 beforeEach(async () => {
   aasHome = await mkdtemp('/tmp/as-policy-home-')
   claudeDir = await mkdtemp('/tmp/as-policy-claude-')
   codexDir = await mkdtemp('/tmp/as-policy-codex-')
-  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog('http://localhost:3000') })
+  engine = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog(() => served) })
 })
 
 afterEach(async () => {
   globalThis.fetch = origFetch
+  served = []
   for (const d of [aasHome, claudeDir, codexDir]) await rm(d, { recursive: true, force: true })
 })
 

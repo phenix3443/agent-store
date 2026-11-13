@@ -1,6 +1,6 @@
 // The e2e assertion driver. Runs INSIDE the container. It:
 //   1. reads provider credentials from a mounted secrets dir (test/provider),
-//   2. serves two deterministic packages from the fixture server,
+//   2. serves two deterministic resources from the fixture server,
 //   3. installs them through the real `as` CLI (auto-enables claude + codex),
 //   4. runs claude and codex headlessly and asserts each actually used the
 //      installed skill and MCP, by matching fixed probe tokens in the output.
@@ -71,7 +71,7 @@ async function run(cmd: string[], env: Record<string, string>, timeoutMs = 180_0
 async function waitPort(port: number, tries = 50): Promise<void> {
   for (let i = 0; i < tries; i++) {
     try {
-      await fetch(`http://127.0.0.1:${port}/api/items`)
+      await fetch(`http://127.0.0.1:${port}/api/resources`)
       return
     } catch {
       await new Promise((r) => setTimeout(r, 100))
@@ -117,7 +117,13 @@ async function main() {
   }
   const aasHome = join(WORK, 'agents')
   await mkdir(WORK, { recursive: true })
-  const baseInstall = { AS_STORE_URL: `http://127.0.0.1:${FIXTURE_PORT}`, AS_HOME: aasHome }
+  const store = `http://127.0.0.1:${FIXTURE_PORT}`
+  const baseInstall = {
+    AS_STORE_URL: store,
+    AS_GITHUB_API_URL: `${store}/github-api`,
+    AS_CODELOAD_URL: `${store}/codeload`,
+    AS_HOME: aasHome,
+  }
 
   // Start the fixture store.
   const server = spawn(['bun', join(HERE, 'fixture-server.ts')], {

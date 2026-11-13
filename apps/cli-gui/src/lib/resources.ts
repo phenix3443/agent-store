@@ -17,7 +17,6 @@ export interface EnrichedInstalledItem extends InstalledItem {
   publisher: ItemDetail['publisher']
   tags: string[]
   downloads: number
-  rating: number
 }
 
 export function enrichInstalled(item: InstalledItem, detail: ItemDetail): EnrichedInstalledItem {
@@ -28,7 +27,6 @@ export function enrichInstalled(item: InstalledItem, detail: ItemDetail): Enrich
     publisher: detail.publisher,
     tags: detail.tags,
     downloads: detail.downloads,
-    rating: 0,
   }
 }
 

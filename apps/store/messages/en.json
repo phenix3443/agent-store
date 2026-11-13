@@ -354,9 +354,9 @@
         {
           "id": "browse",
           "title": "Browse and install in the store",
-          "body": "The store page is a table with one package per row, showing category, publisher and installs. At the top you can switch category, show only packages from verified publishers, and sort by installs / date added / rating; press / to search.",
+          "body": "The store page is a table with one package per row, showing category, publisher and installs. At the top you can switch category, show only packages from verified publishers, and sort by installs / date added; press / to search.",
           "bullets": [
-            "Click a row to open details on the right: what runs after installation, install command, specs, README, version history and reviews",
+            "Click a row to open details on the right: what runs after installation, install command, specs and README",
             "\"Install\" first tries to open the desktop client; if no client is detected, it copies the install command and prompts you to download"
           ]
         },
@@ -508,7 +508,7 @@
     },
     "login": {
       "title": "Sign in to Agent Store",
-      "body": "After signing in you can write reviews, and sync installed skills, MCP servers and providers across devices.",
+      "body": "After signing in you can sync installed skills, MCP servers and providers across devices.",
       "github": "Sign in with GitHub",
       "google": "Sign in with Google",
       "consent": "By continuing, you agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",

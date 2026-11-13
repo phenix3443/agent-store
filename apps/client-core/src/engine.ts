@@ -2,7 +2,7 @@ import { readFile, rm } from 'fs/promises'
 import { join } from 'path'
 import type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
-  ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, JsonSchema, UserReview, ItemVersion,
+  ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, JsonSchema,
   CatalogSearchResult, CatalogResourceDetail, ResourceKind, SkillDeployment,
   EnableOptions, DisableOptions, UninstallOptions, InstallOptions,
   InstallOutcome, TargetStatus, EnableBlocker,
@@ -476,16 +476,6 @@ export class EngineImpl implements Engine {
     const result = await this.client.createCheckout({ period }, { token })
     if (result.error || !result.data) throw new Error(result.error ?? 'Failed to create checkout session')
     return result.data
-  }
-
-  async getReviews(slug: string): Promise<UserReview[]> {
-    const result = await this.client.getReviews(slug)
-    return result.data ?? []
-  }
-
-  async getVersions(slug: string): Promise<ItemVersion[]> {
-    const result = await this.client.getVersions(slug)
-    return result.data ?? []
   }
 
   async clearEntitlement(): Promise<Entitlements> {

@@ -1,10 +1,11 @@
-// A stand-in for the Agent Store API and the GitHub endpoints a skill install
-// reads, for offline tests. Items are written as DB rows and go through the
-// API's own `mapItem`, so a test can only see fields production returns.
+// A stand-in for the Agent Store catalog API and the GitHub endpoints a skill install
+// reads, for offline tests. Resources are served in the /api/resources shape
+// (packages/types/src/resources.ts), so the client installs them the way it installs
+// real catalog entries.
 //
 // Routes:
-//   GET  /api/items, /api/items/:slug, POST /api/items/:slug/install
-//   GET  /files/<path>                              static files (contentUrl, file steps)
+//   GET  /api/resources?kind=&q=                      → { resources, nextOffset }
+//   GET  /api/resources/<id>                          → { resource }
 //   GET  /github-api/repos/:owner/:repo/commits/:ref  → { sha }      (AS_GITHUB_API_URL)
 //   GET  /codeload/:owner/:repo/tar.gz/:sha           → repo tarball (AS_CODELOAD_URL)
 import { spawnSync } from 'child_process'
@@ -12,27 +13,43 @@ import { createHash } from 'crypto'
 import { cpSync, mkdtempSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { mapItem } from '../../apps/api/src/db-types'
+import { resourceSlug } from '../../packages/types/src/catalog'
+import type {
+  McpArgument,
+  McpKeyValueInput,
+  McpResourceDetail,
+  ResourceDetail,
+  ResourceSummary,
+  SkillResourceDetail,
+} from '../../packages/types/src/resources'
 
-type DbRow = Parameters<typeof mapItem>[0]
-
-export interface FixturePublisher {
-  slug: string
-  name: string
-  tier: 'official' | 'verified' | 'community'
-}
-
-/** A package as the registry describes it (metadata stays raw, as in the DB). */
-export interface FixturePackage {
+/** A skill: a directory holding SKILL.md in one of the fixture repos. */
+export interface FixtureSkill {
+  kind: 'skill'
+  /** The slug `aas install` takes; must equal `<repo name>-<skillId>`, as the client derives it. */
   slug: string
   name: string
   description: string
-  category: 'provider' | 'skill' | 'mcp'
-  version: string
-  compatibleWith: Array<'claude' | 'codex'>
-  installHook?: { steps: unknown[] }
-  metadata: Record<string, unknown>
+  /** `owner/name` of one of `repos`. */
+  repo: string
+  skillId: string
+  /** Repo-relative directory holding SKILL.md. */
+  dir: string
 }
+
+/** A stdio MCP server started as `node <script> <args…>`. */
+export interface FixtureMcp {
+  kind: 'mcp'
+  slug: string
+  name: string
+  description: string
+  script: string
+  args?: string[]
+  /** Required environment variables, filled in with `aas config`. */
+  env?: Array<{ name: string; description: string }>
+}
+
+export type FixtureResource = FixtureSkill | FixtureMcp
 
 /** A fake GitHub repo served through the commits API and codeload. */
 export interface FixtureRepo {
@@ -46,11 +63,9 @@ export interface FixtureRepo {
 
 export interface FixtureStoreOptions {
   port?: number
-  publisher: FixturePublisher
-  /** Built from the base URL once the port is known. */
-  packages: (baseUrl: string) => FixturePackage[]
-  /** URL path under /files/ → absolute file path. */
-  files?: Record<string, string>
+  /** Author of every resource; MCP server ids are `io.github.<author>/<slug>`. */
+  author: string
+  resources: FixtureResource[]
   repos?: FixtureRepo[]
 }
 
@@ -63,37 +78,86 @@ export interface FixtureStore {
   stop(): void
 }
 
-function toRow(pkg: FixturePackage, publisher: FixturePublisher): DbRow {
-  const now = new Date('2026-10-22T00:00:00Z')
-  const publisherId = `pub-${publisher.slug}`
+const SYNCED_AT = '2026-10-22T00:00:00Z'
+
+const input = {
+  description: null, isRequired: false, isSecret: false, default: null, value: null,
+  placeholder: null, choices: [], format: null,
+}
+
+function summary(id: string, site: 'github' | 'mcp-registry', upstreamId: string, r: FixtureResource, author: string): ResourceSummary {
   return {
-    id: `item-${pkg.slug}`,
-    slug: pkg.slug,
-    name: pkg.name,
-    description: pkg.description,
-    category: pkg.category,
-    version: pkg.version,
-    publisherId,
-    compatibleWith: pkg.compatibleWith,
-    tags: [pkg.category, 'fixture'],
-    downloads: 0,
-    rating: '0',
-    reviewCount: 0,
-    status: 'published',
-    installHook: pkg.installHook ?? { steps: [] },
-    metadata: pkg.metadata,
-    createdAt: now,
-    updatedAt: now,
-    publisher: {
-      id: publisherId,
-      slug: publisher.slug,
-      name: publisher.name,
-      avatarUrl: 'https://github.com/github.png',
-      tier: publisher.tier,
-      bio: null,
-      createdAt: now,
+    id,
+    kind: r.kind,
+    name: r.name,
+    description: r.description,
+    author: { name: author, url: null },
+    version: '1.0.0',
+    homepageUrl: null,
+    installs: null,
+    stars: null,
+    verified: false,
+    tags: [r.kind, 'fixture'],
+    transports: r.kind === 'mcp' ? ['npm'] : [],
+    origin: {
+      site, upstreamId, url: null, upstreamVersion: '1.0.0', upstreamUpdatedAt: SYNCED_AT,
+      syncedAt: SYNCED_AT, unavailableAt: null, unavailableReason: null,
     },
-  } as DbRow
+  }
+}
+
+function skillDetail(r: FixtureSkill, author: string, shas: Record<string, string>, codeloadUrl: string): SkillResourceDetail {
+  const sha = shas[r.repo]
+  if (!sha) throw new Error(`${r.slug}: ${r.repo} is not one of the fixture repos`)
+  const upstreamId = `${r.repo}/${r.skillId}`
+  return {
+    ...summary(`github:${upstreamId}`, 'github', upstreamId, r, author),
+    kind: 'skill',
+    repo: { fullName: r.repo, ref: 'main', commit: sha, dir: r.dir, treeSha: sha, url: `https://github.com/${r.repo}/tree/${sha}/${r.dir}` },
+    frontmatter: {},
+    // Left empty so the client downloads the codeload tarball: it fetches the
+    // per-file list only over https, and this server is plain http.
+    files: [],
+    archiveUrl: `${codeloadUrl}/${r.repo}/tar.gz/${sha}`,
+  }
+}
+
+function mcpDetail(r: FixtureMcp, author: string): McpResourceDetail {
+  const upstreamId = `io.github.${author}/${r.slug}`
+  const args = (r.args ?? []).map((value): McpArgument => ({
+    ...input, type: 'positional', name: null, value, valueHint: null, isRepeated: false, variables: {},
+  }))
+  const env = (r.env ?? []).map((v): McpKeyValueInput => ({
+    ...input, name: v.name, description: v.description, isRequired: true, variables: {},
+  }))
+  return {
+    ...summary(`mcp-registry:${upstreamId}`, 'mcp-registry', upstreamId, r, author),
+    kind: 'mcp',
+    title: null,
+    status: 'active',
+    statusMessage: null,
+    publishedAt: SYNCED_AT,
+    repository: null,
+    icons: [],
+    packages: [{
+      registryType: 'npm',
+      identifier: r.script,
+      version: null,
+      registryBaseUrl: null,
+      runtimeHint: 'node',
+      fileSha256: null,
+      transport: { type: 'stdio', url: null, headers: [], variables: {} },
+      runtimeArguments: [],
+      packageArguments: args,
+      environmentVariables: env,
+    }],
+    remotes: [],
+  }
+}
+
+function toSummary(r: ResourceDetail): ResourceSummary {
+  const { id, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin } = r
+  return { id, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin }
 }
 
 function buildTarball(repo: FixtureRepo, sha: string, workDir: string): Uint8Array {
@@ -128,17 +192,13 @@ export function startFixtureStore(options: FixtureStoreOptions): FixtureStore {
     tarballs.set(`${repo.repo}/${sha}`, buildTarball(repo, sha, workDir))
   }
 
-  let items: Record<string, unknown> = {}
+  let resources: ResourceDetail[] = []
   const server = Bun.serve({
     port: options.port ?? 0,
     hostname: '127.0.0.1',
     async fetch(req) {
-      const { pathname } = new URL(req.url)
-
-      if (pathname.startsWith('/files/')) {
-        const file = options.files?.[decodeURIComponent(pathname.slice('/files/'.length))]
-        return file ? new Response(Bun.file(file)) : json({ error: 'not found' }, 404)
-      }
+      const url = new URL(req.url)
+      const { pathname } = url
 
       const commit = pathname.match(/^\/github-api\/repos\/([^/]+\/[^/]+)\/commits\/([^/]+)$/)
       if (commit) {
@@ -154,30 +214,39 @@ export function startFixtureStore(options: FixtureStoreOptions): FixtureStore {
           : new Response('404: Not Found', { status: 404 })
       }
 
-      if (pathname === '/api/items') return json({ items: Object.values(items) })
-
-      const install = pathname.match(/^\/api\/items\/([^/]+)\/install$/)
-      if (install && req.method === 'POST') return new Response(null, { status: 204 })
-
-      const detail = pathname.match(/^\/api\/items\/([^/]+)$/)
-      if (detail) {
-        const item = items[decodeURIComponent(detail[1])]
-        return item ? json({ item }) : json({ error: 'not found' }, 404)
+      if (pathname === '/api/resources') {
+        const kind = url.searchParams.get('kind')
+        const q = url.searchParams.get('q')?.toLowerCase()
+        const rows = resources.filter(r =>
+          (!kind || r.kind === kind) &&
+          (!q || [r.name, r.description ?? '', r.id, resourceSlug(r) ?? ''].some(s => s.toLowerCase().includes(q)))
+        )
+        return json({ resources: rows.map(toSummary), nextOffset: null })
       }
 
-      return json({ error: 'not found' }, 404)
+      if (pathname.startsWith('/api/resources/')) {
+        const id = pathname.slice('/api/resources/'.length).split('/').map(decodeURIComponent).join('/')
+        const resource = resources.find(r => r.id === id)
+        return resource ? json({ resource }) : json({ error: 'Not found' }, 404)
+      }
+
+      return json({ error: 'Not found' }, 404)
     },
   })
 
   const url = `http://127.0.0.1:${server.port}`
-  items = Object.fromEntries(
-    options.packages(url).map(pkg => [pkg.slug, mapItem(toRow(pkg, options.publisher))])
-  )
+  const codeloadUrl = `${url}/codeload`
+  resources = options.resources.map(r => {
+    const detail = r.kind === 'skill' ? skillDetail(r, options.author, shas, codeloadUrl) : mcpDetail(r, options.author)
+    const slug = resourceSlug(detail)
+    if (slug !== r.slug) throw new Error(`fixture ${r.slug}: the client would call it ${slug}`)
+    return detail
+  })
 
   return {
     url,
     githubApiUrl: `${url}/github-api`,
-    codeloadUrl: `${url}/codeload`,
+    codeloadUrl,
     shas,
     stop() {
       server.stop(true)

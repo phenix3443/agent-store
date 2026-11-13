@@ -59,7 +59,7 @@ test('shows the 市场 section for a not-yet-installed catalog item too', () => 
       detail={{
         id: 'i1', slug: 'filesystem', name: 'filesystem', description: 'desc',
  category: 'mcp', version: '0.8.1', publisher,
-        compatibleWith: ['claude'], tags: [], downloads: 10, rating: 4.5, status: 'published',
+        compatibleWith: ['claude'], tags: [], downloads: 10, status: 'published',
         installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z',
         configSchema: {}, installed: false, transport: 'stdio', serverCommand: './server',
       } as unknown as SelectedDetail}

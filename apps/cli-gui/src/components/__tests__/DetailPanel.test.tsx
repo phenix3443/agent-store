@@ -86,7 +86,7 @@ test('shows an install button for a not-yet-installed item and installs it', asy
     getResource: () => catalogEntry({
       id: 'i1', slug: 'filesystem', name: 'filesystem', description: '读写本地文件系统',
       category: 'mcp', version: '0.8.1', publisher,
-      compatibleWith: ['claude'], tags: [], downloads: 10, rating: 0, status: 'published',
+      compatibleWith: ['claude'], tags: [], downloads: 10, status: 'published',
       installHook: { steps: [] }, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
       configSchema: { type: 'object', required: ['TOKEN'] }, transport: 'stdio', command: 'npx', serverCommand: 'npx -y fs-mcp@0.8.1',
     }),
@@ -151,49 +151,20 @@ test('an installed skill shows each client with its own switch, and a refused en
   expect(screen.queryByRole('alert')).toBeNull()
 })
 
-test('the 评价 tab lists user reviews', async () => {
+// Reviews and version history went with /api/items; they come back keyed by resource id.
+test('the detail has no 评价 or 版本 tab', async () => {
   mockRpc({
     info: () => ({
       slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
       name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
     }),
-    getReviews: () => [
-      { rating: 4, body: '好用', authorName: 'alice', updatedAt: '2026-06-01T00:00:00Z' },
-      { rating: 5, authorName: null, updatedAt: '2026-06-02T00:00:00Z' },
-    ],
   })
   renderPanel()
   fireEvent.click(screen.getByText('select'))
   await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
-  fireEvent.click(screen.getByRole('button', { name: '评价' }))
-  await waitFor(() => screen.getByText('alice'))
-  expect(screen.getByText('好用')).toBeInTheDocument()
-  expect(screen.getByText('★★★★')).toBeInTheDocument()
-  expect(screen.getByText('匿名')).toBeInTheDocument()
-  expect(screen.getByText('在网页版商店可发表评价')).toBeInTheDocument()
-})
-
-test('switching to the 版本 tab shows the real version history', async () => {
-  mockRpc({
-    info: () => ({
-      slug: 'filesystem', category: 'mcp', version: '0.8.1', installedAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z', compatibleWith: ['claude'], enabledFor: {},
-      name: 'filesystem', description: 'desc', publisher, tags: [], downloads: 0,
-    }),
-    getVersions: () => [
-      { version: '0.8.1', publishedAt: '2026-07-01T00:00:00Z' },
-      { version: '0.8.0', publishedAt: '2026-06-01T00:00:00Z' },
-    ],
-  })
-  renderPanel()
-  fireEvent.click(screen.getByText('select'))
-  await waitFor(() => screen.getByRole('heading', { name: 'filesystem' }))
-  fireEvent.click(screen.getByRole('button', { name: '版本' }))
-  await waitFor(() => screen.getByText('v0.8.0'))
-  expect(screen.getAllByText('v0.8.1').length).toBeGreaterThan(0)
-  expect(screen.getByText('latest')).toBeInTheDocument()
-  expect(screen.getByText('当前版本')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '评价' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '版本' })).toBeNull()
 })
 
 test('概览 tab renders overview, install command, install steps, use case, and footer facts', async () => {
@@ -355,7 +326,7 @@ const mcpStatus = [
 
 // H7: an installed MCP can be configured and enabled from the desktop client.
 test('an installed MCP has a 配置 button that opens the MCP config page', async () => {
-  mockRpc({ info: () => mcpInfo, getTargetStatus: () => mcpStatus, getReviews: () => [], getVersions: () => [] })
+  mockRpc({ info: () => mcpInfo, getTargetStatus: () => mcpStatus })
   renderPanel('github')
   fireEvent.click(screen.getByText('select'))
   fireEvent.click(await screen.findByRole('button', { name: '配置' }))
@@ -368,7 +339,7 @@ test('installing an MCP that needs config goes straight to its config page', asy
   mockRpc({
     info: () => { if (!installed) throw new Error('Item not installed: github'); return mcpInfo },
     list: () => (installed ? [{ ...mcpInfo, resourceId: 'mcp-registry:io.example/github' }] : []),
-    getResource: () => catalogEntry({ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }),
+    getResource: () => catalogEntry({ ...mcpInfo, id: 'i', status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }),
     installAndEnable: () => {
       installed = true
       return { slug: 'github', version: '0.6.2', installedAt: '', category: 'mcp', enabled: [], notEnabled: mcpStatus.map(s => ({ target: s.target, reason: 'needs-config', message: 'x' })) }
@@ -385,7 +356,7 @@ test('a failed install is shown on the detail page', async () => {
   mockRpc({
     info: () => { throw new Error('Item not installed: github') },
     list: () => [],
-    getResource: () => catalogEntry({ ...mcpInfo, id: 'i', rating: 0, status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }),
+    getResource: () => catalogEntry({ ...mcpInfo, id: 'i', status: 'published', installHook: { steps: [] }, createdAt: '', transport: 'stdio' }),
     installAndEnable: () => { throw new Error('Installed github 0.6.2, but enabling it for claude failed: conflict') },
   })
   renderPanel('github')

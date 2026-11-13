@@ -3,13 +3,12 @@ name: api
 # Type-check and test apps/api. Unit tests run first without a database; the
 # DB-backed tests then run in their own process (bun's mock.module leaks across
 # files, so in a shared run the catalog queries would hit a mock) against a
-# Postgres service container with the migrations and seed applied.
+# Postgres service container with the migrations applied.
 on:
   pull_request:
     paths:
       - 'apps/api/**'
       - 'packages/types/**'
-      - 'db/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/api.yml'
   push:
@@ -17,7 +16,6 @@ on:
     paths:
       - 'apps/api/**'
       - 'packages/types/**'
-      - 'db/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/api.yml'
 
@@ -55,7 +53,8 @@ jobs:
         working-directory: apps/api
         run: DATABASE_URL= pnpm test
 
-      - name: Migrate and seed
+      # The same command as the test environment's init container; seed.ts is a no-op.
+      - name: Migrate
         working-directory: apps/api
         run: bun src/migrate.ts && bun src/seed.ts
 

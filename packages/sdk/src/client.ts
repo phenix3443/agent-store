@@ -1,9 +1,5 @@
 import type {
-  Item,
-  Publisher,
   Plan,
-  UserReview,
-  ItemVersion,
   ResourceDetail,
   ResourceKind,
   ResourceListResponse,
@@ -20,21 +16,6 @@ export interface ListResourcesParams {
   /** The API caps it at 100. */
   limit?: number
   offset?: number
-}
-
-export interface GetItemsParams {
-  category?: 'provider' | 'skill' | 'mcp'
-  q?: string
-  limit?: number
-  offset?: number
-  sort?: 'downloads' | 'created'
-}
-
-// No API route returns this since #101. Kept only because apps/client-core re-exports it;
-// drop it once that re-export goes.
-export interface PublisherWithItems {
-  publisher: Publisher
-  items: Item[]
 }
 
 export class StoreClient {
@@ -91,103 +72,6 @@ export class StoreClient {
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
       if (!json.resource) return { data: null, error: 'No resource in response' }
       return { data: json.resource, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async getItems(params: GetItemsParams = {}): Promise<Result<Item[]>> {
-    try {
-      const url = new URL(`${this.baseUrl}/api/items`)
-      if (params.category) url.searchParams.set('category', params.category)
-      if (params.q) url.searchParams.set('q', params.q)
-      if (params.limit != null) url.searchParams.set('limit', String(params.limit))
-      if (params.offset != null) url.searchParams.set('offset', String(params.offset))
-      if (params.sort) url.searchParams.set('sort', params.sort)
-
-      const res = await this._fetch(url.toString())
-      const json = await res.json() as { items?: Item[]; error?: string }
-
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      if (json.items == null) return { data: null, error: 'No items in response' }
-      return { data: json.items, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  async getItemBySlug(slug: string): Promise<Result<Item>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}`)
-      const json = await res.json() as { item?: Item; error?: string }
-
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      if (!json.item) return { data: null, error: 'No item in response' }
-      return { data: json.item, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  /** Best-effort: bump a package's real install count. Never throws. */
-  async recordInstall(slug: string): Promise<void> {
-    try {
-      await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}/install`, { method: 'POST' })
-    } catch {
-      /* install counting is non-critical */
-    }
-  }
-
-  /** Public list of an item's user reviews (most recent first). */
-  async getReviews(slug: string): Promise<Result<UserReview[]>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}/reviews`)
-      const json = (await res.json()) as {
-        reviews?: { author_name: string | null; rating: number; body: string | null; updated_at: string }[]
-        error?: string
-      }
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      const reviews = (json.reviews ?? []).map((r) => ({
-        authorName: r.author_name,
-        rating: r.rating,
-        body: r.body,
-        updatedAt: r.updated_at,
-      }))
-      return { data: reviews, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  /** Public version history for an item (most recent first). */
-  async getVersions(slug: string): Promise<Result<ItemVersion[]>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}/versions`)
-      const json = (await res.json()) as { versions?: { version: string; published_at: string }[]; error?: string }
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      const versions = (json.versions ?? []).map((v) => ({ version: v.version, publishedAt: v.published_at }))
-      return { data: versions, error: null }
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err.message : String(err) }
-    }
-  }
-
-  /** Submit or update the authenticated user's review for an item. */
-  async submitReview(
-    slug: string,
-    token: string,
-    rating: number,
-    body?: string
-  ): Promise<Result<{ rating: number; reviewCount: number }>> {
-    try {
-      const res = await this._fetch(`${this.baseUrl}/api/items/${encodeURIComponent(slug)}/reviews`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ rating, body }),
-      })
-      const json = (await res.json()) as { rating?: number; reviewCount?: number; error?: string }
-      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
-      return { data: { rating: json.rating ?? 0, reviewCount: json.reviewCount ?? 0 }, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }
