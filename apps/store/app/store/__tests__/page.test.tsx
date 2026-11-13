@@ -100,6 +100,18 @@ describe('StorePage', () => {
     expect(calls).toEqual([])
   })
 
+  test('only the All tab has a category column', async () => {
+    await renderPage()
+    expect(screen.getByRole('columnheader', { name: '类别' })).toBeInTheDocument()
+    cleanup()
+    for (const category of ['skill', 'mcp', 'provider']) {
+      await renderPage({ category })
+      expect(screen.getAllByRole('columnheader').length).toBe(4)
+      expect(screen.queryByRole('columnheader', { name: '类别' })).toBeNull()
+      cleanup()
+    }
+  })
+
   test('there is no verified-only switch the API cannot filter on', async () => {
     await renderPage()
     expect(screen.queryByRole('switch')).toBeNull()

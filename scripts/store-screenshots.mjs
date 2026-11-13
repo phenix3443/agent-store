@@ -10,7 +10,9 @@ const PAGES = [
   { name: 'landing', path: '/' },
   { name: 'download', path: '/download' },
   { name: 'store', path: '/store' },
+  { name: 'skill', path: '/store?category=skill' },
   { name: 'mcp', path: '/store?category=mcp' },
+  { name: 'provider', path: '/store?category=provider' },
   { name: 'search', path: '/store?q=github&category=mcp' },
   { name: 'detail', path: DETAIL },
   // The drawer only opens from the list (an intercepted route).
