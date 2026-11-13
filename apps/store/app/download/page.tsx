@@ -47,7 +47,12 @@ export default async function DownloadPage() {
             <li
               key={p.id}
               id={p.id}
-              className="grid scroll-mt-24 gap-x-10 gap-y-3 border-b border-line py-7 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              // Three buttons side by side leave the text a sliver below 1024px, so that row stacks until lg.
+              className={`grid scroll-mt-24 gap-x-10 gap-y-3 border-b border-line py-7 ${
+                p.actions.length > 2
+                  ? 'lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center'
+                  : 'sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center'
+              }`}
             >
               <div>
                 <h2 className="text-[28px] leading-9 tracking-[-0.015em] sm:text-[32px]">{p.name}</h2>
