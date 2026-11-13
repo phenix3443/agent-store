@@ -33,9 +33,9 @@ jobs:
             rust-targets: ''
             sidecar-targets: ''
             tauri-args: ''
-          # 22.04 keeps the glibc floor low enough for older distros. No AppImage:
-          # linuxdeploy patchelfs every executable in usr/bin, which corrupts the
-          # bun-compiled sidecar (its script is appended to the ELF).
+          # 22.04 keeps the glibc floor low enough for older distros. The AppImage
+          # is built in its own step below (bundle-appimage.sh): tauri's AppImage
+          # bundler corrupts the bun-compiled sidecar.
           - host: ubuntu-22.04
             rust-targets: ''
             sidecar-targets: ''
@@ -127,7 +127,7 @@ jobs:
 
             - macOS: `.dmg`（universal，同时支持 Apple 芯片与 Intel）
             - Windows: `.msi` / `-setup.exe`
-            - Linux (x86_64): `.deb`（Debian / Ubuntu）/ `.rpm`（Fedora / openSUSE）
+            - Linux (x86_64): `.deb`（Debian / Ubuntu）/ `.rpm`（Fedora / openSUSE）/ `.AppImage`（其他发行版，`chmod +x` 后直接运行）
 
             当前为**未签名**构建，首次打开会被系统拦截 —— 属正常现象，**并非文件损坏**：
 
@@ -141,3 +141,17 @@ jobs:
             正式的 Apple Developer ID 签名 + 公证（及 Windows 代码签名）接入后，这些提示会消失。
           releaseDraft: false
           prerelease: false
+
+      - name: Build and upload the AppImage
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          pnpm --filter @as/cli-gui bundle:appimage
+          src=$(ls apps/cli-gui/src-tauri/target/release/bundle/appimage/*.AppImage)
+          # The same name GitHub gives the deb and rpm (spaces become dots).
+          asset="$RUNNER_TEMP/$(basename "$src" | tr ' ' .)"
+          cp "$src" "$asset"
+          gh release upload "$TAG" "$asset" --clobber

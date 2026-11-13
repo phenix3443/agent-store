@@ -2,8 +2,10 @@ name: desktop-shots
 
 # Builds the Linux desktop client (test/desktop-linux/Dockerfile) and runs
 # test/desktop-linux/shots.sh: the real window on Xvfb, the bundled aas sidecar
-# behind Tauri IPC, the live test catalog. The screenshots and the on-disk
-# checks are uploaded as the `desktop-shots` artifact.
+# behind Tauri IPC, the live test catalog. Then test/desktop-linux/appimage.sh
+# in a fresh container: the AppImage's sidecar, scheme registration and an
+# install link. The screenshots and the on-disk checks are uploaded as the
+# `desktop-shots` artifact.
 on:
   pull_request:
     paths:
@@ -39,9 +41,14 @@ jobs:
         run: |
           mkdir -p out
           docker run --rm --shm-size 1g -v "$PWD/out:/out" --entrypoint bash as-desktop-linux /work/test/desktop-linux/shots.sh
+      - name: AppImage
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p out/appimage
+          docker run --rm --shm-size 1g -e OUT=/out/appimage -v "$PWD/out:/out" --entrypoint bash as-desktop-linux /work/test/desktop-linux/appimage.sh
       - name: Result
         if: always()
-        run: cat out/result.txt || true
+        run: cat out/result.txt out/appimage/result.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
