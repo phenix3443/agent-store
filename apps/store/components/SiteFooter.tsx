@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 
-const SOURCE_URL = 'https://github.com/awesome-agent-store/agent-store'
+const SOURCE_URL = 'https://github.com/phenix3443/agent-store'
 
 export async function SiteFooter() {
   const t = await getTranslations('site.footer')

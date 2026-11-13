@@ -316,7 +316,8 @@
           "exe": "Installer (.exe)",
           "msi": "MSI package",
           "deb": "Debian / Ubuntu (.deb)",
-          "rpm": "Fedora / openSUSE (.rpm)"
+          "rpm": "Fedora / openSUSE (.rpm)",
+          "appimage": "Other distributions (.AppImage)"
         },
         "unavailable": "The file list of the latest release cannot be read right now.",
         "unavailableLink": "Download from GitHub Releases",
@@ -483,6 +484,9 @@
       "linuxDetail": "x86_64. .deb for Debian / Ubuntu, .rpm for Fedora / openSUSE",
       "linuxDebAction": "Download .deb",
       "linuxRpmAction": "Download .rpm",
+      "linuxDetailWithAppImage": "x86_64. .deb for Debian / Ubuntu, .rpm for Fedora / openSUSE, a no-install .AppImage for other distributions",
+      "linuxAppImageAction": "Download .AppImage",
+      "linuxAppImageSteps": "The AppImage needs no install: run chmod +x file.AppImage, then run it. Without FUSE on the system, add --appimage-extract-and-run. After its first run, \"Install\" on the web opens it.",
       "allReleases": "All releases and release notes",
       "unsignedTitle": "First launch",
       "unsignedBody": "The installers are not signed yet, so the system will block them once. The files are not damaged; follow the steps below to allow them. This won't be needed once code signing is in place.",
