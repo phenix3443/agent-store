@@ -2,11 +2,16 @@
 // file through the store's own openAppDb and writes Better Auth-shaped rows in
 // transactions that read before they write, as Better Auth's do.
 //
-// Usage: node --experimental-strip-types store-writer.mjs <app.db> <count>
+// It keeps writing until it has made at least <min> transactions and has seen at
+// least <overlap> rows the API committed meanwhile, so the two really overlap.
+//
+// Usage: node --experimental-strip-types store-writer.mjs <app.db> <min> <overlap>
 import { openAppDb } from '../../../../store/lib/app-db.ts'
 
-const [path, countArg] = process.argv.slice(2)
-const count = Number(countArg)
+const [path, minArg, overlapArg] = process.argv.slice(2)
+const min = Number(minArg)
+const overlap = Number(overlapArg)
+const cap = 20_000
 const db = openAppDb(path)
 
 const begin = db.prepare('begin')
@@ -22,13 +27,15 @@ const insertSession = db.prepare(
 process.stdout.write('ready\n')
 
 let sawApiWrites = 0
-for (let i = 0; i < count; i++) {
+let writes = 0
+for (let i = 0; i < cap && (i < min || sawApiWrites < overlap); i++) {
   const now = new Date().toISOString()
   begin.run()
   sawApiWrites = Number(countWebhooks.get().n)
   insertUser.run(`u${i}`, `user ${i}`, `u${i}@example.com`, now, now)
   insertSession.run(`s${i}`, now, `t${i}`, now, now, `u${i}`)
   commit.run()
+  writes++
 }
 db.close()
-process.stdout.write(`${JSON.stringify({ sawApiWrites })}\n`)
+process.stdout.write(`${JSON.stringify({ writes, sawApiWrites })}\n`)

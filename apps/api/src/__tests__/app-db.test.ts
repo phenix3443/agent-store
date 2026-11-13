@@ -141,7 +141,8 @@ test('the snapshot command exits 0 on success and non-zero on failure', () => {
 })
 
 test('the store and the API write to app.db at the same time without SQLITE_BUSY', async () => {
-  const storeWrites = 300
+  const minStoreWrites = 300
+  const overlap = 50
   const store = Bun.spawn(
     [
       'node',
@@ -149,7 +150,8 @@ test('the store and the API write to app.db at the same time without SQLITE_BUSY
       '--experimental-strip-types',
       join(import.meta.dir, 'fixtures/store-writer.mjs'),
       dbPath,
-      String(storeWrites),
+      String(minStoreWrites),
+      String(overlap),
     ],
     { stdout: 'pipe', stderr: 'pipe' },
   )
@@ -186,10 +188,13 @@ test('the store and the API write to app.db at the same time without SQLITE_BUSY
   expect(exitCode).toBe(0)
 
   // The store saw rows the API committed while its own writes were running.
-  const { sawApiWrites } = JSON.parse(stdout.trim().split('\n').pop()!) as { sawApiWrites: number }
-  expect(sawApiWrites).toBeGreaterThan(0)
-  expect(apiWrites).toBeGreaterThan(0)
-  expect(count(dbPath, 'user')).toBe(storeWrites)
-  expect(count(dbPath, 'session')).toBe(storeWrites)
+  const { writes, sawApiWrites } = JSON.parse(stdout.trim().split('\n').pop()!) as {
+    writes: number
+    sawApiWrites: number
+  }
+  expect(sawApiWrites).toBeGreaterThanOrEqual(overlap)
+  expect(writes).toBeGreaterThanOrEqual(minStoreWrites)
+  expect(count(dbPath, 'user')).toBe(writes)
+  expect(count(dbPath, 'session')).toBe(writes)
   expect(count(dbPath, 'processed_webhooks')).toBe(apiWrites)
 }, 90_000)
