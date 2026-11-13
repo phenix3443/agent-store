@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { formatCount, installCommand, leadSentence, resourceHref } from '@/lib/resource'
 import { InstallButton } from './InstallButton'
-import { SourceLabel } from './SourceLabel'
 import { VerifiedMark } from './VerifiedLabel'
 
 function samePath(a: string, b: string): boolean {
@@ -82,7 +81,6 @@ function ItemRow({ resource }: { resource: ResourceSummary }) {
           <span className="truncate">{resource.author?.name ?? t('list.unknownAuthor')}</span>
           {resource.verified && <VerifiedMark />}
         </span>
-        <SourceLabel resource={resource} className="block truncate text-[13px] leading-5 text-ink-2 md:mt-0.5" />
         <span className="ml-auto flex shrink-0 items-baseline gap-3 md:hidden">
           <Stars value={resource.stars} className="font-mono text-[13px] text-ink-2" />
           <Installs value={resource.installs} className="font-mono text-sm" />

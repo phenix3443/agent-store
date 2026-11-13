@@ -107,13 +107,12 @@
       "runFiles": "Copies",
       "runsNone": "The registry entry lists no package or remote.",
       "localNote": "The desktop client’s own local relay. Nothing is downloaded and no key is needed.",
-      "upstreamId": "Upstream id",
       "repository": "Repository",
       "files": "Files",
       "fileCount": "{count, plural, one {# file} other {# files}}",
       "homepage": "Homepage",
       "updated": "Updated",
-      "unavailable": "This entry is no longer listed upstream. It stays here so installed copies still resolve.",
+      "unavailable": "This package is no longer listed.",
       "deprecated": "The publisher marked this server deprecated.",
       "executable": "Executable",
       "symlink": "Symlink",
@@ -134,7 +133,7 @@
       "fallbackNote": "If the client does not open, the install command is copied and you are pointed to the download.",
       "phoneNote": "Run this command on your computer, or install with the desktop client.",
       "noCommand": "The record has no package or remote this store can turn into a command. See the repository for setup.",
-      "noteSkill": "Runs the skills.sh CLI, which copies the skill from GitHub into your agents.",
+      "noteSkill": "Install this skill in Claude Code or Codex.",
       "noteMcp": "Adds the server to Claude Code. Replace the values in angle brackets with your own.",
       "noteProvider": "Runs the Agent Store CLI."
     },
@@ -147,12 +146,6 @@
       "downloadAlt": "Go to the download page for the desktop client",
       "close": "Dismiss",
       "noCommandBody": "Open the package for its install command, or get the desktop client first."
-    },
-    "source": {
-      "mcp-registry": "MCP Registry",
-      "github": "GitHub",
-      "builtin": "Built-in",
-      "skillsSh": "skills.sh"
     }
   },
   "site": {
@@ -250,27 +243,6 @@
           "body": "Cost, tokens and requests for today, the last 7 days and the last 30 days, recorded on this machine. Budget limits and overspend alerts are Pro features.",
           "alt": "Overview: usage trend with total cost, tokens, requests and models"
         }
-      },
-      "sources": {
-        "title": "Where packages come from",
-        "lede": "We do not write the catalog by hand: a scheduled job syncs it from three upstream sources into Agent Store's own catalog.",
-        "catalogLabel": "Sources",
-        "mcp": {
-          "name": "The official MCP Registry",
-          "body": "MCP servers registered with the Model Context Protocol registry"
-        },
-        "skill": {
-          "name": "Skill repositories on GitHub",
-          "body": "Discovered through skills.sh; skill contents are downloaded from the GitHub repository"
-        },
-        "provider": {
-          "name": "Built-in provider list",
-          "body": "Common model providers, listed in Agent Store's code"
-        },
-        "sync": "Author names link upstream: skills to the GitHub owner, MCP servers to their namespace.",
-        "toolsLabel": "Supported tools",
-        "claudeNote": "Skills, MCP entries and provider settings. Uses CLAUDE_CONFIG_DIR instead when it is set.",
-        "codexNote": "Skills, MCP entries and provider settings. Uses CODEX_HOME instead when it is set."
       },
       "faq": {
         "title": "Questions",

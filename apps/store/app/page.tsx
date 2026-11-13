@@ -15,7 +15,6 @@ import { HeroDownload } from '@/components/landing/HeroDownload'
 import { InstallMap, type MapCategory, type MapSample } from '@/components/landing/InstallMap'
 import { Screenshot } from '@/components/landing/Screenshot'
 import { SHOTS } from '@/components/landing/shots'
-import { Sources } from '@/components/landing/Sources'
 import { TerminalDemo } from '@/components/landing/TerminalDemo'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -132,11 +131,6 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
       <section aria-labelledby="home-features" className="border-t border-ink py-14 lg:py-20">
         <SectionHead id="home-features" title={t('features.title')} lede={t('features.lede')} />
         <FeatureGrid />
-      </section>
-
-      <section aria-labelledby="home-sources" className="border-t border-ink py-14 lg:py-20">
-        <SectionHead id="home-sources" title={t('sources.title')} lede={t('sources.lede')} />
-        <Sources />
       </section>
 
       <section aria-labelledby="home-faq" className="grid gap-x-16 gap-y-8 border-t border-ink py-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:py-20">

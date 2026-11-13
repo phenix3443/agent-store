@@ -44,13 +44,14 @@ function renderDrawer(onOpenChange: (open: boolean) => void = () => {}) {
   )
 }
 
-test('the drawer and the page render the same detail: name, description, author, source', () => {
+test('the drawer and the page render the same detail: name, description, author without internal catalog sources', () => {
   for (const renderIt of [() => renderPage(skillResource), () => renderDrawer()]) {
     renderIt()
     expect(screen.getByText('brainstorming')).toBeInTheDocument()
     expect(screen.getByText('Explore intent before building. Use it before any creative work.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'obra' }).getAttribute('href')).toBe('https://github.com/obra')
-    expect(screen.getByText('GitHub · skills.sh')).toBeInTheDocument()
+    expect(screen.queryByText('GitHub · skills.sh')).toBeNull()
+    expect(screen.queryByText('上游标识')).toBeNull()
     expect(screen.getByText('12.4K 次安装')).toBeInTheDocument()
     expect(screen.getByText('GitHub 星标 152.3K')).toBeInTheDocument()
     expect(screen.getByText('安装后会执行')).toBeInTheDocument()
@@ -92,7 +93,7 @@ test('an MCP server shows its GitHub stars', () => {
 
 test('an entry gone upstream says so', () => {
   renderPage({ ...mcpResource, origin: { ...mcpResource.origin, unavailableAt: '2026-11-11T00:00:00Z' } })
-  expect(screen.getByRole('note').textContent).toContain('上游已不再列出这个条目')
+  expect(screen.getByRole('note').textContent).toContain('这个包已下架')
 })
 
 test('an MCP record with nothing to install explains instead of showing a command', () => {

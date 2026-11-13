@@ -15,7 +15,6 @@ export function StoreHeading() {
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-2 pb-5 pt-8 lg:pb-6 lg:pt-10">
       <h1 className="text-[40px] leading-none tracking-[-0.035em] sm:text-[56px] lg:text-[72px]">{t('title')}</h1>
-      <p className="max-w-[44ch] pb-1 text-sm leading-[22px] text-ink-2">{t('lede')}</p>
     </div>
   )
 }
