@@ -2,7 +2,6 @@ import type { ResourceDetail } from '@as/types'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatCount, installCommand, runEntries, type RunEntry } from '@/lib/resource'
 import { InstallPanel } from './InstallPanel'
-import { SourceLabel } from './SourceLabel'
 import { VerifiedLabel } from './VerifiedLabel'
 
 interface ItemDetailProps {
@@ -46,7 +45,6 @@ export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
   const specs: Spec[] = []
   // Skills carry a git tree sha as their version; only semver-like versions get a 'v'.
   if (r.version) specs.push({ label: t('detail.version'), value: /^\d+\.\d+/.test(r.version) ? `v${r.version}` : r.version })
-  specs.push({ label: t('detail.upstreamId'), value: r.origin.upstreamId, href: r.origin.url ?? undefined })
   if (r.kind === 'mcp') {
     if (r.repository?.url) specs.push({ label: t('detail.repository'), value: r.repository.url.replace(/^https?:\/\//, ''), href: r.repository.url })
     if (r.transports.length > 0) specs.push({ label: t('detail.transport'), value: r.transports.join(', ') })
@@ -90,8 +88,6 @@ export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
             <span>{t('list.unknownAuthor')}</span>
           )}
           {r.verified && <VerifiedLabel />}
-          <span aria-hidden>·</span>
-          <SourceLabel resource={r} />
           {/* Separator and value wrap together, so a line never ends on a lone "·". */}
           {r.installs != null && (
             <span className="flex items-center gap-2">

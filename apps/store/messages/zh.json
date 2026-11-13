@@ -62,7 +62,6 @@
       "emptyBody": "换个关键词或类别，或清除搜索和筛选后再看。",
       "colInstall": "安装",
       "copyCommand": "复制命令",
-      "lede": "每个包都写明安装后会执行的内容。",
       "noInstalls": "没有安装量数据",
       "stars": "GitHub 星标 {count}",
       "unknownAuthor": "作者不详",
@@ -107,13 +106,12 @@
       "runFiles": "复制文件",
       "runsNone": "这个条目没有列出可安装的包或远程地址。",
       "localNote": "桌面客户端自带的本地转发，不下载任何东西，也不需要密钥。",
-      "upstreamId": "上游标识",
       "repository": "代码仓库",
       "files": "文件",
       "fileCount": "{count} 个文件",
       "homepage": "主页",
       "updated": "更新于",
-      "unavailable": "上游已不再列出这个条目。保留在这里，是为了让已安装的副本仍能找到来源。",
+      "unavailable": "这个包已从目录中下架。",
       "deprecated": "发布者已将这个服务标为弃用。",
       "executable": "可执行",
       "symlink": "符号链接",
@@ -134,7 +132,7 @@
       "fallbackNote": "唤不起客户端时会复制安装命令，并提示下载客户端。",
       "phoneNote": "在电脑上运行这条命令，或用桌面客户端安装。",
       "noCommand": "这条记录里没有能转成安装命令的包或远程地址，请到代码仓库查看配置方法。",
-      "noteSkill": "运行 skills.sh 的命令行工具，从 GitHub 把技能复制到你的 agent 里。",
+      "noteSkill": "将技能安装到 Claude Code 或 Codex。",
       "noteMcp": "把这个服务加进 Claude Code。命令里尖括号中的占位换成你自己的值。",
       "noteProvider": "运行 Agent Store 命令行工具。"
     },
@@ -147,12 +145,6 @@
       "downloadAlt": "前往下载页获取桌面客户端",
       "close": "关闭提示",
       "noCommandBody": "打开包的详情查看安装命令，或先下载桌面客户端。"
-    },
-    "source": {
-      "mcp-registry": "MCP Registry",
-      "github": "GitHub",
-      "builtin": "内置",
-      "skillsSh": "skills.sh"
     }
   },
   "site": {
@@ -195,7 +187,7 @@
       "heroShotAlt": "Agent Store 桌面客户端的技能页（Linux 版截图）：左侧是已装和推荐的技能，右侧是 brainstorming 的详情、安装命令和安装步骤",
       "map": {
         "title": "装了会写到哪",
-        "lede": "选一类包，看它写进 Claude Code 和 Codex 的哪个文件、哪个键。路径和键名取自客户端代码。",
+        "lede": "查看安装会修改哪些文件，以及如何在 Claude Code 和 Codex 中启用。",
         "tabsLabel": "包的类别",
         "tabs": {
           "skill": "技能",
@@ -223,13 +215,13 @@
       },
       "terminal": {
         "title": "也可以在终端里装",
-        "lede": "桌面客户端自带 aas 命令，和客户端读写同一份安装记录。Linux 安装包把它放在 /usr/bin/aas，macOS 和 Windows 在客户端的安装目录里。",
-        "note": "上面是 aas 的输出格式，命令和数据取自 2026-11-12 的测试目录。",
+        "lede": "使用 aas 命令搜索、安装技能和 MCP，并为 Claude Code 或 Codex 启用。",
+        "note": "命令行使用示例。",
         "tabsLabel": "命令"
       },
       "features": {
         "title": "桌面客户端",
-        "lede": "装好的东西在客户端里管理。下面是 Linux 版的真实截图；用量数字来自截图时发给本机测试上游的请求。",
+        "lede": "在桌面客户端管理技能、MCP、供应商和用量。截图中的用量为测试数据。",
         "skill": {
           "title": "技能",
           "body": "列出装好的和推荐的技能，详情里写着安装命令和安装步骤。技能只存一份，Claude Code 和 Codex 共用。",
@@ -250,27 +242,6 @@
           "body": "费用、Token 和请求数按今天、近 7 天、近 30 天汇总，记在本机。预算上限和超支提醒是 Pro 功能。",
           "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总"
         }
-      },
-      "sources": {
-        "title": "包从哪来",
-        "lede": "目录不由我们手写，由定时任务从三处上游同步进 Agent Store 自己的目录。",
-        "catalogLabel": "来源",
-        "mcp": {
-          "name": "官方 MCP Registry",
-          "body": "Model Context Protocol 官方登记的 MCP 服务"
-        },
-        "skill": {
-          "name": "GitHub 上的技能仓库",
-          "body": "以 skills.sh 作为发现来源，技能内容从 GitHub 仓库下载"
-        },
-        "provider": {
-          "name": "内置供应商列表",
-          "body": "常用的模型供应商，列表写在 Agent Store 的代码里"
-        },
-        "sync": "作者名链接到上游：技能链到 GitHub 的 owner 页，MCP 链到它的命名空间。",
-        "toolsLabel": "支持的工具",
-        "claudeNote": "技能、MCP 条目、供应商设置。设置了 CLAUDE_CONFIG_DIR 时改用那个目录。",
-        "codexNote": "技能、MCP 条目、供应商设置。设置了 CODEX_HOME 时改用那个目录。"
       },
       "faq": {
         "title": "常见问题",
