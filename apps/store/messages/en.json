@@ -62,7 +62,6 @@
       "emptyBody": "Try another keyword or type, or clear the search and filters.",
       "colInstall": "Install",
       "copyCommand": "Copy command",
-      "lede": "Every package states what runs when you install it.",
       "noInstalls": "No install count",
       "stars": "{count} GitHub stars",
       "unknownAuthor": "Unknown author",
@@ -188,7 +187,7 @@
       "heroShotAlt": "The Agent Store desktop client's skills view (Linux build): installed and recommended skills on the left, the brainstorming skill's details, install command and install steps on the right",
       "map": {
         "title": "Where an install writes",
-        "lede": "Pick a kind of package to see which file and key it writes for Claude Code and Codex. Paths and key names come from the client code.",
+        "lede": "See which files an install changes and how it is enabled in Claude Code and Codex.",
         "tabsLabel": "Package kind",
         "tabs": {
           "skill": "Skill",
@@ -216,13 +215,13 @@
       },
       "terminal": {
         "title": "From the terminal too",
-        "lede": "The desktop client ships the aas command, which reads and writes the same install records. The Linux packages put it at /usr/bin/aas; on macOS and Windows it is in the client's install folder.",
-        "note": "Above is the output format of aas; the commands and data are from the test catalog on 2026-11-12.",
+        "lede": "Use aas to search for and install skills and MCP servers, then enable them in Claude Code or Codex.",
+        "note": "Command-line usage examples.",
         "tabsLabel": "Command"
       },
       "features": {
         "title": "The desktop client",
-        "lede": "What you install is managed in the client. These are real screenshots of the Linux build; the usage numbers come from requests sent to a local test upstream while taking them.",
+        "lede": "Manage skills, MCP servers, providers and usage in the desktop client. Usage figures in the screenshots are test data.",
         "skill": {
           "title": "Skills",
           "body": "Installed and recommended skills, with the install command and install steps in the details. Each skill is stored once and shared by Claude Code and Codex.",
