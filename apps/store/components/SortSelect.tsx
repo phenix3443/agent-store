@@ -11,16 +11,18 @@ export function SortSelect({ active }: { active: ResourceSort }) {
   const { setParams } = useStoreQuery()
   const id = useId()
 
+  // One frame for label and value. The select draws no outline of its own: the
+  // keyboard ring goes around the whole frame, so it never cuts through the label.
   return (
-    <div className="relative flex h-8 items-center border border-line bg-transparent focus-within:border-ink hover:border-ink">
-      <label htmlFor={id} className="label pointer-events-none pl-3 pr-2">
+    <div className="relative inline-flex h-9 items-center border border-line transition-colors hover:border-line-strong focus-within:border-ink has-[select:focus-visible]:outline has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-offset-2 has-[select:focus-visible]:outline-ink">
+      <label htmlFor={id} className="label cursor-pointer pl-3 pr-2">
         {t('label')}
       </label>
       <select
         id={id}
         value={active}
         onChange={(e) => setParams({ sort: e.target.value === 'default' ? null : e.target.value })}
-        className="h-full cursor-pointer appearance-none bg-transparent pl-1 pr-8 text-sm text-ink outline-offset-4"
+        className="h-full cursor-pointer appearance-none bg-transparent pr-8 text-sm text-ink focus-visible:outline-none"
       >
         {SORTS.map((value) => (
           <option key={value} value={value} className="bg-plate text-ink">
