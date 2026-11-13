@@ -20,8 +20,8 @@ export function defaultDiscoverySources(): DiscoverySource[] {
 }
 
 /**
- * Directories with a keyword search their terms let us call, by name. skills.sh is
- * absent: its robots.txt disallows /api/ and /search.
+ * Directories with a keyword search we call, by name. skills.sh is absent: its
+ * robots.txt disallows /api/ and /search.
  */
 export function searchSources(env: { SKILLSMP_API_KEY?: string | undefined } = {}): Record<string, SearchSource> {
   return {

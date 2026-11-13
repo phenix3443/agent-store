@@ -91,6 +91,8 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 
 ### 搜索补充（本地结果不够时去别的技能站补搜）
 
+**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态：网页还没有告诉用户「搜索词会发给第三方站点」，等新的搜索界面带上这句说明后，再在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp` 打开。
+
 `GET /api/resources` 的行为不变。补搜是单独的接口 `GET /api/search/supplement`，由前端在搜索词稳定后、且只在第一页调用一次；本地结果照常立即返回，不等补搜。代码在 `apps/api/src/catalog/supplement.ts`（规则与调度）、`found-store.ts`（持久化）和 `sources/` 下各站点的搜索函数。
 
 **接口**
@@ -99,8 +101,8 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 
 | 字段 | 含义 |
 |---|---|
-| `status` | `not_needed`：本地结果够用，或这个词不补搜；`searching`：正在查，`retryAfterSeconds` 秒后再问；`found` / `none`：查完了，有 / 没有；`unavailable`：现在一个站点都问不了，`retryAfterSeconds` 秒后可重试 |
-| `reason` | 为什么本地结果不够：`no_results`、`few_results`、`low_relevance`；`not_needed` 时为 `null` |
+| `status` | `disabled`：部署里没打开补搜，界面不显示任何补搜相关内容；`not_needed`：本地结果够用，或这个词不补搜；`searching`：正在查，`retryAfterSeconds` 秒后再问；`found` / `none`：查完了，有 / 没有；`unavailable`：现在一个站点都问不了，`retryAfterSeconds` 秒后可重试 |
+| `reason` | 为什么本地结果不够：`no_results`、`few_results`、`low_relevance`；`disabled`、`not_needed` 时为 `null` |
 | `resources` | 已从 GitHub 仓库读到并校验过、但已发布的 `catalog.db` 里还没有的技能，结构与列表接口的条目相同，详情走 `GET /api/resources/<id>`，可以安装 |
 | `listings` | 别的站点上有、这里还装不了的技能：`key`、`site`、`name`、`description`、`author`、`url`（该站点上的页面）。只能作为外链展示，不能当成可安装的资源 |
 | `partial` | 有站点超时、被限流或超出额度，结果可能不全 |
@@ -127,7 +129,7 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 |---|---|---|---|
 | `clawhub` | `GET https://clawhub.ai/api/v1/search?q=&limit=&nonSuspiciousOnly=true` | 每分钟 30 次、每天 2000 次 | 官方文档允许第三方目录搜索，要求缓存、遵守 429、链接回原页面；站点自己的匿名限额是每 IP 每分钟 3000 次读取 |
 | `skillhub` | `GET https://api.skillhub.cn/api/skills?keyword=&sortBy=score` | 每分钟 30 次、每天 2000 次 | 腾讯官方文档写明免鉴权、查找统一走这个接口；文档和响应头都没给限额，额度是自己定的上限 |
-| `skillsmp` | `GET https://skillsmp.com/api/v1/skills/search?q=&limit=` | 每分钟 5 次、每天 40 次 | 默认不启用。官方文档：匿名每天 50 次、每分钟 10 次，只能关键词搜索；服务条款允许搜索，禁止成规模抓取。结果直接给出 GitHub 仓库和技能名 |
+| `skillsmp` | `GET https://skillsmp.com/api/v1/skills/search?q=&limit=` | 每分钟 5 次、每天 40 次 | 官方文档：匿名每天 50 次、每分钟 10 次，只能关键词搜索，自设额度留在这个限额之内。结果直接给出 GitHub 仓库和技能名，是唯一能产出可安装结果的站点。它的 `robots.txt` 对爬虫禁止 `/api/`，服务条款允许搜索、禁止成规模抓取；这里只做用户搜索触发的单次关键词查询，不做批量采集。额度用完或站点返回 429 时跳过它，其余站点照常 |
 
 skills.sh 不在其中：它的 `robots.txt` 禁止 `/api/` 和 `/search`。
 
@@ -135,7 +137,7 @@ skills.sh 不在其中：它的 `robots.txt` 禁止 `/api/` 和 `/search`。
 
 **发给第三方的内容**
 
-只有归一化后的搜索词。请求由 API 进程自己发出，`User-Agent` 固定为 `agent-store-api`；用户的 Cookie、登录令牌、IP、浏览器请求头都不读取、不转发。搜索词不落库、不写日志：一次查询在 `app.db` 里只按搜索词的 SHA-256 记录，到期删除。导出给定时同步的只有查到的条目和仓库名，没有搜索词，所以搜索历史不会变成关键词采集清单。前端接入时需要在界面上说明「没找到时会把搜索词发给这些站点」。
+只有归一化后的搜索词。请求由 API 进程自己发出，`User-Agent` 固定为 `agent-store-api`；用户的 Cookie、登录令牌、IP、浏览器请求头都不读取、不转发。搜索词不落库、不写日志：一次查询在 `app.db` 里只按搜索词的 SHA-256 记录，到期删除。导出给定时同步的只有查到的条目和仓库名，没有搜索词，所以搜索历史不会变成关键词采集清单。界面上必须先说明「没找到时会把搜索词发给这些站点」，才能打开补搜。
 
 **校验与去重**
 
@@ -161,15 +163,15 @@ API 本地的 `catalog.db` 是下载来的只读副本，每次发布都会被�
 
 - 同一个搜索词在查询进行中再次到来，不会再发请求，共用那一次；查完后在上表的时间内直接用记录的结论，「没查到」同样记录。「全部站点失败」只在内存里记 30 秒。
 - 以后的搜索（包括别的搜索词）先看 `found_listings` 和 `found_resources` 里名称或描述包含全部搜索词的条目，够用就不再问站点。
-- `GET /api/discovery/export` 导出 `found_listings` 和 `found_repos`（各最多 5000 条，最近的在前）。`catalog-sync` 工作流每次运行先读这个地址（`FINDS_URL`，命令行参数 `--finds-url`）：条目按各自的站点写进 `discovery.db` 的 `listings`（已有的不动），仓库以「从没试过」进入扫描队列（`discovered_by = 'search'`），之后和榜单发现的仓库一样被扫描、发布进 `catalog.db`。重复读入不会产生重复行。读不到这个地址只记在报告里（`report.json` 的 `discovery.searchFinds` 和 job summary），不影响这次同步，下次再读。
+- `GET /api/discovery/export` 导出 `found_listings` 和 `found_repos`（各最多 5000 条，最近的在前）。这个接口不鉴权：内容只有各站点本来就公开的条目和 GitHub 仓库名。`catalog-sync` 工作流每次运行先读这个地址（`FINDS_URL`，命令行参数 `--finds-url`）：条目按各自的站点写进 `discovery.db` 的 `listings`（已有的不动），仓库以「从没试过」进入扫描队列（`discovered_by = 'search'`），之后和榜单发现的仓库一样被扫描、发布进 `catalog.db`。重复读入不会产生重复行。读不到这个地址只记在报告里（`report.json` 的 `discovery.searchFinds` 和 job summary），不影响这次同步，下次再读。
 
 | 变量 | 用途 |
 |---|---|
-| `SEARCH_FALLBACK_SOURCES` | 补搜问哪些站点，逗号分隔，默认 `clawhub,skillhub`；`none` 关闭补搜；加上 `skillsmp` 才会问 SkillsMP |
+| `SEARCH_FALLBACK_SOURCES` | 补搜问哪些站点，逗号分隔。不设、为空或 `none` 时补搜关闭（测试环境现状）；打开时设 `clawhub,skillhub,skillsmp` |
 | `SEARCH_FALLBACK_MIN_RESULTS` | 本地结果少于多少条算「太少」，默认 3 |
 | `SEARCH_FALLBACK_TIMEOUT_MS` | 单个站点的超时，默认 4000 |
 | `SKILLSMP_API_KEY` | 可选，SkillsMP 的 API key |
-| `GITHUB_TOKEN` | 可选，API 读仓库用；不设时用匿名额度 |
+| `GITHUB_TOKEN` | 可选，API 读补搜到的仓库用。测试环境的 API Pod 目前没有配；不配时每小时最多读 20 个仓库，打开补搜时应一并配上 |
 
 ## 登录
 

@@ -96,16 +96,18 @@ export interface ExternalListing {
 }
 
 /**
- * `not_needed`: the catalog answers the query well enough, or the query is not looked up
- * (another kind, too short, looks like an address). `searching`: a lookup is running;
+ * `disabled`: the deployment has the lookups switched off; nothing is sent anywhere and
+ * the UI shows nothing for it. `not_needed`: the catalog answers the query well enough, or
+ * the query is not looked up (another kind, too short, looks like an address).
+ * `searching`: a lookup is running;
  * ask again after `retryAfterSeconds`. `found` / `none`: the lookup finished.
  * `unavailable`: no site could be asked right now; retry after `retryAfterSeconds`.
  */
-export type SearchSupplementStatus = 'not_needed' | 'searching' | 'found' | 'none' | 'unavailable'
+export type SearchSupplementStatus = 'disabled' | 'not_needed' | 'searching' | 'found' | 'none' | 'unavailable'
 
 export interface SearchSupplementResponse {
   status: SearchSupplementStatus
-  /** Why the catalog's own results were not enough; null for `not_needed`. */
+  /** Why the catalog's own results were not enough; null for `disabled` and `not_needed`. */
   reason: 'no_results' | 'few_results' | 'low_relevance' | null
   /**
    * Skills checked against their GitHub repo that the catalog does not hold yet.

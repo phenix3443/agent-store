@@ -10,6 +10,7 @@ import { applySearchFinds, openDiscoveryForWrite, pickRepos } from '../catalog/d
 import { FoundStore } from '../catalog/found-store'
 import { CatalogReader } from '../catalog/reader'
 import { resourceRoutes } from '../catalog/routes'
+import { buildSearchSupplement } from '../catalog/runtime'
 import type { SearchSource } from '../catalog/search-sources'
 import { clawhubSearch } from '../catalog/sources/clawhub'
 import { githubSkillsSource } from '../catalog/sources/github-skills'
@@ -660,12 +661,97 @@ describe('routes', () => {
     await s.settled('kubernetes', 5000)
   })
 
-  test('switched off: not needed, and nothing is exported', async () => {
-    const app = resourceRoutes(reader)
-    const res = await app.fetch(new Request('http://local/api/search/supplement?q=terraform'))
-    expect(((await res.json()) as SearchSupplementResponse).status).toBe('not_needed')
-    const exported = (await (await app.fetch(new Request('http://local/api/discovery/export'))).json()) as { listings: unknown[]; repos: unknown[] }
-    expect(exported).toMatchObject({ listings: [], repos: [] })
+})
+
+describe('SEARCH_FALLBACK_SOURCES', () => {
+  const off = { status: 'disabled', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null }
+
+  test('unset, empty or none: the endpoint answers disabled and no request leaves the process', async () => {
+    const original = globalThis.fetch
+    const outbound: string[] = []
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      outbound.push(String(input instanceof Request ? input.url : input))
+      throw new Error('no outbound request is expected')
+    }) as typeof fetch
+    try {
+      for (const env of [{}, { SEARCH_FALLBACK_SOURCES: '' }, { SEARCH_FALLBACK_SOURCES: 'none' }, { SEARCH_FALLBACK_SOURCES: ' , ' }]) {
+        const built = buildSearchSupplement({ ...env, APP_DB_PATH: appDbPath }, { reader })
+        expect(built).toBeNull()
+        const app = resourceRoutes(reader, () => built)
+        // 'terraform' has no local match: with the lookups on, this would start one.
+        for (const path of ['/api/search/supplement?q=terraform', '/api/search/supplement?q=terraform&kind=skill&wait=2']) {
+          const res = await app.fetch(new Request(`http://local${path}`))
+          expect(res.status).toBe(200)
+          expect((await res.json()) as SearchSupplementResponse).toEqual(off as SearchSupplementResponse)
+        }
+        const exported = (await (await app.fetch(new Request('http://local/api/discovery/export'))).json()) as { listings: unknown[]; repos: unknown[] }
+        expect(exported).toMatchObject({ listings: [], repos: [] })
+        // The catalog itself is served as always.
+        expect((await app.fetch(new Request('http://local/api/resources?q=pdf'))).status).toBe(200)
+      }
+      expect(outbound).toEqual([])
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  test('clawhub,skillhub,skillsmp: all three sites are asked and a GitHub find becomes a resource', async () => {
+    const f = fakeFetch(acmeRoutes, searchRoutes({
+      clawhub: clawhubOk(clawhubHit('ivan', 'terraform', 'Terraform')),
+      skillhub: skillhubOk(skillhubHit('ops', 'terraform-wrap')),
+      skillsmp: skillsmpOk(skillsmpHit('acme/tools', 'terraform-plan')),
+    }))
+    const s = buildSearchSupplement({ SEARCH_FALLBACK_SOURCES: 'clawhub, skillhub,skillsmp', APP_DB_PATH: appDbPath }, { reader, fetch: f })!
+    const done = await settle(s, 'terraform')
+    expect(done).toMatchObject({ status: 'found', partial: false })
+    expect(done.resources.map((r) => r.id)).toEqual([ACME_PLAN, ACME_DRIFT])
+    expect(done.listings.map((l) => l.key)).toEqual(['clawhub:ivan/terraform', 'skillhub:ops/terraform-wrap'])
+    for (const host of ['clawhub.ai', 'api.skillhub.cn', 'skillsmp.com']) expect(calls(f, host)).toHaveLength(1)
+  })
+
+  test('only the sites named are asked', async () => {
+    const f = fakeFetch(searchRoutes({ clawhub: clawhubOk() }))
+    const s = buildSearchSupplement({ SEARCH_FALLBACK_SOURCES: 'clawhub,nowhere', APP_DB_PATH: appDbPath }, { reader, fetch: f })!
+    expect((await settle(s, 'terraform')).status).toBe('none')
+    expect(f.calls).toHaveLength(1)
+  })
+})
+
+describe('SkillsMP quota', () => {
+  const all = [SOURCES.clawhub, SOURCES.skillhub, SOURCES.skillsmp]
+
+  test('its ceiling stays under the anonymous allowance of 10 a minute and 50 a day', () => {
+    expect(SOURCES.skillsmp.budget.perMinute).toBeLessThanOrEqual(10)
+    expect(SOURCES.skillsmp.budget.perDay).toBeLessThanOrEqual(50)
+  })
+
+  test('over our own ceiling: SkillsMP is skipped and the other sites still answer', async () => {
+    const f = fakeFetch(searchRoutes({ clawhub: clawhubOk(clawhubHit('ivan', 'iac-kit')), skillhub: skillhubOk(), skillsmp: skillsmpOk() }))
+    const s = supplement(f, { sources: all, scan: false })
+    const perMinute = SOURCES.skillsmp.budget.perMinute
+    for (let i = 0; i < perMinute; i++) expect(await settle(s, `quota probe ${i}`)).toMatchObject({ status: 'found', partial: false })
+    const over = await settle(s, 'one more query')
+    expect(over).toMatchObject({ status: 'found', partial: true })
+    expect(over.listings.map((l) => l.key)).toEqual(['clawhub:ivan/iac-kit'])
+    expect(calls(f, 'skillsmp.com')).toHaveLength(perMinute)
+    expect(calls(f, 'clawhub.ai')).toHaveLength(perMinute + 1)
+    expect(calls(f, 'api.skillhub.cn')).toHaveLength(perMinute + 1)
+  })
+
+  test('the site reporting its daily quota spent: left alone for Retry-After while the others carry on', async () => {
+    const spent = () => new Response(JSON.stringify({ success: false, error: { code: 'DAILY_QUOTA_EXCEEDED', message: 'Daily API quota exceeded' } }), {
+      status: 429, headers: { 'content-type': 'application/json', 'retry-after': '1800' },
+    })
+    const f = fakeFetch(searchRoutes({ clawhub: clawhubOk(clawhubHit('ivan', 'iac-kit')), skillhub: skillhubOk(), skillsmp: spent }))
+    const s = supplement(f, { sources: all, scan: false })
+    expect(await settle(s, 'terraform')).toMatchObject({ status: 'found', partial: true })
+    advance(20 * MINUTE)
+    expect(await settle(s, 'kubernetes')).toMatchObject({ status: 'found', partial: true })
+    expect(calls(f, 'skillsmp.com')).toHaveLength(1)
+    expect(calls(f, 'clawhub.ai')).toHaveLength(2)
+    advance(11 * MINUTE)
+    await settle(s, 'ansible')
+    expect(calls(f, 'skillsmp.com')).toHaveLength(2)
   })
 })
 

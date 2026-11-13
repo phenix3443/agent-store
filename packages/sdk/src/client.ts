@@ -81,7 +81,7 @@ export class StoreClient {
   /**
    * GET /api/search/supplement: what other skill directories list for a query the catalog
    * answers poorly. Call it once the query has settled (not per keystroke) and only for
-   * the first page. `wait` holds the request up to that many seconds for a running lookup;
+   * the first page. `disabled` means the deployment has the lookups off. `wait` holds the request up to that many seconds for a running lookup;
    * on `searching`, call again after `retryAfterSeconds`.
    */
   async searchSupplement(params: { q: string; kind?: ResourceKind; wait?: number }): Promise<Result<SearchSupplementResponse>> {

@@ -15,7 +15,8 @@ const MAX_WAIT_SECONDS = 10
  * GET /api/search/supplement?q=&kind=&wait=          what other skill directories list for a query
  *                                                    the catalog answers poorly (see supplement.ts)
  * GET /api/discovery/export                          stored finds, for the catalog sync
- * `supplement` returns null when the lookups are switched off or app.db is missing.
+ * `supplement` returns null when the lookups are switched off (the default) or app.db is
+ * missing; the supplement endpoint then answers `disabled`.
  */
 export function resourceRoutes(reader: CatalogReader, supplement: () => SearchSupplement | null = () => null): Hono {
   const app = new Hono()
@@ -68,7 +69,7 @@ export function resourceRoutes(reader: CatalogReader, supplement: () => SearchSu
     c.header('cache-control', 'no-store')
     const s = supplement()
     if (!s) {
-      const off: SearchSupplementResponse = { status: 'not_needed', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null }
+      const off: SearchSupplementResponse = { status: 'disabled', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null }
       return c.json(off)
     }
     let body = s.lookup(q, (kind as ResourceKind) || null)

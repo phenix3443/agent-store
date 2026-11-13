@@ -192,8 +192,9 @@ export class SearchSupplement {
     ): SearchSupplementResponse => ({ status, reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null, ...rest })
 
     const q = normalizeQuery(rawQuery)
+    if (this.o.sources.length === 0) return answer('disabled')
     // The sites list skills only.
-    if (this.o.sources.length === 0 || (kind && kind !== 'skill') || !lookupEligible(q, this.c)) return answer('not_needed')
+    if ((kind && kind !== 'skill') || !lookupEligible(q, this.c)) return answer('not_needed')
     const local = this.o.reader.list({ q, kind, limit: this.c.sample }).resources.map((r) => ({ name: r.name, key: r.origin.upstreamId }))
     const reason = fallbackTrigger(q, local, this.c.minResults)
     if (!reason) return answer('not_needed')

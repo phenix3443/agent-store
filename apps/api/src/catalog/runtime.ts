@@ -32,35 +32,36 @@ export function startCatalog(env: Record<string, string | undefined> = process.e
   return updater
 }
 
-let supplement: SearchSupplement | null | undefined
-
 /**
- * The search supplement, built on first use; null when it is switched off or app.db
- * cannot be opened.
- * SEARCH_FALLBACK_SOURCES: sites to ask, comma separated (default `clawhub,skillhub`;
- * `none` switches the lookups off; `skillsmp` is opt-in). SEARCH_FALLBACK_MIN_RESULTS and
- * SEARCH_FALLBACK_TIMEOUT_MS override the trigger threshold and the per-site timeout.
- * SKILLSMP_API_KEY: optional key for SkillsMP. GITHUB_TOKEN: optional, raises how many
- * found repos the API may scan per hour.
+ * Builds the search supplement from the environment; null when it is off.
+ * SEARCH_FALLBACK_SOURCES: sites to ask, comma separated. Unset, empty or `none` means
+ * off: no site is ever called. `clawhub,skillhub,skillsmp` switches every site on.
+ * SEARCH_FALLBACK_MIN_RESULTS and SEARCH_FALLBACK_TIMEOUT_MS override the trigger
+ * threshold and the per-site timeout. SKILLSMP_API_KEY: optional key for SkillsMP.
+ * GITHUB_TOKEN: optional, raises how many found repos the API may scan per hour.
  */
-export function searchSupplement(env: Record<string, string | undefined> = process.env): SearchSupplement | null {
-  if (supplement !== undefined) return supplement
+export function buildSearchSupplement(
+  env: Record<string, string | undefined> = process.env,
+  deps: { reader?: CatalogReader; fetch?: typeof fetch } = {},
+): SearchSupplement | null {
   const known = searchSources(env)
-  const names = (env['SEARCH_FALLBACK_SOURCES'] ?? 'clawhub,skillhub').split(',').map((s) => s.trim()).filter(Boolean)
+  const names = (env['SEARCH_FALLBACK_SOURCES'] ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   const sources = names.flatMap((n) => known[n] ?? [])
   const unknown = names.filter((n) => n !== 'none' && !known[n])
   if (unknown.length) console.warn(JSON.stringify({ level: 'warn', message: 'unknown SEARCH_FALLBACK_SOURCES entries ignored', unknown }))
-  if (sources.length === 0) return (supplement = null)
+  if (sources.length === 0) return null
   try {
     const token = env['GITHUB_TOKEN'] || undefined
     const positive = (raw: string | undefined) => (raw && Number(raw) > 0 ? Number(raw) : undefined)
     const minResults = positive(env['SEARCH_FALLBACK_MIN_RESULTS'])
     const sourceTimeoutMs = positive(env['SEARCH_FALLBACK_TIMEOUT_MS'])
-    supplement = new SearchSupplement({
-      reader: catalogReader,
-      store: new FoundStore(getDb()),
+    const silent = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
+    return new SearchSupplement({
+      reader: deps.reader ?? catalogReader,
+      store: new FoundStore(getDb(env['APP_DB_PATH'] ? { APP_DB_PATH: env['APP_DB_PATH'] } : undefined)),
       sources,
-      github: new Octokit({ auth: token, userAgent: 'agent-store-api', log: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} } }),
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+      github: new Octokit({ auth: token, userAgent: 'agent-store-api', log: silent, ...(deps.fetch ? { request: { fetch: deps.fetch } } : {}) }),
       config: {
         // Anonymous GitHub API calls are capped at 60 an hour per address; a scan takes two.
         scansPerHour: token ? 200 : 20,
@@ -70,7 +71,14 @@ export function searchSupplement(env: Record<string, string | undefined> = proce
     })
   } catch (e) {
     console.warn(JSON.stringify({ level: 'warn', message: 'search supplement is off', error: e instanceof Error ? e.message : String(e) }))
-    supplement = null
+    return null
   }
+}
+
+let supplement: SearchSupplement | null | undefined
+
+/** The process's search supplement, built on first use. */
+export function searchSupplement(): SearchSupplement | null {
+  if (supplement === undefined) supplement = buildSearchSupplement()
   return supplement
 }
