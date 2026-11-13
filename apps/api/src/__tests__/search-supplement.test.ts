@@ -672,7 +672,7 @@ describe('SEARCH_FALLBACK_SOURCES', () => {
     globalThis.fetch = (async (input: string | URL | Request) => {
       outbound.push(String(input instanceof Request ? input.url : input))
       throw new Error('no outbound request is expected')
-    }) as typeof fetch
+    }) as unknown as typeof fetch
     try {
       for (const env of [{}, { SEARCH_FALLBACK_SOURCES: '' }, { SEARCH_FALLBACK_SOURCES: 'none' }, { SEARCH_FALLBACK_SOURCES: ' , ' }]) {
         const built = buildSearchSupplement({ ...env, APP_DB_PATH: appDbPath }, { reader })
