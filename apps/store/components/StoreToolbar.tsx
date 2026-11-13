@@ -33,10 +33,10 @@ export function StoreToolbar({ category, sort, filtered }: StoreToolbarProps) {
   return (
     <div className="flex flex-col border-b border-ink lg:flex-row lg:items-center lg:justify-between lg:gap-6">
       <CategoryFilter active={category} />
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line py-3 lg:border-t-0 lg:py-0">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line py-2.5 lg:border-t-0 lg:py-0">
         <SortSelect active={sort} />
         {filtered && (
-          <ClearFiltersLink className="text-sm underline decoration-line-strong hover:decoration-ink" />
+          <ClearFiltersLink className="inline-flex h-9 items-center text-sm underline decoration-line-strong transition-colors hover:decoration-ink" />
         )}
       </div>
     </div>
