@@ -35,7 +35,7 @@ export default async function StorePage({ searchParams }: StorePageProps) {
       <StoreHeading />
       <StoreToolbar category={query.kind ?? 'all'} sort={query.sort} filtered={filtered} />
       {result === null ? (
-        <ItemTableSkeleton />
+        <ItemTableSkeleton showCategory={query.kind === null} />
       ) : !result.ok ? (
         <StoreError retryHref={href} />
       ) : (
