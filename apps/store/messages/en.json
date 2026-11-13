@@ -347,7 +347,7 @@
           "body": "Get the macOS (Universal, works on Apple silicon and Intel), Windows or Linux (.deb / .rpm) desktop client from the download page. The client manages installed resources on this machine, maintains provider configurations, runs the local relay and shows usage. After signing in, installed skills, MCP servers and providers sync across devices.",
           "bullets": [
             "The installers are currently unsigned, so the system blocks them on first launch. This is expected; the files are not damaged",
-            "If macOS says the app \"is damaged and can't be opened\": drag the app into \"Applications\", run xattr -cr \"/Applications/Agent Store CLI.app\" in Terminal, then double-click to open it",
+            "If macOS says the app \"is damaged and can't be opened\": drag the app into \"Applications\", run xattr -cr \"/Applications/Agent Store.app\" in Terminal, then double-click to open it",
             "If Windows shows \"Unknown publisher\": click \"More info\", then \"Run anyway\"",
             "These prompts will go away once Apple / Windows code signing is in place"
           ]

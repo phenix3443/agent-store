@@ -40,7 +40,7 @@ export function TitleBar() {
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
           <path d="M9 2l5.5 3v8L9 16l-5.5-3V5z" stroke="var(--text-3)" strokeWidth="1.4" strokeLinejoin="round" />
         </svg>
-        <p className="text-xs font-semibold text-store-text-2">Agent Store CLI</p>
+        <p className="text-xs font-semibold text-store-text-2">Agent Store</p>
       </div>
     </div>
   )

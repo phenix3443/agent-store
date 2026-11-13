@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { getLatestRelease, RELEASE_REPO } from '@/lib/latest-release'
 
 const RELEASES_URL = `https://github.com/${RELEASE_REPO}/releases`
-const XATTR = 'xattr -cr "/Applications/Agent Store CLI.app"'
+const XATTR = 'xattr -cr "/Applications/Agent Store.app"'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('site.download')
