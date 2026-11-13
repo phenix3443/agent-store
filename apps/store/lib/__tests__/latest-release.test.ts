@@ -63,3 +63,18 @@ test('sizes are binary megabytes', () => {
   expect(formatSize(93368276)).toBe('89 MB')
   expect(formatSize(5 * 1024 * 1024 + 300_000)).toBe('5.3 MB')
 })
+
+test('lists the AppImage under Linux after deb and rpm, not as the recommended file', () => {
+  const release = parseRelease({ ...v021, assets: [...v021.assets, asset('Agent.Store.CLI_0.2.2_amd64.AppImage', 61000000)] })!
+  const linux = release.platforms.find((p) => p.os === 'linux')!
+  expect(linux.files.map((f) => [f.kind, f.recommended])).toEqual([
+    ['deb', false],
+    ['rpm', false],
+    ['appimage', false],
+  ])
+})
+
+test('a release without an AppImage lists none', () => {
+  const files = parseRelease(v021)!.platforms.flatMap((p) => p.files)
+  expect(files.some((f) => f.kind === 'appimage')).toBe(false)
+})

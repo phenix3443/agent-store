@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
+import { RELEASE_REPO, RELEASES_PAGE } from '@/lib/latest-release'
 
 // Resolve a download target to the matching asset on the latest GitHub Release
 // and 302 to it, so the landing page always links to the newest installer for
 // each platform without hardcoding a version. Falls back to the releases page.
-const REPO = 'awesome-agent-store/agent-store'
-const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`
-
 // The macOS build is a single universal .dmg (Apple Silicon + Intel), so all mac
 // targets resolve to the one dmg; mac-arm/mac-intel stay as aliases for old links.
 const matchMac = (n: string) => n.endsWith('.dmg')
@@ -16,6 +14,7 @@ const MATCHERS: Record<string, (name: string) => boolean> = {
   win: (n) => n.endsWith('-setup.exe'),
   'linux-deb': (n) => n.endsWith('.deb'),
   'linux-rpm': (n) => n.endsWith('.rpm'),
+  'linux-appimage': (n) => n.endsWith('.AppImage'),
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ target: string }> }) {
@@ -24,7 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ target:
   if (!match) return NextResponse.redirect(RELEASES_PAGE, 302)
 
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+    const res = await fetch(`https://api.github.com/repos/${RELEASE_REPO}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json' },
       next: { revalidate: 300 },
     })

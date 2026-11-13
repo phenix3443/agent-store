@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
+import { getLatestRelease, RELEASE_REPO } from '@/lib/latest-release'
 
-const RELEASES_URL = 'https://github.com/awesome-agent-store/agent-store/releases'
+const RELEASES_URL = `https://github.com/${RELEASE_REPO}/releases`
 const XATTR = 'xattr -cr "/Applications/Agent Store CLI.app"'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,6 +14,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function DownloadPage() {
   const t = await getTranslations('site.download')
+  // Only offer the AppImage when the latest release ships one; older releases have deb and rpm only.
+  const release = await getLatestRelease()
+  const hasAppImage = !!release?.platforms.some((p) => p.files.some((f) => f.kind === 'appimage'))
 
   const platforms = [
     { id: 'mac', name: t('mac'), detail: t('macDetail'), actions: [{ label: t('macAction'), href: '/download/mac' }], primary: true },
@@ -20,10 +24,11 @@ export default async function DownloadPage() {
     {
       id: 'linux',
       name: t('linux'),
-      detail: t('linuxDetail'),
+      detail: hasAppImage ? t('linuxDetailWithAppImage') : t('linuxDetail'),
       actions: [
         { label: t('linuxDebAction'), href: '/download/linux-deb' },
         { label: t('linuxRpmAction'), href: '/download/linux-rpm' },
+        ...(hasAppImage ? [{ label: t('linuxAppImageAction'), href: '/download/linux-appimage' }] : []),
       ],
       primary: false,
     },
@@ -84,6 +89,7 @@ export default async function DownloadPage() {
           </pre>
           <p className="mt-6 border-t border-line pt-6">{t('winSteps')}</p>
           <p className="mt-6 border-t border-line pt-6">{t('linuxSteps')}</p>
+          {hasAppImage && <p className="mt-3">{t('linuxAppImageSteps')}</p>}
         </div>
       </section>
 
