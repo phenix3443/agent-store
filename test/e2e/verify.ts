@@ -47,25 +47,31 @@ async function loadProviders(): Promise<{ claude: Provider; codex: Provider }> {
   const all = await Promise.all(
     files.map(async (f) => parseProvider(await readFile(join(SECRETS_DIR, f), 'utf-8'), f))
   )
-  // The endpoint whose base-url mentions "codex" speaks the OpenAI Responses API
-  // used by Codex; the other is the Anthropic-style endpoint for Claude Code.
-  const codex = all.find((p) => /codex/i.test(p.baseUrl)) ?? all[0]
-  const claude = all.find((p) => p !== codex) ?? all[0]
+  // CI writes claude.txt and codex.txt; both may point at the same relay, so the
+  // file name decides. Older local setups named files freely and put "codex" in
+  // the Codex endpoint's base-url.
+  const byName = (n: string) => all.find((p) => p.file === `${n}.txt`)
+  const codex = byName('codex') ?? all.find((p) => /codex/i.test(p.baseUrl)) ?? all[0]
+  const claude = byName('claude') ?? all.find((p) => p !== codex) ?? all[0]
   return { claude, codex }
 }
 
-interface RunOut { code: number; stdout: string; stderr: string }
+interface RunOut { code: number; timedOut: boolean; stdout: string; stderr: string }
 async function run(cmd: string[], env: Record<string, string>, timeoutMs = 180_000): Promise<RunOut> {
   // stdin closed: codex exec otherwise blocks "Reading additional input from stdin".
   const proc = spawn(cmd, { env: { ...process.env, ...env }, stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' })
-  const timer = setTimeout(() => proc.kill(), timeoutMs)
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    proc.kill()
+  }, timeoutMs)
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ])
   clearTimeout(timer)
-  return { code, stdout, stderr }
+  return { code, timedOut, stdout, stderr }
 }
 
 async function waitPort(port: number, tries = 50): Promise<void> {
@@ -90,7 +96,7 @@ function record(name: string, ok: boolean, detail = '') {
 // drop the exact token); retry a few times before failing.
 const MAX_ATTEMPTS = 3
 async function checkAgent(name: string, cmd: string[], env: Record<string, string>, token: string) {
-  let last: RunOut = { code: -1, stdout: '', stderr: '' }
+  let last: RunOut = { code: -1, timedOut: false, stdout: '', stderr: '' }
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     last = await run(cmd, env)
     if (last.stdout.includes(token)) {
@@ -98,7 +104,7 @@ async function checkAgent(name: string, cmd: string[], env: Record<string, strin
       return
     }
   }
-  record(name, false, oneline(last))
+  record(name, false, failure(last))
 }
 
 async function main() {
@@ -190,6 +196,12 @@ async function main() {
 
 function oneline(r: RunOut): string {
   return (r.stdout + ' ' + r.stderr).replace(/\s+/g, ' ').trim().slice(0, 160)
+}
+
+// The cause usually sits at the end of the output (an auth error after a banner).
+function failure(r: RunOut): string {
+  const tail = (r.stdout + ' ' + r.stderr).replace(/\s+/g, ' ').trim().slice(-600)
+  return `exit=${r.code}${r.timedOut ? ' (timed out)' : ''} … ${tail || '(no output)'}`
 }
 
 main().catch((e) => {
