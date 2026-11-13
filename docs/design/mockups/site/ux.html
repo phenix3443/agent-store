@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="ux">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<div lang="zh-CN">
+<section class="page-hero">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <span class="chip chip-dash eyebrow">原型文档 · 不属于产品 · 只有中文</span>
+    <h1 class="h1">交互说明<span class="dim">页面、流程、状态，逐一列出。</span></h1>
+    <p class="lede">每一步都链接到可以点的页面或状态。右下角的「原型控制」可以切换登录、客户端和方案；导航里可以切换中文和英文。</p>
+    <p style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap"><a class="chip" href="#map">站点地图</a><a class="chip" href="#flows">流程</a><a class="chip" href="#states">状态表</a><a class="chip" href="#keys">快捷键</a><a class="chip" href="#open">待定问题</a></p>
+  </div>
+</section>
+
+<section id="map">
+  <div class="wrap">
+    <h2 class="h2">站点地图<span class="dim">主动线：首页 → 商店 → 详情 → 安装 → 客户端。</span></h2>
+    <div class="journey" data-kind="mcp">
+      <a href="index.html"><b>首页</b>主张、演示窗口、下载</a>
+      <a href="store.html"><b>商店</b>搜索、筛选、排序</a>
+      <a href="detail.html"><b>详情</b>安装按钮、命令、说明</a>
+      <a href="detail.html?set=client#id=mcp-registry%3Aio.github.upstash%2Fcontext7&open=install"><b>安装</b>交给客户端，或复制命令</a>
+      <a href="client.html"><b>客户端</b>按 agent 开关和管理</a>
+    </div>
+
+    <div style="margin:48px 0 20px"><span class="label">全站导航（链接居中）</span>
+      <div class="navmap" style="margin-top:10px"><a class="chip" href="index.html">Agent Store</a><span class="sep"></span><a class="chip" href="store.html">商店</a><a class="chip" href="client.html">客户端</a><a class="chip" href="docs.html">文档</a><a class="chip" href="pricing.html">定价</a><span class="sep"></span><a class="chip" href="index.html?open=palette">搜索 ⌘K</a><a class="chip" href="index.html?lang=en">中 / EN</a><a class="chip" href="index.html?set=out&open=login">登录 / 账号菜单</a><a class="chip" href="download.html">下载</a></div>
+    </div>
+
+    <div class="layer" data-kind="mcp"><h2>发现<small>找到一个包</small></h2><div class="nodes" data-spot-group>
+      <a class="node-c spot" href="index.html"><h3>首页<code>index.html</code></h3><p>主标题和一个下载按钮；客户端演示窗口（五个视图）；四个价值点和已支持的 agent；「哪个在生效」；目录卡片；收尾下载。</p><span class="to">去往<span class="chip">下载</span><span class="chip">商店</span><span class="chip">详情</span><span class="chip">客户端</span></span></a>
+      <a class="node-c spot" href="store.html"><h3>商店<code>store.html</code></h3><p>内容区里的搜索栏，类别与排序，热门，列表，加载更多。点一行打开快速查看。</p><span class="to">去往<span class="chip">快速查看</span><span class="chip">详情</span></span></a>
+      <a class="node-c spot" href="detail.html"><h3>详情<code>detail.html#id=</code></h3><p>安装按钮和安装命令在首屏；下面是安装内容、配置位置、规格和上游说明，都是参考信息。</p><span class="to">去往<span class="chip">安装流程</span><span class="chip">下载</span></span></a>
+    </div></div>
+
+    <div class="layer" data-kind="skill"><h2>使用<small>装上并管起来</small></h2><div class="nodes" data-spot-group>
+      <a class="node-c spot" href="client.html"><h3>客户端<code>client.html</code></h3><p>技能与按 agent 开关、MCP 设置、网页直装、供应商切换、用量。本地代理是这里的一节。</p><span class="to">去往<span class="chip">下载</span><span class="chip">定价</span></span></a>
+      <a class="node-c spot" href="download.html"><h3>下载<code>download.html</code></h3><p>标出当前系统的安装包，列出全部文件，首次打开的放行步骤。从安装提示过来时能回到刚才的包。</p><span class="to">去往<span class="chip">详情</span><span class="chip">商店</span><span class="chip">文档</span></span></a>
+      <a class="node-c spot" href="docs.html"><h3>文档<code>docs.html</code> <code>docs-article.html</code></h3><p>落地页五张卡片；文章页左侧章节、右侧本页目录、上一篇下一篇、可复制的代码块。</p><span class="to">去往<span class="chip">下载</span><span class="chip">定价</span></span></a>
+    </div></div>
+
+    <div class="layer" data-kind="provider"><h2>账户与付费<small>登录、订阅、收藏</small></h2><div class="nodes" data-spot-group>
+      <a class="node-c spot" href="pricing.html"><h3>定价<code>pricing.html</code></h3><p>Free 与 Pro，按月 / 按年 / 终身买断切换，逐项对比。</p><span class="to">去往<span class="chip">登录</span><span class="chip">结账</span></span></a>
+      <a class="node-c spot" href="checkout.html?set=in,free#period=monthly&trial=1"><h3>结账<code>checkout.html</code></h3><p>订单、试用说明、模拟支付。真实站点在这一步跳到 Waffo 的支付页。</p><span class="to">去往<span class="chip">个人面板</span></span></a>
+      <a class="node-c spot" href="dashboard.html?set=in"><h3>个人面板<code>dashboard.html</code></h3><p>账户、订阅（含取消与恢复）、收藏；「设备同步」标为即将推出，没有内容。</p><span class="to">去往<span class="chip">定价</span><span class="chip">商店</span></span></a>
+    </div></div>
+
+    <div class="layer"><h2 style="color:var(--fg2)">全局组件与系统页<small>任何页面都可能出现</small></h2><div class="nodes">
+      <a class="node-c spot ghost" href="index.html?open=palette"><h3>全局搜索</h3><p>输入前显示最近查看和建议；结果按类别分组；没有结果时先显示「正在其他来源查找」，再落到「没有找到」。</p></a>
+      <a class="node-c spot ghost" href="index.html?set=out&open=login"><h3>登录</h3><p>对话框，不单独成页。登录后继续刚才被打断的动作。</p></a>
+      <a class="node-c spot ghost" href="store.html#kind=mcp"><h3>快速查看</h3><p>从商店的一行打开的侧边抽屉，手机上占满屏幕；可以展开为整页。</p></a>
+      <a class="node-c spot ghost" href="index.html?open=offline"><h3>提示与横幅</h3><p>底部的轻提示；断网时顶部出现横幅。</p></a>
+      <a class="node-c spot ghost" href="404.html"><h3>404<code>404.html</code></h3><p>带一个搜索框，把人送回商店的搜索结果。</p></a>
+      <a class="node-c spot ghost" href="privacy.html"><h3>隐私与条款<code>privacy.html</code> <code>terms.html</code></h3><p>版式占位；正文沿用现有站点。</p></a>
+    </div></div>
+  </div>
+</section>
+
+<section class="section tight" id="flows">
+  <div class="wrap">
+    <h2 class="h2">流程<span class="dim">带颜色边框的步骤可以点。</span></h2>
+
+    <div class="flowc" data-kind="mcp"><h3><small>01</small>新访客，没装客户端</h3><div class="chain">
+      <a href="index.html?set=reset"><b>首页</b><small>看演示窗口</small></a><a href="store.html"><b>商店</b><small>搜索、筛选、排序</small></a><a href="store.html#q=browser&sort=stars"><b>缩小范围</b><small>状态在地址里</small></a><a href="detail.html?set=noclient#id=mcp-registry%3Aio.github.upstash%2Fcontext7"><b>详情</b></a><a href="detail.html?set=noclient#id=mcp-registry%3Aio.github.upstash%2Fcontext7&open=install"><b>点「安装」</b><small>没有找到客户端：复制命令或下载</small></a><a href="download.html#from=mcp-registry%3Aio.github.upstash%2Fcontext7"><b>下载页</b><small>记着来自哪个包</small></a><a href="download.html#first-run"><b>首次打开</b></a>
+    </div></div>
+
+    <div class="flowc" data-kind="skill"><h3><small>02</small>已装客户端，安装一个包</h3><div class="chain">
+      <a href="detail.html?set=client#id=github%3Amattpocock%2Fskills%2Ftdd"><b>详情</b></a><a href="detail.html?set=client#id=github%3Amattpocock%2Fskills%2Ftdd&open=install"><b>安装窗口</b><small>包名与类别、发布者、装到哪个 agent、要填的值</small></a><span><b>进度</b><small>逐步打勾</small></span><span><b>已安装</b><small>列表和详情显示「已安装」</small></span>
+    </div><p class="fine" style="margin-top:12px">网页无法确认本机装了什么，这里的「已安装」是原型模拟的状态。安装窗口只列 agent 复选框和要填的值，不展示会执行的内容。</p></div>
+
+    <div class="flowc" data-kind="mcp"><h3><small>03</small>全局搜索</h3><div class="chain">
+      <a href="index.html?open=palette"><b>按 / 或 ⌘K</b><small>或点导航里的搜索</small></a><span><b>输入前</b><small>最近查看、建议、页面</small></span><span><b>输入</b><small>按类别分组，↑↓ 选择</small></span><span class="branch"><b>没有结果</b><small>正在其他来源查找… → 没有找到</small></span><span><b>回车</b><small>进详情；Esc 关闭，焦点还回去</small></span>
+    </div></div>
+
+    <div class="flowc" data-kind="skill"><h3><small>04</small>浏览商店</h3><div class="chain">
+      <a href="store.html#state=loading"><b>加载中</b><small>骨架</small></a><a href="store.html"><b>列表</b></a><a href="store.html#kind=skill&sort=installs"><b>类别 + 排序</b></a><span><b>点一行</b><small>快速查看抽屉</small></span><span><b>展开为整页</b></span><a href="store.html#state=empty"><b>没有结果</b></a><a href="store.html#state=error"><b>目录连不上</b><small>重试</small></a>
+    </div></div>
+
+    <div class="flowc" data-kind="provider"><h3><small>05</small>登录与退出</h3><div class="chain">
+      <a href="index.html?set=out&open=login"><b>点「登录」</b><small>对话框</small></a><span><b>选 GitHub 或 Google</b><small>原型直接以 demo 登录</small></span><span><b>导航出现头像</b><small>个人面板、收藏、订阅、退出</small></span><a href="dashboard.html?set=in"><b>个人面板</b></a><span><b>退出登录</b><small>任何页面都能退出</small></span>
+    </div></div>
+
+    <div class="flowc" data-kind="skill"><h3><small>06</small>订阅 Pro</h3><div class="chain">
+      <a href="pricing.html?set=out,free"><b>定价</b><small>选周期</small></a><span class="branch"><b>未登录</b><small>先登录，再继续</small></span><a href="checkout.html?set=in,free#period=monthly&trial=1"><b>结账</b><small>14 天试用说明，模拟支付</small></a><a href="dashboard.html?set=in,pro#tab=subscription"><b>个人面板 · 订阅</b><small>Pro 生效，续费日期</small></a><span><b>管理订阅 → 取消</b><small>二次确认</small></span><span><b>到期后取消</b><small>可恢复</small></span>
+    </div></div>
+
+    <div class="flowc" data-kind="provider"><h3><small>07</small>收藏</h3><div class="chain">
+      <a href="store.html?set=out"><b>点心形按钮</b><small>列表、快速查看、详情都有</small></a><span class="branch"><b>未登录</b><small>先登录，登录后自动完成收藏</small></span><a href="dashboard.html?set=in#tab=favorites"><b>个人面板 · 收藏</b><small>可移除；空状态引导去商店</small></a>
+    </div></div>
+  </div>
+</section>
+
+<section class="section tight" id="states" style="padding-top:0">
+  <div class="wrap">
+    <h2 class="h2" style="margin-bottom:24px">状态表<span class="dim">每一屏在不同条件下的显示。</span></h2>
+    <div class="tbl-scroll"><table class="tbl">
+      <thead><tr><th>屏</th><th>默认</th><th>加载</th><th>空</th><th>出错</th><th>未登录 / 已登录</th><th>Free / Pro</th></tr></thead>
+      <tbody>
+        <tr><td>商店</td><td><a href="store.html">列表 + 热门</a></td><td><a href="store.html#state=loading">骨架行</a></td><td><a href="store.html#state=empty">没有找到 + 清除</a></td><td><a href="store.html#state=error">目录连不上 + 重试</a></td><td>收藏按钮未登录时先弹登录</td><td>无差别</td></tr>
+        <tr><td>详情</td><td><a href="detail.html">Context7</a>、<a href="detail.html#id=github%3Amattpocock%2Fskills%2Ftdd">技能</a>、<a href="detail.html#id=builtin%3Aopenrouter">供应商</a></td><td>—</td><td>没有说明时指向代码仓库</td><td><a href="detail.html#id=nope">没有这个包</a></td><td>同上</td><td>无差别</td></tr>
+        <tr><td>安装</td><td><a href="detail.html?set=client#id=builtin%3Aopenrouter&open=install">安装窗口</a></td><td>正在打开客户端；安装进度</td><td>—</td><td><a href="detail.html?set=noclient#id=builtin%3Aopenrouter&open=install">没有找到客户端</a></td><td>不需要登录</td><td>无差别</td></tr>
+        <tr><td>全局搜索</td><td><a href="index.html?open=palette">最近查看 + 建议</a></td><td>正在其他来源查找…</td><td>没有找到</td><td>—</td><td>无差别</td><td>无差别</td></tr>
+        <tr><td>定价</td><td><a href="pricing.html">按月</a>、<a href="pricing.html#period=yearly">按年</a>、<a href="pricing.html#period=lifetime">买断</a></td><td>—</td><td>—</td><td>—</td><td>未登录点升级先弹登录</td><td><a href="pricing.html?set=in,pro">Pro 时按钮变成「管理订阅」</a></td></tr>
+        <tr><td>结账</td><td><a href="checkout.html?set=in,free#period=yearly&trial=1">订单 + 模拟支付</a></td><td>正在处理…</td><td>—</td><td>—</td><td><a href="checkout.html?set=out">未登录：先登录</a></td><td><a href="checkout.html?set=in,pro">已是 Pro</a></td></tr>
+        <tr><td>个人面板</td><td><a href="dashboard.html?set=in">账户</a></td><td>—</td><td><a href="dashboard.html?set=in#tab=favorites">收藏为空</a></td><td>—</td><td><a href="dashboard.html?set=out">未登录：请先登录</a></td><td><a href="dashboard.html?set=in,free#tab=subscription">Free</a> / <a href="dashboard.html?set=in,pro#tab=subscription">Pro</a>，另有「到期后取消」</td></tr>
+        <tr><td>下载</td><td><a href="download.html">标出当前系统</a></td><td>—</td><td>—</td><td>—</td><td>无差别</td><td><a href="download.html#from=builtin%3Aopenrouter">从安装提示过来：带返回入口</a></td></tr>
+        <tr><td>全站</td><td><a href="index.html?lang=zh">中文</a> / <a href="index.html?lang=en">English</a></td><td>—</td><td>—</td><td><a href="index.html?open=offline">离线横幅</a>、<a href="404.html">404</a></td><td><a href="index.html?set=out">登录按钮</a> / <a href="index.html?set=in">头像菜单</a></td><td>头像上的 Pro 标记</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="section tight" id="keys" style="padding-top:0">
+  <div class="wrap">
+    <h2 class="h2" style="margin-bottom:20px">快捷键</h2>
+    <div class="keys-list">
+      <div><span>打开全局搜索</span><span><span class="kbd">⌘K</span> / <span class="kbd">Ctrl K</span></span></div>
+      <div><span>聚焦页内搜索框；没有时打开全局搜索</span><span class="kbd">/</span></div>
+      <div><span>在搜索结果里上下移动</span><span><span class="kbd">↑</span> <span class="kbd">↓</span></span></div>
+      <div><span>打开选中的结果</span><span class="kbd">↵</span></div>
+      <div><span>关闭对话框、抽屉、菜单，焦点回到触发它的控件</span><span class="kbd">Esc</span></div>
+      <div><span>首页演示：在五个视图间切换</span><span><span class="kbd">←</span> <span class="kbd">→</span></span></div>
+      <div><span>跳到正文</span><span><span class="kbd">Tab</span> 第一下</span></div>
+      <div><span>开关、复选框</span><span class="kbd">Space</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section tight" id="open" style="padding-top:0">
+  <div class="wrap">
+    <h2 class="h2" style="margin-bottom:24px">待定问题<span class="dim">需要你拍板。</span></h2>
+    <div class="oq">
+      <div><h3>浅色主题</h3><p>现有站点支持深浅切换。原型只做了深色；光晕在浅色底上要另外设计。</p></div>
+      <div><h3>客户端是否跟随这套视觉</h3><p>原型里的客户端窗口是按新方向画的示意，不是现在的客户端界面。</p></div>
+      <div><h3>更多 agent 的名单</h3><p>页面上只亮了 Claude Code 和 Codex，另有一个「更多即将支持」的占位。名单由你提供后再加。</p></div>
+      <div><h3>收藏</h3><p>原型按「登录后可收藏」做了。现有产品里评价和旧的条目接口已经去掉，收藏是否上线由你定。</p></div>
+      <div><h3>网页上的「已安装」</h3><p>原型为了走通流程显示了，并标为模拟。上线时网页是否显示、依据什么显示，需要决定。</p></div>
+      <div><h3>结账页</h3><p>现在点升级直接跳到 Waffo。原型多了一屏订单确认，用来放试用说明；是否保留由你定。</p></div>
+    </div>
+  </div>
+</section>
+</div>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+</body>
+</html>

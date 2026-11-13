@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="home">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="hero">
+  <div class="beams" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="horizon" aria-hidden="true"></div>
+  <div class="wrap">
+    <h1 class="h-hero" data-i18n-attr="aria-label:hero.h1.plain"><span data-i18n="hero.h1a"></span><span class="h-comma" data-i18n="hero.h1c"></span><span class="grad" data-i18n="hero.h1b"></span></h1>
+    <p class="lede" data-i18n="hero.sub"></p>
+    <p class="sup-line" data-i18n="sup.line"></p>
+    <a class="btn btn-pri" id="heroDl" href="download.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg><span data-i18n="dl.free"></span></a>
+    <p class="cap">
+      <span data-i18n="ver.line"></span>
+      <span><a href="docs-article.html#a=cli" data-i18n="hero.cli"></a><i>|</i><a href="download.html#releases" data-i18n="hero.all"></a><i>|</i><a href="store.html" data-i18n="hero.browse"></a></span>
+    </p>
+  </div>
+</section>
+
+<section class="section" id="demo">
+  <div class="wrap">
+    <div class="demo-head" data-reveal>
+      <h2 class="h2"><span data-i18n="demo.ha"></span><span class="dim" data-i18n="demo.hb"></span></h2>
+    </div>
+    <div class="frame demo-frame" data-reveal>
+      <div class="win">
+        <div class="win-bar"><span class="win-dots"><i></i><i></i><i></i></span><span class="win-title" data-i18n="demo.win"></span></div>
+        <div class="app">
+          <div class="app-side" id="demoSide" aria-hidden="true"></div>
+          <div class="app-main" id="demoMain" role="tabpanel" aria-labelledby="dockCap"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dock" id="dock" role="tablist" data-i18n-attr="aria-label:demo.tabs"></div>
+    <p class="dock-cap" id="dockCap" aria-live="polite"></p>
+  </div>
+</section>
+
+<section class="section keys-sec">
+  <div class="wrap split">
+    <div class="stack" data-reveal>
+      <h2 class="h2"><span data-i18n="keys.ha"></span><span class="dim" data-i18n="keys.hb"></span></h2>
+      <div class="sup"><span class="sup-l" data-i18n="sup.label"></span><span class="sup-c">Claude Code</span><span class="sup-c">Codex</span><span class="sup-c more" data-i18n="sup.more"></span></div>
+      <p style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:26px"><a class="btn btn-pri btn-sm" href="download.html" data-i18n="dl.free"></a><a class="link" href="client.html" data-i18n="keys.more"></a></p>
+    </div>
+    <div class="keys" data-reveal>
+      <span class="key">/</span><span class="key x">esc</span>
+      <div class="key hot" data-kind="mcp" data-ic="click"><div><b data-i18n="key1.t"></b><small data-i18n="key1.s"></small></div></div>
+      <span class="key x">⌘</span><span class="key">K</span>
+      <div class="key hot" data-kind="skill" data-ic="two"><div><b data-i18n="key2.t"></b><small data-i18n="key2.s"></small></div></div>
+      <span class="key x">aas</span><span class="key x">↵</span>
+      <div class="key hot" data-kind="skill" data-ic="toggle"><div><b data-i18n="key3.t"></b><small data-i18n="key3.s"></small></div></div>
+      <span class="key">↑</span><span class="key x">tab</span>
+      <div class="key hot" data-kind="provider" data-ic="globe"><div><b data-i18n="key4.t"></b><small data-i18n="key4.s"></small></div></div>
+      <span class="key x">~</span><span class="key">↓</span>
+    </div>
+  </div>
+</section>
+
+<section class="section tight" data-kind="skill">
+  <div class="wrap feature rev">
+    <div class="stack" data-reveal>
+      <h2 class="h2"><span data-i18n="manage.ha"></span><span class="dim" data-i18n="manage.hb"></span></h2>
+      <p class="lede" data-i18n="manage.lede"></p>
+      <p><a class="link" href="client.html" data-i18n="manage.link"></a></p>
+    </div>
+    <div class="frame one" data-reveal>
+      <div class="win">
+        <div class="win-bar"><span class="win-dots"><i></i><i></i><i></i></span><span class="win-title" data-i18n="manage.win"></span></div>
+        <div class="app-main" id="vInstalled"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-bottom:0">
+  <div class="wrap">
+    <div class="shelf-head" data-reveal>
+      <h2 class="h2"><span data-i18n="cat.ha"></span><span class="dim" data-i18n="cat.hb"></span></h2>
+      <div class="seg" id="shelfSeg" role="tablist" data-i18n-attr="aria-label:cat.tabs">
+        <button type="button" role="tab" data-kind="skill" data-k="skill" aria-selected="true" data-i18n="kinds.skill"></button>
+        <button type="button" role="tab" data-kind="mcp" data-k="mcp" aria-selected="false" data-i18n="kinds.mcp"></button>
+        <button type="button" role="tab" data-kind="provider" data-k="provider" aria-selected="false" data-i18n="kinds.provider"></button>
+      </div>
+    </div>
+  </div>
+  <div class="shelf" id="shelf" data-spot-group tabindex="0" data-i18n-attr="aria-label:cat.shelf"></div>
+  <div class="wrap" style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center">
+    <p class="cap" data-i18n="cat.note"></p>
+    <a class="link" id="shelfAll" href="store.html"></a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="cta" data-reveal>
+      <div class="aurora low" aria-hidden="true"><i></i><i></i><i></i></div>
+      <span class="logo" aria-hidden="true"><i></i><i></i><i></i></span>
+      <h2 class="h2"><span data-i18n="cta.ha"></span><span class="dim" data-i18n="cta.hb"></span></h2>
+      <a class="btn btn-pri" href="download.html" data-i18n="dl.free"></a>
+      <p class="cap" data-i18n="cta.cap"></p>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, $$ = AS.$$, esc = AS.esc;
+  var ua = navigator.userAgent, os = /Mac/.test(ua) ? 'mac' : /Win/.test(ua) ? 'win' : /Linux|X11/.test(ua) && !/Android/.test(ua) ? 'linux' : '';
+  if (os) $('#heroDl span').textContent = t('dl.' + os);
+  $$('.key.hot').forEach(function (k) { k.insertAdjacentHTML('afterbegin', AS.ic(k.dataset.ic)); });
+  AS.mountView($('#vInstalled'), 'installed');
+
+  var VIEWS = [['preview', 'click', 'mcp'], ['skills', 'skill', 'skill'], ['mcp', 'mcp', 'mcp'], ['providers', 'provider', 'provider'], ['usage', 'usage', 'provider']];
+  var dock = $('#dock'), side = $('#demoSide'), main = $('#demoMain'), cap = $('#dockCap');
+  dock.innerHTML = VIEWS.map(function (v) { var n = t('dock.' + v[0]); return '<button type="button" role="tab" data-v="' + v[0] + '" data-kind="' + v[2] + '" aria-label="' + n + '" title="' + n + '">' + AS.ic(v[1]) + '</button>'; }).join('');
+  side.innerHTML = VIEWS.map(function (v) { return '<button type="button" tabindex="-1" data-v="' + v[0] + '" data-kind="' + v[2] + '">' + AS.ic(v[1]) + t('dock.' + v[0]) + '</button>'; }).join('') + '<span class="foot">v0.2.2</span>';
+  function show(name) {
+    $$('[data-v]').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.v === name ? 'true' : 'false'); });
+    AS.mountView(main, name);
+    cap.innerHTML = '<b>' + t('dock.' + name) + (AS_LANG === 'en' ? '. ' : '。') + '</b>' + t('cap.' + name);
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest('#dock [data-v],#demoSide [data-v]'); if (b) show(b.dataset.v); });
+  dock.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    var bs = $$('button', dock), i = bs.indexOf(document.activeElement), n = (i + (e.key === 'ArrowRight' ? 1 : -1) + bs.length) % bs.length;
+    bs[n].focus(); show(bs[n].dataset.v);
+  });
+  show('preview');
+
+  /* 卡片下半部分用包自己的命令或文件画出来 */
+  function art(d) {
+    var big, lines = [];
+    if (d.kind === 'skill') { big = 'SKILL.md'; lines = [d.repoDir.split('/').slice(-1)[0] + '/'].concat((d.files || []).slice(0, 5).map(function (f) { return '├ ' + f.path; })); }
+    else if (d.kind === 'mcp') { big = d.launch ? d.launch.split(' ')[0] : 'http'; lines = (d.launch ? d.launch.split(' ').slice(1) : []).concat(d.remote ? ['→ ' + d.remote.replace('https://', '')] : []).concat(AS.needs(d).map(function (n) { return n + '=••••'; })); lines.unshift('mcp add ' + d.mcpName); }
+    else { big = 'Level ' + (d.level || 1); lines = [d.command].concat(d.id === 'builtin:local' ? ['127.0.0.1:18780'] : ['apiKey=••••']); }
+    return '<span class="big">' + esc(big) + '</span>' + lines.slice(0, 6).map(function (l, i) { return '<span class="' + (i ? 't1' : '') + '">' + esc(l) + '</span>'; }).join('');
+  }
+  var shelf = $('#shelf');
+  function renderShelf(kind) {
+    shelf.innerHTML = AS.DATA.filter(function (d) { return d.kind === kind; }).map(function (d) {
+      return '<a class="tall spot" data-kind="' + d.kind + '" href="' + AS.href(d.id) + '"><div class="tall-top"><div class="row1">' + AS.tile(d.kind) + '<span class="arrow">' + AS.ic('arrow').replace('<svg', '<svg width="16" height="16"') + '</span></div><h3>' + esc(d.name) + '</h3><div class="by">' + AS.author(d) + '</div><p>' + esc(d.description) + '</p></div><div class="tall-art" aria-hidden="true"><div class="art">' + art(d) + '</div></div></a>';
+    }).join('');
+    shelf.scrollLeft = 0;
+    $('#shelfAll').href = 'store.html#kind=' + kind;
+    $('#shelfAll').textContent = t('cat.all', { kind: (AS_LANG === 'en' ? ' ' : '') + t('kinds.' + kind) }).replace('  ', ' ');
+  }
+  $('#shelfSeg').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    $$('button', this).forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+    renderShelf(b.dataset.k);
+  });
+  renderShelf('skill');
+})();
+</script>
+</body>
+</html>

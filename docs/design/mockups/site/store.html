@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="store">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero" style="padding-bottom:28px">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <h1 class="h1"><span data-i18n="store.ha"></span><span class="dim" data-i18n="store.hb"></span></h1>
+    <div class="searchbar" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" data-slash data-i18n-attr="aria-label:v.search,placeholder:v.search" autocomplete="off" spellcheck="false">
+      <span class="kbd" aria-hidden="true" data-i18n-attr="title:store.slash">/</span>
+    </div>
+    <div class="toolbar">
+      <div class="seg" id="sortSeg" role="group" data-i18n-attr="aria-label:sort.label"></div>
+      <div class="seg" id="kindSeg" role="group" data-i18n-attr="aria-label:filter.kind"></div>
+      <button class="btn btn-ghost btn-sm filter-btn" type="button" id="filterBtn"></button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div id="hotWrap">
+      <div class="sub-h" style="margin-top:8px"><h2 data-i18n="store.hot"></h2><span class="cap" data-i18n="store.hot.note"></span></div>
+      <div class="hot" id="hot" data-spot-group></div>
+    </div>
+    <div class="sub-h"><h2 id="listTitle"></h2><span><span class="cap" id="count" aria-live="polite"></span>　<button class="clear" type="button" id="clear" hidden data-i18n="store.clear"></button></span></div>
+    <div class="rows" id="rows" role="list"></div>
+    <div class="more" id="more"></div>
+
+    <div class="srcs" data-reveal>
+      <div data-kind="skill"><span class="kind" data-i18n="kinds.skill"></span><b data-i18n="src.skill.b"></b><p data-i18n="src.skill.p"></p></div>
+      <div data-kind="mcp"><span class="kind" data-i18n="kinds.mcp"></span><b data-i18n="src.mcp.b"></b><p data-i18n="src.mcp.p"></p></div>
+      <div data-kind="provider"><span class="kind" data-i18n="kinds.provider"></span><b data-i18n="src.provider.b"></b><p data-i18n="src.provider.p"></p></div>
+    </div>
+    <p class="cap" style="margin-top:12px" data-i18n="src.note"></p>
+  </div>
+</section>
+
+<dialog class="sheet bottom" id="filterSheet" data-i18n-attr="aria-label:filter.title">
+  <div class="sheet-head"><b data-i18n="filter.title"></b><button class="x" type="button" data-close data-i18n-attr="aria-label:close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="sheet-body">
+    <h3 data-i18n="filter.kind"></h3><div class="radio-list" id="fsKind"></div>
+    <h3 data-i18n="sort.label"></h3><div class="radio-list" id="fsSort"></div>
+    <button class="btn btn-pri" type="button" data-close id="fsDone" style="margin-top:14px"></button>
+  </div>
+</dialog>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, esc = AS.esc, D = AS.DATA, K = AS.K;
+  var SORTS = ['', 'installs', 'stars', 'updated', 'name'], KINDS = ['', 'skill', 'mcp', 'provider'];
+  function kl(k) { return k ? t('kinds.' + k) : t('filter.all'); }
+  var PAGE = 8, shown = PAGE, first = true;
+  /* 推荐：三类轮流排，避免第一屏全是同一类 */
+  var rec = [], by = { skill: [], mcp: [], provider: [] };
+  D.forEach(function (d) { by[d.kind].push(d); });
+  for (var i = 0; i < 8; i++) ['skill', 'mcp', 'provider'].forEach(function (k) { if (by[k][i]) rec.push(by[k][i]); });
+
+  function read() { var h = AS.hash(); return { q: h.get('q') || '', kind: h.get('kind') || '', sort: h.get('sort') || '', state: h.get('state') || '' }; }
+  function write(st, replace) {
+    var p = new URLSearchParams(); ['q', 'kind', 'sort', 'state'].forEach(function (k) { if (st[k]) p.set(k, st[k]); });
+    var url = location.pathname + location.search + (p.toString() ? '#' + p.toString() : '');
+    if (replace) history.replaceState(null, '', url); else { history.pushState(null, '', url); shown = PAGE; }
+    render();
+  }
+  function num(a, b, k) { return (b[k] == null ? -1 : b[k]) - (a[k] == null ? -1 : a[k]); }
+  function results(st) {
+    var list = AS.search(st.q, rec);
+    if (st.kind) list = list.filter(function (d) { return d.kind === st.kind; });
+    if (st.sort === 'installs' || st.sort === 'stars') list.sort(function (a, b) { return num(a, b, st.sort); });
+    else if (st.sort === 'updated') list.sort(function (a, b) { return (b.updated || '').localeCompare(a.updated || ''); });
+    else if (st.sort === 'name') list.sort(function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+    return list;
+  }
+  function row(d) {
+    return '<div class="row" role="listitem" data-kind="' + d.kind + '"><a class="hit" href="' + AS.href(d.id) + '" data-quick="' + esc(d.id) + '" aria-label="' + esc(t('store.row', { name: d.name, kind: K(d.kind) })) + '"></a>' + AS.tile(d.kind) +
+      '<div class="nm"><b>' + esc(d.name) + '</b><small><span class="kind">' + K(d.kind) + '</span><span>' + AS.author(d) + '</span><span class="badge-inst" data-installed-badge="' + esc(d.id) + '" hidden>' + t('installed') + '</span></small></div>' +
+      '<div class="ds">' + esc(d.description) + '</div>' +
+      '<div class="st">' + AS.fmt(d.installs) + '<small>' + t('store.col.installs') + '</small></div><div class="st s2">' + AS.fmt(d.stars) + '<small>' + t('store.col.stars') + '</small></div>' +
+      AS.heart(d.id).replace('class="heart"', 'class="heart sm"') + '</div>';
+  }
+  function skel(n) {
+    var s = ''; for (var i = 0; i < n; i++) s += '<div class="row skel" aria-hidden="true"><span class="sk" style="width:44px;height:44px;border-radius:12px"></span><div><span class="sk" style="width:55%;height:15px"></span><span class="sk" style="width:35%;height:11px;margin-top:8px"></span></div><div class="ds"><span class="sk" style="width:90%;height:12px"></span></div><span class="sk st" style="height:14px"></span><span class="sk st s2" style="height:14px"></span><span></span></div>';
+    return s;
+  }
+  function msg(h, p, btnId, btn) { return '<b>' + t(h) + '</b>' + t(p) + '<br><br><button class="btn btn-ghost btn-sm" type="button" id="' + btnId + '">' + t(btn) + '</button>'; }
+  function render() {
+    var st = read(), rows = $('#rows'), more = $('#more'), list = results(st), filtered = !!(st.q || st.kind || st.sort);
+    if ($('#q') !== document.activeElement) $('#q').value = st.q;
+    $('#sortSeg').innerHTML = SORTS.map(function (s) { return '<button type="button" data-sort="' + s + '" aria-pressed="' + (st.sort === s) + '">' + t('sort.' + s) + '</button>'; }).join('');
+    $('#kindSeg').innerHTML = KINDS.map(function (k) { return '<button type="button" data-k="' + k + '"' + (k ? ' data-kind="' + k + '"' : '') + ' aria-pressed="' + (st.kind === k) + '">' + kl(k) + '<small>' + (k ? by[k].length : D.length) + '</small></button>'; }).join('');
+    $('#filterBtn').innerHTML = AS.ic('filter') + kl(st.kind) + ' · ' + t('sort.' + st.sort);
+    if (!$('#filterSheet').open) {
+      $('#fsKind').innerHTML = KINDS.map(function (k) { return '<label' + (k ? ' data-kind="' + k + '"' : '') + '><input type="radio" name="fk" value="' + k + '"' + (st.kind === k ? ' checked' : '') + '>' + kl(k) + '</label>'; }).join('');
+      $('#fsSort').innerHTML = SORTS.map(function (s) { return '<label><input type="radio" name="fs" value="' + s + '"' + (st.sort === s ? ' checked' : '') + '>' + t('sort.' + s) + '</label>'; }).join('');
+    }
+    $('#clear').hidden = !filtered && !st.state;
+    $('#hotWrap').hidden = filtered || !!st.state;
+    $('#listTitle').textContent = st.q ? t('store.results', { q: st.q }) : st.kind ? kl(st.kind) : t('store.all');
+    more.innerHTML = '';
+    if (st.state === 'loading' || first) {
+      rows.setAttribute('aria-busy', 'true'); rows.innerHTML = skel(6); $('#count').textContent = t('store.loading');
+      if (first) { first = false; if (st.state !== 'loading') setTimeout(render, AS.reduce ? 0 : 480); }
+      return;
+    }
+    rows.removeAttribute('aria-busy');
+    if (st.state === 'error') { $('#count').textContent = ''; rows.innerHTML = '<div class="empty" role="alert">' + msg('store.error.h', 'store.error.p', 'retry', 'retry') + '</div>'; return; }
+    if (st.state === 'empty') list = [];
+    $('#fsDone').textContent = t('filter.done', { n: list.length });
+    if (!list.length) { $('#count').textContent = t('store.count0'); rows.innerHTML = '<div class="empty">' + msg('store.empty.h', 'store.empty.p', 'clear2', 'store.clear') + '</div>'; return; }
+    var vis = list.slice(0, shown);
+    $('#count').textContent = t('store.count', { n: list.length, m: vis.length });
+    rows.innerHTML = vis.map(row).join('');
+    if (list.length > shown) more.innerHTML = '<button class="btn btn-ghost" type="button" id="moreBtn">' + t('store.more', { n: Math.min(PAGE, list.length - shown) }) + '</button>';
+    AS.sync(rows);
+  }
+  var hot = D.filter(function (d) { return d.installs != null; }).sort(function (a, b) { return b.installs - a.installs; }).slice(0, 4);
+  $('#hot').innerHTML = hot.map(function (d, i) {
+    return '<a class="hot-card spot" data-kind="' + d.kind + '" href="' + AS.href(d.id) + '" data-quick="' + esc(d.id) + '"><span class="rank">' + (i + 1) + ' · ' + K(d.kind) + '</span><div><b>' + esc(d.name) + '</b><span class="faint" style="font-size:13px">' + AS.author(d) + '</span></div><span class="num">' + AS.fmt(d.installs) + '<small>' + t('store.installs.unit') + '</small></span></a>';
+  }).join('');
+
+  var qT;
+  $('#q').addEventListener('input', function () { var v = this.value; clearTimeout(qT); qT = setTimeout(function () { var st = read(); st.q = v.trim(); st.state = ''; shown = PAGE; write(st, true); }, 140); });
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-sort],[data-k],#clear,#clear2,#retry,#moreBtn,#filterBtn'); if (!el) return;
+    var st = read();
+    if (el.id === 'filterBtn') return $('#filterSheet').showModal();
+    if (el.id === 'moreBtn') { el.disabled = true; el.textContent = t('store.moring'); return setTimeout(function () { shown += PAGE; render(); }, AS.reduce ? 0 : 420); }
+    if (el.id === 'clear' || el.id === 'clear2') { $('#q').value = ''; return write({}); }
+    if (el.id === 'retry') { st.state = ''; first = true; return write(st); }
+    st.state = '';
+    if (el.dataset.sort !== undefined) st.sort = el.dataset.sort; else st.kind = el.dataset.k;
+    write(st);
+  });
+  $('#filterSheet').addEventListener('change', function (e) { var st = read(); st.state = ''; if (e.target.name === 'fk') st.kind = e.target.value; else st.sort = e.target.value; write(st); });
+  $('#filterSheet').addEventListener('click', function (e) { if (e.target === this) this.close(); });
+  window.addEventListener('hashchange', function () { shown = PAGE; render(); });
+  window.addEventListener('popstate', function () { shown = PAGE; render(); });
+  render();
+})();
+</script>
+</body>
+</html>

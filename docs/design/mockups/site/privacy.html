@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="privacy">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero">
+  <div class="narrow legal">
+    <span class="chip chip-dash eyebrow" data-i18n="legal.chip"></span>
+    <h1 class="h1" data-i18n="footer.privacy"></h1>
+    <p class="lede" style="margin-top:22px" data-i18n="legal.p"></p>
+    <h2 data-i18n="legal.where.h"></h2>
+    <p data-i18n="legal.where.p"></p>
+    <p style="margin-top:28px;display:flex;gap:18px;flex-wrap:wrap"><a class="link" href="index.html" data-i18n="go.home"></a><a class="link" href="terms.html" data-i18n="footer.terms"></a></p>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+</body>
+</html>

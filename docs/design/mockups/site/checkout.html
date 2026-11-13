@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="pricing">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap" id="co"></div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, PL = AS_PLANS, S = AS.S, root = $('#co'), asked = false, leaving = false;
+  document.title = t('title.checkout');
+  function render() {
+    var h = AS.hash(), period = PL.periods[h.get('period')] ? h.get('period') : 'monthly', p = PL.periods[period], life = period === 'lifetime', trial = !life && h.get('trial') === '1', s = S.get();
+    var per = t('pr.per.' + period), label = t('pr.' + period);
+    if (!s.signedIn) {
+      root.innerHTML = '<div class="gate"><h1 class="h2">' + t('co.gate.h') + '</h1><p class="muted">' + t('auth.pay') + '</p><button class="btn btn-pri" type="button" id="gateLogin">' + t('nav.login') + '</button><a class="link" href="pricing.html">' + t('co.back') + '</a></div>';
+      $('#gateLogin').addEventListener('click', function () { AS.openAuth(null, t('auth.pay')); });
+      if (!asked) { asked = true; AS.openAuth(null, t('auth.pay')); }
+      return;
+    }
+    if (s.plan.tier === 'pro') { root.innerHTML = '<div class="gate"><span class="tile ok">' + AS.ic('check') + '</span><h1 class="h2">' + t('co.pro.h') + '</h1><a class="btn btn-pri" href="dashboard.html#tab=subscription">' + t('co.view') + '</a></div>'; return; }
+    var today = trial ? '$0' : p.text;
+    root.innerHTML = '<nav class="crumb"><a href="pricing.html#period=' + period + '">' + t('nav.pricing') + '</a><span>/</span><span>' + t('co.crumb') + '</span></nav>' +
+      '<h1 class="h1" style="margin-bottom:32px">' + t('co.h') + '<span class="dim">Pro · ' + label + '</span></h1>' +
+      '<div class="checkout"><section class="card"><h2>' + t('co.order') + '</h2>' +
+        '<div class="sum-line" style="border-top:0"><span>Agent Store Pro · ' + label + '</span><b>' + p.text + ' ' + per + '</b></div>' +
+        (trial ? '<div class="sum-line"><span>' + t('co.trial') + '</span><b>−' + p.text + '</b></div>' : '') +
+        '<div class="sum-line sum-total"><span>' + t('co.today') + '</span><b>' + today + '</b></div>' +
+        '<p class="fine" style="margin-top:6px">' + (trial ? t('co.n.trial', { price: p.text, per: per }) : t(life ? 'co.n.life' : 'co.n.renew')) + ' ' + t('co.tax') + '</p>' +
+        '<h2 style="margin-top:26px">' + t('co.includes') + '</h2><ul class="featlist">' + PL.list(life ? PL.lifetime : PL.pro, AS.ic('check')) + '</ul>' +
+        '<p style="margin-top:20px"><a class="link" href="pricing.html#period=' + period + '" style="font-size:14px">' + t('co.change') + '</a></p></section>' +
+      '<section class="card install-card" data-kind="skill"><h2>' + t('co.pay.h') + '</h2><dl class="kv"><div><dt>' + t('co.account') + '</dt><dd>' + s.user.email + '</dd></div><div><dt>' + t('co.plan') + '</dt><dd>Pro · ' + label + '</dd></div><div><dt>' + t('co.today') + '</dt><dd><b>' + today + '</b></dd></div></dl>' +
+        '<p class="proto-note" style="margin:14px 0">' + t('co.proto') + '</p><button class="btn btn-pri" type="button" id="pay">' + t('co.pay', { amt: today }) + '</button></section></div>';
+    $('#pay').addEventListener('click', function () {
+      this.disabled = true; this.textContent = t('co.paying');
+      setTimeout(function () { leaving = true; S.set({ plan: { tier: 'pro', period: period, since: Date.now(), trial: trial, cancel: false } }); location.href = 'dashboard.html#tab=subscription&paid=1'; }, AS.reduce ? 0 : 1100);
+    });
+  }
+  document.addEventListener('as:state', function () { if (!leaving) render(); });
+  window.addEventListener('hashchange', render);
+  render();
+})();
+</script>
+</body>
+</html>
