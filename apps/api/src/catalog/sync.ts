@@ -3,8 +3,13 @@ import type { Octokit } from '@octokit/rest'
 import type { ResourceKind } from '@as/types'
 import { countAvailable, getMeta, setMeta, CATALOG_SCHEMA_VERSION } from './db'
 import { encodeDetail } from './detail-codec'
+import {
+  beginRun, discoveryTotals, linkResources, pickRepos, pruneSnapshots, recordAttempts, runDiscovery, seedRepos,
+  skillsShInstalls, type DiscoveryReport, type DiscoverySource,
+} from './discovery'
+import { upstreamClient } from './http'
 import { refreshStars, type StarsOptions, type StarsReport } from './stars'
-import type { CatalogRecord, CatalogSource, SourceRun } from './types'
+import type { CatalogRecord, CatalogSource, SourceContext, SourceRun } from './types'
 
 export interface SourceReport {
   source: string
@@ -27,6 +32,7 @@ export interface SyncReport {
   finishedAt: string
   sources: SourceReport[]
   stars?: StarsReport
+  discovery?: DiscoveryReport
   before: { available: number }
   after: { available: number; unavailable: number; byKind: Record<string, number> }
 }
@@ -38,6 +44,11 @@ export interface SyncOptions {
   full?: boolean
   /** Refresh GitHub stars after the sources; needs an authenticated `github` (GraphQL has no anonymous access). */
   stars?: StarsOptions | false
+  /**
+   * Skill directories to read first, into discovery.db; their GitHub repos feed
+   * github-skills through a queue of `repoBudget` repos per run.
+   */
+  discovery?: { db: Database; sources: DiscoverySource[]; repoBudget?: number; httpRetries?: number }
   now?: () => Date
   log?: (message: string) => void
 }
@@ -138,6 +149,26 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
   const before = { available: countAvailable(db) }
   const reports: SourceReport[] = []
 
+  let discovery: DiscoveryReport | undefined
+  let skills: SourceContext['skills']
+  const d = options.discovery
+  if (d) {
+    const runId = beginRun(d.db, startedAt)
+    const http = upstreamClient(options.fetch, d.httpRetries ?? 3)
+    const sources = await runDiscovery(d.db, d.sources, { http, now: now(), full: options.full ?? false, log }, runId, () => now().toISOString())
+    const scopes = db
+      .query(`SELECT scope, max(synced_at) AS syncedAt FROM resources
+              WHERE source = 'github-skills' AND scope IS NOT NULL AND unavailable_at IS NULL GROUP BY scope`)
+      .all() as { scope: string; syncedAt: string }[]
+    seedRepos(d.db, scopes, startedAt)
+    const picked = pickRepos(d.db, d.repoBudget ?? 200)
+    skills = { repos: picked.repos, installs: skillsShInstalls(d.db) }
+    discovery = {
+      runId, sources, queue: picked.report, listings: 0, skills: 0, crossSite: 0, linkedResources: 0, snapshots: 0, prunedSnapshots: 0,
+    }
+    log(`discovery: ${picked.report.pickedNew} new and ${picked.report.pickedKnown} known repos queued, ${picked.report.waitingNew} new waiting`)
+  }
+
   for (const source of options.sources) {
     const started = Date.now()
     const report: SourceReport = {
@@ -156,6 +187,7 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
         now: now(),
         full: options.full ?? false,
         state: { watermark: getMeta(db, watermarkKey(source.name)), knownScopes },
+        ...(skills ? { skills } : {}),
         log,
       })
       report.mode = run.coverage.mode
@@ -166,6 +198,7 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
       // The stamp is taken after fetching, so rows a run saw are always newer than it.
       const stamp = now().toISOString()
       db.transaction(() => applyRun(db, source, run, stamp, report))()
+      if (d && run.attempted) recordAttempts(d.db, run.attempted, stamp)
     } catch (e) {
       report.status = 'failed'
       report.errors.push(e instanceof Error ? e.message : String(e))
@@ -185,6 +218,12 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     }
   }
 
+  if (d && discovery) {
+    discovery.linkedResources = linkResources(d.db, db)
+    discovery.prunedSnapshots = pruneSnapshots(d.db, now())
+    Object.assign(discovery, discoveryTotals(d.db))
+  }
+
   db.exec("INSERT INTO resources_fts (resources_fts) VALUES ('rebuild')")
   const finishedAt = now().toISOString()
   setMeta(db, 'schema_version', String(CATALOG_SCHEMA_VERSION))
@@ -193,7 +232,7 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     (db.query('SELECT kind, count(*) AS n FROM resources WHERE unavailable_at IS NULL GROUP BY kind').all() as { kind: string; n: number }[]).map((r) => [r.kind, r.n]),
   )
   const unavailable = (db.query('SELECT count(*) AS n FROM resources WHERE unavailable_at IS NOT NULL').get() as { n: number }).n
-  return { startedAt, finishedAt, sources: reports, ...(stars ? { stars } : {}), before, after: { available: countAvailable(db), unavailable, byKind } }
+  return { startedAt, finishedAt, sources: reports, ...(stars ? { stars } : {}), ...(discovery ? { discovery } : {}), before, after: { available: countAvailable(db), unavailable, byKind } }
 }
 
 export function formatReportMarkdown(report: SyncReport, extra: string[] = []): string {
@@ -211,6 +250,38 @@ export function formatReportMarkdown(report: SyncReport, extra: string[] = []): 
       `| ${s.source} | ${s.status} | ${s.mode ?? '-'} | ${s.fetched} | ${s.added} | ${s.updated} | ${s.restored} | ${s.unchanged} | ${s.unavailable} | ${Object.values(s.skipped).reduce((a, b) => a + b, 0)} |`,
     ),
   ]
+  const disc = report.discovery
+  if (disc) {
+    const q = disc.queue
+    lines.push(
+      '',
+      '### Skill discovery',
+      `- ${disc.listings} listings, ${disc.skills} distinct skills (${disc.crossSite} listed on more than one site), ` +
+        `${disc.linkedResources} linked to catalog rows; ${disc.snapshots} popularity snapshots kept, ${disc.prunedSnapshots} pruned`,
+      ...(q
+        ? [`- repo queue: ${q.pickedNew} new + ${q.pickedKnown} known of a budget of ${q.budget}; ${q.waitingNew} new still waiting, ` +
+            `${q.known} known, oldest attempt ${q.oldestAttemptAt ?? '-'}`]
+        : []),
+      '',
+      '| Site | Status | Seen | New | Updated | New on boards | Rose | New repos | Duration | Last success |',
+      '|---|---|---:|---:|---:|---:|---:|---:|---:|---|',
+      ...disc.sources.map((s) =>
+        `| ${s.source} | ${s.status} | ${s.seen} | ${s.added} | ${s.updated} | ${s.newOnBoards} | ${s.rose} | ${s.newRepos} | ` +
+          `${(s.durationMs / 1000).toFixed(1)} s | ${s.lastSuccessAt ?? 'never'} |`,
+      ),
+    )
+    for (const s of disc.sources) {
+      lines.push('', `#### ${s.source}`)
+      for (const c of s.coverage) {
+        lines.push(`- ${c.list}: ${c.items} entries in ${c.pages} pages` + (c.total !== null ? ` of ${c.total}` : '') +
+          `, stopped by ${c.stoppedBy}` + (c.next ? `, next from ${c.next.length > 24 ? `${c.next.slice(0, 24)}…` : c.next}` : ''))
+      }
+      for (const [reason, n] of Object.entries(s.skipped)) lines.push(`- skipped ${n}: ${reason}`)
+      for (const e of s.errors.slice(0, 10)) lines.push(`- error: ${e}`)
+      if (s.examples.newOnBoards.length) lines.push(`- new on boards: ${s.examples.newOnBoards.join('; ')}`)
+      if (s.examples.rose.length) lines.push(`- biggest rises: ${s.examples.rose.join('; ')}`)
+    }
+  }
   const st = report.stars
   if (st) {
     const cov = Object.entries(st.coverage)

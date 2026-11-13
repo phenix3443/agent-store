@@ -57,6 +57,8 @@ export interface SourceRun {
   errors: string[]
   /** Saved and handed back as `state.watermark` next run. */
   watermark?: string | null
+  /** Scopes the run tried, with how it went; rate-limited ones are left out so they stay due. */
+  attempted?: Array<{ repo: string; status: string }>
 }
 
 export interface SourceContext {
@@ -70,6 +72,8 @@ export interface SourceContext {
     /** Scopes of rows this source wrote before, so a run can revisit them. */
     knownScopes: string[]
   }
+  /** Skill repos picked from the discovery queue for this run, and skills.sh install counts. */
+  skills?: { repos: string[]; installs: Map<string, number> }
   log: (message: string) => void
 }
 

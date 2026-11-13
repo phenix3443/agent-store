@@ -1,18 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import type { ResourceSummary, SkillResourceDetail } from '@as/types'
 import { findSkillDirs, githubSkillsSource, type TreeEntry } from '../catalog/sources/github-skills'
-import { discoverFromSkillsSh } from '../catalog/sources/skills-sh'
 import type { SourceContext } from '../catalog/types'
-import {
-  ANTHROPIC_SKILLS_SHA,
-  fakeFetch,
-  fixtureJson,
-  githubRoutes,
-  hangingFetch,
-  json,
-  octokitWith,
-  type Route,
-} from './helpers/upstream-fixtures'
+import { ANTHROPIC_SKILLS_SHA, fakeFetch, fixtureJson, githubRoutes, octokitWith, type Route } from './helpers/upstream-fixtures'
 
 type Skill = Omit<SkillResourceDetail, keyof ResourceSummary>
 
@@ -44,37 +34,20 @@ describe('findSkillDirs', () => {
   })
 })
 
-const skillsShRoute = (body: unknown): Route => (url) => (url.hostname === 'skills.sh' ? json(body) : undefined)
-
-describe('discoverFromSkillsSh', () => {
-  test('collects source repos and install counts', async () => {
-    const f = fakeFetch(skillsShRoute(fixtureJson('skills-sh-search-frontend.json')))
-    const d = await discoverFromSkillsSh(f, { queries: ['frontend'] })
-    expect(f.calls[0]).toBe('https://skills.sh/api/search?q=frontend&limit=200')
-    expect(d.errors).toEqual([])
-    expect(d.installs.get('anthropics/skills/frontend-design')).toBe(1106066)
-    expect(d.repos.get('anthropics/skills')).toMatchObject({ fullName: 'anthropics/skills' })
-  })
-
-  test('a timeout leaves discovery empty with an error, and stops after three straight failures', async () => {
-    const d = await discoverFromSkillsSh(hangingFetch(), { queries: ['a1', 'b2', 'c3', 'd4'], timeoutMs: 20 })
-    expect(d.repos.size).toBe(0)
-    expect(d.errors).toHaveLength(3)
-    expect(d.errors[0]).toContain('did not answer')
-  })
-})
-
 describe('githubSkillsSource', () => {
-  const ctx = (f: typeof fetch, knownScopes: string[] = []): SourceContext => ({
+  const ctx = (f: typeof fetch, knownScopes: string[] = [], skills?: SourceContext['skills']): SourceContext => ({
     fetch: f, github: octokitWith(f), now: new Date(), full: false, state: { watermark: null, knownScopes }, log: () => {},
+    ...(skills ? { skills } : {}),
   })
+  const installs = new Map([['anthropics/skills/frontend-design', 1106066]])
 
-  test('scans a repo into records pinned to its commit, with skills.sh installs', async () => {
-    const f = fakeFetch(skillsShRoute(fixtureJson('skills-sh-search-frontend.json')), githubRoutes)
-    const run = await githubSkillsSource({ repos: ['anthropics/skills'], maxRepos: 1, skillsSh: { queries: ['frontend'] } }).run(ctx(f))
+  test('scans the queued repos into records pinned to their commit, with skills.sh installs', async () => {
+    const f = fakeFetch(githubRoutes)
+    const run = await githubSkillsSource().run(ctx(f, ['other/repo'], { repos: ['anthropics/skills'], installs }))
     expect(run.errors).toEqual([])
     expect(run.coverage).toEqual({ mode: 'scoped', scopes: ['anthropics/skills'] })
-    expect(run.skipped).toEqual({ 'repo over the per-run repo cap': 1 })
+    expect(run.attempted).toEqual([{ repo: 'anthropics/skills', status: 'scanned' }])
+    expect(run.skipped).toEqual({})
     expect(run.records).toHaveLength(19)
     const fd = run.records.find((r) => r.upstreamId === 'anthropics/skills/frontend-design')!
     const detail = fd.detail as Skill
@@ -95,20 +68,30 @@ describe('githubSkillsSource', () => {
     expect(detail.archiveUrl).toBe(`https://codeload.github.com/anthropics/skills/tar.gz/${ANTHROPIC_SKILLS_SHA}`)
   })
 
-  test('skills.sh failing still scans the listed repos', async () => {
-    const down: Route = (url) => (url.hostname === 'skills.sh' ? new Response('', { status: 503 }) : undefined)
-    const f = fakeFetch(down, githubRoutes)
-    const run = await githubSkillsSource({ repos: ['anthropics/skills'], skillsSh: { queries: ['frontend'] } }).run(ctx(f))
+  test('without a queue it rescans the repos it holds, up to the cap', async () => {
+    const f = fakeFetch(githubRoutes)
+    const run = await githubSkillsSource({ maxRepos: 1 }).run(ctx(f, ['anthropics/skills', 'other/repo']))
     expect(run.records).toHaveLength(19)
     expect(run.records.every((r) => r.installs === null)).toBe(true)
-    expect(run.errors).toEqual(['skills.sh: skills.sh search "frontend": HTTP 503'])
+    expect(run.skipped).toEqual({ 'repo over the per-run repo cap': 1 })
+  })
+
+  test('a SKILL.md that fails to download leaves the repo unreconciled, so none of its skills is marked gone', async () => {
+    const flaky: Route = (url) => (url.hostname === 'raw.githubusercontent.com' && url.pathname.endsWith('/skills/pdf/SKILL.md') ? new Response('', { status: 500 }) : undefined)
+    const f = fakeFetch(flaky, githubRoutes)
+    const run = await githubSkillsSource({ repos: ['anthropics/skills'] }).run(ctx(f))
+    expect(run.records).toHaveLength(18)
+    expect(run.coverage).toEqual({ mode: 'scoped', scopes: [] })
+    expect(run.attempted).toEqual([{ repo: 'anthropics/skills', status: 'partial' }])
+    expect(run.errors).toEqual(['anthropics/skills: 1 SKILL.md downloads failed; its skills keep their previous state'])
   })
 
   test('a repo that is gone is covered with nothing; known repos are revisited', async () => {
-    const f = fakeFetch(skillsShRoute({ skills: [] }), githubRoutes)
-    const run = await githubSkillsSource({ repos: [], skillsSh: { queries: ['x1'] } }).run(ctx(f, ['gone/repo']))
+    const f = fakeFetch(githubRoutes)
+    const run = await githubSkillsSource().run(ctx(f, ['gone/repo']))
     expect(run.coverage).toEqual({ mode: 'scoped', scopes: ['gone/repo'] })
     expect(run.errors).toEqual(['gone/repo: repository not found'])
+    expect(run.attempted).toEqual([{ repo: 'gone/repo', status: 'not found' }])
   })
 
   test('a rate limit stops scanning and leaves those repos uncovered', async () => {
@@ -116,9 +99,11 @@ describe('githubSkillsSource', () => {
       url.hostname === 'api.github.com'
         ? new Response(JSON.stringify({ message: 'API rate limit exceeded' }), { status: 403, headers: { 'x-ratelimit-remaining': '0' } })
         : undefined
-    const f = fakeFetch(skillsShRoute({ skills: [] }), limited)
-    const run = await githubSkillsSource({ repos: ['anthropics/skills'], skillsSh: { queries: ['x1'] } }).run(ctx(f))
+    const f = fakeFetch(limited)
+    const run = await githubSkillsSource({ repos: ['anthropics/skills'] }).run(ctx(f))
     expect(run.coverage).toEqual({ mode: 'scoped', scopes: [] })
     expect(run.skipped['repo not scanned: GitHub rate limit']).toBe(1)
+    // Not attempted, so the repo stays due in the queue.
+    expect(run.attempted).toEqual([])
   })
 })
