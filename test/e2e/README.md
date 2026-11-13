@@ -32,7 +32,9 @@ model:    claude-haiku-4-5-20251001
 Name them `claude.txt` and `codex.txt`. `claude.txt` is an Anthropic-style
 endpoint with a claude model (e.g. `claude-haiku-4-5-20251001`); `codex.txt` is an
 endpoint serving the OpenAI Responses API with a `gpt-*` model (e.g.
-`gpt-5.6-terra`). Both may point at the same relay. Without those names, the file
+`gpt-5.6-terra`). Codex appends `/responses` to the base-url, so for an
+OpenAI-compatible relay it ends in `/v1`; without it Codex only prints
+`Reconnecting... 5/5`. Both may point at the same relay. Without those names, the file
 whose `base-url` contains `codex` is used for Codex. Keys are mounted read-only at
 runtime and are never copied into the image.
 
