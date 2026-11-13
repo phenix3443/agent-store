@@ -18,6 +18,22 @@ const PAGES = [
   // The drawer only opens from the list (an intercepted route).
   { name: 'drawer', path: '/store', click: 'a[data-item-link]' },
 ]
+// Interaction states of the store toolbar's sort control, on a filtered page so the
+// clear link shows too. Viewport-only shots.
+const SORT_PATH = '/store?q=github&category=mcp'
+const SORT_STATES = [
+  {
+    // Focus the last category tab, then Tab: a real keyboard move, so :focus-visible matches.
+    name: 'store-sortfocus',
+    act: async (page) => {
+      await page.locator('[role="group"] button').last().focus()
+      await page.keyboard.press('Tab')
+    },
+  },
+  { name: 'store-sorthover', act: (page) => page.locator('select').first().hover() },
+  // A mouse click opens the native list (not in the screenshot) and leaves mouse focus.
+  { name: 'store-sortclick', act: (page) => page.locator('select').first().click() },
+]
 const WIDTHS = [390, 820, 1440]
 const THEMES = ['light', 'dark']
 const LOCALES = ['zh', 'en']
@@ -48,6 +64,19 @@ for (const locale of LOCALES) {
           await page.screenshot({ path: file, fullPage: !p.click })
           const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
           if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
+          console.log(`ok ${file}`)
+        } catch (e) {
+          failures.push(`${file}: ${e.message}`)
+        }
+      }
+      for (const st of SORT_STATES) {
+        const file = `${out}/${st.name}-${width}-${theme}-${locale}.png`
+        try {
+          await page.goto(base + SORT_PATH, { waitUntil: 'networkidle', timeout: 60_000 })
+          await page.evaluate(() => document.fonts.ready)
+          await st.act(page)
+          await page.screenshot({ path: file })
+          await page.keyboard.press('Escape')
           console.log(`ok ${file}`)
         } catch (e) {
           failures.push(`${file}: ${e.message}`)
