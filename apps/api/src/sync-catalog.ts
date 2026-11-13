@@ -8,13 +8,14 @@ import { formatReportMarkdown, syncCatalog } from './catalog/sync'
 
 // bun run sync:catalog [--db catalog.db] [--out catalog.db] [--discovery discovery.db] [--full]
 //   [--sources skills-sh,clawhub,skillhub,mcp-registry,github-skills,builtin-providers] [--min-ratio 0.8]
-//   [--report-json report.json] [--report-md report.md]
+//   [--report-json report.json] [--report-md report.md] [--finds-url https://…/api/discovery/export]
 // Reads the previous catalog from --db when it exists, syncs into a copy and
 // moves the copy to --out. Exits 2 without writing --out when the result has
 // fewer than --min-ratio of the previous available resources. With --discovery,
 // the skill directories are read into that file (updated the same way) and pick
 // the GitHub repos github-skills scans; without it github-skills rescans the repos
-// the catalog already holds.
+// the catalog already holds. With --finds-url, what the API's search lookups found is
+// read from that URL into --discovery first, so found repos join the scan queue.
 const { values } = parseArgs({
   options: {
     db: { type: 'string', default: 'catalog.db' },
@@ -25,6 +26,7 @@ const { values } = parseArgs({
     'min-ratio': { type: 'string', default: '0.8' },
     'report-json': { type: 'string' },
     'report-md': { type: 'string' },
+    'finds-url': { type: 'string' },
   },
 })
 
@@ -70,7 +72,9 @@ const report = await syncCatalog(db, {
   full: values.full,
   // GraphQL has no anonymous access; without a token the previous stars stay.
   stars: process.env['GITHUB_TOKEN'] ? {} : false,
-  ...(discoveryDb ? { discovery: { db: discoveryDb, sources: discoverySources } } : {}),
+  ...(discoveryDb
+    ? { discovery: { db: discoveryDb, sources: discoverySources, ...(values['finds-url'] ? { findsUrl: values['finds-url'] } : {}) } }
+    : {}),
   log: (m) => console.error(m),
 })
 const after = countAvailable(db)

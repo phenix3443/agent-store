@@ -188,6 +188,20 @@ export class CatalogReader {
     return { ...toSummary(row), ...decodeDetail(row.kind, row.detail) } as ResourceDetail
   }
 
+  has(id: string): boolean {
+    return this.handle().query('SELECT 1 FROM resources WHERE id = ? AND unavailable_at IS NULL').get(id) !== null
+  }
+
+  /** The available skill of a GitHub repo (lowercase owner/repo) with this name, compared without case. */
+  skillId(repo: string, name: string): string | null {
+    const prefix = `github:${repo}/`
+    const rows = this.handle()
+      .query("SELECT id FROM resources WHERE id >= ? AND id < ? AND kind = 'skill' AND unavailable_at IS NULL")
+      .all(prefix, `${prefix}\uffff`) as { id: string }[]
+    const wanted = name.toLowerCase()
+    return rows.find((r) => r.id.slice(prefix.length).toLowerCase() === wanted)?.id ?? null
+  }
+
   info(): { builtAt: string | null; available: number } {
     const db = this.handle()
     const built = db.query("SELECT value FROM catalog_meta WHERE key = 'built_at'").get() as { value: string } | null

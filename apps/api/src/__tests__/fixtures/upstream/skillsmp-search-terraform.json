@@ -1,0 +1,46 @@
+{
+ "success": true,
+ "data": {
+  "skills": [
+   {
+    "id": "wshobson-agents-plugins-cloud-infrastructure-skills-terraform-module-library-skill-md",
+    "name": "terraform-module-library",
+    "author": "wshobson",
+    "description": "Build reusable Terraform modules for AWS, Azure, GCP, and OCI infrastructure following infrastructure-as-code best practices. Use when creating infrastructure modules, standardizing cloud provisioning, or implementing reusable IaC components.",
+    "contentLanguage": "en",
+    "githubUrl": "https://github.com/wshobson/agents/tree/main/plugins/cloud-infrastructure/skills/terraform-module-library",
+    "skillUrl": "https://skillsmp.com/creators/wshobson/agents/plugins-cloud-infrastructure-skills-terraform-module-library",
+    "stars": 42429,
+    "updatedAt": 1773759121
+   },
+   {
+    "id": "github-awesome-copilot-skills-terraform-azurerm-set-diff-analyzer-skill-md",
+    "name": "terraform-azurerm-set-diff-analyzer",
+    "author": "github",
+    "description": "Analyze Terraform plan JSON output for AzureRM Provider to distinguish between false-positive diffs (order-only changes in Set-type attributes) and actual resource changes. Use when reviewing terraform plan output for Azure resources like Application Gateway, Load Balancer, Firewall, Front Door, NSG, and other resources with Set-type attributes that cause spurious diffs due to internal ordering changes.",
+    "contentLanguage": "en",
+    "githubUrl": "https://github.com/github/awesome-copilot/tree/main/skills/terraform-azurerm-set-diff-analyzer",
+    "skillUrl": "https://skillsmp.com/creators/github/awesome-copilot/skills-terraform-azurerm-set-diff-analyzer",
+    "stars": 41059,
+    "updatedAt": 1769990331
+   }
+  ],
+  "pagination": {
+   "page": 1,
+   "limit": 5,
+   "total": 6,
+   "totalPages": 2,
+   "hasNext": true,
+   "hasPrev": false,
+   "totalIsExact": false
+  },
+  "filters": {
+   "search": "terraform",
+   "sortBy": "stars"
+  }
+ },
+ "meta": {
+  "requestId": "4b96005e-e648-415a-b475-f59c730f6839",
+  "responseTimeMs": 392
+ }
+}

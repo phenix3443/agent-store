@@ -10,7 +10,7 @@ import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type Waffo
 import { subscriptionRecordFromEvent } from './billing'
 import { getAuthUser } from './auth'
 import { resourceRoutes } from './catalog/routes'
-import { catalogReader } from './catalog/runtime'
+import { catalogReader, searchSupplement } from './catalog/runtime'
 import {
   isWebhookProcessed,
   recordWebhook,
@@ -59,8 +59,8 @@ app.get('/readyz', async (c) => {
   }
 })
 
-// Aggregated catalog, read from catalog.db (see src/catalog).
-app.route('/', resourceRoutes(catalogReader))
+// Aggregated catalog, read from catalog.db, and the search supplement (see src/catalog).
+app.route('/', resourceRoutes(catalogReader, searchSupplement))
 
 // ── Billing (Waffo Pancake, Merchant of Record) ──────────────────────────────
 

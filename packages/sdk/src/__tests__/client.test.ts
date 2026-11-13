@@ -159,3 +159,30 @@ describe('StoreClient resources', () => {
     expect(result).toEqual({ data: null, error: 'Not found', status: 404 })
   })
 })
+
+describe('StoreClient.searchSupplement', () => {
+  test('sends the trimmed query, kind and wait, and returns the supplement', async () => {
+    const originalFetch = globalThis.fetch
+    const body = { status: 'found', reason: 'no_results', resources: [], listings: [], partial: false, retryAfterSeconds: null }
+    globalThis.fetch = async (url: RequestInfo | URL) => {
+      expect(String(url)).toBe('http://localhost:3000/api/search/supplement?q=terraform+plan&kind=skill&wait=5')
+      return new Response(JSON.stringify(body), { status: 200 })
+    }
+
+    const result = await new StoreClient().searchSupplement({ q: ' terraform plan ', kind: 'skill', wait: 5 })
+    expect(result.data).toEqual(body)
+
+    globalThis.fetch = originalFetch
+  })
+
+  test('a body that is not a supplement is an error', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = async () => new Response(JSON.stringify({ resources: [] }), { status: 200 })
+
+    const result = await new StoreClient().searchSupplement({ q: 'terraform' })
+    expect(result.data).toBeNull()
+    expect(result.error).toBe('Malformed supplement response')
+
+    globalThis.fetch = originalFetch
+  })
+})

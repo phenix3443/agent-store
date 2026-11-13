@@ -41,7 +41,7 @@ skill、MCP 和 provider 的目录不在 `app.db` 里，而是另一个独立的
 - **生成**：`catalog-sync` 工作流每 6 小时跑一次（也可手动触发），下载 `catalog` 这个 release 里上一版的 `catalog.db` 和 `discovery.db`，执行 `bun run sync:catalog`，再把 gzip 压缩后的 `catalog.db.gz`、`discovery.db.gz` 和 `report.json` 覆盖上传到这个 release（预发布、不标为 latest，以免影响桌面端下载页取最新版本）。release 里列着某个文件却下载失败时工作流直接失败，不会从空库开始再覆盖上传。同步报告写在该次运行的 job summary 里，三个文件同时作为工作流产物 `catalog-sync` 保留 14 天。同步最后用 GraphQL 批量查 MCP 服务器仓库和技能仓库的 GitHub 星标（每次 100 个仓库、花 1 点额度，用工作流自带的 `GITHUB_TOKEN`，一次只发一个查询：GitHub 的二级限流按服务器 CPU 时间算，并发会很快被拦），只查 3 天内没查过的仓库，勾选 `full` 时全部重查；每次运行最多查 20 分钟，没查完的留给下一次；报告里的「GitHub stars」一节写了查了多少、剩余额度和耗时。可用条目数少于上一版的 80% 时不上传、工作流失败；确认是上游真的变少了，再手动触发并勾选 `allow-shrink`。
 - **只在 main 上发布**：上传 release 的步骤只在 `main` 上、且没勾选 `dry-run` 时执行。其他分支手动触发只留工作流产物，用来验证改动；填 `seed-run`（某次运行的 ID）时从那次运行的产物开始，而不是从 release 开始，这样能在分支上连续跑两次，检查第二次记录的排名变化。
 - **来源**：MCP 来自官方 MCP Registry（按 `updated_since` 增量）；provider 是 `sources/providers.ts` 里的内置列表；skill 分两步：先从技能目录站发现，再用 GitHub tree API 扫描仓库。加一个目录站就是在 `sources/` 下加一个实现 `DiscoverySource` 的模块并登记到 `sources/index.ts` 的 `defaultDiscoverySources`。
-- **用户搜索**只查 `catalog.db`。目录站不可用时，API 继续用上一次成功发布的文件。
+- **用户搜索**（`GET /api/resources`）只查 `catalog.db`。目录站不可用时，API 继续用上一次成功发布的文件。本地结果不够时去别的技能站补搜是另一个接口，见下文「搜索补充」。
 - **读取**：API 启动时先打开本地副本，再从 `CATALOG_URL` 下载新版，之后每 `CATALOG_REFRESH_SECONDS` 秒用 ETag 检查一次；新文件校验通过才原子替换，下载失败时继续用旧的。
 
 | 变量 | 用途 |
@@ -50,7 +50,7 @@ skill、MCP 和 provider 的目录不在 `app.db` 里，而是另一个独立的
 | `CATALOG_PATH` | 本地副本路径，默认 `$TMPDIR/agent-store/catalog.db`，目录要可写 |
 | `CATALOG_REFRESH_SECONDS` | 检查新版本的间隔，默认 300，最小 30 |
 
-本地生成一份：`cd apps/api && GITHUB_TOKEN=… bun run sync:catalog --db /tmp/catalog.db --discovery /tmp/discovery.db`，再用 `CATALOG_PATH=/tmp/catalog.db` 启动 API。不带 `--discovery` 时不读目录站，只重扫 `catalog.db` 里已有的技能仓库。不带 `GITHUB_TOKEN` 时 GitHub 每小时只给 60 次请求，扫不完 skill 仓库，没扫到的仓库保留上一版的数据。
+本地生成一份：`cd apps/api && GITHUB_TOKEN=… bun run sync:catalog --db /tmp/catalog.db --discovery /tmp/discovery.db`（加 `--finds-url <API 地址>/api/discovery/export` 时同时读入 API 补搜到的条目），再用 `CATALOG_PATH=/tmp/catalog.db` 启动 API。不带 `--discovery` 时不读目录站，只重扫 `catalog.db` 里已有的技能仓库。不带 `GITHUB_TOKEN` 时 GitHub 每小时只给 60 次请求，扫不完 skill 仓库，没扫到的仓库保留上一版的数据。
 
 ### 技能发现（discovery.db）
 
@@ -88,6 +88,90 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 **扫描队列**：技能仓库来自各站点条目的 GitHub 仓库，加上 `catalog.db` 里已有技能的仓库，没有固定种子名单。每次最多扫 200 个仓库：从没试过的新仓库最多占一半（先发现的先扫，同一批里榜单名次高的先扫），其余给上次尝试最早的已知仓库，一方用不完的名额给另一方，所以新仓库不会被已知仓库挤掉，已知仓库也会轮流更新。碰到 GitHub 限流时剩下的仓库不算尝试过，下次仍然排在前面。扫过的仓库里不再出现的技能标为不可用；只要该仓库有一个 `SKILL.md` 没下载下来，这次就不对它做这一步，它的技能保持上一版的状态。
 
 **报告**：`report.json` 的 `discovery` 字段和 job summary 的「Skill discovery」一节写每个站点的状态、读到的条目数、新条目、数值有变的条目、首次上榜（`newOnBoards`，附示例）、名次上升（`rose`，附上升最多的几条）、带出的新仓库、耗时和最近成功时间（`lastSuccessAt`），以及每个榜单和目录读了几页、多少条、总数、为什么停（读到底 `end`、到了每次的页数 `depth`、站点只给这么多 `site-limit`、出错 `error`、被限流 `rate-limited`）和下次从哪继续；另有扫描队列的新旧仓库数、仍在等待的新仓库数，以及条目数、去重后的技能数、多站重复的技能数、已关联到 `catalog.db` 的条目数和快照数。
+
+### 搜索补充（本地结果不够时去别的技能站补搜）
+
+**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态：网页还没有告诉用户「搜索词会发给第三方站点」，等新的搜索界面带上这句说明后，再在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp` 打开。
+
+`GET /api/resources` 的行为不变。补搜是单独的接口 `GET /api/search/supplement`，由前端在搜索词稳定后、且只在第一页调用一次；本地结果照常立即返回，不等补搜。代码在 `apps/api/src/catalog/supplement.ts`（规则与调度）、`found-store.ts`（持久化）和 `sources/` 下各站点的搜索函数。
+
+**接口**
+
+`GET /api/search/supplement?q=<搜索词>&kind=<skill|空>&wait=<秒，0–10>`，返回：
+
+| 字段 | 含义 |
+|---|---|
+| `status` | `disabled`：部署里没打开补搜，界面不显示任何补搜相关内容；`not_needed`：本地结果够用，或这个词不补搜；`searching`：正在查，`retryAfterSeconds` 秒后再问；`found` / `none`：查完了，有 / 没有；`unavailable`：现在一个站点都问不了，`retryAfterSeconds` 秒后可重试 |
+| `reason` | 为什么本地结果不够：`no_results`、`few_results`、`low_relevance`；`disabled`、`not_needed` 时为 `null` |
+| `resources` | 已从 GitHub 仓库读到并校验过、但已发布的 `catalog.db` 里还没有的技能，结构与列表接口的条目相同，详情走 `GET /api/resources/<id>`，可以安装 |
+| `listings` | 别的站点上有、这里还装不了的技能：`key`、`site`、`name`、`description`、`author`、`url`（该站点上的页面）。只能作为外链展示，不能当成可安装的资源 |
+| `partial` | 有站点超时、被限流或超出额度，结果可能不全 |
+| `retryAfterSeconds` | 见 `status` |
+
+- `wait` 大于 0 时，请求最多等这么多秒让正在进行的查询结束，通常一次请求就拿到最终结果；不带 `wait` 时立即返回，前端按 `retryAfterSeconds` 轮询。
+- `resources` 和 `listings` 只随这个接口返回，不进 `GET /api/resources` 的 `resources`，也不占它的 `offset`，翻页不受影响。等定时同步把某个技能发布进 `catalog.db` 后，它从列表接口正常返回，同时从这里消失，id 不变，详情地址不变。
+- `kind` 是 `mcp` 或 `provider` 时一律 `not_needed`：这些站点只收技能。
+
+**什么时候补搜**（`fallbackTrigger`）
+
+只看本地结果的前 10 条，不单看数量：
+
+1. 有一条的名称（或 id 末段）和搜索词完全相同：够用，不补搜。
+2. 一条结果都没有：`no_results`。
+3. 没有任何一条的名称或 id 包含全部搜索词（只在描述里命中）：`low_relevance`，不管有多少条。
+4. 有名称命中，但总数少于 `SEARCH_FALLBACK_MIN_RESULTS`（默认 3）：`few_results`。
+
+搜索词先归一化（去首尾空白、转小写、合并空白）。以下搜索词不发给任何站点：短于 2 个字符、长于 64 个字符、超过 6 个词、单个词超过 40 个字符、不含字母或数字、含 `@` 或 `://`（看起来是邮箱或网址）。
+
+**问哪些站点**
+
+| 站点 | 接口 | 自设额度 | 说明 |
+|---|---|---|---|
+| `clawhub` | `GET https://clawhub.ai/api/v1/search?q=&limit=&nonSuspiciousOnly=true` | 每分钟 30 次、每天 2000 次 | 官方文档允许第三方目录搜索，要求缓存、遵守 429、链接回原页面；站点自己的匿名限额是每 IP 每分钟 3000 次读取 |
+| `skillhub` | `GET https://api.skillhub.cn/api/skills?keyword=&sortBy=score` | 每分钟 30 次、每天 2000 次 | 腾讯官方文档写明免鉴权、查找统一走这个接口；文档和响应头都没给限额，额度是自己定的上限 |
+| `skillsmp` | `GET https://skillsmp.com/api/v1/skills/search?q=&limit=` | 每分钟 5 次、每天 40 次 | 官方文档：匿名每天 50 次、每分钟 10 次，只能关键词搜索，自设额度留在这个限额之内。结果直接给出 GitHub 仓库和技能名，是唯一能产出可安装结果的站点。它的 `robots.txt` 对爬虫禁止 `/api/`，服务条款允许搜索、禁止成规模抓取；这里只做用户搜索触发的单次关键词查询，不做批量采集。额度用完或站点返回 429 时跳过它，其余站点照常 |
+
+skills.sh 不在其中：它的 `robots.txt` 禁止 `/api/` 和 `/search`。
+
+每个站点各自 4 秒超时（`SEARCH_FALLBACK_TIMEOUT_MS`），不重试，并行请求。一个站点超时、返回 429、返回的不是预期结构，只影响它自己，其余站点的结果照常返回并标 `partial`。收到 429 后按 `Retry-After` 停用该站点（没有这个头时停 60 秒，最多 1 小时）。全部站点都失败时返回 `unavailable`。同时进行的查询最多 8 个，超出的直接返回 `unavailable`。额度和停用时间记在 API 进程内存里，重启后重新计。
+
+**发给第三方的内容**
+
+只有归一化后的搜索词。请求由 API 进程自己发出，`User-Agent` 固定为 `agent-store-api`；用户的 Cookie、登录令牌、IP、浏览器请求头都不读取、不转发。搜索词不落库、不写日志：一次查询在 `app.db` 里只按搜索词的 SHA-256 记录，到期删除。导出给定时同步的只有查到的条目和仓库名，没有搜索词，所以搜索历史不会变成关键词采集清单。界面上必须先说明「没找到时会把搜索词发给这些站点」，才能打开补搜。
+
+**校验与去重**
+
+- 每条结果必须有名称、身份字段，以及一个 `https` 且域名属于来源站点的页面地址，否则丢弃；名称、描述、作者去掉控制字符并截断（200 / 500 / 100 个字符）。
+- 身份沿用 `discovery.db` 的 `skill_key`：ClawHub 是 `clawhub:<owner>/<slug>`，SkillHub 转收录的 ClawHub 技能取同一个 `clawhub:` 键，SkillsMP 是 `github:<owner/repo>/<技能名>`。同一个键只展示一条；同名但作者不同、同一仓库的不同技能，键不同，各自保留。
+- `catalog.db` 里已经有的技能不重复返回。
+- 查询阶段只读文件（GitHub 的提交、目录树和 `SKILL.md`），不执行任何第三方安装命令或脚本。
+
+**哪些结果能安装**
+
+只有来自 GitHub 仓库的结果会变成可安装的资源：API 用和定时同步相同的 `scanRepo` 读这个仓库（每次查询最多 2 个仓库，10 秒内没读完的不等；技能数超过 40 的仓库留给定时同步；没有 `GITHUB_TOKEN` 时每小时最多读 20 个仓库，有则 200 个；同一仓库 6 小时内不重复读），读到的技能和定时同步产出的 id、结构完全一致。只托管在 ClawHub、SkillHub 上的技能目前装不了，只作为 `listings` 外链返回，也不进 `catalog.db`。
+
+**持久化，以及和定时发布的衔接**
+
+API 本地的 `catalog.db` 是下载来的只读副本，每次发布都会被整个替换，所以补搜到的内容不写进去，而是写进 `app.db`（持久卷、有备份，重启和替换 `catalog.db` 都不影响）：
+
+| 表 | 内容 | 保留 |
+|---|---|---|
+| `found_listings` | 每个站点上的一条结果：来源、站内 ID、`skill_key`、名称、描述、作者、页面地址、GitHub 仓库、首次和最近一次查到的时间 | 180 天没再查到就删 |
+| `found_repos` | 结果指向的 GitHub 仓库，以及 API 最近一次读它的时间和结果 | 180 天 |
+| `found_resources` | 从这些仓库读到的技能（与 `catalog.db` 同样的摘要和安装数据） | `catalog.db` 里出现同一 id 后删除；14 天仍未出现也删除 |
+| `search_lookups` | 一次查询的结论：搜索词的 SHA-256、`found` / `none`、是否不全、命中的 `skill_key`、过期时间 | 查到结果 24 小时，没查到 6 小时，结果不全 10 分钟 |
+
+- 同一个搜索词在查询进行中再次到来，不会再发请求，共用那一次；查完后在上表的时间内直接用记录的结论，「没查到」同样记录。「全部站点失败」只在内存里记 30 秒。
+- 以后的搜索（包括别的搜索词）先看 `found_listings` 和 `found_resources` 里名称或描述包含全部搜索词的条目，够用就不再问站点。
+- `GET /api/discovery/export` 导出 `found_listings` 和 `found_repos`（各最多 5000 条，最近的在前）。这个接口不鉴权：内容只有各站点本来就公开的条目和 GitHub 仓库名。`catalog-sync` 工作流每次运行先读这个地址（`FINDS_URL`，命令行参数 `--finds-url`）：条目按各自的站点写进 `discovery.db` 的 `listings`（已有的不动），仓库以「从没试过」进入扫描队列（`discovered_by = 'search'`），之后和榜单发现的仓库一样被扫描、发布进 `catalog.db`。重复读入不会产生重复行。读不到这个地址只记在报告里（`report.json` 的 `discovery.searchFinds` 和 job summary），不影响这次同步，下次再读。
+
+| 变量 | 用途 |
+|---|---|
+| `SEARCH_FALLBACK_SOURCES` | 补搜问哪些站点，逗号分隔。不设、为空或 `none` 时补搜关闭（测试环境现状）；打开时设 `clawhub,skillhub,skillsmp` |
+| `SEARCH_FALLBACK_MIN_RESULTS` | 本地结果少于多少条算「太少」，默认 3 |
+| `SEARCH_FALLBACK_TIMEOUT_MS` | 单个站点的超时，默认 4000 |
+| `SKILLSMP_API_KEY` | 可选，SkillsMP 的 API key |
+| `GITHUB_TOKEN` | 可选，API 读补搜到的仓库用。测试环境的 API Pod 目前没有配；不配时每小时最多读 20 个仓库，打开补搜时应一并配上 |
 
 ## 登录
 
