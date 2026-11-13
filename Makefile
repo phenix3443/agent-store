@@ -1,14 +1,13 @@
 # Makefile — Local development workflow for agent-store
-# Requires: pnpm, Bun, Docker (local Postgres via docker-compose.dev.yml)
+# Requires: pnpm, Bun, Node 22
 #
-# Local dev runs against a Postgres container. `make db` starts it and applies
-# the migrations; `make db-reset` wipes it.
+# The API and the store share one SQLite file, app.db. `make db` creates it and
+# applies the migrations; `make db-reset` deletes it.
 
-.PHONY: setup db db-reset dev-env dev-api dev-store dev-client build-cli e2e-docker-build e2e-docker stop status
+.PHONY: setup db db-reset dev-env dev-api dev-store dev-client build-cli e2e-docker-build e2e-docker status
 
-DEV_DB_PORT ?= 55432
-DEV_DATABASE_URL ?= postgres://postgres:dev@127.0.0.1:$(DEV_DB_PORT)/agent_store
-COMPOSE := DEV_DB_PORT=$(DEV_DB_PORT) docker compose -f docker-compose.dev.yml
+# Absolute, because the API and the store each run from their own directory.
+DEV_APP_DB_PATH ?= $(CURDIR)/.dev/app.db
 
 # Dev-server ports. `make dev-env` picks the first free ports at/above these
 # (see scripts/dev-ports.sh) and passes them to the sub-targets, so a stale
@@ -16,20 +15,19 @@ COMPOSE := DEV_DB_PORT=$(DEV_DB_PORT) docker compose -f docker-compose.dev.yml
 API_PORT ?= 3001
 STORE_PORT ?= 3000
 
-## One-time setup: create apps/store/.env.local and start the database
+## One-time setup: create apps/store/.env.local and the database
 setup: db
 	@test -f apps/store/.env.local || cp apps/store/.env.local.example apps/store/.env.local
 	@echo ""
 	@echo "Next: fill apps/store/.env.local (Better Auth secret, GitHub OAuth app), then: make dev-env"
 
-## Start the local Postgres and apply migrations
+## Create app.db if needed and apply migrations
 db:
-	$(COMPOSE) up -d --wait db
-	cd apps/api && DATABASE_URL="$(DEV_DATABASE_URL)" bun src/migrate.ts
+	cd apps/api && APP_DB_PATH="$(DEV_APP_DB_PATH)" bun src/migrate.ts
 
-## Wipe the local database (drops everything, including sign-ins)
+## Delete the local database (everything, including sign-ins) and recreate it
 db-reset:
-	$(COMPOSE) down -v
+	rm -f "$(DEV_APP_DB_PATH)" "$(DEV_APP_DB_PATH)-wal" "$(DEV_APP_DB_PATH)-shm"
 	$(MAKE) --no-print-directory db
 
 ## Start ALL THREE components locally for full integration testing — catalog
@@ -44,16 +42,16 @@ dev-env: db
 ## Catalog API server (apps/api). Verifies sign-in tokens against the local
 ## store's Better Auth JWKS. Both the web store and the CLI consume this API.
 dev-api:
-	DATABASE_URL="$(DEV_DATABASE_URL)" \
+	APP_DB_PATH="$(DEV_APP_DB_PATH)" \
 	AUTH_JWKS_URL=http://localhost:$(STORE_PORT)/api/auth/jwks \
 	AUTH_ISSUER=http://localhost:$(STORE_PORT) \
 	PORT=$(API_PORT) pnpm --filter=@as/api start
 
 ## Web store (apps/store), which also hosts Better Auth. Reads the catalog from
-## the local API via API_URL; Better Auth uses the same database.
+## the local API via API_URL; Better Auth uses the same app.db.
 dev-store:
 	set -a; . apps/store/.env.local; set +a; \
-	DATABASE_URL="$(DEV_DATABASE_URL)" BETTER_AUTH_URL=http://localhost:$(STORE_PORT) \
+	APP_DB_PATH="$(DEV_APP_DB_PATH)" BETTER_AUTH_URL=http://localhost:$(STORE_PORT) \
 	PORT=$(STORE_PORT) API_URL=http://127.0.0.1:$(API_PORT) NEXT_PUBLIC_API_URL=http://127.0.0.1:$(API_PORT) \
 	pnpm --filter=@as/store dev
 
@@ -89,11 +87,6 @@ e2e-docker-build:
 e2e-docker: e2e-docker-build
 	docker run --rm -v "$(PWD)/test/provider:/secrets:ro" agent-store-e2e
 
-## Stop the local Postgres (keeps its data; `make db-reset` wipes it)
-stop:
-	$(COMPOSE) down
-
-## Show the local Postgres container and its connection string
+## Show where the local app.db is
 status:
-	$(COMPOSE) ps
-	@echo "$(DEV_DATABASE_URL)"
+	@echo "$(DEV_APP_DB_PATH)"

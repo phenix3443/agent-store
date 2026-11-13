@@ -46,13 +46,13 @@ function fail(c: Context<Env>, status: ContentfulStatusCode, message: string, ca
 
 app.get('/', (c) => c.json({ ok: true, service: 'as-api' }))
 
-// Liveness: the process answers. Readiness: it can also reach Postgres. Kept
-// apart so a database outage takes the pod out of the Service instead of
+// Liveness: the process answers. Readiness: it can also open app.db. Kept
+// apart so a database problem takes the pod out of the Service instead of
 // restarting it in a loop.
 app.get('/healthz', (c) => c.json({ ok: true }))
 app.get('/readyz', async (c) => {
   try {
-    await getDb(c.env).execute(sql`select 1`)
+    getDb(c.env).get(sql`select 1`)
     return c.json({ ok: true })
   } catch (e) {
     return fail(c, 503, 'Database unavailable', e)

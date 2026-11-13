@@ -1,28 +1,25 @@
 import { sql } from 'drizzle-orm'
-import {
-  boolean,
-  check,
-  index,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { check, customType, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-// Drizzle schema — the source of truth for the Postgres database.
-// Migrations are generated into ./drizzle and applied with `drizzle-kit migrate`.
-//
-// Scope: tables, columns, types, defaults, checks, foreign keys, unique
-// constraints, and indexes — the structural schema. Deliberately NOT reproduced
-// here:
-//   • RLS policies + anon/authenticated GRANTs — Supabase/PostgREST specific;
-//     authorization moves to the API layer (the API is the only catalog client).
-//   • The updated_at trigger + update_updated_at() function — kept for DB-level
-//     parity but expressed in raw SQL, appended to the generated migration
-//     (drizzle-kit does not model triggers). See drizzle/*_*.sql.
+// Drizzle schema for app.db, the SQLite file the API and the store's Better Auth
+// share. Migrations are generated into ./drizzle (`pnpm db:generate`) and applied
+// by `bun src/migrate.ts`.
 
-export const subscriptions = pgTable('subscriptions', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+// Dates are stored as ISO 8601 text, the format Better Auth's Kysely adapter
+// writes on SQLite, so both writers produce values that sort and compare alike.
+const isoNow = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
+
+function isoDate(sqlType: 'text' | 'date') {
+  return customType<{ data: Date; driverData: string }>({
+    dataType: () => sqlType,
+    toDriver: (value) => value.toISOString(),
+    fromDriver: (value) => new Date(value),
+  })
+}
+const timestamp = isoDate('text')
+
+export const subscriptions = sqliteTable('subscriptions', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   waffoOrderId: text('waffo_order_id').notNull().unique(),
   buyerEmail: text('buyer_email').notNull(),
   buyerIdentity: text('buyer_identity'),
@@ -31,9 +28,9 @@ export const subscriptions = pgTable('subscriptions', {
   productName: text('product_name'),
   waffoStoreId: text('waffo_store_id').notNull(),
   mode: text('mode').notNull().default('prod'),
-  eventTimestamp: timestamp('event_timestamp', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  eventTimestamp: timestamp('event_timestamp'),
+  createdAt: timestamp('created_at').notNull().default(isoNow),
+  updatedAt: timestamp('updated_at').notNull().default(isoNow),
 }, (t) => [
   check('subscriptions_plan_check', sql`${t.plan} IN ('pro', 'team')`),
   check(
@@ -44,37 +41,37 @@ export const subscriptions = pgTable('subscriptions', {
   index('subscriptions_buyer_email_idx').on(sql`lower(${t.buyerEmail})`),
 ])
 
-export const processedWebhooks = pgTable('processed_webhooks', {
+export const processedWebhooks = sqliteTable('processed_webhooks', {
   deliveryId: text('delivery_id').primaryKey(),
   eventType: text('event_type').notNull(),
-  processedAt: timestamp('processed_at', { withTimezone: true }).notNull().defaultNow(),
+  processedAt: timestamp('processed_at').notNull().default(isoNow),
 })
 
 // ── Better Auth ──────────────────────────────────────────────────────────────
 // Tables owned by the store's self-hosted Better Auth (apps/store/lib/auth/server.ts).
-// Columns keep Better Auth's camelCase names: its Kysely adapter queries them
-// verbatim, so these must match what `getMigrations` emits for that config. When
-// the auth config changes (new plugin or user field), regenerate and compare.
+// Columns keep Better Auth's camelCase names and the SQLite types its `getMigrations`
+// emits (text, integer for booleans, date): its Kysely adapter queries them verbatim.
+// When the auth config changes (new plugin or user field), regenerate and compare.
 
-const tz = { withTimezone: true } as const
+const authDate = isoDate('date')
 
-export const authUser = pgTable('user', {
+export const authUser = sqliteTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  emailVerified: boolean('emailVerified').notNull(),
+  emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull(),
   image: text('image'),
-  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt', tz).notNull().defaultNow(),
+  createdAt: authDate('createdAt').notNull().default(isoNow),
+  updatedAt: authDate('updatedAt').notNull().default(isoNow),
   username: text('username'),
 })
 
-export const authSession = pgTable('session', {
+export const authSession = sqliteTable('session', {
   id: text('id').primaryKey(),
-  expiresAt: timestamp('expiresAt', tz).notNull(),
+  expiresAt: authDate('expiresAt').notNull(),
   token: text('token').notNull().unique(),
-  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt', tz).notNull(),
+  createdAt: authDate('createdAt').notNull().default(isoNow),
+  updatedAt: authDate('updatedAt').notNull(),
   ipAddress: text('ipAddress'),
   userAgent: text('userAgent'),
   userId: text('userId')
@@ -82,7 +79,7 @@ export const authSession = pgTable('session', {
     .references(() => authUser.id, { onDelete: 'cascade' }),
 }, (t) => [index('session_userId_idx').on(t.userId)])
 
-export const authAccount = pgTable('account', {
+export const authAccount = sqliteTable('account', {
   id: text('id').primaryKey(),
   accountId: text('accountId').notNull(),
   providerId: text('providerId').notNull(),
@@ -92,29 +89,29 @@ export const authAccount = pgTable('account', {
   accessToken: text('accessToken'),
   refreshToken: text('refreshToken'),
   idToken: text('idToken'),
-  accessTokenExpiresAt: timestamp('accessTokenExpiresAt', tz),
-  refreshTokenExpiresAt: timestamp('refreshTokenExpiresAt', tz),
+  accessTokenExpiresAt: authDate('accessTokenExpiresAt'),
+  refreshTokenExpiresAt: authDate('refreshTokenExpiresAt'),
   scope: text('scope'),
   password: text('password'),
-  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt', tz).notNull(),
+  createdAt: authDate('createdAt').notNull().default(isoNow),
+  updatedAt: authDate('updatedAt').notNull(),
 }, (t) => [index('account_userId_idx').on(t.userId)])
 
-export const authVerification = pgTable('verification', {
+export const authVerification = sqliteTable('verification', {
   id: text('id').primaryKey(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
-  expiresAt: timestamp('expiresAt', tz).notNull(),
-  createdAt: timestamp('createdAt', tz).notNull().defaultNow(),
-  updatedAt: timestamp('updatedAt', tz).notNull().defaultNow(),
+  expiresAt: authDate('expiresAt').notNull(),
+  createdAt: authDate('createdAt').notNull().default(isoNow),
+  updatedAt: authDate('updatedAt').notNull().default(isoNow),
 }, (t) => [index('verification_identifier_idx').on(t.identifier)])
 
-export const authJwks = pgTable('jwks', {
+export const authJwks = sqliteTable('jwks', {
   id: text('id').primaryKey(),
   publicKey: text('publicKey').notNull(),
   privateKey: text('privateKey').notNull(),
-  createdAt: timestamp('createdAt', tz).notNull(),
-  expiresAt: timestamp('expiresAt', tz),
+  createdAt: authDate('createdAt').notNull(),
+  expiresAt: authDate('expiresAt'),
   alg: text('alg'),
   crv: text('crv'),
 })
