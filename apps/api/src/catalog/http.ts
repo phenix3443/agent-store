@@ -1,3 +1,5 @@
+import ky, { isHTTPError, isTimeoutError, type KyInstance } from 'ky'
+
 export class UpstreamError extends Error {
   constructor(
     readonly code: 'timeout' | 'rate_limited' | 'not_found' | 'unavailable' | 'bad_response',
@@ -49,3 +51,32 @@ export const str = (v: unknown): string | null => (typeof v === 'string' && v !=
 export const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 export const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
+
+/**
+ * HTTP client for the discovery sites. ky retries 408/429/5xx with backoff and waits
+ * out Retry-After (capped), which ClawHub's API terms ask clients to honor.
+ */
+export function upstreamClient(fetchImpl: typeof fetch, retries = 3): KyInstance {
+  return ky.create({
+    fetch: (input, init) => fetchImpl(input, init),
+    headers: { 'user-agent': 'agent-store-catalog-sync' },
+    timeout: 30_000,
+    retry: {
+      limit: retries,
+      statusCodes: [408, 429, 500, 502, 503, 504],
+      afterStatusCodes: [413, 429, 503],
+      maxRetryAfter: 60_000,
+      backoffLimit: 10_000,
+      retryOnTimeout: true,
+    },
+  })
+}
+
+/** Short description of a failed upstream request, for the report. */
+export function describeError(e: unknown): string {
+  if (isHTTPError(e)) return `HTTP ${e.response.status} from ${e.request.url}`
+  if (isTimeoutError(e)) return `timed out: ${e.request.url}`
+  return e instanceof Error ? e.message : String(e)
+}
+
+export const isRateLimited = (e: unknown): boolean => isHTTPError(e) && e.response.status === 429

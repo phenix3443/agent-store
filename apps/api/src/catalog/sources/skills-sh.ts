@@ -1,60 +1,128 @@
-import { getJson, isRecord, str } from '../http'
+import type { DiscoveryRun, DiscoverySource, Metric, Observation } from '../discovery'
+import { describeError, isRateLimited, isRecord, str } from '../http'
+import { githubRepoOf } from '../stars'
+import { addSkip } from '../types'
 
-// skills.sh has no documented API. Its search endpoint is used only to discover
-// source repos and install counts; any failure leaves discovery empty.
+// skills.sh's /api/v1 needs a Vercel OIDC token and robots.txt disallows /api/, so the
+// three leaderboard pages are read instead. Each page embeds its first 600 entries in
+// the Next.js flight payload as `"initialSkills":[…]`, followed by the board's
+// `totalSkills`; deeper entries are only reachable through the API.
 export const SKILLS_SH_URL = 'https://skills.sh'
 
-/** Search terms whose results seed the repo list; skills.sh needs at least 2 characters. */
-export const DISCOVERY_QUERIES = [
-  'frontend', 'react', 'design', 'test', 'git', 'python', 'typescript', 'docs',
-  'api', 'database', 'security', 'deploy', 'debug', 'review', 'writing', 'data',
-  'cloud', 'agent', 'mcp', 'web', 'mobile', 'pdf', 'marketing', 'seo', 'code',
-]
-
-export interface SkillsShDiscovery {
-  /** `owner/repo` (lowercase) → summed installs of its skills seen in the results. */
-  repos: Map<string, { fullName: string; installs: number }>
-  /** `owner/repo/skillId` (lowercase) → installs. */
-  installs: Map<string, number>
-  errors: string[]
+interface Board {
+  board: string
+  path: string
+  metrics: (e: Record<string, unknown>) => Partial<Record<Metric, number>>
 }
 
-export async function discoverFromSkillsSh(
-  fetchImpl: typeof fetch,
-  options: { baseUrl?: string; queries?: string[]; limit?: number; timeoutMs?: number } = {},
-): Promise<SkillsShDiscovery> {
-  const base = options.baseUrl ?? SKILLS_SH_URL
-  const out: SkillsShDiscovery = { repos: new Map(), installs: new Map(), errors: [] }
-  for (const q of options.queries ?? DISCOVERY_QUERIES) {
-    const url = new URL('/api/search', base)
-    url.searchParams.set('q', q)
-    url.searchParams.set('limit', String(options.limit ?? 200))
-    let body: unknown
-    try {
-      body = await getJson(fetchImpl, url.toString(), `skills.sh search "${q}"`, options.timeoutMs ?? 10_000)
-    } catch (e) {
-      out.errors.push(e instanceof Error ? e.message : String(e))
-      // A dead or rate-limiting service would fail every remaining query the same way.
-      if (out.errors.length >= 3 && out.installs.size === 0) break
-      continue
-    }
-    if (!isRecord(body) || !Array.isArray(body['skills'])) {
-      out.errors.push(`skills.sh search "${q}": unexpected response shape`)
-      continue
-    }
-    for (const s of body['skills']) {
-      if (!isRecord(s)) continue
-      const source = str(s['source'])
-      const skillId = str(s['skillId'])
-      if (!source || !skillId || !/^[\w.-]+\/[\w.-]+$/.test(source)) continue
-      const installs = typeof s['installs'] === 'number' && s['installs'] >= 0 ? Math.floor(s['installs']) : 0
-      const key = `${source.toLowerCase()}/${skillId.toLowerCase()}`
-      if (out.installs.has(key)) continue
-      out.installs.set(key, installs)
-      const repo = out.repos.get(source.toLowerCase()) ?? { fullName: source, installs: 0 }
-      repo.installs += installs
-      out.repos.set(source.toLowerCase(), repo)
+const count = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.floor(v) : undefined)
+
+const BOARDS: Board[] = [
+  { board: 'all-time', path: '/', metrics: (e) => ({ installs_total: count(e['installs']) }) },
+  // The tab says "Trending (24h)"; the page title says "This Week". The window is the site's.
+  { board: 'trending', path: '/trending', metrics: (e) => ({ installs_window: count(e['installs']) }) },
+  { board: 'hot', path: '/hot', metrics: (e) => ({ installs_hour: count(e['installs']), installs_hour_change: count(e['change']) }) },
+]
+
+const PUSH = /self\.__next_f\.push\((\[1,"(?:[^"\\]|\\.)*"\])\)/g
+
+/** End index of the JSON array or object starting at `start`, skipping brackets inside strings. */
+function closingBracket(text: string, start: number): number {
+  let depth = 0
+  let inString = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (inString) {
+      if (c === '\\') i++
+      else if (c === '"') inString = false
+    } else if (c === '"') inString = true
+    else if (c === '[' || c === '{') depth++
+    else if (c === ']' || c === '}') {
+      if (--depth === 0) return i
     }
   }
-  return out
+  return -1
+}
+
+/** The entries a leaderboard page embeds, or null when the page no longer has them where expected. */
+export function parseLeaderboard(html: string): { entries: Record<string, unknown>[]; total: number | null } | null {
+  let payload = ''
+  for (const m of html.matchAll(PUSH)) {
+    try {
+      payload += (JSON.parse(m[1]!) as [number, string])[1]
+    } catch {
+      // Not a flight chunk.
+    }
+  }
+  const key = '"initialSkills":'
+  const at = payload.indexOf(key)
+  if (at < 0) return null
+  const start = at + key.length
+  const end = closingBracket(payload, start)
+  if (end < 0) return null
+  let entries: unknown
+  try {
+    entries = JSON.parse(payload.slice(start, end + 1))
+  } catch {
+    return null
+  }
+  if (!Array.isArray(entries)) return null
+  const total = /^,"totalSkills":(\d+)/.exec(payload.slice(end + 1, end + 40))
+  return { entries: entries.filter(isRecord), total: total ? Number(total[1]) : null }
+}
+
+export function skillsShSource(options: { baseUrl?: string } = {}): DiscoverySource {
+  const base = options.baseUrl ?? SKILLS_SH_URL
+  return {
+    name: 'skills-sh',
+    async run(ctx): Promise<DiscoveryRun> {
+      const run: DiscoveryRun = { observations: [], coverage: [], skipped: {}, errors: [] }
+      for (const b of BOARDS) {
+        let html: string
+        try {
+          html = await ctx.http.get(new URL(b.path, base).toString(), { headers: { accept: 'text/html' } }).text()
+        } catch (e) {
+          run.errors.push(`${b.board}: ${describeError(e)}`)
+          run.coverage.push({ list: b.board, pages: 0, items: 0, total: null, stoppedBy: isRateLimited(e) ? 'rate-limited' : 'error' })
+          continue
+        }
+        const parsed = parseLeaderboard(html)
+        if (!parsed) {
+          run.errors.push(`${b.board}: leaderboard data not found in the page`)
+          run.coverage.push({ list: b.board, pages: 1, items: 0, total: null, stoppedBy: 'error' })
+          continue
+        }
+        let rank = 0
+        for (const e of parsed.entries) {
+          rank++
+          const source = str(e['source'])
+          const skillId = str(e['skillId'])
+          // Entries from well-known URLs rather than GitHub have a domain as their source.
+          const repo = source ? githubRepoOf(`https://github.com/${source}`) : null
+          if (!repo || !skillId || source!.split('/').length !== 2) {
+            addSkip(run.skipped, 'not a GitHub skill')
+            continue
+          }
+          const listingId = `${repo}/${skillId.toLowerCase()}`
+          const metrics = Object.fromEntries(Object.entries(b.metrics(e)).filter(([, v]) => v !== undefined)) as Observation['metrics']
+          run.observations.push({
+            listingId,
+            skillKey: `github:${listingId}`,
+            name: str(e['name']) ?? skillId,
+            url: `${base}/${source}/${skillId}`,
+            githubRepo: repo,
+            board: b.board,
+            rank,
+            metrics,
+          })
+        }
+        const items = parsed.entries.length
+        run.coverage.push({
+          list: b.board, pages: 1, items, total: parsed.total,
+          stoppedBy: parsed.total !== null && items >= parsed.total ? 'end' : 'site-limit',
+        })
+      }
+      return run
+    },
+  }
 }

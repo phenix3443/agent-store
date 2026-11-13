@@ -1,0 +1,112 @@
+{
+ "code": 0,
+ "message": "success",
+ "data": {
+  "total": 2,
+  "skills": [
+   {
+    "category": "dev-programming",
+    "claim_state": "unclaimed",
+    "claimable": false,
+    "claimed_user_handle": null,
+    "created_at": 1791402289536,
+    "description": "【全栈能力】编程大神.Skill：面向复杂真实项目的高阶全栈编程助手。不止生成代码，而是从一句目标接手陌生代码库，拆解需",
+    "description_zh": "【全栈能力】编程大神.Skill：面向复杂真实项目的高阶全栈编程助手。不止生成代码，而是从一句目标接手陌生代码库，拆解需",
+    "downloads": 11460606,
+    "homepage": "https://api.skillhub.cn/ake/dev-god",
+    "iconUrl": "https://skillhub-1388575217.cos.accelerate.myqcloud.com/skill-icons/uploads/783809/35df42ddf263488b8514c8dc45d1edd7.png",
+    "installs": 0,
+    "isServiceized": false,
+    "labels": {
+     "requires_api_key": "false"
+    },
+    "last_synced_at": null,
+    "name": "编程大神.Skill",
+    "namespace": {
+     "canonicalName": "@ake/dev-god",
+     "displayName": "ake",
+     "handle": "ake",
+     "publicSlug": "dev-god"
+    },
+    "ownerName": "u_42bbb65f",
+    "publisher": {
+     "name": "阿客实验室",
+     "logoUrl": null,
+     "verified": true,
+     "certifiedName": "阿客（北京）科技有限公司",
+     "orgId": "org-m3rw44qx"
+    },
+    "score": 100000,
+    "slug": "dev-god",
+    "source": "enterprise",
+    "stars": 120,
+    "subCategories": [
+     {
+      "key": "dev-code-gen",
+      "name": "代码生成"
+     },
+     {
+      "key": "dev-bug-fix",
+      "name": "Bug 修复"
+     },
+     {
+      "key": "dev-backend",
+      "name": "后端开发"
+     }
+    ],
+    "tags": null,
+    "updated_at": 1794584866975,
+    "upstream_owner_login": null,
+    "upstream_url": null,
+    "verified": false,
+    "version": "1.2.4"
+   },
+   {
+    "category": "ai-agent",
+    "claim_state": "unclaimed",
+    "claimable": true,
+    "claimed_user_handle": null,
+    "created_at": 1772739772656,
+    "description": "A skill where the agent logs it's own findings for self-impr",
+    "description_zh": "记录自身发现以实现自我改进的技能",
+    "downloads": 1674869,
+    "homepage": "https://api.skillhub.cn/clawhub_pskoett/self-improving-agent",
+    "iconUrl": "https://cloudcache.tencent-cloud.com/qcloud/ui/static/other_external_resource/81015f94-5620-494e-bbd6-ac3268e7ccd3.png",
+    "installs": 86140,
+    "isServiceized": false,
+    "labels": {
+     "requires_api_key": "false"
+    },
+    "last_synced_at": 1782524296677,
+    "name": "self-improving agent",
+    "namespace": {
+     "canonicalName": "@clawhub_pskoett/self-improving-agent",
+     "displayName": "pskoett",
+     "handle": "clawhub_pskoett",
+     "publicSlug": "self-improving-agent"
+    },
+    "ownerName": "pskoett",
+    "score": 100000,
+    "slug": "self-improving-agent",
+    "source": "clawhub",
+    "stars": 4547,
+    "subCategories": [
+     {
+      "key": "agent-context",
+      "name": "上下文管理"
+     },
+     {
+      "key": "agent-memory",
+      "name": "记忆增强"
+     }
+    ],
+    "tags": null,
+    "updated_at": 1794584552267,
+    "upstream_owner_login": "pskoett",
+    "upstream_url": "https://clawhub.ai/pskoett/self-improving-agent",
+    "verified": false,
+    "version": "3.0.24"
+   }
+  ]
+ }
+}

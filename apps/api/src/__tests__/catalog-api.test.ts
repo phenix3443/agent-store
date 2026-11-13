@@ -13,7 +13,7 @@ import { githubSkillsSource } from '../catalog/sources/github-skills'
 import { syncCatalog } from '../catalog/sync'
 import type { CatalogSource } from '../catalog/types'
 import { CatalogUpdater } from '../catalog/updater'
-import { fakeFetch, fixtureJson, githubGraphqlRoute, githubRoutes, json, octokitWith } from './helpers/upstream-fixtures'
+import { fakeFetch, fixtureJson, githubGraphqlRoute, githubRoutes, octokitWith } from './helpers/upstream-fixtures'
 
 const MCP_FIXTURES = [
   'mcp-io-github-ChromeDevTools-chrome-devtools-mcp.json',
@@ -29,6 +29,7 @@ const v1 = join(dir, 'v1.db')
 const v2 = join(dir, 'v2.db')
 // A file of schema version 2, before resources.stars, as the release held when stars shipped.
 const old = join(dir, 'schema2.db')
+const SKILL_INSTALLS = new Map([['anthropics/skills/frontend-design', 1106066]])
 const STARS = { 'github/github-mcp-server': 28_000, 'chromedevtools/chrome-devtools-mcp': 20_000, 'supabase/mcp': 2_000 }
 
 async function build(path: string, mcpFixtures: string[], schema?: number) {
@@ -40,7 +41,6 @@ async function build(path: string, mcpFixtures: string[], schema?: number) {
     },
   }
   const f = fakeFetch(
-    (url) => (url.hostname === 'skills.sh' ? json(fixtureJson('skills-sh-search-frontend.json')) : undefined),
     githubGraphqlRoute(STARS),
     githubRoutes,
   )
@@ -53,7 +53,7 @@ async function build(path: string, mcpFixtures: string[], schema?: number) {
   }
   await syncCatalog(db, {
     stars: schema ? false : {},
-    sources: [builtinProvidersSource(), mcp, githubSkillsSource({ repos: ['anthropics/skills'], maxRepos: 1, skillsSh: { queries: ['frontend'] } })],
+    sources: [builtinProvidersSource(), mcp, githubSkillsSource({ repos: ['anthropics/skills'], installs: SKILL_INSTALLS })],
     fetch: f,
     github: octokitWith(f),
   })

@@ -1,9 +1,11 @@
 name: catalog-sync
 
-# Scrapes the upstream catalogs (MCP Registry, GitHub skill repos found directly
-# and through skills.sh, built-in providers) into catalog.db and publishes it as
-# catalog.db.gz, an asset of the `catalog` release, which the API downloads (CATALOG_URL).
-# The previous catalog.db is the starting point, so MCP syncs are incremental.
+# Reads the skill directories (skills.sh boards, ClawHub, SkillHub) into discovery.db,
+# scans the GitHub skill repos they lead to, syncs the MCP Registry and built-in
+# providers into catalog.db, and publishes catalog.db.gz (which the API downloads,
+# CATALOG_URL), discovery.db.gz and report.json as assets of the `catalog` release.
+# Both previous files are the starting point. Only main publishes; other refs and
+# dry runs keep the results as a workflow artifact.
 on:
   schedule:
     - cron: '23 */6 * * *'
@@ -17,6 +19,14 @@ on:
         description: Publish even if the catalog shrank below 80% of the previous one
         type: boolean
         default: false
+      dry-run:
+        description: Do not publish; keep the results as a workflow artifact
+        type: boolean
+        default: false
+      seed-run:
+        description: Start from the artifact of this earlier run instead of the release (run id)
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -42,17 +52,39 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --filter @as/api...
 
+      - name: Download the previous run's files
+        if: inputs.seed-run
+        uses: actions/download-artifact@v4
+        with:
+          name: catalog-sync
+          path: work
+          run-id: ${{ inputs.seed-run }}
+          github-token: ${{ github.token }}
+
       - name: Download the previous catalog
         env:
           GH_TOKEN: ${{ github.token }}
+          SEEDED: ${{ inputs.seed-run && 'true' || 'false' }}
         run: |
           mkdir -p work
-          if gh release download "$RELEASE_TAG" --pattern catalog.db.gz --dir work; then
-            gunzip work/catalog.db.gz
-            ls -l work/catalog.db
+          if [ "$SEEDED" = true ]; then
+            gunzip --force work/catalog.db.gz work/discovery.db.gz
           else
-            echo "No previous catalog.db; this run builds one from scratch."
+            # No release yet starts from scratch; any other failure stops here.
+            if ! assets=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.assets[].name' 2>&1); then
+              if grep -q 'HTTP 404' <<<"$assets"; then assets=''; else echo "$assets"; exit 1; fi
+            fi
+            for f in catalog.db discovery.db; do
+              if grep -qx "$f.gz" <<<"$assets"; then
+                # Listed but not downloadable must fail: starting empty would publish over the history.
+                gh release download "$RELEASE_TAG" --pattern "$f.gz" --dir work
+                gunzip work/"$f".gz
+              else
+                echo "No previous $f; this run starts it from scratch."
+              fi
+            done
           fi
+          ls -l work
 
       - name: Sync
         working-directory: apps/api
@@ -63,18 +95,37 @@ jobs:
         run: |
           set +e
           # shellcheck disable=SC2086
-          bun run sync:catalog --db ../../work/catalog.db --min-ratio "$MIN_RATIO" \
+          bun run sync:catalog --db ../../work/catalog.db --discovery ../../work/discovery.db --min-ratio "$MIN_RATIO" \
             --report-md ../../work/report.md --report-json ../../work/report.json $FULL
           status=$?
           set -e
           if [ -f ../../work/report.md ]; then cat ../../work/report.md >> "$GITHUB_STEP_SUMMARY"; fi
-          if [ -f ../../work/catalog.db ]; then
-            echo "catalog.db: $(du -h ../../work/catalog.db | cut -f1) before compression" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for f in catalog.db discovery.db; do
+            if [ -f ../../work/$f ]; then
+              echo "$f: $(du -h ../../work/$f | cut -f1) before compression" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
           if [ "$status" -eq 2 ]; then echo "::error::The new catalog shrank below the guard; not published."; fi
           exit "$status"
 
+      - name: Compress
+        run: |
+          gzip -9 --keep --force work/catalog.db work/discovery.db
+          ls -l work
+
+      - name: Keep the results
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-sync
+          path: |
+            work/catalog.db.gz
+            work/discovery.db.gz
+            work/report.json
+            work/report.md
+          retention-days: 14
+
       - name: Publish
+        if: github.ref == 'refs/heads/main' && !inputs.dry-run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -84,6 +135,4 @@ jobs:
               --title "Catalog data" \
               --notes "Machine-published catalog.db.gz for the API (CATALOG_URL). Rebuilt by the catalog-sync workflow; do not edit."
           fi
-          gzip -9 --keep work/catalog.db
-          ls -l work/catalog.db work/catalog.db.gz
-          gh release upload "$RELEASE_TAG" work/catalog.db.gz work/report.json --clobber
+          gh release upload "$RELEASE_TAG" work/catalog.db.gz work/discovery.db.gz work/report.json --clobber

@@ -5,17 +5,6 @@ import pMap from 'p-map'
 import { rawUrl } from '../detail-codec'
 import { getText, isRecord, str } from '../http'
 import { addSkip, type CatalogRecord, type CatalogSource, type SourceRun } from '../types'
-import { discoverFromSkillsSh, type SkillsShDiscovery } from './skills-sh'
-
-/** Repos scanned on every run, before any discovered through skills.sh. */
-export const SKILL_REPOS = [
-  'anthropics/skills',
-  'obra/superpowers',
-  'vercel-labs/agent-skills',
-  // Sources of the skills the old hand-maintained registry listed.
-  'affaan-m/ECC',
-  'multica-ai/andrej-karpathy-skills',
-]
 
 // Container directories, in the order vercel-labs/skills searches them
 // (docs/creating-skills.md, "Skill Discovery"). The repo root comes first.
@@ -98,7 +87,8 @@ export async function scanRepo(
   github: Octokit,
   fetchImpl: typeof fetch,
   fullName: string,
-  installs: SkillsShDiscovery['installs'],
+  /** `owner/repo/skill` (lowercase) → installs. */
+  installs: Map<string, number>,
 ): Promise<RepoScan> {
   const [owner, repo] = fullName.split('/') as [string, string]
   const scope = fullName.toLowerCase()
@@ -195,37 +185,37 @@ export async function scanRepo(
   return { scope, records, skipped }
 }
 
-export function githubSkillsSource(options: { repos?: string[]; maxRepos?: number; skillsSh?: Parameters<typeof discoverFromSkillsSh>[1] } = {}): CatalogSource {
+/**
+ * Scans the repos the sync picked from the discovery queue (`ctx.skills`). Without a
+ * queue (no discovery.db) it rescans the repos it already holds, or `options.repos`.
+ */
+export function githubSkillsSource(options: { repos?: string[]; maxRepos?: number; installs?: Map<string, number> } = {}): CatalogSource {
   return {
     name: 'github-skills',
     site: 'github',
     kind: 'skill',
     async run(ctx): Promise<SourceRun> {
-      const run: SourceRun = { records: [], removed: [], skipped: {}, errors: [], coverage: { mode: 'scoped', scopes: [] } }
-      const discovery = await discoverFromSkillsSh(ctx.fetch, options.skillsSh)
-      run.errors.push(...discovery.errors.map((e) => `skills.sh: ${e}`))
-      ctx.log(`github-skills: skills.sh found ${discovery.repos.size} repos`)
-
-      const order = new Map<string, string>()
-      const add = (full: string) => { if (!order.has(full.toLowerCase())) order.set(full.toLowerCase(), full) }
-      ;(options.repos ?? SKILL_REPOS).forEach(add)
-      ctx.state.knownScopes.forEach(add)
-      ;[...discovery.repos.values()].sort((a, b) => b.installs - a.installs).forEach((r) => add(r.fullName))
+      const run: SourceRun = { records: [], removed: [], skipped: {}, errors: [], coverage: { mode: 'scoped', scopes: [] }, attempted: [] }
+      const installs = ctx.skills?.installs ?? options.installs ?? new Map<string, number>()
+      let repos = ctx.skills?.repos ?? options.repos ?? ctx.state.knownScopes
       const maxRepos = options.maxRepos ?? 200
-      const repos = [...order.values()]
-      if (repos.length > maxRepos) run.skipped['repo over the per-run repo cap'] = repos.length - maxRepos
+      if (!ctx.skills && repos.length > maxRepos) {
+        run.skipped['repo over the per-run repo cap'] = repos.length - maxRepos
+        repos = repos.slice(0, maxRepos)
+      }
 
       let rateLimited = false
       const scopes: string[] = []
       await pMap(
-        repos.slice(0, maxRepos),
+        repos,
         async (fullName) => {
           if (rateLimited) { addSkip(run.skipped, 'repo not scanned: GitHub rate limit'); return }
           try {
-            const scan = await scanRepo(ctx.github, ctx.fetch, fullName, discovery.installs)
+            const scan = await scanRepo(ctx.github, ctx.fetch, fullName, installs)
             run.records.push(...scan.records)
             for (const [k, v] of Object.entries(scan.skipped)) run.skipped[k] = (run.skipped[k] ?? 0) + v
             scopes.push(scan.scope)
+            run.attempted!.push({ repo: scan.scope, status: scan.records.length ? 'scanned' : 'no skills' })
           } catch (e) {
             if (isRateLimit(e)) {
               rateLimited = true
@@ -234,8 +224,10 @@ export function githubSkillsSource(options: { repos?: string[]; maxRepos?: numbe
               // Gone or blocked: everything it held is unavailable now.
               scopes.push(fullName.toLowerCase())
               run.errors.push(`${fullName}: repository not found`)
+              run.attempted!.push({ repo: fullName, status: 'not found' })
             } else {
               run.errors.push(`${fullName}: ${e instanceof Error ? e.message : String(e)}`)
+              run.attempted!.push({ repo: fullName, status: 'error' })
             }
           }
         },

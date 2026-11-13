@@ -1,0 +1,103 @@
+{
+ "items": [
+  {
+   "ownerHandle": "pskoett",
+   "slug": "self-improving-agent",
+   "displayName": "self-improving agent",
+   "summary": "Captures and maintains learnings, errors, and corrections. Use when a command fa",
+   "description": null,
+   "topics": [
+    "self-improvement",
+    "context"
+   ],
+   "tags": {
+    "latest": "4.0.5"
+   },
+   "stats": {
+    "comments": 53,
+    "downloads": 492663,
+    "installs": 18538,
+    "stars": 4018,
+    "versions": 42
+   },
+   "createdAt": 1767632598365,
+   "updatedAt": 1792672926676,
+   "latestVersion": {
+    "version": "4.0.5",
+    "createdAt": 1792672635457,
+    "changelog": "…",
+    "license": "MIT-0"
+   },
+   "metadata": null
+  },
+  {
+   "ownerHandle": "spclaudehome",
+   "slug": "skill-vetter",
+   "displayName": "Skill Vetter",
+   "summary": "Security-first skill vetting for AI agents. Use before installing any skill from",
+   "description": null,
+   "topics": [
+    "GitHub",
+    "Permission"
+   ],
+   "tags": {
+    "latest": "1.0.0"
+   },
+   "stats": {
+    "comments": 0,
+    "downloads": 282510,
+    "installs": 12279,
+    "stars": 1316,
+    "versions": 1
+   },
+   "createdAt": 1769863429632,
+   "updatedAt": 1789594554485,
+   "latestVersion": {
+    "version": "1.0.0",
+    "createdAt": 1769863429632,
+    "changelog": "…",
+    "license": null
+   },
+   "metadata": null
+  },
+  {
+   "ownerHandle": "ivangdavila",
+   "slug": "self-improving",
+   "displayName": "Self-Improving + Proactive Agent",
+   "summary": "Self-reflection + Self-criticism + Self-learning + Self-organizing memory. Agent",
+   "description": null,
+   "topics": [
+    "Self Improving",
+    "Learning"
+   ],
+   "tags": {
+    "latest": "1.2.16"
+   },
+   "stats": {
+    "comments": 0,
+    "downloads": 214770,
+    "installs": 7400,
+    "stars": 1305,
+    "versions": 22
+   },
+   "createdAt": 1771266418607,
+   "updatedAt": 1778491556797,
+   "latestVersion": {
+    "version": "1.2.16",
+    "createdAt": 1773329327755,
+    "changelog": "…",
+    "license": "MIT-0"
+   },
+   "metadata": {
+    "setup": [],
+    "os": [
+     "linux",
+     "darwin",
+     "win32"
+    ],
+    "systems": null
+   }
+  }
+ ],
+ "nextCursor": null
+}
