@@ -1,4 +1,4 @@
-# Linux .deb and .rpm of the desktop client plus a virtual display, to exercise
+# Linux .deb, .rpm and AppImage of the desktop client plus a virtual display, to exercise
 # agent-store:// install links end to end without touching the host's config.
 # Build context is the repo root:
 #   docker build -f test/desktop-linux/Dockerfile -t as-desktop-linux .
@@ -32,9 +32,12 @@ RUN cd apps/cli-gui && pnpm exec tauri build --no-bundle
 RUN cd apps/cli-gui && pnpm exec tauri bundle --bundles deb,rpm \
   && mkdir /bundles && cp src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/rpm/*.rpm /bundles/ \
   && chmod a+rx /bundles/*
+RUN cd apps/cli-gui && pnpm bundle:appimage \
+  && cp src-tauri/target/release/bundle/appimage/*.AppImage /bundles/ \
+  && chmod a+rx /bundles/*
 
 # A disposable home: the client writes skills and MCP config under it.
-# The deb is installed at run time by run.sh.
+# The deb is installed at run time by run.sh; appimage.sh runs the AppImage.
 RUN useradd -m -u 1001 tester && chmod -R a+rX /work \
   && echo 'tester ALL=(root) NOPASSWD: /usr/bin/dpkg' > /etc/sudoers.d/tester
 USER tester
