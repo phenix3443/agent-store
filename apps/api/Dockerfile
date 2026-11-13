@@ -13,6 +13,8 @@ RUN pnpm --filter @as/api deploy --legacy --prod /out
 FROM oven/bun:1.3.14-alpine
 WORKDIR /app
 COPY --from=build --chown=bun /out ./
+# Default APP_DB_PATH directory; deployments mount the shared volume over it.
+RUN mkdir -p /var/lib/agent-store && chown bun /var/lib/agent-store
 ENV HOST=:: PORT=3001
 USER bun
 EXPOSE 3001

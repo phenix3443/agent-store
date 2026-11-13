@@ -11,7 +11,7 @@
     "clean": "rm -rf dist *.tsbuildinfo",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun src/migrate.ts",
-    "test:integration": "bun test integration",
+    "db:snapshot": "bun src/snapshot.ts",
     "sync:catalog": "bun src/sync-catalog.ts"
   },
   "dependencies": {
@@ -22,8 +22,7 @@
     "gray-matter": "^4.0.3",
     "hono": "^4.6.0",
     "jose": "^6.2.3",
-    "p-map": "^7.1.1",
-    "postgres": "4.1.0"
+    "p-map": "^7.1.1"
   },
   "devDependencies": {
     "@types/bun": "latest",

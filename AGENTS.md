@@ -50,7 +50,7 @@ it into any new package that tests against happy-dom.
 
 Run test suites, builds and screenshots in GitHub Actions, not on a shared host: a
 runaway test then takes down only its runner. `.github/workflows/unit.yml` type-checks and
-tests every package except `apps/api`, which `api.yml` covers.
+tests the packages a change affects, `apps/api` included.
 
 ## UI implementation sign-off
 

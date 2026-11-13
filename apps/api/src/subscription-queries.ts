@@ -7,19 +7,20 @@ import { planForSubscription, type SubscriptionRecord, type SubscriptionStatus }
 /** Whether a webhook delivery id has already been processed (idempotent dedup). */
 export async function isWebhookProcessed(env: DbEnv | undefined, deliveryId: string): Promise<boolean> {
   const db = getDb(env)
-  const rows = await db
+  const row = db
     .select({ deliveryId: processedWebhooks.deliveryId })
     .from(processedWebhooks)
     .where(eq(processedWebhooks.deliveryId, deliveryId))
     .limit(1)
-  return rows.length > 0
+    .get()
+  return row !== undefined
 }
 
 /**
  * Applies a webhook's subscription change and marks the delivery processed in one
  * transaction: if either fails, neither is kept and Waffo's retry
- * processes it again. The upsert is order-safe, so two concurrent deliveries of the
- * same event both applying it is harmless; the second mark is a no-op.
+ * processes it again. The upsert is order-safe, so a delivery applied twice is
+ * harmless; the second mark is a no-op.
  */
 export async function recordWebhook(
   env: DbEnv | undefined,
@@ -28,10 +29,17 @@ export async function recordWebhook(
   record: SubscriptionRecord | null
 ): Promise<void> {
   const db = getDb(env)
-  await db.transaction(async (tx) => {
-    if (record) await subscriptionUpsertQuery(tx, record)
-    await tx.insert(processedWebhooks).values({ deliveryId, eventType }).onConflictDoNothing()
-  })
+  // bun:sqlite is synchronous, so the callback must be too: drizzle commits as
+  // soon as it returns. IMMEDIATE takes the write lock up front, where
+  // busy_timeout applies, instead of failing on a read-to-write upgrade while
+  // the store holds the lock.
+  db.transaction(
+    (tx) => {
+      if (record) subscriptionUpsertQuery(tx, record).run()
+      tx.insert(processedWebhooks).values({ deliveryId, eventType }).onConflictDoNothing().run()
+    },
+    { behavior: 'immediate' }
+  )
 }
 
 /**
@@ -44,7 +52,7 @@ export async function recordWebhook(
  * stale event can never reactivate a canceled subscription. Rows without a
  * stored timestamp (pre-existing data) are always allowed to update.
  */
-// Takes a transaction as well as the pooled client, hence only `insert`.
+// Takes a transaction as well as the client, hence only `insert`.
 export function subscriptionUpsertQuery(db: Pick<Database, 'insert'>, record: SubscriptionRecord) {
   const values = {
     waffoOrderId: record.waffoOrderId,
@@ -79,13 +87,13 @@ export function subscriptionUpsertQuery(db: Pick<Database, 'insert'>, record: Su
 /** Resolves the current entitlement plan for a buyer email from their most recent subscription row. */
 export async function getPlanByEmail(env: DbEnv | undefined, email: string): Promise<Plan> {
   const db = getDb(env)
-  const rows = await db
+  const row = db
     .select({ plan: subscriptions.plan, status: subscriptions.status })
     .from(subscriptions)
     .where(sql`lower(${subscriptions.buyerEmail}) = lower(${email})`)
     .orderBy(desc(subscriptions.eventTimestamp))
     .limit(1)
-  const row = rows[0]
+    .get()
   if (!row) return 'free'
   return planForSubscription(row.status as SubscriptionStatus, row.plan as Plan)
 }
@@ -93,13 +101,13 @@ export async function getPlanByEmail(env: DbEnv | undefined, email: string): Pro
 /** Resolves the current entitlement plan for an authenticated app user from their most recent subscription row. */
 export async function getPlanByUserId(env: DbEnv | undefined, userId: string): Promise<Plan> {
   const db = getDb(env)
-  const rows = await db
+  const row = db
     .select({ plan: subscriptions.plan, status: subscriptions.status })
     .from(subscriptions)
     .where(eq(subscriptions.buyerIdentity, userId))
     .orderBy(desc(subscriptions.eventTimestamp))
     .limit(1)
-  const row = rows[0]
+    .get()
   if (!row) return 'free'
   return planForSubscription(row.status as SubscriptionStatus, row.plan as Plan)
 }

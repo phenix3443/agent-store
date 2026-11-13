@@ -11,6 +11,7 @@ on:
       - 'apps/store/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
+      - 'scripts/ci-app-db.mjs'
       - '.github/workflows/images.yml'
   push:
     branches: [main]
@@ -19,6 +20,7 @@ on:
       - 'apps/store/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
+      - 'scripts/ci-app-db.mjs'
       - '.github/workflows/images.yml'
   workflow_dispatch:
 
@@ -57,11 +59,14 @@ jobs:
           tags: |
             type=raw,value=main-{{date 'YYYYMMDDHHmmss'}},enable={{is_default_branch}}
             type=sha,format=long
-      - uses: docker/build-push-action@v7
+      - id: build
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
+          # Pull requests load the image for the smoke tests below.
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # The store bakes these into its browser bundle; the API ignores them.
@@ -70,3 +75,57 @@ jobs:
             NEXT_PUBLIC_SITE_URL=https://agent-store-test.panghuli.tech
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      # The commands home-lab runs in the API pod: migrate in the init container,
+      # and the backup timer's `kubectl exec` snapshot plus `kubectl cp`, which
+      # needs tar in the image.
+      - name: Smoke test (api)
+        if: matrix.name == 'api' && github.event_name == 'pull_request'
+        env:
+          IMAGE: ${{ steps.build.outputs.imageid }}
+        run: |
+          docker run --rm -e APP_DB_PATH=/tmp/db/app.db "$IMAGE" sh -euc '
+            command -v tar
+            tar --help 2>&1 | head -1
+            bun src/migrate.ts
+            bun src/migrate.ts
+            bun src/snapshot.ts /tmp/snap.db
+            test -s /tmp/snap.db
+            if bun src/snapshot.ts /tmp/snap.db; then echo "snapshot overwrote a file"; exit 1; fi
+          '
+
+      # Starts the store on a migrated app.db and makes Better Auth write through
+      # node:sqlite: the first /api/auth/jwks request creates the signing key.
+      - uses: actions/setup-node@v4
+        if: matrix.name == 'store' && github.event_name == 'pull_request'
+        with:
+          node-version: 22
+      - name: Smoke test (store)
+        if: matrix.name == 'store' && github.event_name == 'pull_request'
+        env:
+          IMAGE: ${{ steps.build.outputs.imageid }}
+        run: |
+          mkdir -m 777 "$RUNNER_TEMP/db"
+          node scripts/ci-app-db.mjs "$RUNNER_TEMP/db/app.db"
+          chmod 666 "$RUNNER_TEMP/db/app.db"
+
+          # Without app.db the store must refuse to start.
+          if timeout 60 docker run --rm -e APP_DB_PATH=/nope/app.db "$IMAGE" > "$RUNNER_TEMP/missing.log" 2>&1; then
+            echo "::error::store started without app.db"; exit 1
+          fi
+          grep -q 'app.db not found at /nope/app.db' "$RUNNER_TEMP/missing.log"
+
+          docker run -d --name store -p 3000:3000 -v "$RUNNER_TEMP/db:/var/lib/agent-store" \
+            -e BETTER_AUTH_SECRET="$(openssl rand -hex 32)" -e BETTER_AUTH_URL=http://localhost:3000 "$IMAGE"
+          for i in $(seq 60); do curl -fsS --max-time 5 -o /dev/null http://localhost:3000/ && break; sleep 2; done
+          curl -fsS --max-time 30 http://localhost:3000/api/auth/jwks | tee "$RUNNER_TEMP/jwks.json"
+          grep -q '"keys":\[{' "$RUNNER_TEMP/jwks.json"
+          node -e '
+            const { DatabaseSync } = require("node:sqlite")
+            const db = new DatabaseSync(process.argv[1], { readOnly: true })
+            const { n } = db.prepare("select count(*) as n from jwks").get()
+            if (n !== 1) { console.error(`expected 1 jwks row, got ${n}`); process.exit(1) }
+          ' "$RUNNER_TEMP/db/app.db"
+      - name: Store logs
+        if: always() && matrix.name == 'store' && github.event_name == 'pull_request'
+        run: docker logs store 2>&1 | tail -100 || true

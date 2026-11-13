@@ -1,11 +1,12 @@
 import { test, expect } from 'bun:test'
-import { getDb } from '../db/client'
+import { Database as Sqlite } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import * as schema from '../db/schema'
 import { subscriptionUpsertQuery } from '../subscription-queries'
 import type { SubscriptionRecord } from '../billing'
 
-// A fake connection string is enough: postgres() connects on the first query,
-// and .toSQL() only compiles the query.
-const db = getDb({ DATABASE_URL: 'postgresql://user:pass@localhost:5432/db' })
+// .toSQL() only compiles the query, so an empty in-memory database is enough.
+const db = drizzle({ client: new Sqlite(':memory:'), schema })
 
 function record(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRecord {
   return {

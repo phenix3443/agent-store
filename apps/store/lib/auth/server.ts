@@ -1,30 +1,31 @@
 import { betterAuth } from 'better-auth'
 import { jwt } from 'better-auth/plugins'
 import { nextCookies } from 'better-auth/next-js'
-import { Pool } from 'pg'
+import { openAppDb } from '../app-db'
 import { syncGithubUsername } from './github-username'
 
 // Self-hosted Better Auth. Its tables (user, session, account, verification,
-// jwks) live in the same Postgres as the catalog and are created by the API's
-// drizzle migrations, not by Better Auth's own migrator: one migration source.
+// jwks) live in app.db, the SQLite file shared with the API, and are created by
+// the API's drizzle migrations, not by Better Auth's own migrator: one migration
+// source.
 //
 // The API never sees the session cookie. Browsers and the desktop app call
 // /api/auth/token for a short-lived JWT (EdDSA), and the API verifies it against
 // /api/auth/jwks. `username` is the GitHub login, carried in the token.
 export function createAuth() {
   const baseURL = process.env.BETTER_AUTH_URL
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 })
+  const db = openAppDb()
   return betterAuth({
     baseURL,
     secret: process.env.BETTER_AUTH_SECRET,
-    database: pool,
+    database: db,
     databaseHooks: {
       account: {
         // create covers sign-up and linking GitHub to an existing user; update
         // runs on every later GitHub sign-in, which backfills older users and
         // follows a renamed login.
-        create: { after: (account) => syncGithubUsername(account, pool) },
-        update: { after: (account) => syncGithubUsername(account, pool) },
+        create: { after: (account) => syncGithubUsername(account, db) },
+        update: { after: (account) => syncGithubUsername(account, db) },
       },
     },
     user: {
@@ -65,7 +66,7 @@ type Auth = ReturnType<typeof createAuth>
 let instance: Auth | undefined
 
 // Created on first use, not at import: `next build` imports this module while
-// collecting routes, and the secret and database URL only exist at runtime.
+// collecting routes, and the secret and app.db only exist at runtime.
 export function auth(): Auth {
   if (!instance) instance = createAuth()
   return instance

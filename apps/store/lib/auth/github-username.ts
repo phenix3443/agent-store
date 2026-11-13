@@ -4,8 +4,9 @@ interface AccountRow {
   accessToken?: string | null
 }
 
-interface Queryable {
-  query: (text: string, values: unknown[]) => Promise<unknown>
+// The slice of node:sqlite's DatabaseSync this needs; tests pass a fake.
+interface Writable {
+  prepare: (sql: string) => { run: (...values: string[]) => unknown }
 }
 
 // The GitHub login names the user on their dashboard, so it has to come from
@@ -15,7 +16,7 @@ interface Queryable {
 // on account linking alike — so mapProfileToUser cannot fill it.
 export async function syncGithubUsername(
   account: AccountRow | null | undefined,
-  db: Queryable,
+  db: Writable,
   fetchImpl: typeof fetch = fetch,
 ): Promise<void> {
   if (!account || account.providerId !== 'github' || !account.userId || !account.accessToken) return
@@ -33,10 +34,7 @@ export async function syncGithubUsername(
     }
     const { login } = (await res.json()) as { login?: unknown }
     if (typeof login !== 'string' || !login) return
-    await db.query('update "user" set username = $1 where id = $2 and username is distinct from $1', [
-      login,
-      account.userId,
-    ])
+    db.prepare('update "user" set username = ? where id = ? and username is not ?').run(login, account.userId, login)
   } catch (error) {
     // A failed sync must not fail the sign-in; the next GitHub sign-in retries.
     console.error('github username sync failed', error)

@@ -1,14 +1,11 @@
 import { defineConfig } from 'drizzle-kit'
 
-// drizzle-kit reads DATABASE_URL from apps/api/.dev.vars (Workers-style local
-// secrets). Run migrations with:  bun --env-file=.dev.vars drizzle-kit migrate
+// Only `drizzle-kit generate` uses this; it diffs the schema against
+// ./drizzle/meta and needs no database. `bun src/migrate.ts` applies the result.
 export default defineConfig({
-  dialect: 'postgresql',
+  dialect: 'sqlite',
   schema: './src/db/schema.ts',
   out: './drizzle',
-  dbCredentials: {
-    url: process.env['DATABASE_URL'] ?? '',
-  },
   casing: 'snake_case',
   strict: true,
   verbose: true,
