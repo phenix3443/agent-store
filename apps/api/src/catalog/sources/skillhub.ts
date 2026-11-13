@@ -1,5 +1,6 @@
 import type { DiscoveryContext, DiscoveryRun, DiscoverySource, Observation, PageCoverage } from '../discovery'
 import { describeError, isRateLimited, isRecord, str } from '../http'
+import type { ExternalFind, SearchSource } from '../search-sources'
 import { githubRepoOf } from '../stars'
 import { addSkip } from '../types'
 
@@ -32,6 +33,55 @@ export function skillhubKey(item: Record<string, unknown>, canonical: string): s
   return `skillhub:${canonical.replace(/^@/, '')}`
 }
 
+/** Identity, name and canonical listing URL of a SkillHub entry, shared by the boards and the search. */
+function skillhubIdentity(item: Record<string, unknown>) {
+  const slug = str(item['slug'])
+  const ns = isRecord(item['namespace']) ? item['namespace'] : {}
+  const owner = str(item['ownerName'])
+  const canonical = str(ns['canonicalName']) ?? (slug && owner ? `@${owner}/${slug}` : null)
+  if (!slug || !canonical) return null
+  return {
+    listingId: canonical.toLowerCase(),
+    skillKey: skillhubKey(item, canonical),
+    name: str(item['name']) ?? slug,
+    // The documented public page; the API's `homepage` field points at the API host.
+    url: `https://skillhub.cn/skills/${slug}`,
+    githubRepo: githubRepoOf(str(item['upstream_url'])),
+  }
+}
+
+/** GET /api/skills?keyword=…&sortBy=score: the keyword search the official API doc tells clients to use. */
+export function skillhubSearch(options: { baseUrl?: string } = {}): SearchSource {
+  const base = options.baseUrl ?? SKILLHUB_API
+  return {
+    name: 'skillhub',
+    hosts: ['skillhub.cn'],
+    // The API documents no limit and sends no rate-limit headers; this is our own ceiling.
+    budget: { perMinute: 30, perDay: 2000 },
+    async search(http, q, limit): Promise<ExternalFind[]> {
+      const url = new URL('/api/skills', base)
+      url.searchParams.set('keyword', q)
+      url.searchParams.set('sortBy', 'score')
+      url.searchParams.set('order', 'desc')
+      url.searchParams.set('page', '1')
+      url.searchParams.set('pageSize', String(limit))
+      const body = await http.get(url.toString()).json<unknown>()
+      const data = isRecord(body) && body['code'] === 0 && isRecord(body['data']) ? body['data'] : null
+      if (!data || !Array.isArray(data['skills'])) throw new Error('search: unexpected response shape')
+      return data['skills'].filter(isRecord).flatMap((item) => {
+        const identity = skillhubIdentity(item)
+        if (!identity) return []
+        return [{
+          source: 'skillhub',
+          ...identity,
+          description: str(item['description']) ?? str(item['description_zh']),
+          author: str(item['ownerName']),
+        }]
+      })
+    },
+  }
+}
+
 export function skillhubSource(options: SkillHubOptions = {}): DiscoverySource {
   const base = options.baseUrl ?? SKILLHUB_API
   const boardPages = options.boardPages ?? 2
@@ -50,11 +100,8 @@ export function skillhubSource(options: SkillHubOptions = {}): DiscoverySource {
   }
 
   function observe(run: DiscoveryRun, item: Record<string, unknown>, board: string | null, rank: number | null): void {
-    const slug = str(item['slug'])
-    const ns = isRecord(item['namespace']) ? item['namespace'] : {}
-    const owner = str(item['ownerName'])
-    const canonical = str(ns['canonicalName']) ?? (slug && owner ? `@${owner}/${slug}` : null)
-    if (!slug || !canonical) {
+    const identity = skillhubIdentity(item)
+    if (!identity) {
       addSkip(run.skipped, 'no slug or namespace')
       return
     }
@@ -66,12 +113,7 @@ export function skillhubSource(options: SkillHubOptions = {}): DiscoverySource {
       }).filter(([, v]) => v !== undefined),
     ) as Observation['metrics']
     run.observations.push({
-      listingId: canonical.toLowerCase(),
-      skillKey: skillhubKey(item, canonical),
-      name: str(item['name']) ?? slug,
-      // The documented public page; the API's `homepage` field points at the API host.
-      url: `https://skillhub.cn/skills/${slug}`,
-      githubRepo: githubRepoOf(str(item['upstream_url'])),
+      ...identity,
       board,
       rank,
       metrics,

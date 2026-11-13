@@ -1,0 +1,101 @@
+{
+ "code": 0,
+ "data": {
+  "skills": [
+   {
+    "category": "it-ops-security",
+    "claim_state": "unclaimed",
+    "claimable": false,
+    "claimed_user_handle": null,
+    "created_at": 1781091560707,
+    "description": "",
+    "description_zh": "",
+    "downloads": 810,
+    "homepage": "https://api.skillhub.cn/user_922b1001/terraform-wrap",
+    "iconUrl": "https://cloudcache.tencent-cloud.com/qcloud/ui/static/other_external_resource/e9a58ede-ead5-43fd-9523-d1ba7f1b78cd.png",
+    "installs": 0,
+    "isServiceized": false,
+    "labels": {
+     "requires_api_key": "false"
+    },
+    "last_synced_at": null,
+    "name": "Terraform Wrap",
+    "namespace": {
+     "canonicalName": "@user_922b1001/terraform-wrap",
+     "displayName": "user_922b1001",
+     "handle": "user_922b1001",
+     "publicSlug": "terraform-wrap"
+    },
+    "ownerName": "user_922b1001",
+    "score": 63802.10289147578,
+    "slug": "terraform-wrap",
+    "source": "community",
+    "stars": 0,
+    "subCategories": [
+     {
+      "key": "itops-server",
+      "name": "服务器运维"
+     },
+     {
+      "key": "itops-config",
+      "name": "配置生成"
+     },
+     {
+      "key": "itops-devops",
+      "name": "DevOps"
+     }
+    ],
+    "tags": null,
+    "updated_at": 1794579151075,
+    "upstream_owner_login": null,
+    "upstream_url": null,
+    "verified": false,
+    "version": "1.0.0"
+   },
+   {
+    "category": "it-ops-security",
+    "claim_state": "unclaimed",
+    "claimable": false,
+    "claimed_user_handle": null,
+    "created_at": 1784794268823,
+    "description": "Terraform Cloud MCP 服务器技能",
+    "description_zh": "Terraform Cloud MCP 服务器技能",
+    "downloads": 566,
+    "homepage": "https://api.skillhub.cn/user_3c6cb52e/terraform-cloud-mcp-server",
+    "iconUrl": null,
+    "installs": 0,
+    "isServiceized": false,
+    "labels": {
+     "requires_api_key": "false"
+    },
+    "last_synced_at": null,
+    "name": "Terraform Cloud MCP 服务器",
+    "namespace": {
+     "canonicalName": "@user_3c6cb52e/terraform-cloud-mcp-server",
+     "displayName": "user_3c6cb52e",
+     "handle": "user_3c6cb52e",
+     "publicSlug": "terraform-cloud-mcp-server"
+    },
+    "ownerName": "user_3c6cb52e",
+    "score": 62656.778069846034,
+    "slug": "terraform-cloud-mcp-server",
+    "source": "community",
+    "stars": 0,
+    "subCategories": [
+     {
+      "key": "itops-devops",
+      "name": "DevOps"
+     }
+    ],
+    "tags": null,
+    "updated_at": 1794580329039,
+    "upstream_owner_login": null,
+    "upstream_url": null,
+    "verified": false,
+    "version": "1.0.0"
+   }
+  ],
+  "total": 187
+ },
+ "message": "success"
+}

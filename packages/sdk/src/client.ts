@@ -4,6 +4,7 @@ import type {
   ResourceKind,
   ResourceListResponse,
   ResourceSort,
+  SearchSupplementResponse,
 } from '@as/types'
 
 /** `status` is the HTTP status when the server answered; absent for network errors. */
@@ -72,6 +73,28 @@ export class StoreClient {
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
       if (!json.resource) return { data: null, error: 'No resource in response' }
       return { data: json.resource, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /**
+   * GET /api/search/supplement: what other skill directories list for a query the catalog
+   * answers poorly. Call it once the query has settled (not per keystroke) and only for
+   * the first page. `wait` holds the request up to that many seconds for a running lookup;
+   * on `searching`, call again after `retryAfterSeconds`.
+   */
+  async searchSupplement(params: { q: string; kind?: ResourceKind; wait?: number }): Promise<Result<SearchSupplementResponse>> {
+    try {
+      const url = new URL(`${this.baseUrl}/api/search/supplement`)
+      url.searchParams.set('q', params.q.trim())
+      if (params.kind) url.searchParams.set('kind', params.kind)
+      if (params.wait) url.searchParams.set('wait', String(params.wait))
+      const res = await this._fetch(url.toString())
+      const json = (await res.json().catch(() => ({}))) as Partial<SearchSupplementResponse> & { error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
+      if (!json.status || !Array.isArray(json.resources) || !Array.isArray(json.listings)) return { data: null, error: 'Malformed supplement response' }
+      return { data: json as SearchSupplementResponse, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }

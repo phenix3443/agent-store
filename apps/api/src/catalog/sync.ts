@@ -4,10 +4,10 @@ import type { ResourceKind } from '@as/types'
 import { countAvailable, getMeta, setMeta, CATALOG_SCHEMA_VERSION } from './db'
 import { encodeDetail } from './detail-codec'
 import {
-  beginRun, discoveryTotals, linkResources, pickRepos, pruneSnapshots, recordAttempts, runDiscovery, seedRepos,
-  skillsShInstalls, type DiscoveryReport, type DiscoverySource,
+  applySearchFinds, beginRun, discoveryTotals, linkResources, pickRepos, pruneSnapshots, recordAttempts, runDiscovery, seedRepos,
+  skillsShInstalls, type DiscoveryReport, type DiscoverySource, type SearchFindsReport,
 } from './discovery'
-import { upstreamClient } from './http'
+import { describeError, upstreamClient } from './http'
 import { refreshStars, type StarsOptions, type StarsReport } from './stars'
 import type { CatalogRecord, CatalogSource, SourceContext, SourceRun } from './types'
 
@@ -48,7 +48,14 @@ export interface SyncOptions {
    * Skill directories to read first, into discovery.db; their GitHub repos feed
    * github-skills through a queue of `repoBudget` repos per run.
    */
-  discovery?: { db: Database; sources: DiscoverySource[]; repoBudget?: number; httpRetries?: number }
+  discovery?: {
+    db: Database
+    sources: DiscoverySource[]
+    repoBudget?: number
+    httpRetries?: number
+    /** The API's GET /api/discovery/export: what search lookups found, taken into the listings and the repo queue. */
+    findsUrl?: string
+  }
   now?: () => Date
   log?: (message: string) => void
 }
@@ -156,6 +163,16 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     const runId = beginRun(d.db, startedAt)
     const http = upstreamClient(options.fetch, d.httpRetries ?? 3)
     const sources = await runDiscovery(d.db, d.sources, { http, now: now(), full: options.full ?? false, log }, runId, () => now().toISOString())
+    let searchFinds: SearchFindsReport | undefined
+    if (d.findsUrl) {
+      // The API being down or a bad body costs this run's finds only; they are exported again next time.
+      try {
+        searchFinds = applySearchFinds(d.db, await http.get(d.findsUrl).json<unknown>(), now().toISOString())
+      } catch (e) {
+        searchFinds = { status: 'failed', listings: 0, newListings: 0, repos: 0, newRepos: 0, skipped: 0, error: describeError(e) }
+      }
+      log(`search finds: ${searchFinds.status}, +${searchFinds.newListings} listings, +${searchFinds.newRepos} repos`)
+    }
     const scopes = db
       .query(`SELECT scope, max(synced_at) AS syncedAt FROM resources
               WHERE source = 'github-skills' AND scope IS NOT NULL AND unavailable_at IS NULL GROUP BY scope`)
@@ -164,7 +181,7 @@ export async function syncCatalog(db: Database, options: SyncOptions): Promise<S
     const picked = pickRepos(d.db, d.repoBudget ?? 200)
     skills = { repos: picked.repos, installs: skillsShInstalls(d.db) }
     discovery = {
-      runId, sources, queue: picked.report, listings: 0, skills: 0, crossSite: 0, linkedResources: 0, snapshots: 0, prunedSnapshots: 0,
+      runId, sources, ...(searchFinds ? { searchFinds } : {}), queue: picked.report, listings: 0, skills: 0, crossSite: 0, linkedResources: 0, snapshots: 0, prunedSnapshots: 0,
     }
     log(`discovery: ${picked.report.pickedNew} new and ${picked.report.pickedKnown} known repos queued, ${picked.report.waitingNew} new waiting`)
   }
@@ -261,6 +278,12 @@ export function formatReportMarkdown(report: SyncReport, extra: string[] = []): 
       ...(q
         ? [`- repo queue: ${q.pickedNew} new + ${q.pickedKnown} known of a budget of ${q.budget}; ${q.waitingNew} new still waiting, ` +
             `${q.known} known, oldest attempt ${q.oldestAttemptAt ?? '-'}`]
+        : []),
+      ...(disc.searchFinds
+        ? [disc.searchFinds.status === 'ok'
+            ? `- search finds: ${disc.searchFinds.listings} listings (${disc.searchFinds.newListings} new), ` +
+              `${disc.searchFinds.repos} repos (${disc.searchFinds.newRepos} new to the queue), ${disc.searchFinds.skipped} skipped`
+            : `- search finds: not read this run (${disc.searchFinds.error})`]
         : []),
       '',
       '| Site | Status | Seen | New | Updated | New on boards | Rose | New repos | Duration | Last success |',

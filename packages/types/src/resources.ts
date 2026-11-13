@@ -73,6 +73,52 @@ export interface ResourceListResponse {
   nextOffset: number | null
 }
 
+// ── Search supplement (GET /api/search/supplement) ───────────────────────────
+//
+// When the catalog has no or only weak matches for a skill query, the API looks the
+// query up on other skill directories. The list endpoint is not affected: its
+// `resources` and `nextOffset` never include what is returned here.
+
+export type ExternalSite = 'clawhub' | 'skillhub' | 'skillsmp'
+
+/**
+ * A skill another directory lists that the catalog cannot install yet. Show it as a
+ * link to `url` (the listing on its site), never as an installable resource.
+ */
+export interface ExternalListing {
+  /** The same skill listed on two sites has one key; two skills of one name have two. */
+  key: string
+  site: ExternalSite
+  name: string
+  description: string | null
+  author: string | null
+  url: string
+}
+
+/**
+ * `not_needed`: the catalog answers the query well enough, or the query is not looked up
+ * (another kind, too short, looks like an address). `searching`: a lookup is running;
+ * ask again after `retryAfterSeconds`. `found` / `none`: the lookup finished.
+ * `unavailable`: no site could be asked right now; retry after `retryAfterSeconds`.
+ */
+export type SearchSupplementStatus = 'not_needed' | 'searching' | 'found' | 'none' | 'unavailable'
+
+export interface SearchSupplementResponse {
+  status: SearchSupplementStatus
+  /** Why the catalog's own results were not enough; null for `not_needed`. */
+  reason: 'no_results' | 'few_results' | 'low_relevance' | null
+  /**
+   * Skills checked against their GitHub repo that the catalog does not hold yet.
+   * GET /api/resources/<id> serves their detail; after the next catalog build they
+   * come back from GET /api/resources and leave this list.
+   */
+  resources: ResourceSummary[]
+  listings: ExternalListing[]
+  /** A site did not answer or was over its quota, so more may exist. */
+  partial: boolean
+  retryAfterSeconds: number | null
+}
+
 // ── MCP (official MCP Registry server.json, normalized) ──────────────────────
 //
 // Field meanings follow server.json

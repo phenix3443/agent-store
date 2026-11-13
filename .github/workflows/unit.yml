@@ -38,6 +38,13 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: TEMP generate the app.db migration
+        working-directory: apps/api
+        run: pnpm db:generate --name search_supplement
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drizzle
+          path: apps/api/drizzle
       - name: Affected packages
         env:
           BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}

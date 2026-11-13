@@ -1,5 +1,7 @@
 import type { DiscoveryContext, DiscoveryRun, DiscoverySource, Metric, Observation, PageCoverage } from '../discovery'
 import { describeError, isRateLimited, isRecord, str } from '../http'
+import type { ExternalFind, SearchSource } from '../search-sources'
+import { githubRepoOf } from '../stars'
 import { addSkip } from '../types'
 
 // ClawHub's public read API (docs/http-api.md in openclaw/clawhub) invites third-party
@@ -22,6 +24,45 @@ export interface ClawHubOptions {
 interface Page {
   items: Record<string, unknown>[]
   nextCursor: string | null
+}
+
+/** Identity and canonical listing URL of a ClawHub skill, shared by the boards and the search. */
+function clawhubIdentity(base: string, owner: string, slug: string) {
+  const listingId = `${owner}/${slug}`.toLowerCase()
+  return { listingId, skillKey: `clawhub:${listingId}`, url: `${base}/${owner}/skills/${slug}` }
+}
+
+/** GET /api/v1/search: relevance-ranked keyword search, on the same public read quota as the lists. */
+export function clawhubSearch(options: { baseUrl?: string } = {}): SearchSource {
+  const base = options.baseUrl ?? CLAWHUB_URL
+  return {
+    name: 'clawhub',
+    hosts: [new URL(base).hostname],
+    budget: { perMinute: 30, perDay: 2000 },
+    async search(http, q, limit): Promise<ExternalFind[]> {
+      const url = new URL('/api/v1/search', base)
+      url.searchParams.set('q', q)
+      url.searchParams.set('limit', String(limit))
+      url.searchParams.set('nonSuspiciousOnly', 'true')
+      const body = await http.get(url.toString()).json<unknown>()
+      if (!isRecord(body) || !Array.isArray(body['results'])) throw new Error('search: unexpected response shape')
+      return body['results'].filter(isRecord).flatMap((item) => {
+        const owner = str(item['ownerHandle'])
+        const slug = str(item['slug'])
+        if (!owner || !slug) return []
+        const links = isRecord(item['links']) ? item['links'] : {}
+        const publisher = isRecord(item['publisher']) ? item['publisher'] : {}
+        return [{
+          source: 'clawhub',
+          ...clawhubIdentity(base, owner, slug),
+          name: str(item['displayName']) ?? slug,
+          description: str(item['summary']),
+          author: str(publisher['displayName']) ?? owner,
+          githubRepo: githubRepoOf(str(links['source'])),
+        }]
+      })
+    },
+  }
 }
 
 export function clawhubSource(options: ClawHubOptions = {}): DiscoverySource {
@@ -56,12 +97,9 @@ export function clawhubSource(options: ClawHubOptions = {}): DiscoverySource {
         site_stars: count(stats['stars']),
       }).filter(([, v]) => v !== undefined),
     ) as Observation['metrics']
-    const listingId = `${owner}/${slug}`.toLowerCase()
     run.observations.push({
-      listingId,
-      skillKey: `clawhub:${listingId}`,
+      ...clawhubIdentity(base, owner, slug),
       name: str(item['displayName']) ?? slug,
-      url: `${base}/${owner}/skills/${slug}`,
       githubRepo: null,
       board,
       rank,

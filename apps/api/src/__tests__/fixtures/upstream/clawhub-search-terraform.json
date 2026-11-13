@@ -1,0 +1,196 @@
+{
+ "results": [
+  {
+   "canonicalUrl": "/ivangdavila/skills/terraform",
+   "displayName": "Terraform",
+   "downloads": 4925,
+   "featured": false,
+   "icon": null,
+   "id": "clawhub:kd73fxz77cnnj0ntnttemgb7t980x7fg",
+   "install": {
+    "kind": "clawhub",
+    "reference": "ivangdavila/terraform",
+    "sourceUrl": null
+   },
+   "links": {
+    "canonical": "/ivangdavila/skills/terraform",
+    "source": null
+   },
+   "metrics": {
+    "bookmarks": 0,
+    "rolling60DayInstalls": 1,
+    "updatedAt": 1785070248365
+   },
+   "native": {
+    "owner": {
+     "_creationTime": 1774341320125.7473,
+     "_id": "s178jdk12x4qj3gs2se3etxf3h83h7ft",
+     "displayName": "Iván",
+     "handle": "ivangdavila",
+     "image": "https://avatars.githubusercontent.com/u/81719670?v=4",
+     "kind": "user",
+     "linkedUserId": "kn73vp5rarc3b14rc7wjcw8f8580t5d1"
+    },
+    "ownerHandle": "ivangdavila",
+    "skill": {
+     "_creationTime": 1770683465588.2432,
+     "_id": "kd73fxz77cnnj0ntnttemgb7t980x7fg",
+     "badges": {},
+     "categories": [
+      "other"
+     ],
+     "createdAt": 1770683465588,
+     "displayName": "Terraform",
+     "isSuspicious": false,
+     "latestVersionId": "k970na0ebk6qyk8n11appzc5jx8b85vd",
+     "ownerPublisherId": "s178jdk12x4qj3gs2se3etxf3h83h7ft",
+     "ownerUserId": "kn73vp5rarc3b14rc7wjcw8f8580t5d1",
+     "slug": "terraform",
+     "stats": {
+      "comments": 0,
+      "downloads": 4925,
+      "installs": 123,
+      "stars": 3,
+      "versions": 5
+     },
+     "summary": "Writes, debugs, and refactors Terraform — HCL and modules, plan and apply failures, state surgery, drift, and provider pinning. Use when writing or reviewing HCL, when terraform plan or apply errors out, when a plan shows a permanent diff, an unexplained destroy, or \"forces replacement\", when renaming, importing, or moving resources between modules and states, when a state lock is stuck or state is lost or corrupted, when for_each fails because a value is not known until apply, when pinning providers or surviving a major version upgrade, or when wiring plan-on-PR, apply-on-merge, drift detection, and policy gates. Covers OpenTofu, tfstate, backends, workspaces, and infrastructure-as-code review. Not for choosing which cloud services to build — see aws, gcp, or azure.",
+     "tags": {
+      "latest": "k970na0ebk6qyk8n11appzc5jx8b85vd"
+     },
+     "updatedAt": 1785070248365
+    },
+    "version": null
+   },
+   "official": false,
+   "ownerHandle": "ivangdavila",
+   "publisher": {
+    "displayName": "Iván",
+    "handle": "ivangdavila",
+    "image": "https://avatars.githubusercontent.com/u/81719670?v=4",
+    "kind": "user",
+    "official": false
+   },
+   "score": 6120,
+   "slug": "terraform",
+   "source": "clawhub",
+   "sourceIdentity": {
+    "host": null,
+    "id": "kd73fxz77cnnj0ntnttemgb7t980x7fg",
+    "lifetimeInstalls": null,
+    "owner": "ivangdavila",
+    "repo": null
+   },
+   "summary": "Writes, debugs, and refactors Terraform — HCL and modules, plan and apply failures, state surgery, drift, and provider pinning. Use when writing or reviewing HCL, when terraform plan or apply errors out, when a plan shows a permanent diff, an unexplained destroy, or \"forces replacement\", when renaming, importing, or moving resources between modules and states, when a state lock is stuck or state is lost or corrupted, when for_each fails because a value is not known until apply, when pinning providers or surviving a major version upgrade, or when wiring plan-on-PR, apply-on-merge, drift detection, and policy gates. Covers OpenTofu, tfstate, backends, workspaces, and infrastructure-as-code review. Not for choosing which cloud services to build — see aws, gcp, or azure.",
+   "trust": {
+    "clawHubVerdict": null,
+    "installability": "installable",
+    "sourceFreshness": "native",
+    "upstreamScanners": null,
+    "visibility": "public"
+   },
+   "updatedAt": 1785070248365,
+   "version": null,
+   "owner": {
+    "handle": "ivangdavila",
+    "displayName": "Iván",
+    "image": "https://avatars.githubusercontent.com/u/81719670?v=4"
+   }
+  },
+  {
+   "canonicalUrl": "/oomol/skills/oo-terraform",
+   "displayName": "Terraform",
+   "downloads": 742,
+   "featured": false,
+   "icon": null,
+   "id": "clawhub:kd7f0dch54ber415cxw5sxva3d8afb86",
+   "install": {
+    "kind": "clawhub",
+    "reference": "oomol/oo-terraform",
+    "sourceUrl": null
+   },
+   "links": {
+    "canonical": "/oomol/skills/oo-terraform",
+    "source": null
+   },
+   "metrics": {
+    "bookmarks": 0,
+    "rolling60DayInstalls": 0,
+    "updatedAt": 1793704151885
+   },
+   "native": {
+    "owner": {
+     "_creationTime": 0,
+     "_id": "s1790xw8jww1c6hgm8aqy9q25187t1rg",
+     "displayName": "OOMOL",
+     "handle": "oomol",
+     "image": "https://static.oomol.com/assets/oomol-mark.svg",
+     "kind": "org"
+    },
+    "ownerHandle": "oomol",
+    "skill": {
+     "_creationTime": 1783918450406,
+     "_id": "kd7f0dch54ber415cxw5sxva3d8afb86",
+     "badges": {},
+     "categories": [
+      "other"
+     ],
+     "createdAt": 1783918450406,
+     "displayName": "Terraform",
+     "isSuspicious": false,
+     "latestVersionId": "k97dhwqj6zqdyksm4pa1yk4wbs8hhcgc",
+     "ownerPublisherId": "s1790xw8jww1c6hgm8aqy9q25187t1rg",
+     "ownerUserId": "kn78y60sfta5p7kq45p63gehhd87z1wk",
+     "slug": "oo-terraform",
+     "stats": {
+      "comments": 0,
+      "downloads": 742,
+      "installs": 1,
+      "stars": 0,
+      "versions": 3
+     },
+     "summary": "Terraform (hashicorp.com). Use this skill for ANY Terraform request — searching and reading data. Whenever a task involves Terraform, use this skill instead of calling the API directly.",
+     "tags": {
+      "latest": "k97dhwqj6zqdyksm4pa1yk4wbs8hhcgc"
+     },
+     "topics": [],
+     "updatedAt": 1793704151885
+    },
+    "version": null
+   },
+   "official": false,
+   "ownerHandle": "oomol",
+   "publisher": {
+    "displayName": "OOMOL",
+    "handle": "oomol",
+    "image": "https://static.oomol.com/assets/oomol-mark.svg",
+    "kind": "org",
+    "official": false
+   },
+   "score": 6110,
+   "slug": "oo-terraform",
+   "source": "clawhub",
+   "sourceIdentity": {
+    "host": null,
+    "id": "kd7f0dch54ber415cxw5sxva3d8afb86",
+    "lifetimeInstalls": null,
+    "owner": "oomol",
+    "repo": null
+   },
+   "summary": "Terraform (hashicorp.com). Use this skill for ANY Terraform request — searching and reading data. Whenever a task involves Terraform, use this skill instead of calling the API directly.",
+   "trust": {
+    "clawHubVerdict": null,
+    "installability": "installable",
+    "sourceFreshness": "native",
+    "upstreamScanners": null,
+    "visibility": "public"
+   },
+   "updatedAt": 1793704151885,
+   "version": null,
+   "owner": {
+    "handle": "oomol",
+    "displayName": "OOMOL",
+    "image": "https://static.oomol.com/assets/oomol-mark.svg"
+   }
+  }
+ ]
+}
