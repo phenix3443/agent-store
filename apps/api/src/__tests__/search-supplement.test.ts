@@ -64,6 +64,10 @@ const skillsmpHit = (repo: string, name: string) => ({
   githubUrl: `https://github.com/${repo}/tree/main/skills/${name}`, skillUrl: `https://skillsmp.com/creators/${repo}/skills-${name}`,
 })
 
+/** The request a fetch call would send, to read the headers ky put on it. */
+const requestOf = (input: string | URL | Request, init?: RequestInit) =>
+  input instanceof Request ? new Request(input, init) : new Request(String(input), init)
+
 type Answer = () => Response | Promise<Response>
 const never: Answer = () => new Promise<Response>(() => {})
 
@@ -247,7 +251,7 @@ describe('recorded search responses', () => {
     const seen: Array<string | null> = []
     const base = fakeFetch(searchRoutes({ skillsmp: () => json(fixtureJson('skillsmp-search-terraform.json')) }))
     const f = (async (input: string | URL | Request, init?: RequestInit) => {
-      seen.push(new Request(input, init).headers.get('authorization'))
+      seen.push(requestOf(input, init).headers.get('authorization'))
       return base(input, init)
     }) as typeof fetch
     const finds = await search(skillsmpSearch({ apiKey: 'sk_test' }), f)
@@ -312,7 +316,7 @@ describe('when a lookup runs', () => {
     const seen: Array<{ url: string; headers: Record<string, string> }> = []
     const base = fakeFetch(searchRoutes({ clawhub: clawhubOk(), skillhub: skillhubOk() }))
     const f = (async (input: string | URL | Request, init?: RequestInit) => {
-      const req = new Request(input, init)
+      const req = requestOf(input, init)
       seen.push({ url: req.url, headers: Object.fromEntries(req.headers) })
       return base(input, init)
     }) as typeof fetch
@@ -677,7 +681,7 @@ describe('the catalog sync takes the finds in', () => {
     const s = supplement(f, { sources: [SOURCES.clawhub, SOURCES.skillsmp], scan: false })
     await settle(s, 'terraform')
     const app = resourceRoutes(reader, () => s)
-    const exportRoute: Route = (url) => (url.hostname === 'api.test' ? app.fetch(new Request(url)) : undefined)
+    const exportRoute: Route = (url) => (url.hostname === 'api.test' ? app.fetch(new Request(url.href)) : undefined)
 
     const catalogPath = join(dir, 'catalog.db')
     const catalog = openCatalogForWrite(catalogPath)
