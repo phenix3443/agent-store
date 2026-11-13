@@ -62,7 +62,6 @@
       "emptyBody": "Try another keyword or type, or clear the search and filters.",
       "colInstall": "Install",
       "copyCommand": "Copy command",
-      "lede": "Every package states what runs when you install it.",
       "noInstalls": "No install count",
       "stars": "{count} GitHub stars",
       "unknownAuthor": "Unknown author",
@@ -107,13 +106,12 @@
       "runFiles": "Copies",
       "runsNone": "The registry entry lists no package or remote.",
       "localNote": "The desktop client’s own local relay. Nothing is downloaded and no key is needed.",
-      "upstreamId": "Upstream id",
       "repository": "Repository",
       "files": "Files",
       "fileCount": "{count, plural, one {# file} other {# files}}",
       "homepage": "Homepage",
       "updated": "Updated",
-      "unavailable": "This entry is no longer listed upstream. It stays here so installed copies still resolve.",
+      "unavailable": "This package is no longer listed.",
       "deprecated": "The publisher marked this server deprecated.",
       "executable": "Executable",
       "symlink": "Symlink",
@@ -134,7 +132,7 @@
       "fallbackNote": "If the client does not open, the install command is copied and you are pointed to the download.",
       "phoneNote": "Run this command on your computer, or install with the desktop client.",
       "noCommand": "The record has no package or remote this store can turn into a command. See the repository for setup.",
-      "noteSkill": "Runs the skills.sh CLI, which copies the skill from GitHub into your agents.",
+      "noteSkill": "Install this skill in Claude Code or Codex.",
       "noteMcp": "Adds the server to Claude Code. Replace the values in angle brackets with your own.",
       "noteProvider": "Runs the Agent Store CLI."
     },
@@ -147,12 +145,6 @@
       "downloadAlt": "Go to the download page for the desktop client",
       "close": "Dismiss",
       "noCommandBody": "Open the package for its install command, or get the desktop client first."
-    },
-    "source": {
-      "mcp-registry": "MCP Registry",
-      "github": "GitHub",
-      "builtin": "Built-in",
-      "skillsSh": "skills.sh"
     }
   },
   "site": {
@@ -195,7 +187,7 @@
       "heroShotAlt": "The Agent Store desktop client's skills view (Linux build): installed and recommended skills on the left, the brainstorming skill's details, install command and install steps on the right",
       "map": {
         "title": "Where an install writes",
-        "lede": "Pick a kind of package to see which file and key it writes for Claude Code and Codex. Paths and key names come from the client code.",
+        "lede": "See which files an install changes and how it is enabled in Claude Code and Codex.",
         "tabsLabel": "Package kind",
         "tabs": {
           "skill": "Skill",
@@ -223,13 +215,13 @@
       },
       "terminal": {
         "title": "From the terminal too",
-        "lede": "The desktop client ships the aas command, which reads and writes the same install records. The Linux packages put it at /usr/bin/aas; on macOS and Windows it is in the client's install folder.",
-        "note": "Above is the output format of aas; the commands and data are from the test catalog on 2026-11-12.",
+        "lede": "Use aas to search for and install skills and MCP servers, then enable them in Claude Code or Codex.",
+        "note": "Command-line usage examples.",
         "tabsLabel": "Command"
       },
       "features": {
         "title": "The desktop client",
-        "lede": "What you install is managed in the client. These are real screenshots of the Linux build; the usage numbers come from requests sent to a local test upstream while taking them.",
+        "lede": "Manage skills, MCP servers, providers and usage in the desktop client. Usage figures in the screenshots are test data.",
         "skill": {
           "title": "Skills",
           "body": "Installed and recommended skills, with the install command and install steps in the details. Each skill is stored once and shared by Claude Code and Codex.",
@@ -250,27 +242,6 @@
           "body": "Cost, tokens and requests for today, the last 7 days and the last 30 days, recorded on this machine. Budget limits and overspend alerts are Pro features.",
           "alt": "Overview: usage trend with total cost, tokens, requests and models"
         }
-      },
-      "sources": {
-        "title": "Where packages come from",
-        "lede": "We do not write the catalog by hand: a scheduled job syncs it from three upstream sources into Agent Store's own catalog.",
-        "catalogLabel": "Sources",
-        "mcp": {
-          "name": "The official MCP Registry",
-          "body": "MCP servers registered with the Model Context Protocol registry"
-        },
-        "skill": {
-          "name": "Skill repositories on GitHub",
-          "body": "Discovered through skills.sh; skill contents are downloaded from the GitHub repository"
-        },
-        "provider": {
-          "name": "Built-in provider list",
-          "body": "Common model providers, listed in Agent Store's code"
-        },
-        "sync": "Author names link upstream: skills to the GitHub owner, MCP servers to their namespace.",
-        "toolsLabel": "Supported tools",
-        "claudeNote": "Skills, MCP entries and provider settings. Uses CLAUDE_CONFIG_DIR instead when it is set.",
-        "codexNote": "Skills, MCP entries and provider settings. Uses CODEX_HOME instead when it is set."
       },
       "faq": {
         "title": "Questions",

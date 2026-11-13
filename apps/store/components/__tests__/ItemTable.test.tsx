@@ -28,14 +28,14 @@ const { ItemTable } = await import('../ItemTable')
 
 const rows = [summary(skillResource), summary(mcpResource), summary(providerResource)]
 
-test('renders name, the lead sentence of the description, author and source', () => {
+test('renders name, the lead sentence of the description, author without internal catalog sources', () => {
   render(<ItemTable resources={rows} showCategory />)
   expect(screen.getByText('brainstorming')).toBeInTheDocument()
   expect(screen.getByText('Explore intent before building.')).toBeInTheDocument()
   expect(screen.getByText('obra')).toBeInTheDocument()
-  expect(screen.getByText('GitHub · skills.sh')).toBeInTheDocument()
-  expect(screen.getByText('MCP Registry')).toBeInTheDocument()
-  expect(screen.getByText('内置')).toBeInTheDocument()
+  expect(screen.queryByText('GitHub · skills.sh')).toBeNull()
+  expect(screen.queryByText('MCP Registry')).toBeNull()
+  expect(screen.queryByText('内置')).toBeNull()
 })
 
 test('shows skills.sh installs where the data has them, and a dash, not a zero, where it does not', () => {
