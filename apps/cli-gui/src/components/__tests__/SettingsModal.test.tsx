@@ -100,7 +100,7 @@ test('language dropdown lists only Chinese and English', async () => {
 test('switching to the about tab shows app name, version, and links', async () => {
   renderModal()
   fireEvent.click(await screen.findByText('关于'))
-  expect(screen.getByText('Agent Store CLI')).toBeInTheDocument()
+  expect(screen.getByText('Agent Store')).toBeInTheDocument()
   expect(screen.getByText('文档')).toBeInTheDocument()
   expect(screen.getByText('检查更新')).toBeInTheDocument()
 })

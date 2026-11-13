@@ -25,7 +25,7 @@
 - [ ] Windows OV/EV 证书，消除 SmartScreen「未知发布者」
 
 > 现状：v0.1.0 已发版（macOS universal dmg + Windows exe/msi），均为**未签名**构建。
-> 未签名的临时打开办法已写进 Release 说明 / 落地页 / 文档（macOS：`xattr -cr "/Applications/Agent Store CLI.app"`）。
+> 未签名的临时打开办法已写进 Release 说明 / 落地页 / 文档（macOS：`xattr -cr "/Applications/Agent Store.app"`）。
 
 ---
 

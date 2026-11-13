@@ -16,7 +16,9 @@ function samePath(a: string, b: string): boolean {
   }
 }
 
+// Header and rows must take the same template, or the columns drift apart.
 const COLS = 'md:grid-cols-[64px_minmax(0,1fr)_168px_72px_92px]'
+const COLS_NO_CATEGORY = 'md:grid-cols-[minmax(0,1fr)_168px_72px_92px]'
 
 function Installs({ value, className }: { value: number | null; className: string }) {
   const t = useTranslations('store.list')
@@ -43,7 +45,7 @@ function Stars({ value, className }: { value: number | null; className: string }
   )
 }
 
-function ItemRow({ resource }: { resource: ResourceSummary }) {
+function ItemRow({ resource, showCategory }: { resource: ResourceSummary; showCategory: boolean }) {
   const t = useTranslations('store')
   const pathname = usePathname()
   const href = resourceHref(resource)
@@ -53,11 +55,13 @@ function ItemRow({ resource }: { resource: ResourceSummary }) {
     <div
       role="row"
       data-current={current ? '' : undefined}
-      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-3.5 transition-colors hover:bg-sel data-[current]:border-ink data-[current]:bg-sel data-[current]:shadow-[0_-1px_0_var(--ink)] md:h-20 md:py-0 ${COLS}`}
+      className={`group relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-3.5 transition-colors hover:bg-sel data-[current]:border-ink data-[current]:bg-sel data-[current]:shadow-[0_-1px_0_var(--ink)] md:h-20 md:py-0 ${showCategory ? COLS : COLS_NO_CATEGORY}`}
     >
-      <span role="cell" className="label col-span-2 md:col-span-1 group-data-[current]:text-ink">
-        {t(`category.${resource.kind}`)}
-      </span>
+      {showCategory && (
+        <span role="cell" className="label col-span-2 md:col-span-1 group-data-[current]:text-ink">
+          {t(`category.${resource.kind}`)}
+        </span>
+      )}
 
       <div role="cell" className="min-w-0">
         {/* The link's ::after covers the row, so the whole row opens the package
@@ -92,21 +96,22 @@ function ItemRow({ resource }: { resource: ResourceSummary }) {
         <Stars value={resource.stars} className="mt-0.5 block font-mono text-[13px] leading-5 text-ink-2" />
       </span>
 
-      <div role="cell" className="relative z-[1] col-start-2 row-start-2 self-start justify-self-end md:col-start-auto md:row-start-auto md:self-center">
+      <div role="cell" className={`relative z-[1] col-start-2 ${showCategory ? 'row-start-2' : 'row-start-1'} self-start justify-self-end md:col-start-auto md:row-start-auto md:self-center`}>
         <InstallButton resource={resource} command={installCommand(resource)} />
       </div>
     </div>
   )
 }
 
-export function ItemTable({ resources }: { resources: ResourceSummary[] }) {
+/** `showCategory` is off on a single-kind tab, where every row would repeat the same category. */
+export function ItemTable({ resources, showCategory }: { resources: ResourceSummary[]; showCategory: boolean }) {
   const t = useTranslations('store.list')
 
   return (
     <div role="table" aria-label={t('title')} className="store-results">
       <div role="rowgroup">
-        <div role="row" className={`label hidden h-9 items-center gap-x-4 border-b border-line px-3 md:grid ${COLS}`}>
-          <span role="columnheader" className="truncate">{t('colCategory')}</span>
+        <div role="row" className={`label hidden h-9 items-center gap-x-4 border-b border-line px-3 md:grid ${showCategory ? COLS : COLS_NO_CATEGORY}`}>
+          {showCategory && <span role="columnheader" className="truncate">{t('colCategory')}</span>}
           <span role="columnheader" className="truncate">{t('colPackage')}</span>
           <span role="columnheader" className="truncate">{t('colPublisher')}</span>
           <span role="columnheader" className="truncate text-right">
@@ -119,21 +124,21 @@ export function ItemTable({ resources }: { resources: ResourceSummary[] }) {
       </div>
       <div role="rowgroup">
         {resources.map((resource) => (
-          <ItemRow key={resource.id} resource={resource} />
+          <ItemRow key={resource.id} resource={resource} showCategory={showCategory} />
         ))}
       </div>
     </div>
   )
 }
 
-export function ItemTableSkeleton({ rows = 8 }: { rows?: number }) {
+export function ItemTableSkeleton({ rows = 8, showCategory }: { rows?: number; showCategory: boolean }) {
   const t = useTranslations('store.list')
   return (
     <div className="store-results" aria-busy="true" aria-label={t('loading')} role="status">
       <div className="hidden h-9 border-b border-line md:block" />
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} aria-hidden className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-line px-3 py-3.5 md:h-20 md:py-0 ${COLS}`}>
-          <span className="hidden h-3 w-10 bg-fill md:block" />
+        <div key={i} aria-hidden className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-b border-line px-3 py-3.5 md:h-20 md:py-0 ${showCategory ? COLS : COLS_NO_CATEGORY}`}>
+          {showCategory && <span className="hidden h-3 w-10 bg-fill md:block" />}
           <span className="block space-y-2">
             <span className="block h-3.5 w-40 max-w-full bg-fill" />
             <span className="block h-3 w-72 max-w-full bg-fill" />

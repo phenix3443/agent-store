@@ -74,7 +74,7 @@ export function ResourceList({ query, initial, initialNextOffset, emptyAction }:
 
   return (
     <>
-      <ItemTable resources={resources} />
+      <ItemTable resources={resources} showCategory={query.kind === null} />
       <div ref={sentinel} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-3 py-6">
         <p className="font-mono text-xs text-ink-2" aria-live="polite">
           {nextOffset === null ? t('countAll', { count: resources.length }) : t('countShown', { count: resources.length })}

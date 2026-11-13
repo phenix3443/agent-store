@@ -121,7 +121,7 @@ jobs:
           projectPath: apps/cli-gui
           args: ${{ matrix.tauri-args }}
           tagName: ${{ inputs.tag || github.ref_name }}
-          releaseName: 'Agent Store CLI ${{ inputs.tag || github.ref_name }}'
+          releaseName: 'Agent Store ${{ inputs.tag || github.ref_name }}'
           releaseBody: |
             桌面客户端安装包。
 
@@ -133,7 +133,7 @@ jobs:
 
             - **macOS** 若提示「已损坏，无法打开」：把 App 拖入「应用程序」，然后在终端执行
               ```
-              xattr -cr "/Applications/Agent Store CLI.app"
+              xattr -cr "/Applications/Agent Store.app"
               ```
               再双击打开即可。（这种情况下右键「打开」通常无效，需用上面的命令去除隔离标记。）
             - **Windows** 若提示「未知发布者」：点「更多信息」→「仍要运行」。

@@ -1,9 +1,9 @@
 import type { DesktopOs } from './desktop-os'
 
-export const RELEASE_REPO = 'awesome-agent-store/agent-store'
+export const RELEASE_REPO = 'phenix3443/agent-store'
 export const RELEASES_PAGE = `https://github.com/${RELEASE_REPO}/releases/latest`
 
-export type ReleaseFileKind = 'dmg' | 'exe' | 'msi' | 'deb' | 'rpm'
+export type ReleaseFileKind = 'dmg' | 'exe' | 'msi' | 'deb' | 'rpm' | 'appimage'
 
 export interface ReleaseFile {
   kind: ReleaseFileKind
@@ -38,6 +38,7 @@ const KINDS: { kind: ReleaseFileKind; os: DesktopOs; match: (name: string) => bo
   // Debian/Ubuntu and Fedora/openSUSE are both common, so neither Linux package is the default.
   { kind: 'deb', os: 'linux', match: (n) => n.endsWith('.deb'), recommended: false },
   { kind: 'rpm', os: 'linux', match: (n) => n.endsWith('.rpm'), recommended: false },
+  { kind: 'appimage', os: 'linux', match: (n) => n.endsWith('.AppImage'), recommended: false },
 ]
 
 const OS_ORDER: DesktopOs[] = ['mac', 'win', 'linux']

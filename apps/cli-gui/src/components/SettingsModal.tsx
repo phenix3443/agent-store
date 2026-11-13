@@ -313,7 +313,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       <path d="M9 2v14M3.5 5L9 8l5.5-3" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <div className="text-[15px] font-bold text-store-text">Agent Store CLI</div>
+                  <div className="text-[15px] font-bold text-store-text">Agent Store</div>
                   <div className="font-mono text-xs text-store-text-3">v{appVersion} · {t('settings.about.subtitle')}</div>
                   <div className="mt-1.5 flex items-center gap-4.5">
                     <button
