@@ -52,12 +52,16 @@ jobs:
       - run: pnpm --filter=@as/client-core run build
 
       # The two agent CLIs under test + the fixture MCP server's deps.
+      # Right after a codex release npm can install it without its platform
+      # binary ("Missing optional dependency @openai/codex"); fail here, not in
+      # the agent checks.
       - run: npm install -g @anthropic-ai/claude-code @openai/codex
+      - run: claude --version && codex --version
       - run: cd test/e2e/fixtures && npm install --no-audit --no-fund
 
       # Provider creds — each a 3-line base-url / api-key / model config.
-      # The codex endpoint (code.ylsagi.com/codex) only serves OpenAI models, so
-      # E2E_PROVIDER_CODEX must specify a gpt-* model, not a claude model.
+      # E2E_PROVIDER_CODEX must name a gpt-* model the relay serves through the
+      # Responses API.
       - name: Write provider configs
         run: |
           mkdir -p test/provider

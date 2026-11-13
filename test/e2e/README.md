@@ -29,13 +29,14 @@ api-key:  …
 model:    claude-haiku-4-5-20251001
 ```
 
-The endpoint whose `base-url` contains `codex` is used for Codex (OpenAI Responses
-API); the other is used for Claude Code (Anthropic-style). Keys are mounted
-read-only at runtime and are never copied into the image.
-
-**Model note:** the Codex endpoint (`code.ylsagi.com/codex`) only serves OpenAI
-models, so its config must specify a `gpt-*` model (e.g. `gpt-5.4`). The Claude
-config uses a claude model (e.g. `claude-haiku-4-5-20251001`).
+Name them `claude.txt` and `codex.txt`. `claude.txt` is an Anthropic-style
+endpoint with a claude model (e.g. `claude-haiku-4-5-20251001`); `codex.txt` is an
+endpoint serving the OpenAI Responses API with a `gpt-*` model (e.g.
+`gpt-5.6-terra`). Codex appends `/responses` to the base-url, so for an
+OpenAI-compatible relay it ends in `/v1`; without it Codex only prints
+`Reconnecting... 5/5`. Both may point at the same relay. Without those names, the file
+whose `base-url` contains `codex` is used for Codex. Keys are mounted read-only at
+runtime and are never copied into the image.
 
 ## Run locally (Docker)
 
@@ -56,4 +57,11 @@ Docker — the runner is already isolated). It needs two repo secrets holding th
 3-line provider configs:
 
 - `E2E_PROVIDER_CLAUDE` — Anthropic-style endpoint + a claude model
-- `E2E_PROVIDER_CODEX` — the `…/codex` endpoint + a `gpt-*` model
+- `E2E_PROVIDER_CODEX` — a Responses API endpoint + a `gpt-*` model
+
+Set them from the files with `gh secret set E2E_PROVIDER_CLAUDE < test/provider/claude.txt`
+(and likewise for codex). When a relay key is rotated, update these secrets too:
+a stale key shows up as `401` in the failing check's output.
+
+A failing check prints the exit code, whether it timed out, and the end of the
+agent's output.
