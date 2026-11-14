@@ -37,6 +37,7 @@ const SECTIONS: LegalSection[] = [
     bullets: [
       'GitHub、Google —— 第三方登录（OAuth），仅在你选择用其登录时获取上述基本资料。',
       'Waffo —— 订阅支付处理（Merchant of Record）。',
+      'ClawHub、腾讯 SkillHub、SkillsMP —— 商店搜索的补充查询。本站结果不足、且你点击「发送并查找」后，我们的服务器把搜索词发给这些技能目录，实际查询的站点以搜索页的提示为准。只发送搜索词，不发送你的账号、Cookie 或 IP 地址；我们只保存搜索词的 SHA-256 摘要用于缓存，不保存原文。',
     ],
   },
   {

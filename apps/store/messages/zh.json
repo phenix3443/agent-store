@@ -166,16 +166,17 @@
       "note": "数字截至 2026-11-13，目录每 6 小时更新。"
     },
     "supplement": {
-      "offerTitle": "到其他技能目录里找找「{q}」",
-      "offerBody": "会把搜索词发给第三方技能目录站点 ClawHub、SkillHub、SkillsMP。只发送搜索词，不带账号或其他信息。",
+      "offerTitle": "在其他技能目录中查找「{q}」",
+      "offerBody": "搜索词将发送至第三方站点 {sites}。仅发送搜索词，不附带账号或其他个人信息。",
       "offerAction": "发送并查找",
-      "searching": "正在其他技能目录里查找…",
-      "foundTitle": "其他技能目录里的结果",
-      "listingsNote": "以下技能还没收录进商店，安装方式请到原站点查看。",
+      "searching": "正在其他技能目录中查找…",
+      "foundTitle": "其他技能目录中的结果",
+      "foundVia": "来自 {sites}",
+      "listingsNote": "以下技能尚未收录，安装方式见原站点。",
       "viewOn": "在 {site} 查看",
-      "partial": "有的站点没有响应，结果可能不全。",
-      "none": "其他技能目录里也没有找到「{q}」。",
-      "unavailable": "暂时没法查询其他技能目录。",
+      "partial": "部分站点未响应，结果可能不全。",
+      "none": "其他技能目录中也未找到「{q}」。",
+      "unavailable": "暂时无法查询其他技能目录。",
       "retry": "重试"
     }
   },

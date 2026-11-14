@@ -166,11 +166,12 @@
       "note": "Counts as of 2026-11-13. The catalog refreshes every 6 hours."
     },
     "supplement": {
-      "offerTitle": "Look for “{q}” in other skill directories",
-      "offerBody": "Your search term is sent to the third-party skill directories ClawHub, SkillHub and SkillsMP. Only the term is sent, never your account or anything else.",
+      "offerTitle": "Search other skill directories for “{q}”",
+      "offerBody": "Your search term will be sent to the third-party sites {sites}. Only the term is sent, never your account or other personal details.",
       "offerAction": "Send and search",
       "searching": "Searching other skill directories…",
       "foundTitle": "From other skill directories",
+      "foundVia": "Via {sites}",
       "listingsNote": "These skills are not in the store yet. See their own site for how to install them.",
       "viewOn": "View on {site}",
       "partial": "Some sites did not answer, so there may be more.",
