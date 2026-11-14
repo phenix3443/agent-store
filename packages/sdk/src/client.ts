@@ -1,5 +1,6 @@
 import type {
   FavoritesResponse,
+  MySubscription,
   Plan,
   ResourceDetail,
   ResourceKind,
@@ -171,4 +172,55 @@ export class StoreClient {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }
   }
+
+  /** The signed-in user's subscription; `subscription` is null for a user who never bought one. */
+  async getMySubscription(token: string): Promise<Result<{ subscription: MySubscription | null }>> {
+    return this._me('GET', 'subscription', token, (json) =>
+      'subscription' in json ? { subscription: (json['subscription'] as MySubscription | null) ?? null } : null
+    )
+  }
+
+  /** Cancels at the end of the current period (status becomes `canceling`). */
+  async cancelSubscription(token: string): Promise<Result<{ subscription: MySubscription }>> {
+    return this._me('POST', 'subscription/cancel', token, subscriptionOf)
+  }
+
+  /** Withdraws a pending cancellation (status back to `active`). */
+  async resumeSubscription(token: string): Promise<Result<{ subscription: MySubscription }>> {
+    return this._me('POST', 'subscription/resume', token, subscriptionOf)
+  }
+
+  /** A one-time link into Waffo's customer portal, signed in as this user. Open it right away; it carries a token. */
+  async openBillingPortal(token: string): Promise<Result<{ portalUrl: string }>> {
+    return this._me('POST', 'subscription/portal', token, (json) =>
+      typeof json['portalUrl'] === 'string' ? { portalUrl: json['portalUrl'] } : null
+    )
+  }
+
+  private async _me<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    token: string,
+    pick: (json: Record<string, unknown>) => T | null
+  ): Promise<Result<T>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/me/${path}`, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) {
+        return { data: null, error: typeof json['error'] === 'string' ? json['error'] : `HTTP ${res.status}`, status: res.status }
+      }
+      const data = pick(json)
+      return data ? { data, error: null } : { data: null, error: 'Unexpected response', status: res.status }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+}
+
+function subscriptionOf(json: Record<string, unknown>): { subscription: MySubscription } | null {
+  const subscription = json['subscription']
+  return subscription && typeof subscription === 'object' ? { subscription: subscription as MySubscription } : null
 }

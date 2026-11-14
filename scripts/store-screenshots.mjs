@@ -50,7 +50,13 @@ const SIGNED_IN = [
   { name: 'dashboard', plan: 'free', path: '/dashboard' },
   { name: 'dashboard-free', plan: 'free', path: '/dashboard?tab=subscription' },
   { name: 'dashboard-pro', plan: 'pro', path: '/dashboard?tab=subscription' },
-  { name: 'account-menu', plan: 'free', path: '/docs', click: 'header button[aria-haspopup="menu"]', minWidth: 1024 },
+  { name: 'dashboard-canceling', plan: 'canceling', path: '/dashboard?tab=subscription' },
+  { name: 'dashboard-canceled', plan: 'canceled', path: '/dashboard?tab=subscription' },
+  { name: 'dashboard-loading', plan: 'pro', path: '/dashboard?tab=subscription&state=loading' },
+  { name: 'dashboard-error', plan: 'pro', path: '/dashboard?tab=subscription&state=error' },
+  // Only opens the confirmation; nothing is sent until its second button.
+  { name: 'dashboard-cancel-confirm', plan: 'pro', path: '/dashboard?tab=subscription', click: 'button[data-subscription-cancel]', opens: '[role="alertdialog"]', viewport: true },
+  { name: 'account-menu', plan: 'free', path: '/docs', click: 'header button[aria-haspopup="menu"]', opens: '[role="menu"]', minWidth: 1024 },
   // The CI proxy starts the pro user with three favorites, including DETAIL.
   { name: 'dashboard-favorites', plan: 'pro', path: '/dashboard?tab=favorites' },
   { name: 'dashboard-favorites-empty', plan: 'free', path: '/dashboard?tab=favorites' },
@@ -166,11 +172,11 @@ for (const locale of LOCALES) {
         if (!res || res.status() >= 400) throw new Error(`HTTP ${res?.status()}`)
         if (p.click) {
           await pg.locator(p.click).last().click()
-          await pg.locator('[role="menu"]').waitFor({ timeout: 10_000 })
+          await pg.locator(p.opens).waitFor({ timeout: 10_000 })
         } else if (p.wait) await pg.locator(p.wait).first().waitFor({ timeout: 30_000 })
         else if (!(await pg.locator('.dash').count())) throw new Error('not signed in')
         await pg.evaluate(() => document.fonts.ready)
-        await pg.screenshot({ path: file, fullPage: !p.click })
+        await pg.screenshot({ path: file, fullPage: !p.click && !p.viewport })
         const overflow = await pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
         if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
         console.log(`ok ${file}`)

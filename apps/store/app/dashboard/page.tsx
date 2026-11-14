@@ -1,13 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { Check, CreditCard, Heart, User } from 'lucide-react'
 import { StoreClient } from '@as/sdk'
-import type { FavoriteEntry, Plan } from '@as/types'
+import type { FavoriteEntry, MySubscription, Plan } from '@as/types'
 import { auth } from '@/lib/auth/server'
 import { enabledLoginProviders } from '@/lib/auth/providers'
 import { LoginGate } from '@/components/LoginGate'
+import { BillingPortalButton, SubscriptionActions } from '@/components/SubscriptionActions'
+import { SubscriptionSkeleton } from '@/components/SubscriptionSkeleton'
 import { KindTile } from '@/components/KindTile'
 import { RemoveFavoriteButton } from '@/components/Favorites'
 import { resourceHref } from '@/lib/resource'
@@ -28,11 +30,19 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('metaTitle'), robots: { index: false } }
 }
 
-async function loadPlan(h: Headers): Promise<Plan | null> {
-  // Authenticated with a Better Auth JWT minted in-process: fetching our own
-  // public URL would leave the pod and need the tailnet.
+// Authenticated with a Better Auth JWT minted in-process: fetching our own
+// public URL would leave the pod and need the tailnet.
+async function apiToken(h: Headers): Promise<string | null> {
   try {
-    const { token } = await auth().api.getToken({ headers: h })
+    return (await auth().api.getToken({ headers: h })).token
+  } catch {
+    return null
+  }
+}
+
+async function loadPlan(token: string | null): Promise<Plan | null> {
+  if (!token) return null
+  try {
     const result = await new StoreClient(API_URL).getMyEntitlements(token)
     return result.data?.plan ?? null
   } catch {
@@ -40,9 +50,9 @@ async function loadPlan(h: Headers): Promise<Plan | null> {
   }
 }
 
-async function loadFavorites(h: Headers): Promise<FavoriteEntry[] | null> {
+async function loadFavorites(token: string | null): Promise<FavoriteEntry[] | null> {
+  if (!token) return null
   try {
-    const { token } = await auth().api.getToken({ headers: h })
     const result = await new StoreClient(API_URL).listFavorites(token)
     return result.data?.favorites ?? null
   } catch {
@@ -109,6 +119,25 @@ function FavoritesCard({ favorites, t, ts }: { favorites: FavoriteEntry[] | null
   )
 }
 
+/** `undefined` when the subscription could not be read. */
+async function loadSubscription(token: string | null): Promise<MySubscription | null | undefined> {
+  if (!token) return undefined
+  try {
+    const result = await new StoreClient(API_URL).getMySubscription(token)
+    return result.data ? result.data.subscription : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** Waffo sends the period end as a date or a timestamp; shown as the UTC calendar date. */
+function formatDate(value: string | null, locale: string): string | null {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-CN', { dateStyle: 'long', timeZone: 'UTC' }).format(date)
+}
+
 async function loadSignInMethods(h: Headers): Promise<string[]> {
   try {
     const accounts = await auth().api.listUserAccounts({ headers: h })
@@ -131,7 +160,11 @@ function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
   )
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; state?: string }>
+}) {
   const h = await headers()
   const t = await getTranslations('site.dashboard')
   const session = await auth()
@@ -149,17 +182,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     )
   }
 
-  const { tab: rawTab } = await searchParams
+  const { tab: rawTab, state } = await searchParams
   const tab: Tab = TABS.find((x) => x.id === rawTab)?.id ?? 'account'
-  const [plan, methods, favorites, ts] = await Promise.all([
-    loadPlan(h),
+  const token = await apiToken(h)
+  const [plan, methods, subscription, favorites, ts] = await Promise.all([
+    loadPlan(token),
     loadSignInMethods(h),
-    tab === 'favorites' ? loadFavorites(h) : Promise.resolve(null),
+    tab === 'subscription' ? loadSubscription(token) : null,
+    tab === 'favorites' ? loadFavorites(token) : null,
     getTranslations('store'),
   ])
   const tp = await getTranslations('site.pricing')
+  const locale = await getLocale()
   const displayName = user.username || user.name || user.email
-  const paid = plan != null && plan !== 'free'
 
   return (
     <section className="page-hero">
@@ -213,46 +248,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   </a>
                 </section>
               </>
-            ) : plan == null ? (
-              <section className="card" role="status">
+            ) : state === 'loading' ? (
+              <SubscriptionSkeleton label={t('loading')} />
+            ) : subscription === undefined || state === 'error' ? (
+              <section className="card" role="alert">
                 <h2 className="dash-h">{t('plan')}</h2>
-                <p className="text-[15px] text-fg-2">{t('planError')}</p>
+                <p className="mb-4 text-[15px] text-fg-2">{t('planError')}</p>
+                <a href="/dashboard?tab=subscription" className="btn btn-sm">
+                  {t('retry')}
+                </a>
               </section>
-            ) : paid ? (
-              <>
-                <section className="card plan-card">
-                  <h2 className="dash-h">
-                    {t('plan')}
-                    <span className="chip">{t('active')}</span>
-                  </h2>
-                  <p className="plan-big">{PLAN_LABEL[plan]}</p>
-                  <p className="mt-1.5 text-[15px] text-fg-2">
-                    {t.rich('manage', {
-                      mail: (chunks) => (
-                        <a href="mailto:support@panghuli.tech" className="link text-fg">
-                          {chunks}
-                        </a>
-                      ),
-                    })}
-                  </p>
-                </section>
-                <section className="card">
-                  <h2 className="dash-h">{t('perks')}</h2>
-                  <ul className="featlist">
-                    {(tp.raw('proFeatures') as string[]).map((f) => (
-                      <li key={f}>
-                        <Check size={18} aria-hidden />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-                <section className="card">
-                  <h2 className="dash-h">{t('billing')}</h2>
-                  <Rows rows={[[t('merchant'), 'Waffo']]} />
-                </section>
-              </>
-            ) : (
+            ) : subscription === null ? (
               <section className="card">
                 <h2 className="dash-h">{t('plan')}</h2>
                 <p className="plan-big">Free</p>
@@ -261,10 +267,86 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   {t('upgrade')}
                 </Link>
               </section>
+            ) : (
+              <SubscriptionPanel
+                subscription={subscription}
+                endDate={formatDate(subscription.currentPeriodEnd, locale)}
+                t={t}
+                tp={tp}
+              />
             )}
           </div>
         </div>
       </div>
     </section>
+  )
+}
+
+type Translate = { (key: string, values?: Record<string, string>): string; raw(key: string): unknown }
+
+function statusLine(sub: MySubscription, endDate: string | null, t: Translate): string {
+  const dated = (key: string) => (endDate ? t(`line.${key}`, { date: endDate }) : t(`line.${key}Undated`))
+  if (sub.status === 'canceling') return dated('canceling')
+  if (sub.status === 'canceled') return dated('canceled')
+  if (sub.status === 'past_due') return t('line.pastDue')
+  if (sub.period === 'lifetime') return t('line.lifetime')
+  return dated('renews')
+}
+
+function SubscriptionPanel({
+  subscription: sub,
+  endDate,
+  t,
+  tp,
+}: {
+  subscription: MySubscription
+  endDate: string | null
+  t: Translate
+  tp: Translate
+}) {
+  const ended = sub.status === 'canceled'
+  const name = `${PLAN_LABEL[sub.plan]}${sub.period ? ` · ${tp(sub.period)}` : ''}`
+  const cancelable = (sub.status === 'active' || sub.status === 'trialing') && sub.period !== 'lifetime'
+  return (
+    <>
+      <section className={ended ? 'card' : 'card plan-card'}>
+        <h2 className="dash-h">
+          {t('plan')}
+          <span className={sub.status === 'canceling' || sub.status === 'past_due' ? 'chip chip-warn' : 'chip'}>
+            {t(`status.${sub.status}`)}
+          </span>
+        </h2>
+        <p className="plan-big">{name}</p>
+        <p className="mb-4 mt-1.5 text-[15px] text-fg-2">{statusLine(sub, endDate, t)}</p>
+        {ended ? (
+          <Link href="/pricing" className="btn btn-primary">
+            {t('resubscribe')}
+          </Link>
+        ) : cancelable ? (
+          <SubscriptionActions mode="cancel" endDate={endDate} />
+        ) : sub.status === 'canceling' ? (
+          <SubscriptionActions mode="resume" endDate={endDate} />
+        ) : null}
+      </section>
+      {!ended && (
+        <section className="card">
+          <h2 className="dash-h">{t('perks')}</h2>
+          <ul className="featlist">
+            {(tp.raw('proFeatures') as string[]).map((f) => (
+              <li key={f}>
+                <Check size={18} aria-hidden />
+                {f}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      <section className="card">
+        <h2 className="dash-h">{t('billing')}</h2>
+        <Rows rows={[[t('merchant'), 'Waffo']]} />
+        <p className="mt-1 text-sm text-fg-3">{t('portalNote')}</p>
+        <BillingPortalButton />
+      </section>
+    </>
   )
 }

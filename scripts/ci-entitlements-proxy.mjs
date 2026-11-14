@@ -1,9 +1,9 @@
 // CI only (store-screenshots.yml): the store's server-side API_URL. Forwards every
-// request to the test API, except the account endpoints: the test API cannot verify
-// the JWTs a CI store mints, so this answers from the token's email instead.
-// /api/me/entitlements is "pro" for the demo user whose email starts with pro (see
-// ci-demo-session.mjs); /api/me/favorites is kept in memory, the pro user starting
-// with three, their summaries read from the test API.
+// request to the test API, except /api/me/entitlements and /api/me/subscription:
+// the test API cannot verify the JWTs a CI store mints, so this answers from the
+// first word of the token's email instead (see ci-demo-session.mjs). /api/me/favorites
+// is kept in memory, the pro user starting with three, their summaries read from the
+// test API.
 //
 // Usage: node scripts/ci-entitlements-proxy.mjs <upstream> <port>
 import { createServer } from 'node:http'
@@ -21,6 +21,18 @@ function emailOf(auth = '') {
   } catch {
     return ''
   }
+}
+
+const day = (offset) => new Date(Date.now() + offset * 864e5).toISOString().slice(0, 10)
+const periodEnd = day(30)
+const SUBSCRIPTIONS = {
+  pro: { plan: 'pro', status: 'active', period: 'monthly', currentPeriodEnd: periodEnd },
+  canceling: { plan: 'pro', status: 'canceling', period: 'monthly', currentPeriodEnd: periodEnd },
+  canceled: { plan: 'pro', status: 'canceled', period: 'monthly', currentPeriodEnd: day(-3) },
+}
+
+function json(res, body, status = 200) {
+  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(body))
 }
 
 const SEEDED = [
@@ -51,31 +63,29 @@ async function summary(id) {
   }
 }
 
-function json(res, status, body) {
-  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(body))
-}
-
 createServer(async (req, res) => {
+  const who = emailOf(req.headers.authorization).split('-')[0]
   if (req.url?.startsWith('/api/me/favorites')) {
     const email = emailOf(req.headers.authorization)
-    if (!email) return json(res, 401, { error: 'Unauthorized' })
+    if (!email) return json(res, { error: 'Unauthorized' }, 401)
     const mine = favoritesOf(email)
     const rest = req.url.slice('/api/me/favorites'.length).split('?')[0]
     if (req.method === 'GET' && !rest) {
       const rows = [...mine].sort((a, b) => b[1].localeCompare(a[1]))
       const list = await Promise.all(rows.map(async ([id, createdAt]) => ({ id, createdAt, resource: await summary(id) })))
-      return json(res, 200, { favorites: list })
+      return json(res, { favorites: list })
     }
     const id = decodeURIComponent(rest.slice(1))
     if (req.method === 'PUT') mine.set(id, mine.get(id) ?? new Date().toISOString())
     else if (req.method === 'DELETE') mine.delete(id)
-    else return json(res, 405, { error: 'Method not allowed' })
-    return json(res, 200, { id, favorited: req.method === 'PUT' })
+    else return json(res, { error: 'Method not allowed' }, 405)
+    return json(res, { id, favorited: req.method === 'PUT' })
   }
   if (req.url?.startsWith('/api/me/entitlements')) {
-    const plan = emailOf(req.headers.authorization).startsWith('pro') ? 'pro' : 'free'
-    res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ plan }))
-    return
+    return json(res, { plan: who === 'pro' || who === 'canceling' ? 'pro' : 'free' })
+  }
+  if (req.url === '/api/me/subscription') {
+    return json(res, { subscription: SUBSCRIPTIONS[who] ?? null })
   }
   try {
     const chunks = []

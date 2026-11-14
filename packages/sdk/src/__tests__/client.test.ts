@@ -228,3 +228,53 @@ describe('StoreClient favorites', () => {
     expect(result).toEqual({ data: null, error: 'Unauthorized', status: 401 })
   })
 })
+
+describe('StoreClient subscription methods', () => {
+  const originalFetch = globalThis.fetch
+  const active = { plan: 'pro', status: 'active', period: 'monthly', currentPeriodEnd: '2026-12-01' } as const
+  let seen: { url: string; method?: string; auth?: string }[] = []
+
+  function answer(status: number, body: unknown) {
+    seen = []
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      seen.push({ url: String(url), method: init?.method, auth: (init?.headers as Record<string, string>)['Authorization'] })
+      return new Response(JSON.stringify(body), { status })
+    }) as typeof fetch
+  }
+
+  test('getMySubscription reads the subscription, null included', async () => {
+    answer(200, { subscription: active })
+    expect((await new StoreClient().getMySubscription('tok-1')).data).toEqual({ subscription: active })
+    expect(seen).toEqual([{ url: 'http://localhost:3000/api/me/subscription', method: 'GET', auth: 'Bearer tok-1' }])
+
+    answer(200, { subscription: null })
+    expect((await new StoreClient().getMySubscription('tok-1')).data).toEqual({ subscription: null })
+    globalThis.fetch = originalFetch
+  })
+
+  test('cancel, resume and the portal link post to their endpoints', async () => {
+    const client = new StoreClient()
+    answer(200, { subscription: { ...active, status: 'canceling' } })
+    expect((await client.cancelSubscription('tok-1')).data?.subscription.status).toBe('canceling')
+    expect(seen[0]).toEqual({ url: 'http://localhost:3000/api/me/subscription/cancel', method: 'POST', auth: 'Bearer tok-1' })
+
+    answer(200, { subscription: active })
+    expect((await client.resumeSubscription('tok-1')).data?.subscription.status).toBe('active')
+    expect(seen[0]?.url).toBe('http://localhost:3000/api/me/subscription/resume')
+
+    answer(200, { portalUrl: 'https://pancake.waffo.ai/consumer/portal/store/STO_1#token=t' })
+    expect((await client.openBillingPortal('tok-1')).data).toEqual({ portalUrl: 'https://pancake.waffo.ai/consumer/portal/store/STO_1#token=t' })
+    expect(seen[0]?.url).toBe('http://localhost:3000/api/me/subscription/portal')
+    globalThis.fetch = originalFetch
+  })
+
+  test('an error keeps the server message and the HTTP status', async () => {
+    answer(409, { error: 'Subscription cannot be canceled' })
+    const result = await new StoreClient().cancelSubscription('tok-1')
+    expect(result).toEqual({ data: null, error: 'Subscription cannot be canceled', status: 409 })
+
+    answer(200, {})
+    expect((await new StoreClient().openBillingPortal('tok-1')).error).toBe('Unexpected response')
+    globalThis.fetch = originalFetch
+  })
+})

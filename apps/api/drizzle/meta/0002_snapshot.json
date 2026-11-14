@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ba5c5e50-680f-4758-8568-0d922128f1a2",
+  "id": "21ae9c0f-a8d7-4289-a5c5-05966936e2e4",
   "prevId": "0b4d61b7-f5b2-4d75-bd17-07d002ffd563",
   "tables": {
     "account": {
@@ -421,60 +421,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "favorites": {
-      "name": "favorites",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "resource_id": {
-          "name": "resource_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "favorites_user_id_user_id_fk": {
-          "name": "favorites_user_id_user_id_fk",
-          "tableFrom": "favorites",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "favorites_user_id_resource_id_pk": {
-          "columns": [
-            "user_id",
-            "resource_id"
-          ],
-          "name": "favorites_user_id_resource_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "found_listings": {
       "name": "found_listings",
       "columns": {
@@ -864,6 +810,20 @@
         },
         "event_timestamp": {
           "name": "event_timestamp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "billing_period": {
+          "name": "billing_period",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "current_period_end": {
+          "name": "current_period_end",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
