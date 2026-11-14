@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from 'next-intl/server'
 import { Check, CreditCard, Heart, User } from 'lucide-react'
 import { StoreClient } from '@as/sdk'
 import type { FavoriteEntry, MySubscription, Plan } from '@as/types'
+import { apiToken, formatDate, loadSubscription, statusLine } from '@/lib/subscription'
 import { auth } from '@/lib/auth/server'
 import { enabledLoginProviders } from '@/lib/auth/providers'
 import { LoginGate } from '@/components/LoginGate'
@@ -28,16 +29,6 @@ type Tab = (typeof TABS)[number]['id']
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('site.dashboard')
   return { title: t('metaTitle'), robots: { index: false } }
-}
-
-// Authenticated with a Better Auth JWT minted in-process: fetching our own
-// public URL would leave the pod and need the tailnet.
-async function apiToken(h: Headers): Promise<string | null> {
-  try {
-    return (await auth().api.getToken({ headers: h })).token
-  } catch {
-    return null
-  }
 }
 
 async function loadPlan(token: string | null): Promise<Plan | null> {
@@ -117,25 +108,6 @@ function FavoritesCard({ favorites, t, ts }: { favorites: FavoriteEntry[] | null
       )}
     </section>
   )
-}
-
-/** `undefined` when the subscription could not be read. */
-async function loadSubscription(token: string | null): Promise<MySubscription | null | undefined> {
-  if (!token) return undefined
-  try {
-    const result = await new StoreClient(API_URL).getMySubscription(token)
-    return result.data ? result.data.subscription : undefined
-  } catch {
-    return undefined
-  }
-}
-
-/** Waffo sends the period end as a date or a timestamp; shown as the UTC calendar date. */
-function formatDate(value: string | null, locale: string): string | null {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-CN', { dateStyle: 'long', timeZone: 'UTC' }).format(date)
 }
 
 async function loadSignInMethods(h: Headers): Promise<string[]> {
@@ -283,15 +255,6 @@ export default async function DashboardPage({
 }
 
 type Translate = { (key: string, values?: Record<string, string>): string; raw(key: string): unknown }
-
-function statusLine(sub: MySubscription, endDate: string | null, t: Translate): string {
-  const dated = (key: string) => (endDate ? t(`line.${key}`, { date: endDate }) : t(`line.${key}Undated`))
-  if (sub.status === 'canceling') return dated('canceling')
-  if (sub.status === 'canceled') return dated('canceled')
-  if (sub.status === 'past_due') return t('line.pastDue')
-  if (sub.period === 'lifetime') return t('line.lifetime')
-  return dated('renews')
-}
 
 function SubscriptionPanel({
   subscription: sub,

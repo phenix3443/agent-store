@@ -597,6 +597,11 @@
       "buy": "Buy lifetime",
       "working": "Opening checkout…",
       "failed": "Couldn't open checkout. Please try again later.",
+      "current": "Current plan",
+      "manage": "Manage subscription",
+      "viewPlan": "View plan and orders",
+      "ownedSubscription": "You're on {plan}. Switching period or buying lifetime isn't available here.",
+      "ownedLifetime": "You own Pro Lifetime. No subscription needed.",
       "merchant": "Payments by Waffo. Prices include tax.",
       "compare": {
         "title": "Compare plans",
