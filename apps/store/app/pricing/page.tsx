@@ -5,28 +5,36 @@ import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { StoreClient } from '@as/sdk'
-import { PRICING, formatPrice } from '@as/types'
+import { PRICING, formatPrice, type BillingPeriod } from '@as/types'
 import { getAuthToken } from '@/lib/auth/token'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
-type Period = 'monthly' | 'yearly'
-type Plan = Period | 'lifetime'
+const PERIODS: BillingPeriod[] = ['monthly', 'yearly', 'lifetime']
+
+// Free / Pro per row of the comparison; `failover` shows how many providers a failover spans.
+// Matches the Entitlements in @as/types and FREE_MAX_UPSTREAMS in client-core relay/server.ts.
+const COMPARE: ('yes-yes' | 'no-yes' | 'failover')[] = ['yes-yes', 'yes-yes', 'failover', 'yes-yes', 'no-yes', 'no-yes', 'no-yes', 'no-yes']
 
 export default function PricingPage() {
   const t = useTranslations('site.pricing')
-  const [period, setPeriod] = useState<Period>('yearly')
+  const tm = useTranslations('site.marketing')
+  const [period, setPeriod] = useState<BillingPeriod>('monthly')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState(false)
+  const lifetime = period === 'lifetime'
+  const days = PRICING.trialDays
+  const price = formatPrice(period)
+  const per = t(`per.${period}`)
 
-  async function checkout(plan: Plan, trial = false) {
-    const key = trial ? `${plan}-trial` : plan
+  async function checkout(trial: boolean) {
+    const key = trial ? `${period}-trial` : period
     if (busy) return
     setBusy(key)
     setError(false)
     try {
       const token = await getAuthToken()
-      const result = await new StoreClient(API_URL).createCheckout({ period: plan, trial }, { token: token ?? undefined })
+      const result = await new StoreClient(API_URL).createCheckout({ period, trial }, { token: token ?? undefined })
       if (result.data?.checkoutUrl) window.open(result.data.checkoutUrl, '_blank', 'noopener,noreferrer')
       else setError(true)
     } catch {
@@ -36,103 +44,168 @@ export default function PricingPage() {
     }
   }
 
-  const per = period === 'monthly' ? t('perMonth') : t('perYear')
+  const compareRows = t.raw('compare.rows') as string[]
 
   return (
-    <div className="px-4 pb-20 pt-10 lg:px-10 lg:pt-14">
-      <header className="grid gap-x-10 gap-y-5 pb-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,46ch)] lg:items-end">
-        <h1 className="text-[44px] leading-none tracking-[-0.03em] sm:text-[56px] lg:text-[88px]">{t('title')}</h1>
-        <p className="max-w-[52ch] text-[15px] leading-6 text-ink-2">{t('lede')}</p>
-      </header>
+    <>
+      <section className="relative pb-[clamp(36px,5vw,64px)] pt-[clamp(64px,9vw,120px)] text-center">
+        <div className="wrap">
+          <h1 className="h1 mb-[18px]">
+            {t('title')}
+            <span className="dim">{t('dim')}</span>
+          </h1>
+          <p className="lede mx-auto">{t('lede')}</p>
+          <div className="mt-8">
+            <div role="group" aria-label={t('period')} className="seg">
+              {PERIODS.map((p) => (
+                <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}>
+                  {t(p)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="cap mt-3 min-h-[1.6em]">{t(`note.${period}`)}</p>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-4">
-        <div role="group" aria-label={t('period')} className="inline-flex border border-ink">
-          {(['monthly', 'yearly'] as Period[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              aria-pressed={period === p}
-              onClick={() => setPeriod(p)}
-              className="min-h-10 px-4 caps text-xs transition-colors hover:bg-sel aria-pressed:bg-ink aria-pressed:text-on-ink"
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-bad">
+              {t('failed')}
+            </p>
+          )}
+
+          <div className="mx-auto mt-11 grid max-w-[900px] gap-5 text-left md:grid-cols-2">
+            <Plan
+              name={t('free')}
+              price="$0"
+              per={t('freePrice')}
+              sub={t('freeSub')}
+              features={t.raw('freeFeatures') as string[]}
             >
-              {t(p)}
-            </button>
-          ))}
+              <Link href="/download" className="btn mt-auto">
+                {tm('downloadFree')}
+              </Link>
+            </Plan>
+            <Plan
+              pro
+              name={t('pro')}
+              chip={lifetime ? t('chipLifetime') : t('chipTrial', { days })}
+              price={price}
+              per={per}
+              sub={lifetime ? t('lifetimeSub') : t('proSub', { days, price, per })}
+              features={t.raw(lifetime ? 'lifetimeFeatures' : 'proFeatures') as string[]}
+            >
+              <div className="mt-auto grid gap-2.5">
+                {lifetime ? (
+                  <button type="button" onClick={() => checkout(false)} disabled={busy != null} className="btn btn-primary">
+                    {busy === 'lifetime' ? t('working') : t('buy')}
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => checkout(true)} disabled={busy != null} className="btn btn-primary">
+                      {busy === `${period}-trial` ? t('working') : t('trial', { days })}
+                    </button>
+                    <button type="button" onClick={() => checkout(false)} disabled={busy != null} className="btn min-h-11">
+                      {busy === period ? t('working') : t('upgrade')}
+                    </button>
+                  </>
+                )}
+              </div>
+            </Plan>
+          </div>
+          <p className="cap mt-[22px]">{t('merchant')}</p>
         </div>
-        {period === 'yearly' && <span className="text-sm text-ink-2">{t('yearlyNote')}</span>}
-      </div>
+      </section>
 
-      {error && (
-        <p role="alert" className="mb-4 text-sm text-danger">
-          {t('failed')}
-        </p>
-      )}
+      <section aria-labelledby="pricing-compare" className="section-tight">
+        <div className="mx-auto w-[min(820px,100%-2*clamp(16px,4vw,32px))]">
+          <h2 id="pricing-compare" className="h2 mb-7">
+            {t('compare.title')}
+            <span className="dim">{t('compare.dim')}</span>
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="cmp">
+              <thead>
+                <tr>
+                  <th scope="col">{t('compare.feature')}</th>
+                  <th scope="col">{t('free')}</th>
+                  <th scope="col">{t('pro')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compareRows.map((row, i) => {
+                  const kind = COMPARE[i]
+                  return (
+                    <tr key={row}>
+                      <th scope="row" className="font-normal">
+                        {row}
+                      </th>
+                      {kind === 'failover' ? (
+                        <>
+                          <td className="font-mono">{t('compare.failoverFree')}</td>
+                          <td className="font-bold text-fg">{t('compare.failoverPro')}</td>
+                        </>
+                      ) : (
+                        <>
+                          <Cell yes={kind === 'yes-yes'} yesLabel={t('compare.yes')} noLabel={t('compare.no')} />
+                          <Cell yes yesLabel={t('compare.yes')} noLabel={t('compare.no')} />
+                        </>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}
 
-      <div className="grid border-t border-ink md:grid-cols-3">
-        <Plan name={t('free')} price="$0" sub={t('freeSub')} features={t.raw('freeFeatures') as string[]}>
-          <Link href="/store" className="btn min-h-12 w-full px-5">
-            {t('startFree')}
-          </Link>
-        </Plan>
-
-        <Plan name={t('pro')} price={formatPrice(period)} sub={per} features={t.raw('proFeatures') as string[]} emphasis>
-          <button
-            type="button"
-            onClick={() => checkout(period, true)}
-            disabled={busy != null}
-            className="btn btn-primary w-full"
-          >
-            {busy === `${period}-trial` ? t('working') : t('trial', { days: PRICING.trialDays })}
-          </button>
-          <button type="button" onClick={() => checkout(period)} disabled={busy != null} className="btn mt-2.5 min-h-10 w-full">
-            {busy === period ? t('working') : t('upgrade')}
-          </button>
-          <p className="mt-3 text-[13px] leading-5 text-ink-2">
-            {t('trialNote', { days: PRICING.trialDays, price: formatPrice(period), per })}
-          </p>
-        </Plan>
-
-        <Plan name={t('lifetime')} price={formatPrice('lifetime')} sub={t('lifetimeSub')} features={t.raw('lifetimeFeatures') as string[]}>
-          <button type="button" onClick={() => checkout('lifetime')} disabled={busy != null} className="btn min-h-12 w-full px-5">
-            {busy === 'lifetime' ? t('working') : t('buy')}
-          </button>
-        </Plan>
-      </div>
-
-      <p className="mt-8 max-w-[70ch] text-[13px] leading-5 text-ink-2">{t('merchant')}</p>
-    </div>
+function Cell({ yes, yesLabel, noLabel }: { yes: boolean; yesLabel: string; noLabel: string }) {
+  return yes ? (
+    <td className="font-bold text-fg">{yesLabel}</td>
+  ) : (
+    <td className="text-fg-3">
+      <span aria-hidden>—</span>
+      <span className="sr-only">{noLabel}</span>
+    </td>
   )
 }
 
 function Plan({
   name,
+  chip,
   price,
+  per,
   sub,
   features,
-  emphasis,
+  pro = false,
   children,
 }: {
   name: string
+  chip?: string
   price: string
+  per: string
   sub: string
   features: string[]
-  emphasis?: boolean
+  pro?: boolean
   children: React.ReactNode
 }) {
   return (
-    <section
-      aria-label={name}
-      className={`flex flex-col border-b border-line py-8 md:border-b-0 md:px-6 md:first:pl-0 md:last:pr-0 md:[&:not(:first-child)]:border-l ${emphasis ? 'bg-plate md:!px-6' : ''} ${emphasis ? 'px-4 md:px-6' : ''}`}
-    >
-      <h2 className={`text-[22px] leading-7 ${emphasis ? 'font-medium' : ''}`}>{name}</h2>
-      <p className="mt-4 flex items-baseline gap-2">
-        <span className="font-mono text-[44px] leading-none tracking-[-0.02em]">{price}</span>
-        <span className="text-sm text-ink-2">{sub}</span>
+    <section aria-label={name} className={`plan ${pro ? 'plan-pro' : ''}`}>
+      <h2 className="flex items-center justify-between gap-3 text-xl font-bold">
+        {name}
+        {chip && <span className="chip">{chip}</span>}
+      </h2>
+      <p className="mt-4 flex flex-wrap items-baseline gap-2">
+        <span className="text-[44px] font-extrabold leading-none tracking-[-0.02em]">{price}</span>
+        <span className="text-sm text-fg-2">{per}</span>
       </p>
-      <ul className="mb-8 mt-7 flex-1">
+      <p className="mt-2 min-h-[3.3em] text-sm text-fg-3">{sub}</p>
+      <ul className="mb-7 mt-5 grid gap-3">
         {features.map((f) => (
-          <li key={f} className="flex items-start gap-2.5 border-t border-line py-2.5 text-sm leading-[22px] last:border-b">
-            <Check size={15} aria-hidden className="mt-[3px] shrink-0" />
+          <li key={f} className="grid grid-cols-[20px_minmax(0,1fr)] gap-2.5 text-[15px] text-fg-2">
+            <Check size={18} aria-hidden className="mt-[3px] text-fg" />
             {f}
           </li>
         ))}

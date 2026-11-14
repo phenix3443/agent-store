@@ -8,6 +8,8 @@ const [base = 'http://localhost:3000', out = 'shots'] = process.argv.slice(2)
 const DETAIL = '/store/skill/github:vercel-labs/skills/find-skills'
 const PAGES = [
   { name: 'landing', path: '/' },
+  { name: 'client', path: '/client' },
+  { name: 'pricing', path: '/pricing' },
   { name: 'download', path: '/download' },
   { name: 'store', path: '/store' },
   { name: 'skill', path: '/store?category=skill' },

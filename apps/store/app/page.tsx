@@ -1,146 +1,153 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { Check } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { formatPrice } from '@as/types'
-import { getResource, listResources } from '@/lib/catalog'
-import { desktopSlug } from '@/lib/resource'
+import type { ResourceKind, ResourceSummary } from '@as/types'
+import { listResources } from '@/lib/catalog'
 import { desktopOsFromUserAgent } from '@/lib/desktop-os'
-import { getLatestRelease } from '@/lib/latest-release'
-import { DownloadSection } from '@/components/landing/DownloadSection'
-import { Faq } from '@/components/landing/Faq'
-import { FeatureGrid } from '@/components/landing/FeatureGrid'
-import { HeroDownload } from '@/components/landing/HeroDownload'
-import { InstallMap, type MapCategory, type MapSample } from '@/components/landing/InstallMap'
-import { Screenshot } from '@/components/landing/Screenshot'
-import { SHOTS } from '@/components/landing/shots'
-import { TerminalDemo } from '@/components/landing/TerminalDemo'
+import { getLatestRelease, RELEASES_PAGE } from '@/lib/latest-release'
+import { CatalogShelf } from '@/components/marketing/CatalogShelf'
+import { SHELF_KINDS } from '@/components/marketing/shelf'
+import { FeatureKeys } from '@/components/marketing/FeatureKeys'
+import { Cta, DownloadButton, SupportedAgents } from '@/components/marketing/Marketing'
+import { ProductDemo } from '@/components/marketing/ProductDemo'
+import { AppShot, SHOTS, WindowFrame } from '@/components/marketing/Window'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('site.home')
-  return { title: { absolute: t('metaTitle') }, description: t('lede') }
+  return { title: { absolute: t('metaTitle') }, description: t('metaDescription') }
 }
 
-const MAP_CATEGORIES: MapCategory[] = ['skill', 'mcp', 'provider']
-const TRUST = ['preview', 'restore', 'keys'] as const
+const SHELF_SIZE = 10
+const NO_SAMPLES: Record<ResourceKind, ResourceSummary[]> = { skill: [], mcp: [], provider: [] }
 
-async function mapSample(kind: MapCategory): Promise<MapSample | null> {
-  const page = await listResources({ kind, q: '', sort: 'default' }, 0, 1)
-  const first = page.ok ? page.resources[0] : undefined
-  const slug = first && desktopSlug(first)
-  if (!first || !slug) return null
-  // Skills and MCP servers go to both tools; a provider says which it serves.
-  let tools: MapSample['tools'] = ['claude', 'codex']
-  if (kind === 'provider') {
-    const detail = await getResource(first.id).catch(() => null)
-    if (detail?.kind === 'provider') tools = detail.compatibleWith.filter((t) => t === 'claude' || t === 'codex')
-  }
-  return { name: first.name, slug, tools }
-}
-
-async function mapSamples(): Promise<Record<MapCategory, MapSample | null>> {
-  const samples = await Promise.all(MAP_CATEGORIES.map((kind) => mapSample(kind).catch(() => null)))
-  return Object.fromEntries(MAP_CATEGORIES.map((c, i) => [c, samples[i]])) as Record<MapCategory, MapSample | null>
-}
-
-const NO_SAMPLES: Record<MapCategory, MapSample | null> = { skill: null, mcp: null, provider: null }
-
-function SectionHead({ id, title, lede }: { id: string; title: string; lede?: string }) {
-  return (
-    <div className="grid gap-x-16 gap-y-4 lg:grid-cols-2 lg:items-end">
-      <h2 id={id} className="max-w-[18ch] text-[28px] leading-9 tracking-[-0.02em] sm:text-[40px] sm:leading-[1.1]">
-        {title}
-      </h2>
-      {lede && <p className="max-w-[56ch] text-[15px] leading-[26px] text-ink-2">{lede}</p>}
-    </div>
+async function shelfSamples(): Promise<Record<ResourceKind, ResourceSummary[]>> {
+  const pages = await Promise.all(
+    SHELF_KINDS.map((kind) => listResources({ kind, q: '', sort: 'default' }, 0, SHELF_SIZE).catch(() => null)),
   )
+  return Object.fromEntries(
+    SHELF_KINDS.map((k, i) => {
+      const page = pages[i]
+      return [k, page?.ok ? page.resources : []]
+    }),
+  ) as Record<ResourceKind, ResourceSummary[]>
 }
 
 export default async function LandingPage({ searchParams }: { searchParams: Promise<{ state?: string }> }) {
   const t = await getTranslations('site.home')
-  // ?state=empty|error open the degraded states for screenshots and review (frontend-build step 8).
+  const tm = await getTranslations('site.marketing')
+  // ?state=empty|error open the degraded states for screenshots and review.
   const { state } = await searchParams
   const [samples, release, requestHeaders] = await Promise.all([
-    state === 'empty' ? NO_SAMPLES : mapSamples(),
+    state === 'empty' ? NO_SAMPLES : shelfSamples(),
     state === 'error' ? null : getLatestRelease(),
     headers(),
   ])
   const visitorOs = desktopOsFromUserAgent(requestHeaders.get('user-agent'))
+  const version = release?.version ?? null
 
   return (
-    <div className="px-4 lg:px-10">
-      <section className="grid gap-x-14 gap-y-12 pb-14 pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:pb-20 lg:pt-16">
-        <div className="min-w-0">
-          <h1 className="text-[44px] leading-[1.02] tracking-[-0.035em] [text-wrap:balance] [word-break:keep-all] sm:text-[56px] lg:text-[clamp(56px,4.8vw,80px)] lg:leading-[1]">
-            <span className="block">{t('titleA')}</span>
-            <span className="block">{t('titleB')}</span>
+    <>
+      <section className="hero">
+        <div aria-hidden className="beams">
+          <i />
+          <i />
+          <i />
+        </div>
+        <div aria-hidden className="horizon" />
+        <div className="wrap relative">
+          <h1 aria-label={t('titlePlain')} className="h-hero hero-title mx-auto mb-[22px] max-w-[14em]">
+            <span aria-hidden>{t('titleA')}</span>
+            {t('titleComma') && (
+              <span aria-hidden className="hero-comma">
+                {t('titleComma')}
+              </span>
+            )}
+            <span aria-hidden className="text-grad">
+              {t('titleB')}
+            </span>
           </h1>
-          <p className="mt-7 max-w-[46ch] text-lg leading-7">{t('lede')}</p>
-          <Link href="/store" className="btn btn-primary mt-9">
-            {t('browse')}
-          </Link>
+          <p className="lede mx-auto mb-3 max-w-[38em]">{t('lede')}</p>
+          <p className="mx-auto mb-[30px] text-[13.5px] text-fg-3">{tm('supLine')}</p>
+          <DownloadButton visitorOs={visitorOs} />
+          <div className="cap mt-[18px] flex flex-col items-center gap-1">
+            <span>
+              {version && `${version} · `}
+              {tm('platforms')}
+            </span>
+            <span className="flex flex-wrap justify-center gap-y-0.5">
+              <Link href="/docs#cli">{t('cli')}</Link>
+              <i aria-hidden className="mx-2 not-italic text-line-strong">
+                |
+              </i>
+              <a href={release?.url ?? RELEASES_PAGE}>{t('allReleases')}</a>
+              <i aria-hidden className="mx-2 not-italic text-line-strong">
+                |
+              </i>
+              <Link href="/store">{t('browse')}</Link>
+            </span>
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-8 max-w-[34rem] border-t border-line pt-5">
-            <p className="text-[13px] leading-5 text-ink-2">
-              {t('unsigned')}{' '}
-              <Link href="/download#first-run" className="link text-ink">
-                {t('unsignedLink')}
+      <section aria-labelledby="home-demo" className="section">
+        <div className="wrap">
+          <h2 id="home-demo" className="h2 mb-[clamp(36px,5vw,64px)] text-center">
+            {t('demo.title')}
+            <span className="dim">{t('demo.dim')}</span>
+          </h2>
+          <ProductDemo />
+          <p className="cap text-center">{tm('shotNote')}</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="home-keys" className="section">
+        <div className="wrap split">
+          <div className="stack">
+            <h2 id="home-keys" className="h2">
+              {t('keys.title')}
+              <span className="dim">{t('keys.dim')}</span>
+            </h2>
+            <SupportedAgents />
+            <p className="!mt-[26px] flex flex-wrap items-center gap-[18px]">
+              <DownloadButton visitorOs={visitorOs} small />
+              <Link href="/client" className="link inline-flex items-center gap-1.5 font-semibold text-fg">
+                {t('keys.more')}
+                <ArrowRight size={15} aria-hidden />
               </Link>
             </p>
-            <div className="mt-4">
-              <HeroDownload visitorOs={visitorOs} />
-            </div>
           </div>
-          <p className="mt-6 text-sm leading-[22px]">
-            <Link href="/pricing" className="link">
-              {t('price', { monthly: formatPrice('monthly') })}
-            </Link>
-          </p>
-        </div>
-
-        <div className="min-w-0 px-2 sm:px-0 lg:pt-2">
-          <Screenshot shot={SHOTS.hero} alt={t('heroShotAlt')} marks priority sizes="(min-width: 1024px) 55vw, 100vw" />
-          <ul aria-label={t('trustLabel')} className="mt-10 border-t border-line">
-            {TRUST.map((key) => (
-              <li key={key} className="flex gap-3 border-b border-line py-3 text-[15px] leading-6">
-                <Check size={16} aria-hidden className="mt-1 shrink-0" />
-                {t(`trust.${key}`)}
-              </li>
-            ))}
-          </ul>
+          <FeatureKeys />
         </div>
       </section>
 
-      <section aria-labelledby="home-map" className="border-t border-ink py-14 lg:py-20">
-        <SectionHead id="home-map" title={t('map.title')} lede={t('map.lede')} />
-        <InstallMap samples={samples} />
-      </section>
-
-      <section aria-labelledby="home-terminal" className="grid gap-x-16 gap-y-8 border-t border-ink py-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:py-20">
-        <div>
-          <h2 id="home-terminal" className="max-w-[16ch] text-[28px] leading-9 tracking-[-0.02em] sm:text-[40px] sm:leading-[1.1]">
-            {t('terminal.title')}
-          </h2>
-          <p className="mt-4 max-w-[48ch] text-[15px] leading-[26px] text-ink-2">{t('terminal.lede')}</p>
-          <p className="mt-4 max-w-[48ch] text-sm leading-[22px] text-ink-2">{t('terminal.note')}</p>
+      <section aria-labelledby="home-manage" className="section-tight">
+        <div className="wrap split split-rev">
+          <div className="stack">
+            <h2 id="home-manage" className="h2">
+              {t('manage.title')}
+              <span className="dim">{t('manage.dim')}</span>
+            </h2>
+            <p className="lede">{t('manage.lede')}</p>
+            <p>
+              <Link href="/client" className="link inline-flex items-center gap-1.5 font-semibold text-fg">
+                {t('manage.link')}
+                <ArrowRight size={15} aria-hidden />
+              </Link>
+            </p>
+          </div>
+          <WindowFrame title={t('manage.window')} kind="skill">
+            <AppShot shot={SHOTS.skillsNarrow} alt={t('manage.alt')} sizes="(min-width: 900px) 640px, 100vw" />
+          </WindowFrame>
         </div>
-        <TerminalDemo />
       </section>
 
-      <section aria-labelledby="home-features" className="border-t border-ink py-14 lg:py-20">
-        <SectionHead id="home-features" title={t('features.title')} lede={t('features.lede')} />
-        <FeatureGrid />
+      <section aria-labelledby="home-catalog" className="section !pb-0">
+        <CatalogShelf samples={samples} />
       </section>
 
-      <section aria-labelledby="home-faq" className="grid gap-x-16 gap-y-8 border-t border-ink py-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:py-20">
-        <h2 id="home-faq" className="text-[28px] leading-9 tracking-[-0.02em] sm:text-[40px] sm:leading-[1.1]">
-          {t('faq.title')}
-        </h2>
-        <Faq />
-      </section>
-
-      <DownloadSection release={release} visitorOs={visitorOs} />
-    </div>
+      <Cta visitorOs={visitorOs} version={version} />
+    </>
   )
 }
