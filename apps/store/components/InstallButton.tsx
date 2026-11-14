@@ -4,10 +4,12 @@ import type { ResourceSummary } from '@as/types'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { installLink, launchDesktop } from '@/lib/desktop-link'
+import { markDesktopSeen } from '@/lib/local-client'
 import { desktopSlug } from '@/lib/resource'
 import { usePhone } from '@/lib/use-phone'
 import { CopyCommandButton } from './CopyCommandButton'
 import { useInstallNotice } from './InstallNotice'
+import { useInstalledHere } from './LocalInstalled'
 
 type State = 'idle' | 'launching' | 'opened'
 
@@ -26,6 +28,7 @@ export function InstallButton({ resource, command, variant = 'row', className = 
   const [state, setState] = useState<State>('idle')
   const reset = useRef<ReturnType<typeof setTimeout>>()
   const slug = desktopSlug(resource)
+  const here = useInstalledHere(resource.id)
 
   useEffect(() => () => clearTimeout(reset.current), [])
 
@@ -48,6 +51,7 @@ export function InstallButton({ resource, command, variant = 'row', className = 
     setState('launching')
     const result = slug ? await launchDesktop(installLink({ slug, kind: resource.kind, id: resource.id })) : 'missing'
     if (result === 'opened') {
+      markDesktopSeen()
       setState('opened')
       reset.current = setTimeout(() => setState('idle'), 4000)
       return
@@ -66,7 +70,8 @@ export function InstallButton({ resource, command, variant = 'row', className = 
   }
 
   const row = variant === 'row'
-  const idle = row ? t('action') : t('desktop')
+  // Installed here, the same link opens the client's notice for it, which leads to the item.
+  const idle = here ? (row ? t('manage') : t('manageDesktop')) : row ? t('action') : t('desktop')
   const text = state === 'opened' ? (row ? t('openedShort') : t('opened')) : state === 'launching' ? t('opening') : idle
 
   return (
@@ -74,9 +79,10 @@ export function InstallButton({ resource, command, variant = 'row', className = 
       <button
         type="button"
         onClick={() => void install()}
-        aria-label={row && state === 'idle' ? t('label', { name: resource.name }) : undefined}
+        aria-label={row && state === 'idle' ? t(here ? 'manageLabel' : 'label', { name: resource.name }) : undefined}
         aria-busy={state === 'launching'}
         data-install-state={state}
+        data-installed-here={here ? '' : undefined}
         className={`btn ${row ? 'min-w-[68px]' : 'btn-primary'} ${className}`}
       >
         {text}

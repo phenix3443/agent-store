@@ -3,6 +3,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { formatCount, installCommand, runEntries, type RunEntry } from '@/lib/resource'
 import { InstallPanel } from './InstallPanel'
 import { KindTile } from './KindTile'
+import { InstalledBadge } from './LocalInstalled'
 import { VerifiedLabel } from './VerifiedLabel'
 
 interface ItemDetailProps {
@@ -109,6 +110,7 @@ export function ItemDetail({ resource: r, title, readme, layout = 'page' }: Item
               )}
             </span>
             {r.verified && <VerifiedLabel />}
+            <InstalledBadge id={r.id} />
           </p>
           {r.description && (
             <p
