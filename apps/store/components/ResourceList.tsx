@@ -1,6 +1,6 @@
 'use client'
 
-import type { ResourceSummary } from '@as/types'
+import type { ExternalSite, ResourceSummary } from '@as/types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { loadMoreResources } from '@/app/store/actions'
@@ -20,8 +20,8 @@ interface ResourceListProps {
   initialNextOffset: number | null
   title: string
   filtered: boolean
-  /** Whether the deployment can look a search up on other skill directories. */
-  supplement: boolean
+  /** The skill directories this deployment would send the query to; empty when the supplement is off. */
+  supplementSources: ExternalSite[]
   supplementReview?: SupplementView
 }
 
@@ -30,7 +30,7 @@ interface ResourceListProps {
  * action, so the browser never talks to the API directly. Remounted (by key)
  * whenever the query changes.
  */
-export function ResourceList({ query, initial, initialNextOffset, title, filtered, supplement, supplementReview }: ResourceListProps) {
+export function ResourceList({ query, initial, initialNextOffset, title, filtered, supplementSources, supplementReview }: ResourceListProps) {
   const t = useTranslations('store.list')
   const [resources, setResources] = useState(initial)
   const [nextOffset, setNextOffset] = useState(initialNextOffset)
@@ -69,7 +69,7 @@ export function ResourceList({ query, initial, initialNextOffset, title, filtere
     return () => observer.disconnect()
   }, [auto, loadMore])
 
-  const showSupplement = supplementReview !== undefined || (supplement && offerSupplement(query.q, query.kind, initial))
+  const showSupplement = supplementReview !== undefined || (supplementSources.length > 0 && offerSupplement(query.q, query.kind, initial))
   const count = nextOffset === null ? t('countAll', { count: resources.length }) : t('countShown', { count: resources.length })
 
   return (
@@ -102,7 +102,7 @@ export function ResourceList({ query, initial, initialNextOffset, title, filtere
           </div>
         </>
       )}
-      {showSupplement && <StoreSupplement query={query} review={supplementReview} />}
+      {showSupplement && <StoreSupplement query={query} sources={supplementSources} review={supplementReview} />}
     </>
   )
 }

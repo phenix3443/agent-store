@@ -1,5 +1,5 @@
 import type { Octokit } from '@octokit/rest'
-import type { ExternalListing, ResourceDetail, ResourceKind, ResourceSummary, SearchSupplementResponse } from '@as/types'
+import type { ExternalListing, ExternalSite, ResourceDetail, ResourceKind, ResourceSummary, SearchSupplementResponse } from '@as/types'
 import { isHTTPError, isTimeoutError, type KyInstance } from 'ky'
 import { RateLimiterMemory } from 'rate-limiter-flexible'
 import { upstreamClient } from './http'
@@ -189,7 +189,17 @@ export class SearchSupplement {
     const answer = (
       status: SearchSupplementResponse['status'],
       rest: Partial<Omit<SearchSupplementResponse, 'status'>> = {},
-    ): SearchSupplementResponse => ({ status, reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null, ...rest })
+    ): SearchSupplementResponse => ({
+      status,
+      sources: this.o.sources.map((s) => s.name),
+      reason: null,
+      resources: [],
+      listings: [],
+      foundOn: {},
+      partial: false,
+      retryAfterSeconds: null,
+      ...rest,
+    })
 
     const q = normalizeQuery(rawQuery)
     if (this.o.sources.length === 0) return answer('disabled')
@@ -255,7 +265,7 @@ export class SearchSupplement {
    * Stored finds for a query: scanned skills as resources, the rest as listings. What
    * the catalog holds by now is left out (it is in the local results) and dropped.
    */
-  private stored(q: string, skillKeys: string[]): { resources: ResourceSummary[]; listings: ExternalListing[] } {
+  private stored(q: string, skillKeys: string[]): { resources: ResourceSummary[]; listings: ExternalListing[]; foundOn: Record<string, ExternalSite[]> } {
     const { resources, listings } = this.o.store.find(skillKeys, q.split(' '), this.c.maxResults)
     const published = resources.filter((r) => this.o.reader.has(r.summary.id))
     if (published.length) this.o.store.dropResources(published.map((r) => r.summary.id))
@@ -268,6 +278,11 @@ export class SearchSupplement {
         .map((x) => x.t)
 
     const promoted = new Set(kept.map((r) => r.skillKey))
+    const sitesOfRepo = new Map<string, Set<ExternalSite>>()
+    for (const l of listings) {
+      const repo = l.githubRepo?.toLowerCase()
+      if (repo) sitesOfRepo.set(repo, (sitesOfRepo.get(repo) ?? new Set()).add(l.site))
+    }
     const byKey = new Map<string, FoundListing>()
     for (const l of listings) {
       if (promoted.has(l.key) || this.inCatalog(l.key)) continue
@@ -275,8 +290,16 @@ export class SearchSupplement {
       // Of two sites listing one skill, the site the key names is its home.
       if (!prev || (!prev.key.startsWith(`${prev.site}:`) && l.key.startsWith(`${l.site}:`))) byKey.set(l.key, l)
     }
+    const shown = byRelevance(kept, (r) => r.summary.name, (r) => r.skillKey).slice(0, this.c.maxResults)
+    const foundOn: Record<string, ExternalSite[]> = {}
+    for (const r of shown) {
+      const repo = /^github:([^/]+\/[^/]+)\//.exec(r.skillKey)?.[1]
+      const sites = repo ? sitesOfRepo.get(repo.toLowerCase()) : undefined
+      if (sites?.size) foundOn[r.summary.id] = [...sites].sort()
+    }
     return {
-      resources: byRelevance(kept, (r) => r.summary.name, (r) => r.skillKey).slice(0, this.c.maxResults).map((r) => r.summary),
+      resources: shown.map((r) => r.summary),
+      foundOn,
       listings: byRelevance([...byKey.values()], (l) => l.name, (l) => l.key)
         .slice(0, this.c.maxResults)
         .map(({ githubRepo: _repo, ...l }) => l),

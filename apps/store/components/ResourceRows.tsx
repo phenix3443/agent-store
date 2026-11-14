@@ -30,7 +30,7 @@ export function Count({ value }: { value: number | null }) {
   return <>{formatCount(value)}</>
 }
 
-function Row({ resource, showCategory }: { resource: ResourceSummary; showCategory: boolean }) {
+function Row({ resource, showCategory, via }: { resource: ResourceSummary; showCategory: boolean; via?: string }) {
   const t = useTranslations('store')
   const pathname = usePathname()
   const href = resourceHref(resource)
@@ -55,6 +55,7 @@ function Row({ resource, showCategory }: { resource: ResourceSummary; showCatego
           {showCategory && <span className="kind">{t(`category.${resource.kind}`)}</span>}
           <span className="truncate">{resource.author?.name ?? t('list.unknownAuthor')}</span>
           {resource.verified && <VerifiedMark />}
+          {via && <span className="shrink-0 text-fg-2">{via}</span>}
           <span className="store-row-meta-stat ml-auto shrink-0 font-mono">
             <Count value={resource.installs} /> {t('list.installsUnit')}
           </span>
@@ -83,12 +84,25 @@ function Row({ resource, showCategory }: { resource: ResourceSummary; showCatego
   )
 }
 
-/** `showCategory` is off on a single-kind filter, where every row would repeat the same category. */
-export function ResourceRows({ resources, showCategory, label }: { resources: ResourceSummary[]; showCategory: boolean; label: string }) {
+/**
+ * `showCategory` is off on a single-kind filter, where every row would repeat the same category.
+ * `via`: resource id → where it was found, for search supplement rows.
+ */
+export function ResourceRows({
+  resources,
+  showCategory,
+  label,
+  via,
+}: {
+  resources: ResourceSummary[]
+  showCategory: boolean
+  label: string
+  via?: Record<string, string>
+}) {
   return (
     <ul aria-label={label} className="store-rows store-results">
       {resources.map((resource) => (
-        <Row key={resource.id} resource={resource} showCategory={showCategory} />
+        <Row key={resource.id} resource={resource} showCategory={showCategory} via={via?.[resource.id]} />
       ))}
     </ul>
   )
