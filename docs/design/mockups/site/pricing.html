@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="pricing">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero center">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <h1 class="h1"><span data-i18n="pr.ha"></span><span class="dim" data-i18n="pr.hb"></span></h1>
+    <p class="lede" data-i18n="pr.lede"></p>
+    <div style="margin-top:32px"><div class="seg" id="period" role="group" data-i18n-attr="aria-label:pr.period"></div></div>
+    <p class="cap" id="periodNote" style="margin-top:12px;min-height:1.6em"></p>
+
+    <div class="plans" style="text-align:left" data-spot-group>
+      <article class="plan spot" data-kind="provider">
+        <h2>Free</h2>
+        <div class="price"><b>$0</b><span data-i18n="pr.free.price"></span></div>
+        <p class="sub" data-i18n="pr.free.sub"></p>
+        <ul id="freeList"></ul>
+        <a class="btn btn-ghost" href="download.html" data-i18n="dl.free"></a>
+      </article>
+      <article class="plan pro spot" data-kind="skill">
+        <h2>Pro <span class="chip" id="proChip"></span></h2>
+        <div class="price"><b id="amount">$9.99</b><span id="per"></span></div>
+        <p class="sub" id="proSub"></p>
+        <ul id="proList"></ul>
+        <div id="proActions" style="display:grid;gap:10px;margin-top:auto"></div>
+      </article>
+    </div>
+    <p class="cap" style="margin-top:22px" data-i18n="pr.merchant"></p>
+  </div>
+</section>
+
+<section class="section tight">
+  <div class="narrow">
+    <h2 class="h2" data-reveal style="margin-bottom:28px"><span data-i18n="pr.cmp.ha"></span><span class="dim" data-i18n="pr.cmp.hb"></span></h2>
+    <div class="cmp-scroll" data-reveal>
+    <table class="cmp">
+      <thead><tr><th data-i18n="pr.cmp.f"></th><th>Free</th><th>Pro</th></tr></thead>
+      <tbody id="cmp"></tbody>
+    </table>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, PL = AS_PLANS, S = AS.S, cur = AS.hash().get('period');
+  if (!PL.periods[cur]) cur = 'monthly';
+  var shownAmt = PL.periods[cur].amount, check = AS.ic('check');
+  $('#freeList').innerHTML = PL.list(PL.free, check);
+  $('#cmp').innerHTML = [[1, 1], [1, 1], [1, 1], [0, 1], [0, 1], [0, 2], [0, 2]].map(function (r, i) {
+    function c(v) { return v === 1 ? '<td class="y">' + t('pr.yes') + '</td>' : v === 2 ? '<td class="n">' + t('pr.planned') + '</td>' : '<td class="n">—</td>'; }
+    return '<tr><td>' + t('pr.r' + (i + 1)) + '</td>' + c(r[0]) + c(r[1]) + '</tr>';
+  }).join('');
+  function money(n) { return '$' + (Math.round(n * 100) % 100 === 0 ? Math.round(n) : n.toFixed(2)); }
+  function tween(to) {
+    var from = shownAmt, t0 = performance.now(), el = $('#amount');
+    if (AS.reduce || from === to) { shownAmt = to; el.textContent = money(to); return; }
+    (function step(now) { var k = Math.min(1, (now - t0) / 420), e = 1 - Math.pow(1 - k, 3); shownAmt = from + (to - from) * e; el.textContent = k < 1 ? '$' + (to % 1 ? shownAmt.toFixed(2) : Math.round(shownAmt)) : money(to); if (k < 1) requestAnimationFrame(step); else shownAmt = to; })(t0);
+  }
+  function go(trial) { AS.requireAuth(function () { location.href = 'checkout.html#period=' + cur + (trial ? '&trial=1' : ''); }, t('auth.pay')); }
+  function render() {
+    var p = PL.periods[cur], life = cur === 'lifetime', isPro = S.get().signedIn && S.get().plan.tier === 'pro';
+    $('#period').innerHTML = Object.keys(PL.periods).map(function (k) { return '<button type="button" data-p="' + k + '" aria-pressed="' + (k === cur) + '">' + t('pr.' + k) + '</button>'; }).join('');
+    $('#periodNote').textContent = t('pr.note.' + cur);
+    tween(p.amount); $('#per').textContent = t('pr.per.' + cur);
+    $('#proChip').textContent = t(life ? 'pr.chip.life' : 'pr.chip.trial');
+    $('#proSub').textContent = life ? t('pr.sub.life') : t('pr.sub', { price: p.text, per: t('pr.per.' + cur) });
+    $('#proList').innerHTML = PL.list(life ? PL.lifetime : PL.pro, check);
+    $('#proActions').innerHTML = isPro ? '<a class="btn btn-pri" href="dashboard.html#tab=subscription">' + t('pr.manage') + '</a>'
+      : life ? '<button class="btn btn-pri" type="button" data-go="0">' + t('pr.buy') + '</button>'
+        : '<button class="btn btn-pri" type="button" data-go="1">' + t('pr.trial') + '</button><button class="btn btn-ghost" type="button" data-go="0">' + t('pr.upgrade') + '</button>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-p],[data-go]'); if (!b) return;
+    if (b.dataset.p) { cur = b.dataset.p; history.replaceState(null, '', '#period=' + cur); render(); } else go(b.dataset.go === '1');
+  });
+  document.addEventListener('as:state', render);
+  render();
+})();
+</script>
+</body>
+</html>
