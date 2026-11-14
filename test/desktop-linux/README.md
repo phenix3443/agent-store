@@ -31,3 +31,35 @@ docker run --rm --shm-size 1g -e OUT=/out/appimage -v "$PWD/test/desktop-linux/o
 | `06-warm` | Link while the client runs. On Linux a second instance handles it until #68 is fixed |
 
 Not covered: macOS and Windows link delivery, and the browser's own "open this app?" prompt.
+
+## Website screenshots
+
+`marketing.sh` takes the client screenshots on the website's home page and `/client`, in Chinese and English. It also runs in the `desktop-shots` workflow, in its own container, and writes PNGs to `out/marketing/<zh|en>/`. It installs real catalog skills and MCP servers through the sidecar (one of each switched off for Codex), installs OpenRouter with a placeholder key and the local relay and enables both for Codex (OpenRouter supports only Codex), starts the relay and seeds two weeks of Codex usage through OpenRouter with `seed-usage.ts <home> openrouter`. The client follows the system language until one is picked in Settings, so each language is a launch with `LANG`/`LC_ALL` set; the image generates both locales. The window is drawn at 2x (`GDK_SCALE=2`) and each shot is cropped to the page, without the client's title bar, border and status bar: the website draws its own window frame.
+
+| Shot | Website slot | What it shows |
+|---|---|---|
+| `install` | Home demo, 安装 tab | The install dialog for agent-browser over Discover (cancelled afterwards) |
+| `skills` | `/client` hero | The skill library |
+| `mcp` | Home demo MCP tab, `/client` MCP | The MCP library with Context7 open |
+| `relay` | Home demo, 供应商 tab | The providers page with the relay running |
+| `usage` | Home demo 用量 tab, `/client` usage | The usage page |
+| `skills-narrow` | Home, 管得住 section | The skill library in an 800px-wide window |
+
+The wide shots are a 1056×660 page (2112×1320 PNG), `mcp` a 1280×800 page (2560×1600) so the list keeps its names next to the detail pane, and `skills-narrow` an 800×500 page (1600×1000), all 16:10 like the website's frames; `SHOTS` in `apps/store/components/marketing/Window.tsx` holds the pixel sizes. The page sizes sit at the top of `marketing.sh`; a wide page must stay over 1040px or the client switches to its narrow layout.
+
+After a change to the client's screens, regenerate them:
+
+1. Run the workflow on your branch: a PR touching `apps/cli-gui` runs it, or `gh workflow run desktop-shots.yml --ref <branch>` (about 25 minutes).
+2. Download the artifact into an empty temporary directory and check `marketing/result.txt` ends in `result: PASS`. Look at every PNG in `marketing/zh/` and `marketing/en/`; `marketing/raw/` has the uncropped screen.
+   ```sh
+   gh run download <run-id> -n desktop-shots -D /tmp/shots
+   ```
+3. Convert them to WebP over the old files, keeping the names:
+   ```sh
+   for lang in zh en; do for f in /tmp/shots/marketing/$lang/*.png; do
+     cwebp -quiet -q 85 -m 6 "$f" -o "apps/store/public/landing/$lang/$(basename "$f" .png).webp"
+   done; done
+   ```
+   Without `cwebp`, Pillow does the same: `Image.open(f).save(dst, 'WEBP', quality=85, method=6)`.
+4. If a page size changed, update `SHOTS` in `Window.tsx`. If a shot no longer shows what the alt text or caption next to it says, update `site.home.demo`, `site.home.manage` and `site.client` in `apps/store/messages/zh.json` and `en.json`.
+5. The PR's `store-screenshots` artifact has `landing-*` and `client-*` at 390, 820 and 1440px in both languages; check the new shots there.

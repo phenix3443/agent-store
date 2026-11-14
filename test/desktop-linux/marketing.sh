@@ -14,6 +14,8 @@ SETTLE=${SETTLE:-12}
 SCALE=2
 # Page area (logical px, 16:10) of each shot; Window.tsx in apps/store holds these times SCALE.
 WIDE=(1056 660)
+# The MCP shot has the detail pane open; narrower, the list loses its names.
+MCP_PAGE=(1280 800)
 NARROW=(800 500)
 # Client chrome around the page: 1px border, a 38px title bar (its bottom line included)
 # and a 27px status bar (its top line included).
@@ -54,7 +56,7 @@ export DISPLAY=:99
 # No GPU in the container: without these WebKitGTK paints a black window.
 export WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1
 export GDK_SCALE=$SCALE
-Xvfb :99 -screen 0 2560x1600x24 >/dev/null 2>&1 &
+Xvfb :99 -screen 0 2600x1800x24 >/dev/null 2>&1 &
 sleep 2
 eval "$(dbus-launch --sh-syntax)"
 export XDG_DATA_HOME=$HOME/.local/share XDG_CONFIG_HOME=$HOME/.config
@@ -68,7 +70,8 @@ locale -a >>"$OUT/seed.log" 2>&1
 check "the zh_CN and en_US locales exist" 'locale -a | grep -qi "^zh_CN.utf8$" && locale -a | grep -qi "^en_US.utf8$"'
 
 # 1. What a user has after a while: skills and MCP servers on for both agents (one of each
-#    off for Codex), OpenRouter with a key on for both, the relay running, two weeks of usage.
+#    off for Codex), OpenRouter with a key on for Codex (the only agent it supports) through
+#    the local relay, the relay running, two weeks of usage.
 for id in "${SKILLS[@]}" "${MCPS[@]}"; do
   slug=$(rpc installAndEnable "[\"$id\"]" | slug_of)
   check "installed $id${slug:+ as $slug}" '[ -n "$slug" ]'
@@ -79,8 +82,11 @@ done
 provider=$(rpc install '["builtin:openrouter"]' | slug_of)
 check "installed OpenRouter" '[ -n "$provider" ]'
 rpc setConfig "[\"$provider\",{\"apiKey\":\"$PLACEHOLDER_KEY\",\"baseUrl\":\"https://openrouter.ai/api/v1\"}]" >/dev/null
-rpc enable "[\"$provider\",\"claude\"]" >/dev/null
 rpc enable "[\"$provider\",\"codex\"]" >/dev/null
+# The relay itself: on for an agent, that agent's API URL points at it.
+relay=$(rpc install '["builtin:local"]' | slug_of)
+rpc enable "[\"$relay\",\"codex\"]" >/dev/null
+check "Codex goes through the local relay to OpenRouter" '"$SIDECAR" list 2>/dev/null | grep -E "^($provider|$relay) " | grep -c "✓" | grep -q 2'
 "$SIDECAR" relay start >>"$OUT/seed.log" 2>&1
 check "the local relay runs" '"$SIDECAR" relay status | grep -q running'
 (cd /work && bun test/desktop-linux/seed-usage.ts "$HOME/.agent-store" "$provider")
@@ -134,10 +140,12 @@ for lang in zh en; do
   sleep 15
   shot skills $w $h
   # An installed item's link says so; its button opens the item in its library.
+  size_page "${MCP_PAGE[@]}"
   install_link "$MCP_DETAIL"
   xdotool key Tab Return
   sleep 15
-  shot mcp $w $h
+  shot mcp $((MCP_PAGE[0] * SCALE)) $((MCP_PAGE[1] * SCALE))
+  size_page "${WIDE[@]}"
   xdotool key ctrl+4
   sleep 15
   shot relay $w $h

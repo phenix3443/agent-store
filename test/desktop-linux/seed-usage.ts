@@ -1,7 +1,7 @@
 // Writes relay usage for the screenshots: daily rollups over the last 12 days for
 // two providers, both agents and three models, plus recent request-log rows
-// (one fallback, one error). With a provider slug, every row goes through that one
-// provider and Codex uses gpt-5 (marketing.sh installs only OpenRouter). Fixture data for CI only.
+// (one fallback, one error). With a provider slug, every row is Codex through that one
+// provider on GPT models (marketing.sh routes only Codex, through OpenRouter). Fixture data for CI only.
 // Usage: bun test/desktop-linux/seed-usage.ts <AS_HOME> [provider]
 import { mkdirSync } from 'fs'
 import { openUsageDb } from '../../apps/client-core/src/usage/db'
@@ -18,10 +18,13 @@ const series: [string, 'claude' | 'codex', string, number, number, number, numbe
   ['openrouter', 'claude', 'claude-haiku-4-5', 18, 3100, 420, 0.004],
   ['deepseek', 'codex', 'deepseek-chat', 25, 4300, 760, 0.002],
 ]
+const ONLY_MODELS = ['gpt-5', 'gpt-5-mini', 'gpt-5-codex']
 if (only) {
-  series.forEach((row) => (row[0] = only))
-  series[2][2] = 'gpt-5'
-  series[2][6] = 0.009
+  series.forEach((row, i) => {
+    row[0] = only
+    row[1] = 'codex'
+    row[2] = ONLY_MODELS[i]
+  })
 }
 const day = 86_400_000
 for (let d = 11; d >= 0; d--) {
@@ -47,10 +50,11 @@ const logs: [string, 'claude' | 'codex', string, number, number, boolean][] = [
   ['openrouter', 'claude', 'claude-haiku-4-5', 200, 720, false],
 ]
 if (only) {
-  logs.forEach((row) => {
+  logs.forEach((row, i) => {
     row[0] = only
+    row[1] = 'codex'
+    row[2] = ONLY_MODELS[i % ONLY_MODELS.length]
     row[5] = false
-    if (row[1] === 'codex') row[2] = 'gpt-5'
   })
 }
 logs.forEach(([provider, target, model, status, latency, fallback], i) => {
