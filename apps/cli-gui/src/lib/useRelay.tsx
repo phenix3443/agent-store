@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { RelayStatus } from '@as/types'
 import { callRpc, errorText } from './rpc'
 import { AGENTS, joinNames } from './agents'
-import { AGENT_RELAY_ADDRESS, failedListeners, routedTargets } from './relay'
+import { AGENT_RELAY_ADDRESS, failedListeners, relayState, routedTargets } from './relay'
 import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useI18n } from '../i18n'
@@ -22,6 +22,14 @@ export interface RelayControl {
   dialog: JSX.Element
 }
 
+// Shared by every useRelay: a "not listening" line in the activity log waits for a later
+// "listening" line, even when the port frees up on its own and another screen sees it.
+let failureLogged = false
+
+function listeningOn(status: RelayStatus): string {
+  return (status.listeners ?? []).filter((l) => l.listening).map((l) => `127.0.0.1:${l.port}`).join(', ') || AGENT_RELAY_ADDRESS
+}
+
 /** The relay's status, refreshed after every install-level change, with start and stop. */
 export function useRelay(active = true): RelayControl {
   const { t, locale } = useI18n()
@@ -32,6 +40,17 @@ export function useRelay(active = true): RelayControl {
   const [busy, setBusy] = useState<'start' | 'stop' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+
+  useEffect(() => {
+    if (!status) return
+    const state = relayState(status)
+    if (failureLogged && state === 'listening') {
+      failureLogged = false
+      appendLine(`✓ ${t('relayCtl.logListening').replace('{0}', listeningOn(status))}`, 'green')
+    } else if (failureLogged && state === 'stopped') {
+      failureLogged = false
+    }
+  }, [status, appendLine, t])
 
   useEffect(() => {
     if (!active) return
@@ -61,11 +80,16 @@ export function useRelay(active = true): RelayControl {
           setError(t('relayCtl.exited'))
           appendLine(`✗ ${t('relayCtl.exited')}`, 'red')
           toast.error(t('relayCtl.exited'))
-        } else if (action === 'start' && failedListeners(next).length > 0) {
+        } else if (action === 'start' && relayState(next) === 'failed') {
+          failureLogged = true
           appendLine(`✗ ${failedListeners(next).map((l) => `${l.port}: ${l.error ?? ''}`).join('; ')}`, 'red')
           toast.error(t('relayCtl.startedNotListening'))
         } else {
-          appendLine(`✓ ${t(action === 'start' ? 'relayCtl.toastOn' : 'relayCtl.toastOff')}`, 'green')
+          if (action === 'stop') failureLogged = false
+          appendLine(
+            `✓ ${action === 'start' ? t('relayCtl.logListening').replace('{0}', listeningOn(next)) : t('relayCtl.toastOff')}`,
+            'green'
+          )
           toast(t(action === 'start' ? 'relayCtl.toastOn' : 'relayCtl.toastOff'))
         }
       } catch (err) {

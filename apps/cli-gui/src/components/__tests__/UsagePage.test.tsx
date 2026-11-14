@@ -266,3 +266,45 @@ test('a relay that exits right after starting says so', async () => {
   fireEvent.click(await screen.findByRole('button', { name: '启动' }))
   expect(await screen.findByText('中转进程启动后立即退出了，没有留下原因。')).toBeInTheDocument()
 })
+
+test('a start that could not bind is followed in the activity log once the relay listens', async () => {
+  const { useTerminalLog } = await import('../../state/TerminalLog')
+  const { useAppState: useState2 } = await import('../../state/AppState')
+  let listening = false
+  const busy = { running: true, pid: 42, listeners: [{ id: 'default', name: '默认', port: 18780, listening: false, code: 'EADDRINUSE', error: 'in use' }], routedAgents: {} }
+  mockRpc({
+    running: false,
+    relay: {
+      startRelay: () => busy,
+      getRelayStatus: () => (listening ? { running: true, pid: 42, listeners: LISTENING, routedAgents: {} } : { running: false, routedAgents: {} }),
+    },
+  })
+  function Log() {
+    const { lines } = useTerminalLog()
+    const { bumpInstalledVersion } = useState2()
+    return (
+      <>
+        <pre data-testid="log">{lines.map((l) => l.text).join('\n')}</pre>
+        <button type="button" onClick={bumpInstalledVersion}>refresh</button>
+      </>
+    )
+  }
+  render(
+    <AppStateProvider>
+      <TerminalLogProvider>
+        <EntitlementProvider>
+          <AuthProvider>
+            <UsagePage />
+            <Log />
+          </AuthProvider>
+        </EntitlementProvider>
+      </TerminalLogProvider>
+    </AppStateProvider>
+  )
+
+  fireEvent.click(await screen.findByRole('button', { name: '启动' }))
+  await waitFor(() => expect(screen.getByTestId('log').textContent).toContain('✗ 18780: in use'))
+  listening = true
+  fireEvent.click(screen.getByRole('button', { name: 'refresh' }))
+  await waitFor(() => expect(screen.getByTestId('log').textContent).toContain('✓ 本地中转已启动，监听 127.0.0.1:18780'))
+})
