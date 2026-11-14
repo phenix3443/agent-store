@@ -50,3 +50,30 @@ test('unknown errors show the original text and no detail', () => {
   expect(describeError(new RpcError('disk full', 'Error'), zh)).toEqual({ message: 'disk full' })
   expect(describeError(new Error('boom'), zh)).toEqual({ message: 'boom' })
 })
+
+test('project errors say why and what to do next', () => {
+  const cases: Array<[RpcError, 'action' | 'uninstall', string, string]> = [
+    [err('ProjectConflictError', { reason: 'not-ours', tool: 'codex' }), 'action', 'Codex 在这个项目里已有同名的条目，不是 Agent Store 写的', "Codex already has an entry with this name"],
+    [err('ProjectConflictError', { reason: 'modified', tool: 'claude' }), 'action', '「仍然替换」', 'Replace anyway'],
+    [err('ProjectConflictError', { reason: 'modified', tool: 'claude' }), 'uninstall', '「仍然卸载」', 'Uninstall anyway'],
+    [err('ProjectConflictError', { reason: 'not-ours', tool: 'claude' }), 'uninstall', '已不是 Agent Store 安装的副本', 'no longer the one Agent Store installed'],
+    [err('ProjectConflictError', { reason: 'name-clash', tool: 'codex' }), 'action', '只为 Claude Code 安装', 'for Claude Code only'],
+    [err('ProjectPathError', { reason: 'missing' }), 'action', '这个目录不存在', "doesn't exist"],
+    [err('ProjectPathError', { reason: 'not-a-directory' }), 'action', '不是目录', "isn't a folder"],
+    [err('ProjectPathError', { reason: 'already-registered' }), 'action', '已经登记为项目', 'already registered'],
+    [err('ProjectNotFoundError', { reason: 'project-not-found' }), 'action', '已不在项目列表里', 'no longer in the project list'],
+    [err('ProjectItemNotInstalledError', { reason: 'not-installed' }), 'uninstall', '只能在项目里手动删除', 'by hand'],
+    [err('ProjectMcpUnsupportedError', { reason: 'not-portable' }), 'action', '只能全局安装', 'only be installed globally'],
+    [err('ProjectMcpUnsupportedError', { reason: 'codex-reference', tool: 'codex' }), 'action', '只能为 Claude Code 装进项目', 'for Claude Code only'],
+    [err('ProjectMcpUnsupportedError', { reason: 'sse', tool: 'codex' }), 'action', 'Codex 不支持 SSE', "doesn't support SSE"],
+    [err('Error', { reason: 'project-missing' }), 'action', '先重新定位项目', 'Locate the project first'],
+    [err('Error', { reason: 'unsupported' }), 'action', '供应商只能全局安装', 'Providers are global only'],
+  ]
+  for (const [e, context, zhText, enText] of cases) {
+    const z = describeError(e, zh, context)
+    expect(z.message).toContain(zhText)
+    expect(z.message).not.toContain('--force')
+    expect(z.detail).toBe(e.message)
+    expect(describeError(e, en, context).message).toContain(enText)
+  }
+})

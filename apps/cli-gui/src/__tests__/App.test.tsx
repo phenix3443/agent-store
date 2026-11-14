@@ -19,6 +19,8 @@ function mockAllRpcs() {
     if (method === 'listLocalConfigs') return []
     if (method === 'getRecentRequests') return []
     if (method === 'checkUpdates') return []
+    if (method === 'listProjects') return [{ id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true }]
+    if (method === 'getProject') return { id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true, codexTrusted: true, skills: [], mcps: [], env: [] }
     if (method === 'getEntitlements') return { plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }
     throw new Error(`unexpected RPC in smoke test: ${method}`)
   }) as typeof rpcModule.callRpc)
@@ -107,4 +109,30 @@ test('a palette search lands in the Discover search field; installed items are l
   fireEvent.click(within(dialog).getByText('在目录中搜索「find」'))
   expect(await screen.findByDisplayValue('find')).toBeInTheDocument()
   expect(nav().getByRole('button', { name: /发现/ })).toHaveAttribute('aria-current', 'page')
+})
+
+test('the sidebar lists the projects, opens one and offers 添加项目', async () => {
+  mockAllRpcs()
+  render(<App />)
+  const demo = await nav().findByRole('button', { name: 'demo' })
+  expect(demo).toHaveAttribute('title', '/w/demo')
+  expect(nav().getByRole('button', { name: '添加项目' })).toBeInTheDocument()
+  fireEvent.click(demo)
+  expect(demo).toHaveAttribute('aria-current', 'page')
+  expect(await screen.findByRole('heading', { name: 'demo' })).toBeInTheDocument()
+  expect(await screen.findByText('这个项目还没有项目级的技能或 MCP')).toBeInTheDocument()
+  fireEvent.click(nav().getByRole('button', { name: '项目' }))
+  expect(await screen.findByRole('heading', { name: '项目' })).toBeInTheDocument()
+})
+
+test('the palette finds a project by name and has 添加项目', async () => {
+  mockAllRpcs()
+  render(<App />)
+  await nav().findByRole('button', { name: 'demo' })
+  fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+  const dialog = await screen.findByRole('dialog', { name: '命令面板' })
+  expect(within(dialog).getByText('添加项目')).toBeInTheDocument()
+  fireEvent.change(within(dialog).getByRole('combobox'), { target: { value: 'demo' } })
+  fireEvent.click(await within(dialog).findByText('demo'))
+  expect(await screen.findByRole('heading', { name: 'demo' })).toBeInTheDocument()
 })

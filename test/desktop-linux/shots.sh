@@ -2,7 +2,7 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164) and the welcome, usage and settings pages (#165). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165) and projects (#166). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -256,6 +256,75 @@ xdotool key ctrl+5
 sleep 8
 shot 20-narrow-usage
 stop_app
+
+# 11. Projects (#166). A registered folder with a skill of its own, plus a skill and the
+#     bearer MCP installed into it from aas: the MCP also exists globally, so it overrides
+#     that entry, its key has no value on this machine, and Codex does not trust the folder.
+PROJ=$HOME/code/demo-app
+mkdir -p "$PROJ/.claude/skills/team-notes"
+PROJ=$(realpath "$PROJ")
+printf -- '---\nname: team-notes\ndescription: Notes the team keeps in the repository\n---\n# Team notes\n' > "$PROJ/.claude/skills/team-notes/SKILL.md"
+cli projects add "$PROJ"
+cli install "$SKILL_ID" --project "$PROJ"
+cli install "$BEARER_MCP_ID" --project "$PROJ"
+cli projects show "$PROJ"
+check "the project skill is a copy, not a link" '[ -n "$(find "$PROJ/.claude/skills" -mindepth 1 -maxdepth 1 -type d -name "*find*")" ] && [ -z "$(find "$PROJ/.claude/skills" -mindepth 1 -maxdepth 1 -type l)" ]'
+check "the project .mcp.json holds a variable reference, not the global token" 'grep -q "\${" "$PROJ/.mcp.json" && ! grep -q "test-token" "$PROJ/.mcp.json"'
+KEY=$("$SIDECAR" __rpc getProject "[\"$PROJ\"]" | python3 -c 'import json,sys; e=json.load(sys.stdin)["data"]["env"]; print(e[0]["name"] if e else "")')
+check "the project MCP reads a variable with no value yet" '[ -n "$KEY" ]'
+
+# The project in the sidebar, then its page through the palette.
+"$APP" >"$OUT/app-projects.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+shot 21-sidebar-projects
+open_project() {
+  xdotool key ctrl+k
+  sleep 2
+  xdotool type --delay 60 'demo-app'
+  sleep 2
+  xdotool key Return
+  sleep 15
+}
+open_project
+shot 22-project-detail
+# Scroll the page to the 密钥 block: the key with no value and how agents get it.
+xdotool click --repeat 12 5
+sleep 1
+shot 22b-project-keys-missing
+stop_app
+
+# context7 is installed globally, so its link says so and offers a project; the location
+# is preselected, then the install writes the project's .mcp.json.
+install_link "$NPM_MCP_ID"
+xdotool key Tab Return
+sleep 3
+shot 23-install-location
+confirm 20
+shot 24-project-install-done
+check "context7 written into the project's .mcp.json" 'grep -q "@upstash/context7-mcp" "$PROJ/.mcp.json"'
+xdotool key Return
+sleep 15
+shot 25-project-after-install
+point_at_window
+xdotool windowsize "$WIN" 960 680
+sleep 4
+shot 26-narrow-project
+stop_app
+
+# The key stored from aas (stdin), and Codex trusting the folder: the page no longer
+# warns about either. Neither value nor trust is written into the project.
+printf 'tok-project\n' | "$SIDECAR" projects set-env "$PROJ" "$KEY" >>"$OUT/cli.txt" 2>&1
+printf '\n[projects."%s"]\ntrust_level = "trusted"\n' "$PROJ" >> "$HOME/.codex/config.toml"
+check "the key value stays out of the project" '! grep -rq "tok-project" "$PROJ"'
+check "the key value is stored 0600 in ~/.agent-store" '[ "$(stat -c %a "$HOME/.agent-store/project-env.json")" = 600 ] && grep -q "tok-project" "$HOME/.agent-store/project-env.json"'
+"$APP" >"$OUT/app-projects-2.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+open_project
+shot 27-project-trusted-key-stored
+stop_app
+cli projects show "$PROJ"
 
 cli search find-skills --kind skill
 cli info "$SKILL_ID"

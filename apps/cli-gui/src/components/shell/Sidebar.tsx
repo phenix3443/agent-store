@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { AlertTriangle, Plus } from 'lucide-react'
 import type { InstalledItem, RelayStatus, UpdateAvailable } from '@as/types'
 import { useAppState } from '../../state/AppState'
 import { useT } from '../../i18n'
 import { callRpc } from '../../lib/rpc'
 import { currentSection, SECTIONS, type Section } from '../../lib/nav'
-import { useNavigate } from '../../lib/useNavigate'
+import { useNavigate, useOpenProject } from '../../lib/useNavigate'
+import { useProjects } from '../../state/Projects'
 import { NARROW_QUERY, useMediaQuery } from '../../lib/useMediaQuery'
 import { Glyph } from '../ui/icons'
 import { Tooltip } from '../ui/tooltip'
@@ -64,6 +66,83 @@ function NavItem({
 
 const KIND_OF: Partial<Record<Section, Kind>> = { skills: 'skill', mcp: 'mcp', providers: 'provider' }
 
+const ROW =
+  'relative flex h-[34px] w-full flex-none items-center gap-2.5 whitespace-nowrap rounded-[9px] px-2.5 font-medium transition-colors'
+const rowState = (current: boolean) =>
+  current ? 'bg-panel-2 text-fg shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]' : 'text-fg-2 hover:bg-panel hover:text-fg'
+
+/** 项目: one row per registered project and 添加项目; a narrow window keeps one icon that opens the list. */
+function ProjectsGroup({ narrow }: { narrow: boolean }) {
+  const t = useT()
+  const { navView, projectId } = useAppState()
+  const { projects, openDialog } = useProjects()
+  const openProject = useOpenProject()
+  const onProjects = navView === 'projects' || navView === 'project'
+  const anyMissing = projects.some((p) => !p.exists)
+
+  if (narrow) {
+    return (
+      <Tooltip label={t('nav.projects')}>
+        <button
+          type="button"
+          aria-current={onProjects ? 'page' : undefined}
+          onClick={() => openProject(null)}
+          className={cn(ROW, 'justify-center px-0', rowState(onProjects))}
+        >
+          <Glyph name="folder" className="h-[17px] w-[17px] flex-none" />
+          <span className="sr-only">{t('nav.projects')}</span>
+          {anyMissing && (
+            <span className="absolute right-2 top-1.5 h-[7px] w-[7px] rounded-full bg-warn">
+              <span className="sr-only">{t('pj.missingChip')}</span>
+            </span>
+          )}
+        </button>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-current={navView === 'projects' ? 'page' : undefined}
+        onClick={() => openProject(null)}
+        className="flex-none rounded-md px-2.5 pb-1.5 pt-3 text-left font-mono text-[11px] font-medium leading-none text-fg-3 hover:text-fg-2"
+      >
+        {t('nav.projects')}
+      </button>
+      <div className="-mx-1 flex min-h-0 shrink flex-col gap-0.5 overflow-y-auto px-1">
+        {projects.map((p) => {
+          const current = navView === 'project' && projectId === p.id
+          return (
+            <button
+              key={p.id}
+              type="button"
+              title={p.path}
+              aria-current={current ? 'page' : undefined}
+              onClick={() => openProject(p.id)}
+              className={cn(ROW, rowState(current))}
+            >
+              <Glyph name="folder" className="h-[17px] w-[17px] flex-none" />
+              <span className="min-w-0 truncate">{p.name}</span>
+              {!p.exists && (
+                <span className="ml-auto flex-none text-warn" title={t('pj.missingChip')}>
+                  <AlertTriangle size={13} aria-hidden />
+                  <span className="sr-only">{t('pj.missingChip')}</span>
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+      <button type="button" onClick={() => openDialog({ kind: 'add' })} className={cn(ROW, 'text-fg-3 hover:bg-panel hover:text-fg')}>
+        <Plus size={17} className="flex-none" />
+        <span>{t('pj.add')}</span>
+      </button>
+    </>
+  )
+}
+
 export function Sidebar() {
   const t = useT()
   const { navView, categoryFilter, installedVersion } = useAppState()
@@ -112,6 +191,7 @@ export function Sidebar() {
       {item('mcp')}
       {item('providers')}
       {item('usage')}
+      <ProjectsGroup narrow={narrow} />
 
       <div className="mt-auto flex flex-col gap-0.5 border-t border-line pt-2">
         {item('settings')}

@@ -4,7 +4,7 @@ import { sectionTarget, type Section } from './nav'
 
 /** Switches section and drops the selection: Discover selects catalog ids, the libraries installed slugs. */
 export function useNavigate() {
-  const { setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug } = useAppState()
+  const { setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug, setInstallInto } = useAppState()
   return useCallback(
     (section: Section) => {
       const { view, category } = sectionTarget(section)
@@ -12,7 +12,23 @@ export function useNavigate() {
       setNavView(view)
       setSelectedSlug(null)
       setEditingConfigSlug(null)
+      setInstallInto(null)
     },
-    [setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug]
+    [setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug, setInstallInto]
+  )
+}
+
+/** A project's page, or the project list for null. */
+export function useOpenProject() {
+  const { setNavView, setProjectId, setSelectedSlug, setEditingConfigSlug, setInstallInto } = useAppState()
+  return useCallback(
+    (id: string | null) => {
+      setProjectId(id)
+      setNavView(id ? 'project' : 'projects')
+      setSelectedSlug(null)
+      setEditingConfigSlug(null)
+      setInstallInto(null)
+    },
+    [setNavView, setProjectId, setSelectedSlug, setEditingConfigSlug, setInstallInto]
   )
 }

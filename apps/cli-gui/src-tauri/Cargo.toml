@@ -26,6 +26,8 @@ tauri-plugin-log = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-deep-link = "2"
+# 2.8 needs Rust 1.90; rust-toolchain.toml pins 1.85.
+tauri-plugin-dialog = "~2.7"
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 # deep-link: a second launch carrying agent-store:// hands the URL to the running

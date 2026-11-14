@@ -1,13 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Command } from 'cmdk'
-import { Github, Globe, Keyboard, LogOut, RefreshCw, Search, SquareTerminal, Radio } from 'lucide-react'
+import { FolderPlus, Github, Globe, Keyboard, LogOut, RefreshCw, Search, SquareTerminal, Radio } from 'lucide-react'
 import type { InstalledItem, UpdateAvailable } from '@as/types'
 import { useAppState } from '../../state/AppState'
 import { useAuth } from '../../state/Auth'
 import { useI18n } from '../../i18n'
 import { callRpc } from '../../lib/rpc'
 import { modKeyLabel, SECTIONS, type Section } from '../../lib/nav'
-import { useNavigate } from '../../lib/useNavigate'
+import { useNavigate, useOpenProject } from '../../lib/useNavigate'
+import { useProjects } from '../../state/Projects'
 import { useAccountActions } from '../../lib/useAccountActions'
 import { Glyph } from '../ui/icons'
 import { Kbd } from '../ui/badge'
@@ -36,7 +37,7 @@ function Item({ value, keywords, icon, hint, onSelect, forceMount, children }: {
     >
       {icon}
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      {hint && <small className="whitespace-nowrap text-[11.5px] text-fg-3">{hint}</small>}
+      {hint && <small className="max-w-[55%] truncate whitespace-nowrap text-[11.5px] text-fg-3">{hint}</small>}
     </Command.Item>
   )
 }
@@ -50,6 +51,8 @@ export function CommandPalette() {
   const { signedIn, configured } = useAuth()
   const account = useAccountActions()
   const navigate = useNavigate()
+  const openProject = useOpenProject()
+  const { projects, openDialog } = useProjects()
   const [search, setSearch] = useState('')
   const [installed, setInstalled] = useState<InstalledItem[]>([])
   const mod = modKeyLabel()
@@ -106,6 +109,9 @@ export function CommandPalette() {
                   {t(`nav.${s.id}`)}
                 </Item>
               ))}
+              <Item value="go:projects" keywords={[t('nav.projects'), 'projects']} icon={<Glyph name="folder" />} onSelect={() => run(() => openProject(null))}>
+                {t('nav.projects')}
+              </Item>
             </Command.Group>
             <Command.Group heading={t('palette.actions')} className={GROUP}>
               <Item value="act:updates" keywords={[t('palette.checkUpdates')]} icon={<RefreshCw />} onSelect={() => run(() => void checkUpdates())}>
@@ -122,6 +128,9 @@ export function CommandPalette() {
                   </Item>
                 )
               )}
+              <Item value="act:addproject" keywords={[t('palette.addProject'), 'project']} icon={<FolderPlus />} onSelect={() => run(() => openDialog({ kind: 'add' }))}>
+                {t('palette.addProject')}
+              </Item>
               <Item value="act:lang" keywords={[t('palette.lang'), 'language']} icon={<Globe />} onSelect={() => run(() => setLocale(locale === 'zh' ? 'en' : 'zh'))}>
                 {t('palette.lang')}
               </Item>
@@ -135,6 +144,22 @@ export function CommandPalette() {
                 {t('keys.title')}
               </Item>
             </Command.Group>
+            {q && projects.length > 0 && (
+              <Command.Group heading={t('palette.projects')} className={GROUP}>
+                {projects.map((p) => (
+                  <Item
+                    key={p.id}
+                    value={`project:${p.id}`}
+                    keywords={[p.name, p.path]}
+                    icon={<Glyph name="folder" />}
+                    hint={p.path}
+                    onSelect={() => run(() => openProject(p.id))}
+                  >
+                    {p.name}
+                  </Item>
+                ))}
+              </Command.Group>
+            )}
             {q && installed.length > 0 && (
               <Command.Group heading={t('palette.installed')} className={GROUP}>
                 {installed.map((item) => (

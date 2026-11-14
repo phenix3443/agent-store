@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 export type AgentApp = 'claude' | 'codex'
-export type NavView = 'browse' | 'overview' | 'settings'
+export type NavView = 'browse' | 'overview' | 'settings' | 'projects' | 'project'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
 export type SettingsTab = 'general' | 'agents' | 'data' | 'account' | 'cli' | 'about'
 export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | 'welcome' | null
@@ -42,6 +42,12 @@ interface AppStateValue {
   /** A catalog id the install dialog should open for; the dialog consumes it. */
   installRef: string | null
   requestInstall: (ref: string | null) => void
+  /** The project `navView === 'project'` shows. */
+  projectId: string | null
+  setProjectId: (id: string | null) => void
+  /** Discover was opened from a project page: installs default to that project. */
+  installInto: string | null
+  setInstallInto: (id: string | null) => void
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null)
@@ -62,6 +68,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [shellDialog, setShellDialog] = useState<ShellDialog>(null)
   const [discoverKind, setDiscoverKind] = useState<DiscoverKind>('all')
   const [installRef, requestInstall] = useState<string | null>(null)
+  const [projectId, setProjectId] = useState<string | null>(null)
+  const [installInto, setInstallInto] = useState<string | null>(null)
 
   const bumpInstalledVersion = useCallback(() => {
     setInstalledVersion((prev) => prev + 1)
@@ -92,6 +100,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         shellDialog, setShellDialog,
         discoverKind, setDiscoverKind,
         installRef, requestInstall,
+        projectId, setProjectId,
+        installInto, setInstallInto,
       }}
     >
       {children}

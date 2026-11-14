@@ -17,6 +17,9 @@ import { SkillPane } from './SkillPane'
 import { useUpdater } from './common'
 import { useTargetToggle } from './useTargetToggle'
 import { useUninstall } from './UninstallDialog'
+import { useProjects } from '../../state/Projects'
+import { useOpenProject } from '../../lib/useNavigate'
+import { Glyph } from '../ui/icons'
 
 type LibKind = 'skill' | 'mcp'
 type Filter = 'all' | 'on' | 'off' | 'upd'
@@ -39,6 +42,8 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
   })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const { projects } = useProjects()
+  const openProject = useOpenProject()
 
   const updatable = rows.filter((r) => r.update)
   const visible = useMemo(() => rows.filter((r) => matches(r, query.trim(), filter)), [rows, query, filter])
@@ -55,6 +60,16 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
     const failed = await toggle.toggle(row.slug, target, on)
     if (failed) setSelectedSlug(row.slug)
   }
+
+  const globalHint = projects.length > 0 && (
+    <p className="-mt-1.5 mb-3 flex flex-wrap items-center gap-2 text-[12px] text-fg-3">
+      <Glyph name="folder" className="h-3.5 w-3.5 flex-none" />
+      <span>{t('lib.globalHint')}</span>
+      <button type="button" className="font-medium text-fg-2 hover:text-fg hover:underline" onClick={() => openProject(null)}>
+        {t('lib.globalGo')}
+      </button>
+    </p>
+  )
 
   const header = (
     <ViewHeader
@@ -231,6 +246,7 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
         view={
           <>
             {header}
+            {globalHint}
             {body}
           </>
         }
