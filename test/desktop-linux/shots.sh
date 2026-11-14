@@ -64,6 +64,11 @@ check "the rpm obsoletes agent-store-cli" 'rpm -qp --obsoletes /bundles/*.rpm 2>
 PKG=$(dpkg-deb -f /bundles/*.deb Package)
 APP=$(dpkg -L "$PKG" | grep -m1 -E '^/usr/bin/app$')
 SIDECAR=$(dpkg -L "$PKG" | grep -m1 -E '^/usr/bin/aas$')
+# Every command line the sidecar is started with, the app's included; checked at the end for
+# secret values (#177).
+ARGV_LOG=$OUT/sidecar-argv.txt
+: > "$ARGV_LOG"
+sudo /work/test/desktop-linux/wrap-sidecar.sh "$ARGV_LOG" || { log "FAIL: wrapping the sidecar"; exit 1; }
 LIB=$HOME/.agent-store/skills
 
 # 0. What an older Agent Store left in ~/.agents: a marked skill linked into Claude
@@ -270,7 +275,7 @@ cli install "$BEARER_MCP_ID" --project "$PROJ"
 cli projects show "$PROJ"
 check "the project skill is a copy, not a link" '[ -n "$(find "$PROJ/.claude/skills" -mindepth 1 -maxdepth 1 -type d -name "*find*")" ] && [ -z "$(find "$PROJ/.claude/skills" -mindepth 1 -maxdepth 1 -type l)" ]'
 check "the project .mcp.json holds a variable reference, not the global token" 'grep -q "\${" "$PROJ/.mcp.json" && ! grep -q "test-token" "$PROJ/.mcp.json"'
-KEY=$("$SIDECAR" __rpc getProject "[\"$PROJ\"]" | python3 -c 'import json,sys; e=json.load(sys.stdin)["data"]["env"]; print(e[0]["name"] if e else "")')
+KEY=$(printf '["%s"]\n' "$PROJ" | "$SIDECAR" __rpc getProject - | python3 -c 'import json,sys; e=json.load(sys.stdin)["data"]["env"]; print(e[0]["name"] if e else "")')
 check "the project MCP reads a variable with no value yet" '[ -n "$KEY" ]'
 
 # The project in the sidebar, then its page through the palette.
@@ -342,6 +347,10 @@ cli doctor
   echo "\$ cat ~/.codex/config.toml"
   cat "$HOME/.codex/config.toml"
 } >>"$OUT/cli.txt" 2>&1
+
+check "the desktop client started the sidecar with its arguments on stdin" 'grep -qE "^__rpc [A-Za-z]+ -$" "$ARGV_LOG"'
+check "every RPC call kept its arguments off the command line" '! grep "^__rpc" "$ARGV_LOG" | grep -qvE "^__rpc [A-Za-z]+ -$"'
+check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project" "$ARGV_LOG"'
 
 log "result: $([ $failed = 0 ] && echo PASS || echo FAIL)"
 [ $failed = 0 ]

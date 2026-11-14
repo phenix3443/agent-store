@@ -62,7 +62,10 @@ move` points it at the new path and keeps its id and records.
 The committed files hold variable names only. The values:
 
 1. are stored with `aas projects set-env <project> <NAME>` (value from stdin, never from argv) or
-   `Engine.setProjectEnv`, in `~/.agent-store/project-env.json`, mode 0600, keyed by project id;
+   `Engine.setProjectEnv`, in `~/.agent-store/project-env.json`, mode 0600, keyed by project id. The desktop client
+   reaches the engine as `aas __rpc <method> -` and writes the JSON arguments to the sidecar's stdin as one line, so
+   this value, MCP config values and provider API keys never appear in a command line `ps` can show. Its shell
+   capability allows no other argv. `aas __rpc <method> '<json>'` still works for scripts, for calls without secrets;
 2. reach the agent's process environment through `aas projects exec <project> -- claude|codex …` (runs in the project
    directory; stored values win over the shell's), or `eval "$(aas projects env <project>)"` in a shell or `.envrc`;
 3. are then expanded by Claude Code from `${NAME}`, and forwarded by Codex through `env_vars`.
