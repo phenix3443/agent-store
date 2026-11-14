@@ -91,7 +91,7 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 
 ### 搜索补充（本地结果不够时去别的技能站补搜）
 
-**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态：网页还没有告诉用户「搜索词会发给第三方站点」，等新的搜索界面带上这句说明后，再在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp` 打开。
+**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态。打开时在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp`：商店页在发送前列出 `sources` 里的站点，访客点「发送并查找」后才发请求（`apps/store/components/StoreSupplement.tsx`）。
 
 `GET /api/resources` 的行为不变。补搜是单独的接口 `GET /api/search/supplement`，由前端在搜索词稳定后、且只在第一页调用一次；本地结果照常立即返回，不等补搜。代码在 `apps/api/src/catalog/supplement.ts`（规则与调度）、`found-store.ts`（持久化）和 `sources/` 下各站点的搜索函数。
 
@@ -102,9 +102,11 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 | 字段 | 含义 |
 |---|---|
 | `status` | `disabled`：部署里没打开补搜，界面不显示任何补搜相关内容；`not_needed`：本地结果够用，或这个词不补搜；`searching`：正在查，`retryAfterSeconds` 秒后再问；`found` / `none`：查完了，有 / 没有；`unavailable`：现在一个站点都问不了，`retryAfterSeconds` 秒后可重试 |
+| `sources` | 本部署会把搜索词发给哪些站点，按询问顺序；`disabled` 时为空。界面发送前列出的就是这些站点，用空搜索词探测也会返回 |
 | `reason` | 为什么本地结果不够：`no_results`、`few_results`、`low_relevance`；`disabled`、`not_needed` 时为 `null` |
 | `resources` | 已从 GitHub 仓库读到并校验过、但已发布的 `catalog.db` 里还没有的技能，结构与列表接口的条目相同，详情走 `GET /api/resources/<id>`，可以安装 |
 | `listings` | 别的站点上有、这里还装不了的技能：`key`、`site`、`name`、`description`、`author`、`url`（该站点上的页面）。只能作为外链展示，不能当成可安装的资源 |
+| `foundOn` | `resources` 里每条技能的 id → 哪些站点的条目指向它（同一技能或同一 GitHub 仓库）；没有对应条目的 id 不出现 |
 | `partial` | 有站点超时、被限流或超出额度，结果可能不全 |
 | `retryAfterSeconds` | 见 `status` |
 

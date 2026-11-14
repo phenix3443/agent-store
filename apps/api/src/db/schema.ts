@@ -178,3 +178,16 @@ export const authJwks = sqliteTable('jwks', {
   alg: text('alg'),
   crv: text('crv'),
 })
+
+// ── Favorites ────────────────────────────────────────────────────────────────
+// Catalog ids a signed-in user saved (src/favorites.ts). No foreign key to the
+// catalog: catalog.db is a separate file, and a favorite outlives a resource that
+// leaves the catalog.
+
+export const favorites = sqliteTable('favorites', {
+  userId: text('user_id')
+    .notNull()
+    .references(() => authUser.id, { onDelete: 'cascade' }),
+  resourceId: text('resource_id').notNull(),
+  createdAt: timestamp('created_at').notNull().default(isoNow),
+}, (t) => [primaryKey({ columns: [t.userId, t.resourceId] })])

@@ -21,7 +21,9 @@ const PAGES = [
   { name: 'state-loading', path: '/store?state=loading' },
   { name: 'state-error', path: '/store?state=error' },
   { name: 'supplement-offer', path: '/store?state=empty&q=pdf%20tools&supplement=offer' },
+  { name: 'supplement-offer-results', path: '/store?state=results&q=pdf&supplement=offer' },
   { name: 'supplement-searching', path: '/store?state=empty&q=pdf%20tools&supplement=searching' },
+  { name: 'supplement-found', path: '/store?state=empty&q=pdf%20tools&supplement=found' },
   { name: 'supplement-none', path: '/store?state=empty&q=pdf%20tools&supplement=none' },
   { name: 'supplement-unavailable', path: '/store?state=empty&q=pdf%20tools&supplement=unavailable' },
   { name: 'detail', path: DETAIL },
@@ -41,6 +43,8 @@ const PAGES = [
   { name: 'login', path: '/dashboard', wait: '[role="dialog"]', viewport: true },
   { name: 'login-failed', path: '/?error=auth_failed', wait: '[role="alert"]', viewport: true },
   { name: 'auth-desktop', path: '/auth/desktop', wait: '[role="status"] a', viewport: true },
+  // Signed out, a heart opens the log-in dialog with its own reason.
+  { name: 'login-favorite', path: '/store?category=skill', press: 'button[data-favorite]', wait: '[role="dialog"]', viewport: true },
 ]
 // Signed-in pages, one demo session per plan (ci-demo-session.mjs, SHOT_SESSIONS).
 const SESSIONS = JSON.parse(process.env.SHOT_SESSIONS || '{}')
@@ -55,6 +59,11 @@ const SIGNED_IN = [
   // Only opens the confirmation; nothing is sent until its second button.
   { name: 'dashboard-cancel-confirm', plan: 'pro', path: '/dashboard?tab=subscription', click: 'button[data-subscription-cancel]', opens: '[role="alertdialog"]', viewport: true },
   { name: 'account-menu', plan: 'free', path: '/docs', click: 'header button[aria-haspopup="menu"]', opens: '[role="menu"]', minWidth: 1024 },
+  // The CI proxy starts the pro user with three favorites, including DETAIL.
+  { name: 'dashboard-favorites', plan: 'pro', path: '/dashboard?tab=favorites' },
+  { name: 'dashboard-favorites-empty', plan: 'free', path: '/dashboard?tab=favorites' },
+  { name: 'detail-favorited', plan: 'pro', path: DETAIL, wait: 'button[data-favorite][aria-pressed="true"]' },
+  { name: 'store-signed-in', plan: 'pro', path: '/store?category=skill', wait: 'button[data-favorite]:not([aria-disabled])' },
 ]
 // Interaction states of the store toolbar, on a filtered page so the clear link shows
 // too. Viewport-only shots; the button rows show from 640px.
@@ -93,6 +102,7 @@ for (const locale of LOCALES) {
       try {
         const res = await page.goto(base + p.path, { waitUntil: p.waitUntil ?? 'networkidle', timeout: 60_000 })
         if (!res || res.status() !== (p.status ?? 200)) throw new Error(`HTTP ${res?.status()}`)
+        if (p.press) await page.locator(p.press).first().click()
         if (p.wait) await page.locator(p.wait).first().waitFor({ timeout: 30_000 })
         if (p.click) {
           await page.locator(p.click).first().click()
@@ -165,7 +175,8 @@ for (const locale of LOCALES) {
         if (p.click) {
           await pg.locator(p.click).last().click()
           await pg.locator(p.opens).waitFor({ timeout: 10_000 })
-        } else if (!(await pg.locator('.dash').count())) throw new Error('not signed in')
+        } else if (p.wait) await pg.locator(p.wait).first().waitFor({ timeout: 30_000 })
+        else if (!(await pg.locator('.dash').count())) throw new Error('not signed in')
         await pg.evaluate(() => document.fonts.ready)
         await pg.screenshot({ path: file, fullPage: !p.click && !p.viewport })
         const overflow = await pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)

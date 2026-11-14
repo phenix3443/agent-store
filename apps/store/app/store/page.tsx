@@ -1,21 +1,22 @@
-import type { ResourceSummary } from '@as/types'
+import type { ExternalSite, ResourceSummary } from '@as/types'
 import { getTranslations } from 'next-intl/server'
-import { listResources, supplementEnabled, type ListOutcome } from '@/lib/catalog'
+import { listResources, supplementSources, type ListOutcome } from '@/lib/catalog'
 import { parseStoreQuery } from '@/lib/resource'
 import { CatalogSources, HotList } from '@/components/HotList'
 import { ResourceList } from '@/components/ResourceList'
 import { ResourceRowsSkeleton } from '@/components/ResourceRows'
 import type { SupplementView } from '@/components/StoreSupplement'
+import { REVIEW_SOURCES } from '@/lib/supplement'
 import { ListHeading, StoreError, StoreHero } from '@/components/StoreToolbar'
 
-const REVIEW_SUPPLEMENT: SupplementView[] = ['offer', 'searching', 'none', 'unavailable']
+const REVIEW_SUPPLEMENT: SupplementView[] = ['offer', 'searching', 'found', 'none', 'unavailable']
 
 interface StorePageProps {
   searchParams: Promise<{
     category?: string
     q?: string
     sort?: string
-    /** loading | empty | error: opens that state for screenshots and review. */
+    /** loading | empty | error: opens that state for screenshots and review; any other value keeps the real list. */
     state?: string
     /** With `state`: opens that state of the search supplement. */
     supplement?: string
@@ -39,9 +40,12 @@ export default async function StorePage({ searchParams }: StorePageProps) {
     const top = await listResources({ kind: null, q: '', sort: 'installs' }, 0, 4)
     if (top.ok) hot = top.resources
   }
-  const supplement =
-    !review && Boolean(query.q) && query.kind !== 'mcp' && query.kind !== 'provider' && result?.ok === true && (await supplementEnabled().catch(() => false))
   const supplementReview = review && REVIEW_SUPPLEMENT.includes(sp.supplement as SupplementView) ? (sp.supplement as SupplementView) : undefined
+  let sources: ExternalSite[] = []
+  if (supplementReview) sources = REVIEW_SOURCES
+  else if (!review && query.q && query.kind !== 'mcp' && query.kind !== 'provider' && result?.ok === true) {
+    sources = await supplementSources().catch(() => [])
+  }
 
   const params = new URLSearchParams()
   if (query.kind) params.set('category', query.kind)
@@ -75,7 +79,7 @@ export default async function StorePage({ searchParams }: StorePageProps) {
             initialNextOffset={result.nextOffset}
             title={title}
             filtered={filtered}
-            supplement={supplement}
+            supplementSources={sources}
             supplementReview={supplementReview}
           />
         )}
