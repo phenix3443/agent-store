@@ -76,13 +76,13 @@ function openTab(name: string) {
   expect(tab).toHaveAttribute('aria-selected', 'true')
 }
 
-test('has six tabs and opens on General', () => {
+test('has seven tabs and opens on General', () => {
   localStorage.setItem('as-locale', 'zh')
   renderView()
-  expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['通用', 'Agent', '数据', '账号', '命令行', '关于'])
+  expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['通用', 'Agent', '数据', '备份与同步', '账号', '命令行', '关于'])
   expect(screen.getByRole('tab', { name: '通用' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByText('当前只提供深色主题。')).toBeInTheDocument()
-  expect(screen.queryByText(/同步/)).toBeNull()
+  expect(within(screen.getByRole('tabpanel')).queryByText(/同步/)).toBeNull()
 })
 
 test('General switches the language, the target agent, and opens shortcuts and the welcome', () => {

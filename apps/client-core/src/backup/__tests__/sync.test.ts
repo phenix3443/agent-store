@@ -8,9 +8,11 @@ import { join } from 'path'
 import type { Item, MCPItem, ProviderItem, SkillItem } from '@as/types'
 import { EngineImpl } from '../../engine'
 import { ItemCatalog } from '../../__tests__/helpers/item-catalog'
+import lockfile from 'proper-lockfile'
 import { runGit } from '../git'
+import { BackupBusyError } from '../service'
 import { BackupSecretError } from '../secrets'
-import { writeCredentials } from '../state'
+import { lockPath, lockTarget, writeCredentials } from '../state'
 
 process.env['AS_CLAUDE_BIN'] = ''
 process.env['AS_CODEX_BIN'] = ''
@@ -357,4 +359,18 @@ test('disconnect forgets this device only; reconnecting finds the backup again',
   expect(await remoteFile(remote, 'agent-store-backup.json')).toContain('agent-store-backup')
   await expect(a.engine.backupNow()).rejects.toThrow('not connected')
   expect((await a.engine.connectBackup({ remote })).remoteItems).toBe(4)
+}, 60_000)
+
+test('an operation that finds the backup lock held says so with reason busy', async () => {
+  const remote = await bareRemote()
+  const a = await device('laptop')
+  await a.engine.connectBackup({ remote })
+  const release = await lockfile.lock(lockTarget(a.aasHome), { realpath: false, lockfilePath: lockPath(a.aasHome) })
+  try {
+    const err = await a.engine.getBackupStatus().catch(e => e)
+    expect(err).toBeInstanceOf(BackupBusyError)
+    expect((err as BackupBusyError).reason).toBe('busy')
+  } finally {
+    await release()
+  }
 }, 60_000)

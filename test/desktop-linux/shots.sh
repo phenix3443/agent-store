@@ -2,7 +2,8 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164), the welcome, usage and settings pages (#165) and projects (#166). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166)
+# and backup and sync (#112). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -242,11 +243,13 @@ sleep 10
 shot 17b-settings-agents-doctor
 settings_tab 2 4
 shot 17c-settings-data
-settings_tab 3
-shot 17d-settings-account
+settings_tab 3 6
+shot 17c2-settings-backup-not-connected
 settings_tab 4
-shot 17e-settings-cli
+shot 17d-settings-account
 settings_tab 5
+shot 17e-settings-cli
+settings_tab 6
 shot 17f-settings-about
 xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2))
 xdotool key question
@@ -426,6 +429,133 @@ shot 33b-project-missing-last-read
 stop_app
 mv "$PROJ.moved" "$PROJ"
 
+# 13. Backup and sync (#112). A local bare repository is the remote; a second home with its own
+#     ~/.agent-store plays the other device through aas. Device A is the window: connect, back up,
+#     pull what B pushed, resolve a conflict both ways, restore the snapshot taken before that
+#     choice, a secret that stops the backup, and disconnect. The remote must never hold the
+#     marker key, the bearer token typed into the install dialog or the project key.
+REMOTE_DIR=$(mktemp -d)
+REMOTE=$REMOTE_DIR/backup.git
+git init --bare -q --initial-branch=main "$REMOTE"
+MARK=as-marker-key-7f3a9c2e5b1d
+PROVIDER_SLUG=$(printf '[]\n' | "$SIDECAR" __rpc list - | python3 -c 'import json,sys; print(next((i["slug"] for i in json.load(sys.stdin)["data"] if i["category"]=="provider"), ""))')
+check "a provider is installed to hold the marker key" '[ -n "$PROVIDER_SLUG" ]'
+printf '["%s",{"apiKey":"%s"}]\n' "$PROVIDER_SLUG" "$MARK" | "$SIDECAR" __rpc setConfig - >>"$OUT/cli.txt" 2>&1
+remote_has() { git --git-dir="$REMOTE" log --all -p --binary 2>/dev/null | grep -qE "$1"; }
+backup_page() { point_at_window; xdotool key ctrl+6; sleep 2; settings_tab 3 "${1:-10}"; }
+# The settings tabs scroll with the page; scroll back up before clicking them.
+to_top() { xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2)); xdotool click --repeat 20 4; sleep 1; }
+palette() { xdotool key ctrl+k; sleep 2; xdotool type --delay 60 "$1"; sleep 2; xdotool key Return; sleep "${2:-25}"; }
+HOME_B=$(mktemp -d)
+cli_b() { echo "\$ (laptop-b) aas $*" >>"$OUT/cli.txt"; HOME=$HOME_B "$SIDECAR" "$@" >>"$OUT/cli.txt" 2>&1; echo >>"$OUT/cli.txt"; }
+
+"$APP" >"$OUT/app-backup-1.log" 2>&1 &
+sleep "$SETTLE"
+backup_page
+shot 34-backup-not-connected
+# From the tab: the panel, then 连接仓库…; the dialog focuses the URL field.
+xdotool key Tab Tab Return
+sleep 2
+xdotool type --delay 30 "$REMOTE"
+xdotool key Tab Tab
+xdotool type --delay 60 'desk-a'
+shot 35-backup-connect-form
+xdotool key Return
+sleep 15
+shot 36-backup-connected
+# The connected step focuses 立即备份.
+xdotool key Return
+sleep 30
+shot 37-backup-first-sync
+stop_app
+check "connect wrote this device's connection" 'grep -q desk-a "$HOME/.agent-store/backup/connection.json"'
+check "the first backup pushed a commit by desk-a" '[ "$(git --git-dir="$REMOTE" log -1 --format=%an main 2>/dev/null)" = desk-a ]'
+check "the backup holds the skill" 'git --git-dir="$REMOTE" ls-tree -r --name-only main | grep -q "^items/skill/$SKILL_SLUG/"'
+
+# The other device restores the backup, switches the skill off for Claude Code and uploads that.
+cli_b backup connect "$REMOTE" --device laptop-b
+cli_b backup pull
+check "laptop-b restored the skill" '[ -f "$HOME_B/.agent-store/skills/$SKILL_SLUG/SKILL.md" ]'
+cli_b disable "$SKILL_SLUG" --for claude
+cli_b backup now
+"$APP" >"$OUT/app-backup-2.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+palette 'backup-pull'
+backup_page
+shot 38-backup-pulled
+stop_app
+check "the pull applied laptop-b's change: no Claude link for the skill" '[ ! -e "$HOME/.claude/skills/find-skills" ]'
+
+# Both devices edit the same skill; backing up here finds the conflict.
+printf '\nEdited on laptop-b.\n' >> "$HOME_B/.agent-store/skills/legacy-skill/SKILL.md"
+cli_b backup now
+printf '\nEdited on desk-a.\n' >> "$LIB/legacy-skill/SKILL.md"
+"$APP" >"$OUT/app-backup-3.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+palette 'backup-now'
+backup_page
+shot 39-backup-conflict
+# Panel, 拉取, 立即备份, the auto-sync switch, 断开…, then the conflict's 处理….
+xdotool key Tab Tab Tab Tab Tab Tab Return
+sleep 2
+shot 40-backup-resolve-dialog
+# The first choice has focus; arrows move to 两份都保留. Then 取消, 确定.
+xdotool key Down Down
+sleep 1
+shot 40b-backup-resolve-both
+xdotool key Tab Tab Return
+sleep 25
+shot 41-backup-resolved
+check "kept both: the remote version is installed as legacy-skill-laptop-b" '[ -f "$LIB/legacy-skill-laptop-b/SKILL.md" ] && grep -q "Edited on laptop-b" "$LIB/legacy-skill-laptop-b/SKILL.md"'
+check "kept both: this machine's version stays" 'grep -q "Edited on desk-a" "$LIB/legacy-skill/SKILL.md"'
+check "kept both: the copy is enabled for no agent" '[ ! -e "$HOME/.claude/skills/legacy-skill-laptop-b" ] && [ ! -e "$HOME/.codex/skills/legacy-skill-laptop-b" ]'
+# The newest snapshot is the one taken before that choice: Tab to its 恢复…, confirm (focus is on 取消).
+to_top
+settings_tab 3 6
+xdotool key Tab Tab Tab Tab Tab Tab Return
+sleep 2
+shot 42-backup-restore-confirm
+xdotool key Tab Return
+sleep 25
+shot 43-backup-restored
+check "restoring the snapshot undid the choice" '[ ! -e "$LIB/legacy-skill-laptop-b" ]'
+xdotool click --repeat 15 5
+sleep 1
+shot 44-backup-snapshots-history
+stop_app
+
+# A key pasted into a skill stops the backup before anything is written; the page names the file.
+GH_FAKE=ghp_$(python3 -c 'import random,string; r=random.Random(7); print("".join(r.choice(string.ascii_letters+string.digits) for _ in range(36)))')
+printf 'token: %s\n' "$GH_FAKE" > "$LIB/legacy-skill/leaked.md"
+"$APP" >"$OUT/app-backup-4.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+palette 'backup-now' 20
+backup_page
+shot 45-backup-secret-found
+check "the found key never reached the remote" '! remote_has "$GH_FAKE"'
+rm -f "$LIB/legacy-skill/leaked.md"
+# 断开…: panel, 拉取, 立即备份, the switch, 断开…; the dialog focuses 取消.
+to_top
+settings_tab 3 8
+xdotool key Tab Tab Tab Tab Tab Return
+sleep 2
+shot 46-backup-disconnect-confirm
+xdotool key Tab Return
+sleep 10
+shot 47-backup-disconnected
+stop_app
+check "disconnect removed only this machine's backup folder" '[ ! -e "$HOME/.agent-store/backup" ] && git --git-dir="$REMOTE" rev-parse -q --verify main >/dev/null'
+check "the remote never held the marker key, the bearer token or the project key" '! remote_has "$MARK|test-token|tok-project"'
+check "the marker key is still set on this machine" 'grep -rqs "$MARK" "$HOME/.agent-store"'
+{
+  echo "\$ git --git-dir=<remote> log --format='%h %an %s' main"
+  git --git-dir="$REMOTE" log --format='%h %an %s' main
+  echo
+} >>"$OUT/cli.txt" 2>&1
+
 cli search find-skills --kind skill
 cli info "$SKILL_ID"
 cli info "$SKILL_SLUG"
@@ -445,7 +575,7 @@ cli doctor
 
 check "the desktop client started the sidecar with its arguments on stdin" 'grep -qE "^__rpc [A-Za-z]+ -$" "$ARGV_LOG"'
 check "every RPC call kept its arguments off the command line" '! grep "^__rpc" "$ARGV_LOG" | grep -qvE "^__rpc [A-Za-z]+ -$"'
-check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project" "$ARGV_LOG"'
+check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project|$MARK" "$ARGV_LOG"'
 
 log "result: $([ $failed = 0 ] && echo PASS || echo FAIL)"
 [ $failed = 0 ]

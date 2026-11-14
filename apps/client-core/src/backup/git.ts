@@ -8,10 +8,27 @@ export interface GitCredentials {
   password: string
 }
 
+/** Why a git call that talks to the remote failed, read from git's and ssh's own messages. */
+export type GitFailure = 'auth-failed' | 'host-key' | 'not-found' | 'network'
+
+const FAILURES: Array<[GitFailure, RegExp]> = [
+  ['host-key', /Host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED/i],
+  ['auth-failed', /Authentication failed|could not read (Username|Password)|terminal prompts disabled|Permission denied \(|HTTP Basic: Access denied|Invalid username or (password|token)|returned error: 40[13]\b/i],
+  ['not-found', /Repository not found|does not appear to be a git repository|returned error: 404\b|repository '[^']*' not found|No such file or directory/i],
+  ['network', /Could not resolve host|Could not resolve hostname|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|Operation timed out|Couldn't connect to server|SSL|TLS|unable to access/i],
+]
+
+export function classifyGitFailure(stderr: string): GitFailure | undefined {
+  return FAILURES.find(([, re]) => re.test(stderr))?.[0]
+}
+
 export class GitError extends Error {
+  readonly reason?: GitFailure
   constructor(readonly args: string[], readonly exitCode: number | null, readonly stderr: string) {
     super(`git ${args[0] ?? ''} failed: ${stderr.trim().split('\n').slice(-3).join(' ') || `exit ${exitCode}`}`)
     this.name = 'GitError'
+    const reason = classifyGitFailure(stderr)
+    if (reason) this.reason = reason
   }
 }
 

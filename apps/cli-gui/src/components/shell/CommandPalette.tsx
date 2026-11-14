@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Command } from 'cmdk'
-import { FolderPlus, Github, Globe, Keyboard, LogOut, RefreshCw, Search, SquareTerminal, Radio } from 'lucide-react'
+import { Download, FolderPlus, Github, Globe, HardDriveUpload, Keyboard, LogOut, RefreshCw, Search, SquareTerminal, Radio, Upload } from 'lucide-react'
 import type { InstalledItem, UpdateAvailable } from '@as/types'
 import { useAppState } from '../../state/AppState'
 import { useAuth } from '../../state/Auth'
@@ -9,6 +9,8 @@ import { callRpc } from '../../lib/rpc'
 import { modKeyLabel, SECTIONS, type Section } from '../../lib/nav'
 import { useNavigate, useOpenProject } from '../../lib/useNavigate'
 import { useProjects } from '../../state/Projects'
+import { useBackup } from '../../state/Backup'
+import { useSyncAction } from '../backup/actions'
 import { useAccountActions } from '../../lib/useAccountActions'
 import { Glyph } from '../ui/icons'
 import { Kbd } from '../ui/badge'
@@ -47,7 +49,10 @@ const GROUP =
 
 export function CommandPalette() {
   const { locale, setLocale, t } = useI18n()
-  const { paletteOpen, setPaletteOpen, setShellDialog, setSelectedSlug, setEditingConfigSlug, setSearchSeed, installedVersion } = useAppState()
+  const { paletteOpen, setPaletteOpen, setShellDialog, setSelectedSlug, setEditingConfigSlug, setSearchSeed, setSettingsTab, installedVersion } = useAppState()
+  const backup = useBackup()
+  const runSync = useSyncAction()
+  const backupReady = backup !== null && !!backup.status?.connected && backup.busy === null
   const { signedIn, configured } = useAuth()
   const account = useAccountActions()
   const navigate = useNavigate()
@@ -127,6 +132,29 @@ export function CommandPalette() {
                     {t('settings.account.signInGithub')}
                   </Item>
                 )
+              )}
+              <Item
+                value="act:backup"
+                keywords={[t('bk.palette.open'), 'backup', 'sync']}
+                icon={<HardDriveUpload />}
+                onSelect={() =>
+                  run(() => {
+                    navigate('settings')
+                    setSettingsTab('backup')
+                  })
+                }
+              >
+                {t('bk.palette.open')}
+              </Item>
+              {backupReady && (
+                <>
+                  <Item value="act:backup-now" keywords={[t('bk.palette.now'), 'backup']} icon={<Upload />} onSelect={() => run(() => void runSync('now', { toast: true }))}>
+                    {t('bk.palette.now')}
+                  </Item>
+                  <Item value="act:backup-pull" keywords={[t('bk.palette.pull'), 'pull']} icon={<Download />} onSelect={() => run(() => void runSync('pull', { toast: true }))}>
+                    {t('bk.palette.pull')}
+                  </Item>
+                </>
               )}
               <Item value="act:addproject" keywords={[t('palette.addProject'), 'project']} icon={<FolderPlus />} onSelect={() => run(() => openDialog({ kind: 'add' }))}>
                 {t('palette.addProject')}

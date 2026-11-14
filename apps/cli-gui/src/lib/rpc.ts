@@ -55,7 +55,28 @@ function runSidecar(argv: string[], input: string): Promise<SidecarOutput> {
   })
 }
 
+export type RpcWatcher = (method: string, phase: 'start' | 'end') => void
+
+const watchers = new Set<RpcWatcher>()
+
+/** Told when every call starts and ends; backup auto-sync uses it to stay out of installs. */
+export function watchRpc(fn: RpcWatcher): () => void {
+  watchers.add(fn)
+  return () => {
+    watchers.delete(fn)
+  }
+}
+
 export async function callRpc<T>(method: string, args: unknown[] = []): Promise<T> {
+  watchers.forEach((w) => w(method, 'start'))
+  try {
+    return await sidecarRpc<T>(method, args)
+  } finally {
+    watchers.forEach((w) => w(method, 'end'))
+  }
+}
+
+async function sidecarRpc<T>(method: string, args: unknown[]): Promise<T> {
   const output = await runSidecar(['__rpc', method, '-'], `${JSON.stringify(args)}\n`)
 
   let envelope: RpcEnvelope<T>

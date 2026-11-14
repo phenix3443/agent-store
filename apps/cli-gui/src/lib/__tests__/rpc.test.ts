@@ -97,3 +97,14 @@ test('callRpc rejects with the engine error class as code', async () => {
   expect(err.code).toBe('McpChangedOutsideError')
   expect(err.message).toBe('changed outside')
 })
+
+test('watchers see each call start and end, failures included', async () => {
+  mockSidecar(JSON.stringify({ ok: false, error: 'boom' }))
+  const { callRpc, watchRpc } = await import('../rpc')
+  const seen: string[] = []
+  const stop = watchRpc((method, phase) => seen.push(`${method}:${phase}`))
+  await callRpc('enable', ['x', 'claude']).catch(() => undefined)
+  stop()
+  await callRpc('enable', ['x', 'claude']).catch(() => undefined)
+  expect(seen).toEqual(['enable:start', 'enable:end'])
+})
