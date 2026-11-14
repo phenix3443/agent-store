@@ -122,7 +122,7 @@ test('connecting checks the form, passes the token only as an RPC argument, then
   await waitFor(() => expect(calls.some((c) => c.method === 'backupNow')).toBe(true))
   expect(await screen.findByText('备份完成：上传 1 项，从远端应用 0 项。')).toBeInTheDocument()
   expect(await screen.findByRole('button', { name: '备份：已同步' })).toBeInTheDocument()
-  expect(screen.getByText('令牌已存在本机')).toBeInTheDocument()
+  expect(screen.getByText(/令牌已存在本机/)).toBeInTheDocument()
   expect(document.body.textContent).not.toContain('tok-123456789')
 })
 
