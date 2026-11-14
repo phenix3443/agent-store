@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { formatCount, installCommand, leadSentence, resourceHref } from '@/lib/resource'
 import { InstallButton } from './InstallButton'
 import { KindTile } from './KindTile'
+import { InstalledBadge } from './LocalInstalled'
 import { VerifiedMark } from './VerifiedLabel'
 
 function samePath(a: string, b: string): boolean {
@@ -55,6 +56,7 @@ function Row({ resource, showCategory }: { resource: ResourceSummary; showCatego
           {showCategory && <span className="kind">{t(`category.${resource.kind}`)}</span>}
           <span className="truncate">{resource.author?.name ?? t('list.unknownAuthor')}</span>
           {resource.verified && <VerifiedMark />}
+          <InstalledBadge id={resource.id} />
           <span className="store-row-meta-stat ml-auto shrink-0 font-mono">
             <Count value={resource.installs} /> {t('list.installsUnit')}
           </span>

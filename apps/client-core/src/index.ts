@@ -1,6 +1,8 @@
 export { EngineImpl, ProviderNotReadyError, IncompatibleTargetError, UpdateFailedError } from './engine'
 export type { EngineOptions } from './engine'
 export { startRelayServer, RELAY_PORT } from './relay/server'
+export { startLocalApi, localApiHandler, LOCAL_API_PORT, STORE_ORIGINS } from './local-api/server'
+export { readRegistry } from './registry/index'
 export { runRelayDaemon } from './relay/daemon'
 export { refreshRelayTakeover } from './relay/refresh'
 export { resolvePaths, legacyAasHome, InvalidSlugError } from './paths'

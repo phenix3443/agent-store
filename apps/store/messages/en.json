@@ -139,7 +139,13 @@
       "noteMcp": "Adds the server to Claude Code. Replace the values in angle brackets with your own.",
       "noteProvider": "Runs the Agent Store CLI.",
       "note": "No desktop app yet? The command below works too.",
-      "commandTitle": "Install command"
+      "commandTitle": "Install command",
+      "manage": "Manage",
+      "manageDesktop": "Manage in the desktop app",
+      "manageLabel": "Manage {name} in the desktop app",
+      "installedHere": "Installed",
+      "installedHereTitle": "The desktop app on this computer reports it installed",
+      "installedNote": "Installed on this computer. The button opens it in the desktop app."
     },
     "notice": {
       "label": "Notification",

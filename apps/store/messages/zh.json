@@ -139,7 +139,13 @@
       "noteMcp": "把这个服务加进 Claude Code。命令里尖括号中的占位换成你自己的值。",
       "noteProvider": "运行 Agent Store 命令行工具。",
       "note": "没装客户端也行，复制下面的命令。",
-      "commandTitle": "安装命令"
+      "commandTitle": "安装命令",
+      "manage": "管理",
+      "manageDesktop": "在桌面客户端中管理",
+      "manageLabel": "在桌面客户端中管理 {name}",
+      "installedHere": "已安装",
+      "installedHereTitle": "这台电脑上的桌面客户端显示已安装",
+      "installedNote": "这台电脑上已安装。点按钮在客户端里查看和管理。"
     },
     "notice": {
       "label": "提示",
