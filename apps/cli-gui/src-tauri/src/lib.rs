@@ -47,6 +47,7 @@ pub fn run() {
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_deep_link::init())
     .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_opener::init())
     .setup(|app| {
       start_local_api(app);
       if cfg!(debug_assertions) {
