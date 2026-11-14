@@ -7,6 +7,10 @@ import type {
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectSummary, ProjectUninstallOptions, ProjectUninstallResult,
 } from './projects'
+import type {
+  BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
+  BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
+} from './backup'
 
 /** The canonical union for supported tool targets */
 export type ToolTarget = 'claude' | 'codex'
@@ -408,4 +412,20 @@ export interface Engine {
   unsetProjectEnv(ref: string, name: string): Promise<void>
   /** The stored values, for starting an agent with them in its environment. */
   getProjectEnvValues(ref: string): Promise<Record<string, string>>
+  /** Connection, last sync, pending conflicts, keys missing here. `fetch` also counts remote commits not merged yet. */
+  getBackupStatus(options?: { fetch?: boolean }): Promise<BackupStatus>
+  /** Connects this device to a Git remote that is empty or holds an Agent Store backup; nothing is synced yet. */
+  connectBackup(options: BackupConnectOptions): Promise<BackupConnectResult>
+  /** Snapshot, then merge both ways per item, push, and apply what came from the remote. */
+  backupNow(): Promise<BackupSyncResult>
+  /** Applies remote changes here without uploading local ones. */
+  pullBackup(): Promise<BackupSyncResult>
+  /** `item`: slug or `<category>/<slug>`. Takes a snapshot first. */
+  resolveBackupConflict(item: string, choice: BackupConflictChoice): Promise<BackupResolveResult>
+  listBackupSnapshots(): Promise<BackupSnapshot[]>
+  /** Snapshots the current state, then makes this machine match the snapshot. */
+  restoreBackupSnapshot(id: string): Promise<BackupRestoreResult>
+  listBackupHistory(options?: { limit?: number }): Promise<BackupHistoryEntry[]>
+  /** Forgets the connection, local snapshots and the stored token on this device; the remote is left as it is. */
+  disconnectBackup(): Promise<void>
 }

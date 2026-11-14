@@ -70,10 +70,23 @@ export function parseSkillMd(text: string): Record<string, unknown> | null {
   }
 }
 
-function isRateLimit(e: unknown): boolean {
+const headersOf = (e: Record<string, unknown>): Record<string, unknown> =>
+  isRecord(e['response']) && isRecord(e['response']['headers']) ? e['response']['headers'] : {}
+
+export function isRateLimit(e: unknown): boolean {
   if (!isRecord(e) || typeof e['status'] !== 'number') return false
-  const headers = isRecord(e['response']) && isRecord(e['response']['headers']) ? e['response']['headers'] : {}
+  const headers = headersOf(e)
   return e['status'] === 429 || (e['status'] === 403 && (headers['x-ratelimit-remaining'] === '0' || /rate limit/i.test(String(e['message']))))
+}
+
+/** When GitHub says a rate-limited caller may try again (`retry-after`, else `x-ratelimit-reset`), or null. */
+export function rateLimitResetAt(e: unknown, nowMs: number): number | null {
+  if (!isRecord(e)) return null
+  const headers = headersOf(e)
+  const retryAfter = Number(headers['retry-after'])
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return nowMs + retryAfter * 1000
+  const reset = Number(headers['x-ratelimit-reset'])
+  return Number.isFinite(reset) && reset * 1000 > nowMs ? reset * 1000 : null
 }
 
 export class RepoTooLargeError extends Error {
@@ -88,6 +101,8 @@ export interface RepoScan {
   scope: string
   records: CatalogRecord[]
   skipped: Record<string, number>
+  /** Only the skill directories `limits.named` asked for were read, not the whole repo. */
+  subset: boolean
 }
 
 /** Reads one repo at its default branch head and turns each skill directory into a record. */
@@ -97,8 +112,12 @@ export async function scanRepo(
   fullName: string,
   /** `owner/repo/skill` (lowercase) → installs. */
   installs: Map<string, number>,
-  /** maxSkills: throw RepoTooLargeError before any SKILL.md is downloaded. */
-  limits: { maxSkills?: number } = {},
+  /**
+   * maxSkills: over it, throw RepoTooLargeError before any SKILL.md is downloaded, unless
+   * `named` (lowercase directory names) picks at most that many skill directories: then
+   * only those are read.
+   */
+  limits: { maxSkills?: number; named?: Set<string> } = {},
 ): Promise<RepoScan> {
   const [owner, repo] = fullName.split('/') as [string, string]
   const scope = fullName.toLowerCase()
@@ -115,7 +134,13 @@ export async function scanRepo(
   treeShaOf.set('', tree.sha)
 
   let dirs = findSkillDirs(entries)
-  if (limits.maxSkills !== undefined && dirs.length > limits.maxSkills) throw new RepoTooLargeError(fullName, dirs.length, limits.maxSkills)
+  let subset = false
+  if (limits.maxSkills !== undefined && dirs.length > limits.maxSkills) {
+    const named = dirs.filter((d) => limits.named?.has((d.split('/').pop() ?? '').toLowerCase()))
+    if (named.length === 0 || named.length > limits.maxSkills) throw new RepoTooLargeError(fullName, dirs.length, limits.maxSkills)
+    dirs = named
+    subset = true
+  }
   if (dirs.length > MAX_SKILLS_PER_REPO) {
     skipped['repo has too many skills'] = dirs.length - MAX_SKILLS_PER_REPO
     dirs = dirs.slice(0, MAX_SKILLS_PER_REPO)
@@ -193,7 +218,7 @@ export async function scanRepo(
       detail,
     })
   }
-  return { scope, records, skipped }
+  return { scope, records, skipped, subset }
 }
 
 /**

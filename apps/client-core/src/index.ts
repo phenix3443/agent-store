@@ -16,6 +16,11 @@ export { ProjectConflictError, ProjectItemNotInstalledError } from './projects/s
 export { ProjectNotFoundError, ProjectPathError } from './projects/store'
 export { ProjectMcpUnsupportedError } from './projects/mcp-entries'
 export { runMigrate } from './migrate'
+export { BackupNotConnectedError, BackupAlreadyConnectedError, BackupRemoteRefusedError, BackupNotFoundError } from './backup/service'
+export { BackupSecretError } from './backup/secrets'
+export { BackupExportError } from './backup/export'
+export { BackupApplyError } from './backup/apply'
+export { GitError, GitNotFoundError } from './backup/git'
 export type { MigrateResult, MigrateStep } from './migrate'
 export type { DoctorFinding, DoctorPaths } from './doctor'
 export type {
