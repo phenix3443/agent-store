@@ -22,22 +22,24 @@ export function InstallPanel({ resource, command, note }: InstallPanelProps) {
     <section data-kind={resource.kind} className="card install-card">
       <InstallButton resource={resource} command={command} variant="primary" className="w-full" />
       {command && <p className="mt-2.5 text-[12.5px] text-fg-3">{phone ? t('phoneNote') : t('note')}</p>}
-      <h3 className="mb-2.5 mt-[18px] text-sm font-bold text-fg-2">{t('commandTitle')}</h3>
+      <div className="mb-2.5 mt-[18px] flex min-h-[30px] items-center justify-between gap-3">
+        <h3 className="text-sm font-bold text-fg-2">{t('commandTitle')}</h3>
+        {/* On a phone the primary button above is already the copy action. */}
+        {command && !phone && (
+          <CopyCommandButton
+            command={command}
+            name={resource.name}
+            className="!min-h-[30px] !rounded-lg !px-2.5 text-[12.5px] !font-semibold"
+          />
+        )}
+      </div>
       {command ? (
         <>
-          <div className="code-block relative">
-            {/* Wraps rather than scrolls: a hidden scrollbar cut the slug off mid-word. */}
-            <pre className={phone ? undefined : 'pr-[108px]'}>
+          {/* Wraps rather than scrolls: a hidden scrollbar cut the slug off mid-word. */}
+          <div className="code-block">
+            <pre>
               <code>{command}</code>
             </pre>
-            {/* On a phone the primary button above is already the copy action. */}
-            {!phone && (
-              <CopyCommandButton
-                command={command}
-                name={resource.name}
-                className="!absolute right-2 top-2 !min-h-[30px] !rounded-lg !bg-pop !px-2.5 text-[12.5px] !font-semibold"
-              />
-            )}
           </div>
           <p className="mt-2.5 text-[12.5px] text-fg-3">{note}</p>
         </>
