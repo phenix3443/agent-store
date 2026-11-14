@@ -18,7 +18,14 @@ permissions:
   contents: write
 
 jobs:
+  # The macOS and Windows bundles are started and exercised before anything is published.
+  smoke:
+    uses: ./.github/workflows/desktop-smoke.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
+
   release:
+    needs: smoke
     strategy:
       fail-fast: false
       matrix:
