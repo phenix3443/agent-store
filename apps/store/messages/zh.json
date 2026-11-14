@@ -393,9 +393,47 @@
     "docs": {
       "metaTitle": "文档",
       "metaDescription": "Agent Store 使用指南：安装桌面客户端、浏览与安装、本地代理、CLI 与订阅。",
-      "title": "开始使用 Agent Store",
-      "lede": "发现、安装并管理 Claude Code / Codex 的技能、MCP 与模型供应商。",
-      "toc": "目录",
+      "title": "文档",
+      "dim": "从安装到命令行，都在这里。",
+      "toc": "本页目录",
+      "read": "阅读",
+      "crumb": "位置",
+      "nav": "文档章节",
+      "prevNext": "上一篇与下一篇",
+      "prev": "上一篇",
+      "next": "下一篇",
+      "see": {
+        "skill": "看技能",
+        "mcp": "看 MCP",
+        "provider": "看供应商"
+      },
+      "articles": {
+        "install": {
+          "title": "安装客户端",
+          "card": "下载，首次打开。",
+          "lede": "下载，放行一次，开始用。"
+        },
+        "browse": {
+          "title": "浏览与安装",
+          "card": "在商店里找到它，点一下装好。",
+          "lede": "在商店里找到它，点一下装好。"
+        },
+        "relay": {
+          "title": "本地代理",
+          "card": "换供应商，出错自动换下一家。",
+          "lede": "换供应商，出错自动换下一家。"
+        },
+        "cli": {
+          "title": "命令行 aas",
+          "card": "不开客户端，也能搜索、安装、启用。",
+          "lede": "不开客户端，也能搜索、安装、启用。"
+        },
+        "plans": {
+          "title": "订阅",
+          "card": "Free 有什么，Pro 多什么。",
+          "lede": "安装和管理，免费。"
+        }
+      },
       "sections": [
         {
           "id": "about",
@@ -473,12 +511,12 @@
         {
           "id": "pro",
           "title": "Pro 功能",
-          "body": "订阅 Pro 解锁用量治理。部分已经上线，部分在规划中：",
+          "body": "订阅 Pro 解锁用量治理：",
           "bullets": [
-            "预算与超支告警：给供应商设预算上限，接近或超出时提醒（已上线）",
-            "用量分析与导出：更细的费用 / Token 分析与数据导出（已上线）",
-            "智能路由：按成本、延迟或成功率在多家上游之间自动挑选（规划中）",
-            "多 Key 轮换：同一供应商配置多把 API Key 并自动轮换，避开单 Key 限流（规划中）"
+            "预算与超支告警：给供应商设预算上限，接近或超出时提醒",
+            "用量分析与导出：更细的费用 / Token 分析与数据导出",
+            "智能路由：失败降级不限供应商家数，并先避开最近出错的供应商",
+            "多 Key 轮换：同一供应商配置多把 API Key，轮流使用，分散单 Key 限流"
           ]
         },
         {
@@ -486,7 +524,7 @@
           "title": "订阅与买断",
           "body": "浏览、安装、本地代理和用量仪表盘对所有人免费。需要 Pro 时可以按月、按年订阅，或一次性买断：",
           "bullets": [
-            "Free：浏览与安装资源、本地代理转发、用量仪表盘",
+            "Free：浏览与安装资源、本地代理转发（失败降级最多两家）、用量仪表盘",
             "Pro 月付：{monthly} / 月",
             "Pro 年付：{yearly} / 年",
             "终身买断：{lifetime}，一次付费，永久 Pro"
@@ -624,35 +662,67 @@
     },
     "dashboard": {
       "metaTitle": "个人面板",
+      "title": "个人面板",
+      "tabs": "个人面板分区",
+      "tab": {
+        "account": "账户",
+        "subscription": "订阅"
+      },
+      "gateTitle": "请先登录",
+      "gateBody": "账户和订阅都在这里。",
+      "home": "回到首页",
+      "name": "名称",
+      "email": "邮箱",
+      "signIn": "登录方式",
       "plan": "当前方案",
-      "planFree": "Free",
-      "planPro": "Pro",
-      "planTeam": "Team",
-      "upgrade": "升级 Pro",
-      "proActive": "Pro 权益已生效",
-      "redirecting": "正在跳转…",
-      "loginFirst": "请先登录",
-      "checkoutFailed": "没能打开支付页"
+      "planUnknown": "暂时查不到",
+      "view": "查看",
+      "logoutTitle": "退出",
+      "logoutBody": "退出后，订阅仍在账号里。",
+      "logout": "退出登录",
+      "planError": "暂时查不到订阅状态。稍后刷新再看。",
+      "active": "生效中",
+      "manage": "需要取消或变更订阅，写信到 <mail>support@panghuli.tech</mail>。",
+      "perks": "Pro 包含",
+      "billing": "账单",
+      "merchant": "代收方",
+      "freeBody": "安装和管理都能用。Pro 加上预算告警、用量分析、智能路由和多 Key 轮换。",
+      "upgrade": "升级 Pro"
     },
     "login": {
       "title": "登录 Agent Store",
       "body": "登录后可以订阅 Pro。",
-      "github": "使用 GitHub 登录",
-      "google": "使用 Google 登录",
+      "github": "用 GitHub 登录",
+      "google": "用 Google 登录",
       "consent": "继续即表示同意<terms>服务条款</terms>和<privacy>隐私政策</privacy>。",
-      "close": "关闭"
+      "close": "关闭",
+      "failed": "登录没有完成，请再试一次。"
+    },
+    "auth": {
+      "signingIn": "正在登录…",
+      "home": "回到首页",
+      "desktop": {
+        "working": "正在处理…",
+        "noToken": "没有拿到登录令牌",
+        "noTokenHint": "回到客户端，重新点一次登录。",
+        "returning": "登录成功，正在返回客户端",
+        "returningHint": "浏览器没有自动打开客户端时，点下面的按钮。",
+        "openApp": "打开 Agent Store"
+      }
     },
     "legal": {
       "updated": "最后更新：{date}",
       "zhOnly": "本页目前只有中文版本。",
-      "contact": "联系我们"
+      "home": "回到首页"
     },
     "notFound": {
       "metaTitle": "页面不存在",
       "title": "没有这一页",
-      "body": "地址可能写错了，或者这个页面已经移走。",
+      "body": "地址可能写错了，或者页面已经移走。搜一下你要找的包。",
       "store": "去商店",
-      "home": "回到首页"
+      "home": "回到首页",
+      "search": "搜索技能、MCP、供应商",
+      "submit": "搜索"
     },
     "error": {
       "title": "页面出错了",

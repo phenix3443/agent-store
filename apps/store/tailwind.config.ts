@@ -26,20 +26,6 @@ const config: Config = {
         provider: kind('provider'),
         warn: 'var(--warn)',
         bad: 'var(--bad)',
-
-        // Names from the previous design, still used by pages that #160–#162 redo.
-        // Remove each once nothing references it.
-        paper: 'var(--bg)',
-        plate: 'var(--bg-2)',
-        ink: { DEFAULT: 'var(--fg)', 2: 'var(--fg-2)' },
-        'on-ink': 'var(--bg)',
-        sel: 'var(--panel-2)',
-        fill: 'var(--panel)',
-        danger: 'var(--bad)',
-      },
-      // The old design drew section rules in ink; at full text brightness they glare on the dark ground.
-      borderColor: {
-        ink: 'var(--fg-3)',
       },
       boxShadow: {
         nav: '0 10px 40px rgba(0, 0, 0, 0.35)',

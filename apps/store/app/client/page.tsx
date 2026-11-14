@@ -52,7 +52,7 @@ export default async function ClientPage() {
             </p>
             <p className="cap">
               {version && `${version} · `}
-              {tm('platforms')} · <Link href="/docs#install">{t('installGuide')}</Link>
+              {tm('platforms')} · <Link href="/docs/install">{t('installGuide')}</Link>
             </p>
           </div>
           <WindowFrame title={t('heroWindow')}>

@@ -1,6 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { AuthStatus } from '@/components/AuthStatus'
 import { authClient } from '@/lib/auth/client'
 import { getAuthToken } from '@/lib/auth/token'
 
@@ -14,7 +17,9 @@ import { getAuthToken } from '@/lib/auth/token'
 // When the browser session is still valid, step 1 skips the provider consent, so
 // the app can silently refresh an expired token by reopening this page.
 export default function DesktopAuthRelay() {
-  const [status, setStatus] = useState('正在处理…')
+  const t = useTranslations('site.auth')
+  const [status, setStatus] = useState<'working' | 'noToken' | 'returning'>('working')
+  const [appUrl, setAppUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -37,11 +42,13 @@ export default function DesktopAuthRelay() {
       if (!provider) {
         const token = await getAuthToken()
         if (!token) {
-          setStatus('未获取到登录令牌，请重试。')
+          setStatus('noToken')
           return
         }
-        setStatus('登录成功，正在返回应用…')
-        window.location.href = `${resolveScheme()}://auth-callback?token=${encodeURIComponent(token)}`
+        const url = `${resolveScheme()}://auth-callback?token=${encodeURIComponent(token)}`
+        setAppUrl(url)
+        setStatus('returning')
+        window.location.href = url
         return
       }
       // First hop: remember the target scheme across the provider round-trip, then
@@ -58,5 +65,24 @@ export default function DesktopAuthRelay() {
     void run()
   }, [])
 
-  return <div style={{ padding: 40, fontFamily: 'system-ui', color: 'var(--text-2, #888)' }}>{status}</div>
+  return (
+    <AuthStatus title={t(`desktop.${status}`)}>
+      {status === 'noToken' && (
+        <>
+          <p className="text-fg-2">{t('desktop.noTokenHint')}</p>
+          <Link href="/" className="link text-fg-2">
+            {t('home')}
+          </Link>
+        </>
+      )}
+      {status === 'returning' && appUrl && (
+        <>
+          <p className="text-fg-2">{t('desktop.returningHint')}</p>
+          <a href={appUrl} className="btn btn-primary">
+            {t('desktop.openApp')}
+          </a>
+        </>
+      )}
+    </AuthStatus>
+  )
 }

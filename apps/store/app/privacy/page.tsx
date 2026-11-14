@@ -63,5 +63,5 @@ const SECTIONS: LegalSection[] = [
 ]
 
 export default function PrivacyPage() {
-  return <LegalPage title="隐私政策" updated={UPDATED} sections={SECTIONS} />
+  return <LegalPage title="隐私政策" updated={UPDATED} sections={SECTIONS} other="terms" />
 }

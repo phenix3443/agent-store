@@ -21,7 +21,7 @@ export async function SiteFooter() {
       title: t('resources'),
       links: [
         { href: '/docs', label: t('docs') },
-        { href: '/docs#cli', label: t('cli') },
+        { href: '/docs/cli', label: t('cli') },
         { href: `${SOURCE_URL}/releases`, label: t('releases') },
         { href: SOURCE_URL, label: t('source') },
       ],

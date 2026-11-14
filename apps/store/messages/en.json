@@ -393,9 +393,47 @@
     "docs": {
       "metaTitle": "Docs",
       "metaDescription": "Agent Store guide: install the desktop client, browse and install, local relay, CLI and subscriptions.",
-      "title": "Get started with Agent Store",
-      "lede": "Find, install and manage skills, MCP servers and model providers for Claude Code / Codex.",
-      "toc": "Contents",
+      "title": "Docs",
+      "dim": "From first install to the CLI.",
+      "toc": "On this page",
+      "read": "Read",
+      "crumb": "Breadcrumb",
+      "nav": "Docs sections",
+      "prevNext": "Previous and next",
+      "prev": "Previous",
+      "next": "Next",
+      "see": {
+        "skill": "See skills",
+        "mcp": "See MCP",
+        "provider": "See providers"
+      },
+      "articles": {
+        "install": {
+          "title": "Install the app",
+          "card": "Download, first launch.",
+          "lede": "Download, allow it once, start using it."
+        },
+        "browse": {
+          "title": "Browse and install",
+          "card": "Find it in the store. Install in a click.",
+          "lede": "Find it in the store. Install in a click."
+        },
+        "relay": {
+          "title": "Local relay",
+          "card": "Switch providers. Fail over automatically.",
+          "lede": "Switch providers. Fail over automatically."
+        },
+        "cli": {
+          "title": "The aas CLI",
+          "card": "Search, install and enable without the app.",
+          "lede": "Search, install and enable without opening the app."
+        },
+        "plans": {
+          "title": "Plans",
+          "card": "What's in Free. What Pro adds.",
+          "lede": "Installing and managing is free."
+        }
+      },
       "sections": [
         {
           "id": "about",
@@ -473,12 +511,12 @@
         {
           "id": "pro",
           "title": "Pro features",
-          "body": "A Pro subscription unlocks usage governance. Some features are live, others are planned:",
+          "body": "A Pro subscription unlocks usage governance:",
           "bullets": [
-            "Budgets and overspend alerts: set a budget cap per provider and get alerted when nearing or exceeding it (live)",
-            "Usage analytics and export: more detailed cost / token analysis and data export (live)",
-            "Smart routing: automatically choose among multiple upstreams by cost, latency or success rate (planned)",
-            "Multi-key rotation: configure multiple API keys for one provider and rotate them automatically to avoid single-key rate limits (planned)"
+            "Budgets and overspend alerts: set a budget cap per provider and get alerted when nearing or exceeding it",
+            "Usage analytics and export: more detailed cost / token analysis and data export",
+            "Smart routing: failover across any number of providers, skipping the ones that failed recently",
+            "Multi-key rotation: configure several API keys for one provider and take turns with them to spread single-key rate limits"
           ]
         },
         {
@@ -486,7 +524,7 @@
           "title": "Subscriptions and lifetime purchase",
           "body": "Browsing, installing, the local relay and the usage dashboard are free for everyone. If you need Pro, you can subscribe monthly or yearly, or make a one-time lifetime purchase:",
           "bullets": [
-            "Free: browse and install resources, local relay forwarding, usage dashboard",
+            "Free: browse and install resources, local relay forwarding (failover across up to two providers), usage dashboard",
             "Pro monthly: {monthly} / month",
             "Pro yearly: {yearly} / year",
             "Lifetime: {lifetime}, pay once, Pro forever"
@@ -624,35 +662,67 @@
     },
     "dashboard": {
       "metaTitle": "Dashboard",
-      "plan": "Current plan",
-      "planFree": "Free",
-      "planPro": "Pro",
-      "planTeam": "Team",
-      "upgrade": "Upgrade to Pro",
-      "proActive": "Pro is active",
-      "redirecting": "Redirecting…",
-      "loginFirst": "Please sign in first",
-      "checkoutFailed": "Couldn't open checkout"
+      "title": "Dashboard",
+      "tabs": "Dashboard sections",
+      "tab": {
+        "account": "Account",
+        "subscription": "Subscription"
+      },
+      "gateTitle": "Log in first",
+      "gateBody": "Your account and subscription live here.",
+      "home": "Back to home",
+      "name": "Name",
+      "email": "Email",
+      "signIn": "Sign-in",
+      "plan": "Plan",
+      "planUnknown": "Unavailable",
+      "view": "View",
+      "logoutTitle": "Log out",
+      "logoutBody": "Your subscription stays on the account.",
+      "logout": "Log out",
+      "planError": "We can't read your subscription right now. Refresh in a moment.",
+      "active": "Active",
+      "manage": "To cancel or change your subscription, email <mail>support@panghuli.tech</mail>.",
+      "perks": "What Pro includes",
+      "billing": "Billing",
+      "merchant": "Payments by",
+      "freeBody": "Installing and managing work on Free. Pro adds budget alerts, usage analytics, smart routing and multi-key rotation.",
+      "upgrade": "Upgrade to Pro"
     },
     "login": {
-      "title": "Sign in to Agent Store",
-      "body": "Sign in to subscribe to Pro.",
-      "github": "Sign in with GitHub",
-      "google": "Sign in with Google",
-      "consent": "By continuing, you agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
-      "close": "Close"
+      "title": "Log in to Agent Store",
+      "body": "Log in to subscribe to Pro.",
+      "github": "Continue with GitHub",
+      "google": "Continue with Google",
+      "consent": "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
+      "close": "Close",
+      "failed": "The sign-in didn't finish. Try again."
+    },
+    "auth": {
+      "signingIn": "Logging you in…",
+      "home": "Back to home",
+      "desktop": {
+        "working": "Working on it…",
+        "noToken": "No sign-in token",
+        "noTokenHint": "Go back to the app and log in again.",
+        "returning": "Logged in. Returning to the app",
+        "returningHint": "If your browser didn't open the app, use the button below.",
+        "openApp": "Open Agent Store"
+      }
     },
     "legal": {
       "updated": "Updated {date}",
       "zhOnly": "This page is currently available in Chinese only.",
-      "contact": "Contact us"
+      "home": "Back to home"
     },
     "notFound": {
       "metaTitle": "Page not found",
       "title": "This page doesn't exist",
-      "body": "The address may be wrong, or the page has moved.",
+      "body": "The address may be wrong, or the page has moved. Search for the package you wanted.",
       "store": "Go to the store",
-      "home": "Back to home"
+      "home": "Back to home",
+      "search": "Search skills, MCP and providers",
+      "submit": "Search"
     },
     "error": {
       "title": "Something went wrong",
