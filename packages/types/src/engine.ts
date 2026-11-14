@@ -5,7 +5,7 @@ import type { CatalogResourceDetail, CatalogSearchResult } from './catalog'
 import type { ResourceKind, ResourceSort } from './resources'
 import type {
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
-  ProjectUninstallOptions, ProjectUninstallResult,
+  ProjectSummary, ProjectUninstallOptions, ProjectUninstallResult,
 } from './projects'
 import type {
   BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
@@ -238,6 +238,10 @@ export interface ItemDetail {
   headers?: Record<string, string>
   /** skill only */
   contentUrl?: string
+  /** Where the item's files live in the library (`~/.agent-store/<kind>s/<slug>`), absolute. */
+  dir?: string
+  /** mcp only: tools whose own same-name entry was taken over with `replace`; it is written back on disable or uninstall. */
+  replacedFor?: ToolTarget[]
 }
 
 /**
@@ -270,6 +274,23 @@ export interface DisableOptions {
 }
 
 export type UninstallOptions = DisableOptions
+
+/** One step of `batch`: enable or disable needs `target`; uninstall takes the whole entry. No force or replace. */
+export type BatchOperation =
+  | { action: 'enable' | 'disable'; slug: string; target: ToolTarget }
+  | { action: 'uninstall'; slug: string }
+
+/** The engine error of a failed step, with the same fields `aas __rpc` reports. */
+export interface BatchError {
+  message: string
+  /** Error class name, e.g. McpConflictError. */
+  code?: string
+  reason?: string
+  tool?: string
+  target?: string
+}
+
+export type BatchOutcome = BatchOperation & ({ ok: true } | { ok: false; error: BatchError })
 
 /**
  * Why an item is not enabled for a tool yet. The user can fix `needs-config` and
@@ -365,8 +386,15 @@ export interface Engine {
   setBudget(config: BudgetConfig): Promise<BudgetConfig>
   /** Computes current-month spend against the budget, with projection and alert level. */
   getBudgetStatus(): Promise<BudgetStatus>
+  /**
+   * Runs each step in turn and reports each one; a failed step does not stop the rest.
+   * Never throws for a step's own failure.
+   */
+  batch(operations: BatchOperation[]): Promise<BatchOutcome[]>
   /** Registered project directories; `exists` is false for one that is gone. */
   listProjects(): Promise<Project[]>
+  /** Every project with how many skills and MCP servers its agents use there, in one call. */
+  projectSummaries(): Promise<ProjectSummary[]>
   /** Registers an existing directory; the same directory (through any path) is registered once. */
   addProject(path: string, options?: AddProjectOptions): Promise<Project>
   /** Stops managing a project (`ref`: id or path). No file is deleted. */

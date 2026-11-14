@@ -29,12 +29,15 @@ export type {
   LocalRelayConfig,
   BudgetConfig,
   BudgetStatus,
+  BatchOperation,
+  BatchOutcome,
+  BatchError,
 } from './engine'
 export type { RegistryJson } from './registry'
 export type {
   Project, AddProjectOptions, ProjectSkill, ProjectSkillLocation, ProjectMcp, ProjectMcpLocation, ProjectMcpScope,
   ClaudeMcpApproval, ProjectEnvVar, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
-  ProjectUninstallOptions, ProjectUninstallResult,
+  ProjectUninstallOptions, ProjectUninstallResult, ProjectSummary,
 } from './projects'
 export type {
   BackupItemCategory, BackupItemRef, BackupConnectOptions, BackupConflictReason, BackupConflict, BackupConflictChoice,
