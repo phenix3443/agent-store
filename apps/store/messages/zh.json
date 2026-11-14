@@ -264,6 +264,11 @@
           "skill": "技能",
           "mcp": "MCP",
           "provider": "供应商"
+        },
+        "tabs": {
+          "skill": "技能",
+          "mcp": "MCP",
+          "provider": "供应商"
         }
       }
     },

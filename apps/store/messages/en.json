@@ -264,6 +264,11 @@
           "skill": "skills",
           "mcp": "MCP servers",
           "provider": "providers"
+        },
+        "tabs": {
+          "skill": "Skills",
+          "mcp": "MCP",
+          "provider": "Providers"
         }
       }
     },

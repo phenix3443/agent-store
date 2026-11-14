@@ -600,8 +600,13 @@
     align-items: center;
   }
 
+  /* Text first in the source, drawn on the right; on one column it stays on top. */
   .split-rev {
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+
+  .split-rev > :first-child {
+    order: 2;
   }
 
   @media (max-width: 900px) {
@@ -611,7 +616,7 @@
     }
 
     .split-rev > :first-child {
-      order: 2;
+      order: 0;
     }
   }
 

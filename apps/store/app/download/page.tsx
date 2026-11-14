@@ -49,7 +49,7 @@ export default async function DownloadPage() {
               const mine = os === visitorOs
               return (
                 <li key={os} id={os} data-kind={OS_KIND[os]} data-recommended={mine || undefined} className="os-card scroll-mt-24">
-                  <span aria-hidden className="tile mb-3.5 font-mono text-xs font-semibold">
+                  <span aria-hidden className="tile mb-3.5 w-auto min-w-10 px-2.5 font-mono text-xs font-semibold">
                     {os}
                   </span>
                   <h2 className="flex items-center justify-between gap-2 text-[22px] font-extrabold">

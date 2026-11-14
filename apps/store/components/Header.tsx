@@ -52,7 +52,7 @@ function LanguageToggle({ className = '' }: { className?: string }) {
         document.cookie = `locale=${next}; path=/; max-age=31536000`
         router.refresh()
       }}
-      className={`grid h-9 min-w-9 place-items-center rounded-control px-2 text-[13.5px] font-semibold text-fg-2 transition-colors hover:bg-panel hover:text-fg ${className}`}
+      className={`grid h-9 min-w-9 place-items-center whitespace-nowrap rounded-control px-2 text-[13.5px] font-semibold text-fg-2 transition-colors hover:bg-panel hover:text-fg ${className}`}
     >
       {next === 'en' ? 'EN' : tl(next)}
     </button>
@@ -222,7 +222,7 @@ export function Header({ user }: HeaderProps) {
               <button
                 type="button"
                 onClick={() => setLoginOpen(true)}
-                className="hidden px-1.5 py-2 text-[14.5px] font-medium text-fg-2 transition-colors hover:text-fg lg:block"
+                className="hidden whitespace-nowrap px-1.5 py-2 text-[14.5px] font-medium text-fg-2 transition-colors hover:text-fg lg:block"
               >
                 {t('login')}
               </button>

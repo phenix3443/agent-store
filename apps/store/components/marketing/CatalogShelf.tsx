@@ -26,7 +26,7 @@ export function CatalogShelf({ samples }: { samples: Record<ResourceKind, Resour
         <Tabs.List aria-label={t('tabsLabel')} className="seg">
           {SHELF_KINDS.map((k) => (
             <Tabs.Trigger key={k} value={k} data-kind={k}>
-              {t(`kinds.${k}`)}
+              {t(`tabs.${k}`)}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
