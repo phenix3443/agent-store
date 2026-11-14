@@ -76,7 +76,7 @@ export function BudgetCard() {
           <button
             type="button"
             onClick={save}
-            className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+            className="rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-canvas hover:opacity-90"
           >
             {t('common.save')}
           </button>

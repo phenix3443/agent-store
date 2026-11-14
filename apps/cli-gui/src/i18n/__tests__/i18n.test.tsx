@@ -59,3 +59,14 @@ test('an unknown stored value falls back to the detected locale', () => {
   )
   expect(screen.getByText(detectLocale() === 'en' ? 'Settings' : '设置')).toBeInTheDocument()
 })
+
+function keyPaths(dict: Record<string, unknown>, prefix = ''): string[] {
+  return Object.entries(dict).flatMap(([k, v]) =>
+    v && typeof v === 'object' ? keyPaths(v as Record<string, unknown>, `${prefix}${k}.`) : [`${prefix}${k}`]
+  )
+}
+
+test('Chinese and English carry the same keys', async () => {
+  const { messages } = await import('../messages')
+  expect(keyPaths(messages.en).sort()).toEqual(keyPaths(messages.zh).sort())
+})

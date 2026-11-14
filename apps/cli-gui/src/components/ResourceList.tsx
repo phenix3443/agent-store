@@ -34,6 +34,7 @@ export function ResourceList() {
     selectedSlug, setSelectedSlug, navView,
     installedVersion, bumpInstalledVersion,
     editingConfigSlug, setEditingConfigSlug,
+    setCatalogOffline, searchSeed, setSearchSeed,
   } = useAppState()
   const { appendLine } = useTerminalLog()
   const t = useT()
@@ -79,8 +80,17 @@ export function ResourceList() {
     setCatalog((prev) => (offset ? [...prev, ...result.resources] : result.resources))
     setNextOffset(result.nextOffset)
     setOffline(result.offline)
+    setCatalogOffline(result.offline)
     setCatalogLoaded(true)
   }
+
+  useEffect(() => {
+    if (searchSeed === null) return
+    setTextQuery(searchSeed)
+    setTokenMenuOpen(false)
+    setListFilter('all')
+    setSearchSeed(null)
+  }, [searchSeed, setSearchSeed, setListFilter])
 
   useEffect(() => {
     const timer = setTimeout(() => setSearchQuery(textQuery.trim()), SEARCH_DEBOUNCE_MS)
@@ -93,6 +103,7 @@ export function ResourceList() {
       setCatalog([])
       setNextOffset(null)
       setOffline(true)
+      setCatalogOffline(true)
       setCatalogLoaded(true)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -248,6 +259,8 @@ export function ResourceList() {
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-store-text-3" />
             <input
               type="text"
+              data-page-search
+              aria-label={t('resList.searchPlaceholder')}
               value={searchValue}
               onChange={(e) => handleSearchInput(e.target.value)}
               placeholder={t('resList.searchPlaceholder')}
@@ -456,7 +469,7 @@ export function ResourceList() {
                       if (r.kind === 'provider') configureProvider(r)
                       else install(r)
                     }}
-                    className="shrink-0 rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                    className="shrink-0 rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-canvas hover:opacity-90"
                   >
                     {r.kind === 'provider' ? t('resList.configure') : t('common.install')}
                   </button>

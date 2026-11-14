@@ -1,38 +1,200 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-12T00:00:00Z",
+  "generatedAt": "2026-11-13T00:00:00Z",
   "title": "Design System: Agent Store Web",
   "extensions": {
     "colorMeta": {
-      "ink": { "role": "primary", "displayName": "墨", "canonical": "#16181A" },
-      "sel": { "role": "accent", "displayName": "选区淡紫", "canonical": "#EAEAF4" },
-      "paper": { "role": "neutral", "displayName": "纸", "canonical": "#F5F4F6" },
-      "plate": { "role": "neutral", "displayName": "图版", "canonical": "#FAF6F5" },
-      "ink-2": { "role": "neutral", "displayName": "次墨", "canonical": "#55585C" },
-      "line": { "role": "neutral", "displayName": "细线", "canonical": "#C9C7C4" },
-      "scrim": { "role": "neutral", "displayName": "遮罩", "canonical": "rgba(22,24,26,0.4)" }
+      "bg": {
+        "role": "neutral",
+        "displayName": "底",
+        "canonical": "#0B0A12"
+      },
+      "bg-2": {
+        "role": "neutral",
+        "displayName": "底 2",
+        "canonical": "#100E1A"
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "面",
+        "canonical": "rgba(255,255,255,0.04)"
+      },
+      "panel-2": {
+        "role": "neutral",
+        "displayName": "面 2",
+        "canonical": "rgba(255,255,255,0.065)"
+      },
+      "fg": {
+        "role": "primary",
+        "displayName": "文字",
+        "canonical": "#F3F2F8"
+      },
+      "fg-2": {
+        "role": "neutral",
+        "displayName": "次文字",
+        "canonical": "#A5A2B8"
+      },
+      "fg-3": {
+        "role": "neutral",
+        "displayName": "注释",
+        "canonical": "#8683A0"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "细线",
+        "canonical": "rgba(255,255,255,0.09)"
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "强线",
+        "canonical": "rgba(255,255,255,0.18)"
+      },
+      "skill": {
+        "role": "accent",
+        "displayName": "技能紫",
+        "canonical": "#B79CFF"
+      },
+      "mcp": {
+        "role": "accent",
+        "displayName": "MCP 蓝",
+        "canonical": "#62B8FF"
+      },
+      "provider": {
+        "role": "accent",
+        "displayName": "供应商绿",
+        "canonical": "#5FD6A4"
+      },
+      "warn": {
+        "role": "neutral",
+        "displayName": "警示",
+        "canonical": "#FFB86B"
+      },
+      "bad": {
+        "role": "neutral",
+        "displayName": "错误",
+        "canonical": "#FF7A90"
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "遮罩",
+        "canonical": "rgba(5,4,10,0.66)"
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "抽屉和整页详情的包名，每屏一个。" },
-      "label": { "displayName": "Label", "purpose": "栏目标签、表头、按钮文字：等宽大写加字距。" },
-      "display-xl": { "displayName": "Display XL", "purpose": "索引页标题（定价）桌面 88px。" },
-      "display-lg": { "displayName": "Display L", "purpose": "商店、下载的标题。" },
-      "display-md": { "displayName": "Display M", "purpose": "文档类页面标题、平板档索引页标题。" },
-      "display-sm": { "displayName": "Display S", "purpose": "手机档索引页标题、404。" },
-      "headline-sm": { "displayName": "Headline S", "purpose": "落地页节标题（手机）、弹层标题、文档小节。" },
-      "title-lg": { "displayName": "Title L", "purpose": "方案名、法律页小节。" },
-      "reading": { "displayName": "Reading", "purpose": "文档与法律页正文栏，最长 68ch。" }
+      "hero": {
+        "displayName": "Hero",
+        "purpose": "首页大标题，800。"
+      },
+      "h1": {
+        "displayName": "H1",
+        "purpose": "各页页首标题，800。"
+      },
+      "h2": {
+        "displayName": "H2",
+        "purpose": "页内分节标题，800。"
+      },
+      "h3": {
+        "displayName": "H3",
+        "purpose": "卡片标题、小节，700。"
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "标题下的一句说明，次文字色。"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "正文 16px / 1.65。"
+      },
+      "body-sm": {
+        "displayName": "Body S",
+        "purpose": "页脚链接、卡片正文。"
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "版权行、注释。"
+      },
+      "nav": {
+        "displayName": "Nav",
+        "purpose": "顶部导航链接。"
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "按钮文字，700。"
+      },
+      "button-sm": {
+        "displayName": "Button S",
+        "purpose": "小号按钮文字。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "栏目标签、表头：Geist Mono 12.5px，不转大写。"
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "命令和代码块。"
+      }
     },
     "shadows": [
-      { "name": "float", "value": "0 12px 28px -12px rgba(22,24,26,0.35)", "purpose": "弹出菜单和安装提示浮层。" }
+      {
+        "name": "nav",
+        "value": "0 10px 40px rgba(0,0,0,0.35)",
+        "purpose": "顶部导航条。"
+      },
+      {
+        "name": "pop",
+        "value": "0 24px 70px rgba(0,0,0,0.6)",
+        "purpose": "下拉菜单。"
+      },
+      {
+        "name": "sheet",
+        "value": "0 0 120px rgba(0,0,0,0.7)",
+        "purpose": "窄屏菜单。"
+      },
+      {
+        "name": "primary-glow",
+        "value": "0 0 0 1px rgba(255,255,255,0.4) inset, 0 8px 28px rgba(98,184,255,0.28)",
+        "purpose": "主按钮。"
+      }
     ],
     "motion": [
-      { "name": "state", "value": "150ms", "purpose": "按钮和页签的颜色切换。" }
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.2,0.7,0.2,1)",
+        "purpose": "全站缓动。"
+      },
+      {
+        "name": "state",
+        "value": "150–200ms",
+        "purpose": "颜色与底色切换。"
+      },
+      {
+        "name": "sweep",
+        "value": "700ms",
+        "purpose": "主按钮悬停扫光。"
+      },
+      {
+        "name": "aurora",
+        "value": "22–26s",
+        "purpose": "背景光晕漂移，减少动效时停止。"
+      }
     ],
     "breakpoints": [
-      { "name": "sm", "value": "640px" },
-      { "name": "md", "value": "768px" },
-      { "name": "lg", "value": "1024px" }
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
     ]
   },
   "components": [
@@ -40,64 +202,94 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "每屏唯一的主动作，如「在桌面客户端中安装」。",
-      "html": "<button class=\"ds-btn-primary\">在桌面客户端中安装</button>",
-      "css": ".ds-btn-primary { min-height: 48px; padding: 0 20px; background: var(--ink, #16181a); color: var(--on-ink, #f5f4f6); border: 1px solid var(--ink, #16181a); border-radius: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: var(--ink-2, #55585c); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ink, #16181a); outline-offset: 2px; }"
+      "description": "每屏最多一个的主动作，如导航里的「下载」。",
+      "html": "<button class=\"ds-btn-primary\">下载桌面客户端</button>",
+      "css": ".ds-btn-primary { position: relative; overflow: hidden; min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--fg, #f3f2f8); color: var(--bg, #0b0a12); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,.4) inset, 0 8px 28px rgba(98,184,255,.28); transition: transform 180ms cubic-bezier(.2,.7,.2,1), box-shadow 250ms; } .ds-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255,255,255,.5) inset, 0 12px 36px rgba(98,184,255,.42); } .ds-btn-primary:focus-visible { outline: 2px solid var(--mcp, #62b8ff); outline-offset: 3px; }"
     },
     {
       "name": "Secondary Button",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "行内「安装」、「复制命令」、「下载桌面客户端」。",
-      "html": "<button class=\"ds-btn\">安装</button>",
-      "css": ".ds-btn { min-height: 32px; padding: 0 12px; background: transparent; color: var(--ink, #16181a); border: 1px solid var(--ink, #16181a); border-radius: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: background-color 150ms, color 150ms; } .ds-btn:hover { background: var(--ink, #16181a); color: var(--on-ink, #f5f4f6); } .ds-btn:focus-visible { outline: 2px solid var(--ink, #16181a); outline-offset: 2px; }"
+      "description": "次要动作。",
+      "html": "<button class=\"ds-btn\">复制命令</button>",
+      "css": ".ds-btn { min-height: 36px; padding: 0 14px; border: 1px solid var(--line-strong, rgba(255,255,255,.18)); border-radius: 10px; background: var(--panel, rgba(255,255,255,.04)); color: var(--fg, #f3f2f8); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: background-color 200ms, border-color 200ms; } .ds-btn:hover { background: var(--panel-2, rgba(255,255,255,.065)); border-color: rgba(255,255,255,.3); } .ds-btn:focus-visible { outline: 2px solid var(--mcp, #62b8ff); outline-offset: 3px; }"
     },
     {
-      "name": "Command Box",
-      "kind": "custom",
-      "refersTo": "command-box",
-      "description": "安装命令完整显示，必要时换行。",
-      "html": "<div class=\"ds-cmd\"><span class=\"ds-cmd-prompt\">$</span><code>aas install superpowers-brainstorming</code></div>",
-      "css": ".ds-cmd { display: flex; gap: 8px; min-height: 48px; padding: 0 8px 0 14px; border: 1px solid var(--ink, #16181a); background: var(--paper, #f5f4f6); font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 24px; } .ds-cmd-prompt { padding: 12px 0; color: var(--ink-2, #55585c); user-select: none; } .ds-cmd code { flex: 1; min-width: 0; padding: 12px 0; overflow-wrap: anywhere; }"
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "输入框，聚焦时 MCP 蓝边加光圈。",
+      "html": "<input class=\"ds-field\" placeholder=\"搜索技能和 MCP\">",
+      "css": ".ds-field { width: 100%; min-height: 40px; padding: 0 12px; border: 1px solid var(--line-strong, rgba(255,255,255,.18)); border-radius: 10px; background: var(--well, rgba(0,0,0,.25)); color: var(--fg, #f3f2f8); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; outline: none; } .ds-field::placeholder { color: var(--fg-3, #8683a0); } .ds-field:focus { border-color: rgba(98,184,255,.75); box-shadow: 0 0 0 4px rgba(98,184,255,.14); }"
     },
     {
-      "name": "Category Tab",
-      "kind": "nav",
-      "refersTo": "category-tab",
-      "description": "筛选条上的类别页签，焦点框内收但不压字。",
-      "html": "<button class=\"ds-tab\" aria-pressed=\"true\">MCP <span>10</span></button>",
-      "css": ".ds-tab { height: 56px; padding: 0 8px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--ink-2, #55585c); font-size: 15px; cursor: pointer; } .ds-tab span { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-2, #55585c); } .ds-tab[aria-pressed=true] { border-bottom-color: var(--ink, #16181a); color: var(--ink, #16181a); font-weight: 500; } .ds-tab:focus-visible { outline: 2px solid var(--ink, #16181a); outline-offset: -2px; }"
+      "name": "Category Pill",
+      "kind": "badge",
+      "refersTo": "chip",
+      "description": "类别标签，颜色随 data-kind 变化。",
+      "html": "<span class=\"ds-kind\" data-kind=\"skill\">技能</span>",
+      "css": ".ds-kind { --k: 98,184,255; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border: 1px solid rgba(var(--k),.4); border-radius: 999px; background: rgba(var(--k),.1); color: rgb(var(--k)); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12.5px; font-weight: 600; } .ds-kind[data-kind=skill] { --k: 183,156,255; } .ds-kind[data-kind=provider] { --k: 95,214,164; } .ds-kind::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: currentColor; box-shadow: 0 0 10px currentColor; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "半透明面上的内容块。",
+      "html": "<div class=\"ds-card\">卡片内容</div>",
+      "css": ".ds-card { padding: 22px; border: 1px solid var(--line, rgba(255,255,255,.09)); border-radius: 18px; background: var(--panel, rgba(255,255,255,.04)); color: var(--fg, #f3f2f8); font-family: 'Plus Jakarta Sans', sans-serif; }"
     }
   ],
   "narrative": {
-    "northStar": "图版",
-    "overview": "每个包是一张设计年鉴里的图版：近白的纸、墨色的字、细线分栏。访客是熟悉终端的开发者，这一页的任务是让他在几秒内判断「装了会跑什么」，然后拿到安装方式。所以表现力只花在图版四角的套准十字上，其余部分克制到像一张印刷表格。",
+    "northStar": "光谱",
+    "overview": "紫调近黑的底上，三种类别色各占一段光谱：技能紫、MCP 蓝、供应商绿。光效和动效用足：页面顶部有缓慢漂移的三色光晕，主按钮悬停时一道光扫过，品牌标志是三根高低不同的彩色柱子。界面先让人看清是哪一类东西，再给出安装方式。",
     "keyCharacteristics": [
-      "浅色为本，近白底 #F5F4F6，抽屉面略偏暖 #FAF6F5",
-      "墨色 #16181A 而不是纯黑，全站只有一个彩色：选区用的淡紫",
-      "一套 grotesque 无衬线（Schibsted Grotesk）贯穿标题与正文，包名、命令、数字用 JetBrains Mono",
-      "直角、1px 细线、没有阴影层级",
-      "固定列宽的表格代替卡片网格"
+      "只有深色主题，底色 #0B0A12，浮层和抽屉用不透明的 #100E1A",
+      "文字三级：#F3F2F8、#A5A2B8、#8683A0",
+      "三种类别色只用来标类别，外加由三者组成的品牌渐变",
+      "面是半透明白叠在底色上，靠 1px 半透明白线分隔",
+      "圆角：控件 10px，卡片 18px，大外框 28px",
+      "Plus Jakarta Sans 贯穿标题与正文，标题 800；等宽用 Geist Mono"
     ],
     "rules": [
-      { "name": "The One Colour Rule", "body": "淡紫是唯一的彩色，只出现在选区上。状态靠形状和文字区分，不靠加色。", "section": "colors" },
-      { "name": "The Honest State Rule", "body": "网页端不显示它无法确认的「已安装」状态，也不显示没有依据的安全结论。", "section": "colors" },
-      { "name": "The No Eyebrow Rule", "body": "标题上方不放类别小标签或 kicker。类别已在面包屑里出现，标题自己承担层级。", "section": "typography" },
-      { "name": "The Flat Plate Rule", "body": "底面是平涂色，不加纸纹、斜面、浮雕来模仿实物材质。", "section": "elevation" }
+      {
+        "name": "The Category Colour Rule",
+        "body": "三种类别色只标技能、MCP、供应商三类东西和品牌元素；焦点框和选区用 MCP 蓝。",
+        "section": "colors"
+      },
+      {
+        "name": "The Honest State Rule",
+        "body": "网页端不显示它无法确认的「已安装」状态，也不显示没有依据的安全结论。",
+        "section": "colors"
+      },
+      {
+        "name": "The One Theme Rule",
+        "body": "只有深色主题，没有浅色主题和切换入口。",
+        "section": "colors"
+      },
+      {
+        "name": "The CJK Typesetting Rule",
+        "body": "中日韩页面上负字距归零，未加粗的标题提到 500。",
+        "section": "typography"
+      },
+      {
+        "name": "The No Eyebrow Rule",
+        "body": "标题上方不放类别小标签或 kicker。",
+        "section": "typography"
+      }
     ],
     "dos": [
-      "Do 新增颜色前先问能不能用形状或文字表达；确实要加，先在方向契约里写明理由。",
-      "Do 每个界面在 390px、820px、1440px 三个宽度下用真实文案（含西班牙文这类长文案）检查一遍。",
+      "Do 每个界面在 390px、820px、1440px 三个宽度下，用真实的中文和英文文案各检查一遍。",
       "Do 数字列用等宽、右对齐。",
-      "Do 把浏览器自带部分（选中色、焦点框、滚动条、链接下划线偏移）都按本文件的变量设置。"
+      "Do 按类别着色时写 data-kind，让 --kind 接管。",
+      "Do 通用交互用项目里的 Radix 组件，只改样式。"
     ],
     "donts": [
+      "Don't 加浅色主题、主题切换或 prefers-color-scheme 分支。",
+      "Don't 在页面里写死色值。",
+      "Don't 把某个类别色当成通用强调色。",
+      "Don't 在 body 上写 overflow-x: hidden。",
       "Don't 在标题上方放类别小标签或 eyebrow。",
-      "Don't 用卡片网格、图标卡片、轮播排包列表。",
-      "Don't 显示没有依据的审查或安全结论，也不显示「已安装」。",
-      "Don't 用横向滚动隐藏命令或包名的关键部分。",
-      "Don't 给控件加圆角或阴影层级。",
-      "Don't 用 docs/ui/Agent Store.dc.html 的旧外观约束网页商店；它只作为旧外观参考。"
+      "Don't 给中文加负字距。"
     ]
   }
 }

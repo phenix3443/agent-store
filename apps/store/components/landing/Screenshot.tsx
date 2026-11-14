@@ -8,8 +8,8 @@ export interface Shot {
 }
 
 /**
- * A crop of the dark desktop client set on the light page: a plate-coloured mat and a
- * 1px ink frame keep its edge from bleeding into the paper. No shadow, no radius.
+ * A crop of the desktop client on a mat with a 1px frame, so its edge stays visible
+ * against the page ground.
  */
 export function Screenshot({
   shot,

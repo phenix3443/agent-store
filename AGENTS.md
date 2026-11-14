@@ -23,21 +23,24 @@ The web store (`apps/store`) and the desktop client follow different design sour
 **Web store.** Since 2026-11-11 (issue #58) the web store has its own visual system.
 Before implementing or reviewing any web store screen, read `apps/store/DESIGN.md`
 (tokens, layout, components, do's and don'ts) and `apps/store/PRODUCT.md` (product
-facts). The direction contract for the store list and detail drawer is in
-`apps/store/.impeccable/surfaces/`. Tokens live in `apps/store/app/globals.css`; change
-them there and in `DESIGN.md` together. `docs/ui/Agent Store.dc.html` is only a record of
+facts). Since #158 the site is being redone in direction C; the interaction and copy
+reference is the prototype in `docs/design/mockups/site/` on branch
+`design/redesign-prototype`. The old direction contract for the store list and detail
+drawer is in `apps/store/.impeccable/surfaces/`; its visual part no longer applies.
+Tokens live in `apps/store/app/globals.css`; change them there and in `DESIGN.md`
+together. `docs/ui/Agent Store.dc.html` is only a record of
 the old look for the web store and no longer constrains it. Since #66 every web store
 page uses the new system; do not restyle any of them back toward the old mockup.
 
-**Desktop client.** `docs/ui/Agent Store.dc.html` is still the single source of truth for
-the desktop client's UI structure, layout, and behavior. Whether the desktop client moves
-to the web store's new system is undecided. Read the mockup's actual HTML/JS template
-source directly before implementing or reviewing any desktop screen — do not rely on
-`docs/ui/README.md` prose or `docs/ui/screens/*.png` reference screenshots, both of which
-have been found stale/inaccurate relative to the live mockup source. When the mockup
-changes, re-read the relevant section of the `.dc.html` file and update the
-implementation to match — do not implement from memory of an earlier version. When the
-desktop implementation and the design file conflict, the design file wins.
+**Desktop client.** Since #163 (2026-11-13) the desktop client is being rebuilt on the
+redesign's direction C. Read `apps/cli-gui/DESIGN.md` (tokens, window shell, components,
+do's and don'ts) before implementing or reviewing any desktop screen. The interaction and
+copy source is the approved prototype on the `design/redesign-prototype` branch,
+`docs/design/mockups/client-app/` (`app.css`, `app.js`, `i18n.js`, `ux.html`,
+`INVENTORY.md`); read its source, not a memory of it. Tokens live in
+`apps/cli-gui/src/globals.css`; change them there and in `DESIGN.md` together. Screens not
+yet rebuilt (#164, #165) still carry the old layout from `docs/ui/Agent Store.dc.html`;
+that file no longer constrains new work.
 
 ## Tests that touch the DOM
 
@@ -65,9 +68,10 @@ Required steps before calling UI work complete:
 1. Actually run the app (`pnpm dev` for the web store; `make dev-gui` for the desktop
    client) with real or realistically seeded data — not just the empty state.
 2. Compare rendered screens against the design reference side by side, screen by screen:
-   `apps/store/DESIGN.md` for the web store, `docs/ui/Agent Store.dc.html` for the
-   desktop client. For the web store, check every changed screen at 390px, 820px and
-   1440px, in light and dark, in both Chinese and English (the only two locales).
+   `apps/store/DESIGN.md` for the web store, `apps/cli-gui/DESIGN.md` and the prototype
+   for the desktop client. For the web store, check every changed screen at 390px, 820px and
+   1440px, in both Chinese and English (the only two locales). The web store has only a
+   dark theme since #159.
 3. For the desktop client specifically, take a real screenshot of the native window
    (e.g. via `screencapture` on macOS) rather than only checking the underlying dev-server
    page in a browser — a plain browser tab has no Tauri IPC bridge, so RPC-backed data and

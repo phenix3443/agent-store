@@ -5,15 +5,16 @@ import type { TFn } from '../i18n'
 export type Category = 'provider' | 'skill' | 'mcp'
 
 export const TYPE_META: Record<Category, { textClass: string; bgClass: string }> = {
-  provider: { textClass: 'text-store-provider', bgClass: 'bg-store-provider-soft' },
-  skill: { textClass: 'text-store-green', bgClass: 'bg-store-green-soft' },
-  mcp: { textClass: 'text-store-amber', bgClass: 'bg-store-amber-soft' },
+  provider: { textClass: 'text-provider', bgClass: 'bg-provider/10' },
+  skill: { textClass: 'text-skill', bgClass: 'bg-skill/10' },
+  mcp: { textClass: 'text-mcp', bgClass: 'bg-mcp/10' },
 }
 
+// Neutral on purpose: category colors mean category only, and a tier is not an audit result.
 export const TIER_META: Record<string, { textClass: string; bgClass: string }> = {
-  official: { textClass: 'text-store-amber', bgClass: 'bg-store-amber-soft' },
-  verified: { textClass: 'text-store-provider', bgClass: 'bg-store-provider-soft' },
-  community: { textClass: 'text-store-text-2', bgClass: 'bg-store-panel-2' },
+  official: { textClass: 'text-fg', bgClass: 'bg-panel-2' },
+  verified: { textClass: 'text-fg-2', bgClass: 'bg-panel-2' },
+  community: { textClass: 'text-fg-3', bgClass: 'bg-panel' },
 }
 
 export type ReadmeBlock =

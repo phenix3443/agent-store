@@ -277,7 +277,7 @@ export function Overview() {
                     <button
                       type="button"
                       onClick={() => updateOne(item.slug)}
-                      className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-white hover:opacity-90"
+                      className="rounded-md bg-store-accent px-2 py-1 text-xs font-medium text-canvas hover:opacity-90"
                     >
                       {t('overview.update')}
                     </button>

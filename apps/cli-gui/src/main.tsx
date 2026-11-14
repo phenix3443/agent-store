@@ -1,13 +1,15 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
-// Bundled locally (no CDN) so the offline Tauri app renders --mono as JetBrains Mono
-// instead of falling back to the system monospace font. Only the weights actually used
-// via `font-mono font-{semibold,bold,extrabold}` classes are imported.
-import '@fontsource/jetbrains-mono/400.css'
-import '@fontsource/jetbrains-mono/600.css'
-import '@fontsource/jetbrains-mono/700.css'
-import '@fontsource/jetbrains-mono/800.css'
+// Bundled, not loaded from a CDN: the desktop app must render its fonts offline.
+import '@fontsource/plus-jakarta-sans/400.css'
+import '@fontsource/plus-jakarta-sans/500.css'
+import '@fontsource/plus-jakarta-sans/600.css'
+import '@fontsource/plus-jakarta-sans/700.css'
+import '@fontsource/plus-jakarta-sans/800.css'
+import '@fontsource/geist-mono/400.css'
+import '@fontsource/geist-mono/500.css'
+import '@fontsource/geist-mono/600.css'
 import './globals.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
