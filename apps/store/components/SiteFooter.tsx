@@ -12,6 +12,7 @@ export async function SiteFooter() {
       title: t('product'),
       links: [
         { href: '/store', label: t('store') },
+        { href: '/client', label: t('client') },
         { href: '/pricing', label: t('pricing') },
         { href: '/download', label: t('download') },
       ],
