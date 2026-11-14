@@ -14,7 +14,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { parse } from '@iarna/toml'
-import { describeFailure, findBinary, runCli } from './cli-runner'
+import { describeFailure, findCli, runCli } from './cli-runner'
 import type { McpServerSpec } from './mcp'
 import { deepEqual, mcpEntriesEqual, mcpEntryDiff } from './mcp-compare'
 import { disableMcpEntry, enableMcpEntry, syncMcpEntry, type McpEntryStore } from './mcp-ownership'
@@ -114,10 +114,17 @@ function cliEnv(at: CodexLocation): NodeJS.ProcessEnv {
   return env
 }
 
-/** The installed `codex` CLI, or null. `AS_CODEX_BIN` overrides the lookup ('' = none). */
-export function resolveCodexCli(env: NodeJS.ProcessEnv = process.env): CodexMcpCli | null {
-  const bin = findBinary('codex', 'AS_CODEX_BIN', env)
-  if (!bin) return null
+export const findCodexCli = (env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform) =>
+  findCli('codex', 'AS_CODEX_BIN', env, platform)
+
+/**
+ * The installed `codex` CLI, or null: not installed, or (Windows) only a shim
+ * that can't be run without cmd.exe. `AS_CODEX_BIN` overrides the lookup ('' = none).
+ */
+export function resolveCodexCli(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): CodexMcpCli | null {
+  const found = findCodexCli(env, platform)
+  if (found.kind !== 'found') return null
+  const bin = found.cli
   return {
     async version() {
       const r = await runCli(bin, ['--version'], { ...process.env })

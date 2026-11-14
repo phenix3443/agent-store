@@ -11,13 +11,14 @@ import { runSync } from './commands/sync'
 import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
+import { runLocalApi } from './commands/local-api'
 import { realRelayOps } from './relay-ops'
 import { runUsage } from './commands/usage'
 import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
 import { runProjects } from './commands/projects'
 import { runBackup } from './commands/backup'
-import { runRelayDaemon, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome, detectAgents } from '@as/client-core'
+import { runRelayDaemon, startLocalApi, readRegistry, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome, detectAgents } from '@as/client-core'
 import { runImport } from './commands/import'
 import { migrateHomeOnStartup, refreshRelayOnStartup } from './startup'
 import { ensureRelayRunning } from './commands/relay'
@@ -60,6 +61,12 @@ async function main(): Promise<void> {
   }
 
   // The daemon refreshes on its own start; `__rpc` writes JSON to stdout, so warnings go to stderr.
+  // `__local-api` only reads the registry, so it skips the startup migrations.
+  if (command === '__local-api') {
+    const { aasHome } = resolvePaths()
+    await runLocalApi(rest, (origins) => startLocalApi({ origins, installed: async () => (await readRegistry(aasHome)).installed }))
+    process.exit(0)
+  }
   if (command !== '__relay-daemon') {
     if (!process.env['AS_HOME']) {
       const paths = resolvePaths()

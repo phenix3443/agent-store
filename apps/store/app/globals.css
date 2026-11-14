@@ -158,6 +158,22 @@
     transform: none;
   }
 
+  .installed-badge {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 7px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--panel-2);
+    color: var(--fg);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
   .fav-btn {
     display: grid;
     flex: none;

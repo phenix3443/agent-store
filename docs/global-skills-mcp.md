@@ -165,7 +165,12 @@ Takeaways:
 Shared principles. Each tool follows them on its own; they are not a shared abstraction.
 
 - **The canonical skill store is `~/.agents/skills/<slug>/`**, matching the existing convention and `docs/codex-claude-shared-guidance-design.md`. Agent Store writes only directories it installed itself. Each one carries the marker `.agent-store.json` with `{slug, version, source{repo,ref,resolvedSha,path}, contentHash, runtimeNames{claude,codex}}`. Directories without a marker belong to the user: Agent Store never overwrites or deletes them, and reports a conflict on a name clash.
-- **Write config through the official CLI first** (`claude mcp add-json/remove --scope user`, `codex mcp add/remove`). Ownership and conflicts are decided by Agent Store's own preflight (§5.5), never by the CLI. Fall back to file edits only when the binary is missing, and then always: abort the write on a parse failure, write atomically (temp file + rename), and back up to `~/.agents/agent-store/backups/<ts>/` first.
+- **Write config through the official CLI first** (`claude mcp add-json/remove --scope user`, `codex mcp add/remove`). Ownership and conflicts are decided by Agent Store's own preflight (§5.5), never by the CLI. Fall back to file edits only when the binary is missing or can't be run safely (below), and then always: abort the write on a parse failure, write atomically (temp file + rename), and back up to `~/.agents/agent-store/backups/<ts>/` first.
+- **Finding the binary** (`findCli` in `apps/client-core/src/config/cli-runner.ts`). `AS_CLAUDE_BIN` / `AS_CODEX_BIN` override the lookup; an empty value means not installed.
+  - macOS and Linux: the first executable `<dir>/claude` (or `codex`) on `PATH`.
+  - Windows: `<dir>\<name><ext>` for each `PATH` directory and each `PATHEXT` extension (default `.COM;.EXE;.BAT;.CMD`). A real `.exe` or `.com` anywhere on `PATH` wins, such as `%USERPROFILE%\.local\bin\claude.exe` from the native Claude Code installer. npm's extensionless sh shim and `.ps1` shim are never used.
+  - Windows, only a `.cmd` shim found (`npm install -g`): Agent Store reads the shim with `read-cmd-shim` and runs what it points at. A target that is an `.exe` (Claude Code's npm package, `bin/claude.exe`) is run directly; a JS target behind a node shim (Codex, `bin/codex.js`) is run as `node.exe <target>`, using the `node.exe` next to the shim, else the first one on `PATH`. Any other shim or `.bat` file, a missing target, or no `node.exe` counts as "can't be run safely": the config file is edited directly, and the install result's `notes` (printed as `Note:` by `aas install`) says so and names the shim.
+  - A `.cmd` or `.bat` file is never run: the runtime refuses arguments containing `"` for a batch file (CVE-2024-27980), and `shell: true` would have `cmd.exe` parse the JSON argument.
 - **Detection is based on the tools' own view**: "installed" comes from the files we wrote, and "recognized" comes from each tool's own interface (§1.1), checked by the per-tool resolved identity (§5.3).
 - **Name rules**:
   - The install directory and MCP entry name are the registry slug (`^[a-z0-9-]{1,60}$`).
@@ -180,7 +185,7 @@ Shared principles. Each tool follows them on its own; they are not a shared abst
 | MCP | `${CLAUDE_CONFIG_DIR:-~}/.claude.json` top-level `mcpServers.<slug>` | `<slug>`, tools `mcp__<slug>__*` | `init.mcp_servers[name==<slug>].status=="connected"` |
 
 - Without `CLAUDE_CONFIG_DIR`, the defaults are `~/.claude/skills` and `~/.claude.json` (Q2, accepted in review).
-- JSON fields: stdio `{type,command,args,env}`; http/sse `{type,url,headers}`. When the `claude` binary is missing, the fallback is the safe file edit above (fixes G4).
+- JSON fields: stdio `{type,command,args,env}`; http/sse `{type,url,headers}`. When the `claude` binary is missing or can't be run safely, the fallback is the safe file edit above (fixes G4).
 
 ### 5.2 Codex
 
@@ -292,7 +297,7 @@ Each tool is independent: `enable <slug> <tool>` adds that tool's entry and `dis
   3. **Trial round-trip.** Run the restore command in a scratch root (fresh temp `HOME`, `CLAUDE_CONFIG_DIR` or `CODEX_HOME`, same timeout as §6), read the entry back from the scratch file, and compare its canonical form with that of `previous`. The scratch root is deleted afterwards. This catches what a static key list would miss, such as `add-json` silently dropping unknown keys (`timeout`, `unknown`; review case and §1.1-6), and it follows the CLI's real behavior if a later version changes it.
   If step 2 or 3 fails, `--replace` **fails before writing**: it names the keys that cannot be restored (the canonical diff), the real config file stays byte-identical, and the user can resolve it by hand (rename or remove their entry) and run enable again. Otherwise the takeover proceeds.
 - **Restore** (on disable/uninstall/`--force`) runs the same restore command against the real config, reads the entry back, and requires it to equal `previous` under the comparison rule. If it doesn't, Agent Store exits non-zero, keeps `previous` in `targets.json`, and prints the saved value so nothing is lost.
-- Agent Store does **not** edit `.claude.json` or `config.toml` itself to restore an entry while the binary is present. The file-edit path in §5 stays limited to a missing binary; in that case `--replace` is refused, because the trial needs the CLI. This keeps one write mechanism per tool and avoids a second writer that would have to preserve comments.
+- Agent Store does **not** edit `.claude.json` or `config.toml` itself to restore an entry while the binary is present. The file-edit path in §5 stays limited to a binary that is missing or can't be run safely; in that case `--replace` is refused, because the trial needs the CLI. This keeps one write mechanism per tool and avoids a second writer that would have to preserve comments.
 - **Disable/uninstall.** Read the entry again:
   - equal to `written` → remove it and, if `previous` is set, restore it;
   - edited externally (differs) or already gone → do not remove anything, exit non-zero with "changed outside Agent Store", and leave `enabledFor` unchanged. `--force` removes it anyway and still restores `previous`.

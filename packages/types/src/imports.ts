@@ -5,6 +5,8 @@ export interface AgentDetection {
   agent: ToolTarget
   /** The executable the engine runs (`AS_CLAUDE_BIN` / `AS_CODEX_BIN`, else PATH); null when there is none. */
   binary: string | null
+  /** Windows: only a .cmd/.bat shim was found and the engine cannot start it; the shim and why. */
+  cliUnrunnable?: string
   /** First line of `<binary> --version`; null without a binary or when it fails. */
   version: string | null
   configDir: string
