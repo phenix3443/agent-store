@@ -8,6 +8,7 @@ import { formatCount, installCommand, leadSentence, resourceHref } from '@/lib/r
 import { FavoriteButton } from './Favorites'
 import { InstallButton } from './InstallButton'
 import { KindTile } from './KindTile'
+import { InstalledBadge } from './LocalInstalled'
 import { VerifiedMark } from './VerifiedLabel'
 
 function samePath(a: string, b: string): boolean {
@@ -57,6 +58,7 @@ function Row({ resource, showCategory, via }: { resource: ResourceSummary; showC
           <span className="truncate">{resource.author?.name ?? t('list.unknownAuthor')}</span>
           {resource.verified && <VerifiedMark />}
           {via && <span className="shrink-0 text-fg-2">{via}</span>}
+          <InstalledBadge id={resource.id} />
           <span className="store-row-meta-stat ml-auto shrink-0 font-mono">
             <Count value={resource.installs} /> {t('list.installsUnit')}
           </span>
