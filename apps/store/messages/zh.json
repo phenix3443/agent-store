@@ -227,7 +227,7 @@
       "downloadWin": "下载 Windows 版",
       "downloadLinux": "下载 Linux 版",
       "platforms": "macOS · Windows · Linux",
-      "shotNote": "截图来自 Linux 版客户端，界面为英文。",
+      "shotNote": "截图来自 Linux 版客户端。",
       "cta": {
         "title": "把配置的时间省下来。",
         "dim": "免费下载，macOS、Windows、Linux 都有。",
@@ -256,22 +256,22 @@
         "install": {
           "name": "安装",
           "caption": "点一下安装，兼容的 agent 同时装好。",
-          "alt": "桌面客户端的技能页：左侧是已配置和推荐的技能，右侧是 brainstorming 的详情和安装命令"
+          "alt": "安装确认窗口：agent-browser 装到全局，Claude Code 和 Codex 各一个开关，下面列出安装时写入的内容"
         },
         "mcp": {
           "name": "MCP",
           "caption": "每个 MCP 对哪个 agent 开着，一眼看清。停用不用删。",
-          "alt": "Context7 的设置：Applies to 下面是 Claude Code 和 Codex 两个开关"
+          "alt": "MCP 页：已安装的三个 MCP，每个对 Claude Code 和 Codex 各有一个开关；右侧是 Context7 的详情：按 agent 启用、API Key 和运行方式"
         },
         "providers": {
           "name": "供应商",
           "caption": "换 API 供应商，不用碰环境变量。请求经本地代理转发，逐条记下。",
-          "alt": "本地代理卡片：监听 127.0.0.1:18780，运行中；下面是最近的请求"
+          "alt": "供应商页：本地代理运行中，Codex 的请求经它转给 OpenRouter"
         },
         "usage": {
           "name": "用量",
           "caption": "每家供应商用了多少，一眼看清。",
-          "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总"
+          "alt": "用量页：近 7 天的费用趋势，费用、Token、请求数、成功率、模型数五项汇总，以及按供应商、模型和 agent 的明细"
         }
       },
       "keys": {
@@ -298,10 +298,10 @@
       "manage": {
         "title": "装了几十个，哪个在生效？",
         "dim": "一个窗口，全部看见。",
-        "lede": "装过的技能、MCP 和供应商都列在客户端里。点开一个，就能看到它对哪个 agent 开着，并单独开关。",
+        "lede": "装过的技能、MCP 和供应商都列在客户端里。每一行对每个 agent 各有一个开关，哪个开着一眼看清。",
         "link": "看客户端怎么管",
         "window": "Agent Store · 技能",
-        "alt": "桌面客户端的技能页：已配置的 brainstorming、canvas-design、executing-plans，下面是推荐的技能"
+        "alt": "窄窗口里的技能页：六个已安装的技能，每个对 Claude Code 和 Codex 各有一个开关"
       },
       "catalog": {
         "title": "你的 agent 用得上的，这里都有。",
@@ -332,7 +332,7 @@
       "lede": "点一下装好，按 agent 开关，换供应商不用改环境变量。",
       "installGuide": "安装说明",
       "heroWindow": "Agent Store · 技能",
-      "heroAlt": "桌面客户端的技能页：左侧是已配置和推荐的技能，右侧是 brainstorming 的详情和安装命令",
+      "heroAlt": "桌面客户端的技能页：六个已安装的技能，每个对 Claude Code 和 Codex 各有一个开关",
       "library": {
         "title": "装一次就够。",
         "dim": "每个 agent 各有开关。",
@@ -349,7 +349,7 @@
         "lede": "需要 API Key 的 MCP 在这里填。每个 agent 一个开关，停用只是关掉开关，设置还在。",
         "link": "在商店里找 Context7",
         "window": "Agent Store · MCP",
-        "alt": "Context7 的设置：Applies to 下面是 Claude Code 和 Codex 两个开关"
+        "alt": "MCP 页：已安装的三个 MCP，每个对 Claude Code 和 Codex 各有一个开关；右侧是 Context7 的详情：按 agent 启用、API Key 和运行方式"
       },
       "web": {
         "title": "浏览器里点安装。",
@@ -380,7 +380,7 @@
         "pro": "Pro：预算与超支告警，用量分析与账单导出。",
         "link": "看定价",
         "window": "Agent Store · 用量",
-        "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总；下面是 Pro 的预算与超支告警"
+        "alt": "用量页：近 7 天的费用趋势，费用、Token、请求数、成功率、模型数五项汇总，以及按供应商、模型和 agent 的明细"
       },
       "faq": {
         "title": "常见问题",

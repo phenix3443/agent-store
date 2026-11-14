@@ -22,10 +22,9 @@
 
 ### 截图
 
-- 来自 `test/desktop-linux` 的 Linux 原生窗口（Xvfb），不是浏览器开发页，文件在 `apps/store/public/landing/`。界面是英文，页面上写了一行注释。
-- 放进 `.frame` > `.win` 的窗口外框，裁成 16:10 从左上对齐。
-- 不放原型里用 HTML 画的「已安装」列表和带开关的表格：客户端没有这样的界面。
-- 桌面客户端改版（`feat/gui-redesign-foundation`）落地后要重新截图。
+- 来自 `test/desktop-linux/marketing.sh` 的 Linux 原生窗口（Xvfb，2 倍绘制），不是浏览器开发页。中文页用中文界面，英文页用英文界面，文件在 `apps/store/public/landing/zh/` 和 `apps/store/public/landing/en/`；重新生成的步骤见 `test/desktop-linux/README.md`。
+- 裁掉客户端自己的标题栏、边框和状态栏，放进 `.frame` > `.win` 的窗口外框，16:10 从左上对齐。
+- 第 2 节演示窗口的四个页签：安装（安装确认窗口）、MCP（MCP 页和 Context7 详情）、供应商（供应商页，本地代理运行中）、用量（用量页）；第 4 节是窄窗口的技能页。
 
 ## 字段映射
 

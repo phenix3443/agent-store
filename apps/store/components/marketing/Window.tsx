@@ -1,20 +1,27 @@
 import Image from 'next/image'
+import { useLocale } from 'next-intl'
 import type { ReactNode } from 'react'
 
 export interface Shot {
-  src: string
+  name: string
   width: number
   height: number
 }
 
-// Crops of the native Linux window (test/desktop-linux, Xvfb), not the dev page in a browser.
+// The native Linux window at 2x, one set per site language (test/desktop-linux/marketing.sh;
+// its README says how to regenerate them). Sizes must match the files.
 export const SHOTS = {
-  skills: { src: '/landing/hero.webp', width: 1186, height: 706 },
-  skillsNarrow: { src: '/landing/skills.webp', width: 800, height: 500 },
-  mcp: { src: '/landing/mcp.webp', width: 800, height: 500 },
-  relay: { src: '/landing/relay.webp', width: 760, height: 475 },
-  usage: { src: '/landing/usage.webp', width: 960, height: 600 },
+  install: { name: 'install', width: 2112, height: 1320 },
+  skills: { name: 'skills', width: 2112, height: 1320 },
+  skillsNarrow: { name: 'skills-narrow', width: 1600, height: 1000 },
+  mcp: { name: 'mcp', width: 2560, height: 1600 },
+  relay: { name: 'relay', width: 2112, height: 1320 },
+  usage: { name: 'usage', width: 2112, height: 1320 },
 } satisfies Record<string, Shot>
+
+export function shotSrc(shot: Shot, locale: string): string {
+  return `/landing/${locale === 'en' ? 'en' : 'zh'}/${shot.name}.webp`
+}
 
 /** A desktop window on a glowing frame. `kind` tints the glow with one category; without it the glow is the full spectrum. */
 export function WindowFrame({
@@ -45,12 +52,13 @@ export function WindowFrame({
   )
 }
 
-/** A screenshot of the real app, cropped to 16:10 from the top left so every shot in a frame has the same height. */
+/** A screenshot of the real app in the page's language, cropped to 16:10 from the top left so every shot in a frame has the same height. */
 export function AppShot({ shot, alt, sizes, priority = false }: { shot: Shot; alt: string; sizes: string; priority?: boolean }) {
+  const locale = useLocale()
   return (
     <div className="aspect-[16/10] overflow-hidden">
       <Image
-        src={shot.src}
+        src={shotSrc(shot, locale)}
         width={shot.width}
         height={shot.height}
         alt={alt}
