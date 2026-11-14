@@ -19,10 +19,12 @@ import { runProjects } from './commands/projects'
 import { runRelayDaemon, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome } from '@as/client-core'
 import { migrateHomeOnStartup, refreshRelayOnStartup } from './startup'
 import { ensureRelayRunning } from './commands/relay'
+import { VERSION } from './version'
 
 const USAGE = `aas — AI Agent Store CLI
 
 Usage: aas <command> [options]
+       aas --version
 
 Commands:
   search [query] [--kind <skill|mcp|provider>]   Search the catalog
@@ -50,6 +52,11 @@ async function main(): Promise<void> {
 
   if (!command || command === '--help' || command === '-h') {
     console.log(USAGE)
+    return
+  }
+
+  if (command === '--version' || command === '-V') {
+    console.log(`aas ${VERSION}`)
     return
   }
 

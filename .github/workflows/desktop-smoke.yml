@@ -1,0 +1,120 @@
+name: desktop-smoke
+
+# Builds the macOS and Windows desktop bundles the way release.yml does (no upload) and
+# runs test/desktop-smoke/ on them: install, launch, the bundled aas sidecar, and
+# agent-store:// links handed over by the OS. Linux is covered by desktop-shots.
+# release.yml calls this before it publishes installers.
+on:
+  pull_request:
+    paths:
+      - 'apps/cli-gui/**'
+      - 'apps/cli/**'
+      - 'apps/client-core/**'
+      - 'packages/**'
+      - 'test/desktop-smoke/**'
+      - '.github/workflows/desktop-smoke.yml'
+  push:
+    branches: [ci/desktop-smoke-macos-windows]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to build and test
+        required: true
+        type: string
+
+concurrency:
+  group: desktop-smoke-${{ inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep host, targets and args in step with release.yml's matrix.
+          - host: macos-latest
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            sidecar-targets: aarch64-apple-darwin x86_64-apple-darwin
+            tauri-args: --target universal-apple-darwin
+          - host: windows-latest
+            rust-targets: ''
+            sidecar-targets: ''
+            tauri-args: ''
+    runs-on: ${{ matrix.host }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/cli-gui/src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build workspace libraries
+        run: pnpm exec turbo build --filter=@as/client-core
+
+      - name: Build sidecar
+        shell: bash
+        env:
+          SIDECAR_TARGETS: ${{ matrix.sidecar-targets }}
+        run: pnpm --filter @as/cli-gui build:sidecar
+
+      - name: Build frontend
+        run: pnpm --filter @as/cli-gui build
+
+      # The release's tauri-action call without a tag: it builds and bundles, uploads nothing.
+      # No signing secrets here, so the macOS bundle is the unsigned one releases ship today.
+      - name: Build bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          RUSTUP_TOOLCHAIN: stable
+        with:
+          projectPath: apps/cli-gui
+          args: ${{ matrix.tauri-args }}
+
+      - name: Smoke test (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          OUT: ${{ github.workspace }}/out
+        run: bash test/desktop-smoke/macos.sh
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          OUT: ${{ github.workspace }}\out
+        run: ./test/desktop-smoke/windows.ps1
+
+      - name: Result
+        if: always()
+        shell: bash
+        run: cat out/result.txt || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-smoke-${{ runner.os }}
+          path: out/
+          retention-days: 14

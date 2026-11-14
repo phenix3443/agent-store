@@ -14,6 +14,8 @@ fi
 # Defaults to the host triple only — set it to build a macOS universal binary in CI,
 # e.g. SIDECAR_TARGETS="aarch64-apple-darwin x86_64-apple-darwin".
 TARGETS="${SIDECAR_TARGETS:-$HOST_TRIPLE}"
+# `aas --version` reports the version of the app it ships in.
+APP_VERSION="$(cd "$GUI_DIR" && bun -e "console.log(require('./src-tauri/tauri.conf.json').version)")"
 
 # Map a Rust target triple to bun's --compile --target value for cross-compilation.
 bun_target_for() {
@@ -35,14 +37,14 @@ for TRIPLE in $TARGETS; do
 
   if [[ "$TRIPLE" == "$HOST_TRIPLE" ]]; then
     # Native compile for the host (unchanged behavior for local dev and same-arch CI).
-    bun build "$ROOT_DIR/apps/cli/src/index.ts" --compile --outfile "$OUT"
+    bun build "$ROOT_DIR/apps/cli/src/index.ts" --compile --define "AS_VERSION=\"$APP_VERSION\"" --outfile "$OUT"
   else
     BUN_TARGET="$(bun_target_for "$TRIPLE")"
     if [[ -z "$BUN_TARGET" ]]; then
       echo "No bun --compile target mapping for $TRIPLE" >&2
       exit 1
     fi
-    bun build "$ROOT_DIR/apps/cli/src/index.ts" --compile --target="$BUN_TARGET" --outfile "$OUT"
+    bun build "$ROOT_DIR/apps/cli/src/index.ts" --compile --target="$BUN_TARGET" --define "AS_VERSION=\"$APP_VERSION\"" --outfile "$OUT"
   fi
 
   if [[ "$(uname)" == "Darwin" ]]; then
