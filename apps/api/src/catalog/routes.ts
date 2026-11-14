@@ -69,7 +69,7 @@ export function resourceRoutes(reader: CatalogReader, supplement: () => SearchSu
     c.header('cache-control', 'no-store')
     const s = supplement()
     if (!s) {
-      const off: SearchSupplementResponse = { status: 'disabled', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null }
+      const off: SearchSupplementResponse = { status: 'disabled', sources: [], reason: null, resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: null }
       return c.json(off)
     }
     let body = s.lookup(q, (kind as ResourceKind) || null)

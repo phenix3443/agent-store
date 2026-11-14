@@ -1,12 +1,12 @@
 'use client'
 
-import type { SearchSupplementResponse } from '@as/types'
+import type { ExternalSite, SearchSupplementResponse } from '@as/types'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { lookupSupplement } from '@/app/store/actions'
 import type { StoreQuery } from '@/lib/resource'
-import { SITE_NAMES } from '@/lib/supplement'
+import { REVIEW_FOUND, SITE_NAMES, siteList } from '@/lib/supplement'
 import { ResourceRows } from './ResourceRows'
 
 /** The states this block draws; `offer` is before the visitor agreed to send the query. */
@@ -16,6 +16,8 @@ const MAX_POLLS = 6
 
 interface StoreSupplementProps {
   query: StoreQuery
+  /** The sites the query would be sent to, as the API reports them. */
+  sources: ExternalSite[]
   /** Opens a state without asking the API, for screenshots and review (`?supplement=`). */
   review?: SupplementView
 }
@@ -24,10 +26,11 @@ interface StoreSupplementProps {
  * Looks a search the catalog answers poorly up on other skill directories, only once
  * the visitor agreed to send the query there (#152).
  */
-export function StoreSupplement({ query, review }: StoreSupplementProps) {
+export function StoreSupplement({ query, sources, review }: StoreSupplementProps) {
   const t = useTranslations('store.supplement')
+  const locale = useLocale()
   const [view, setView] = useState<SupplementView | 'hidden'>(review ?? 'offer')
-  const [result, setResult] = useState<SearchSupplementResponse | null>(null)
+  const [result, setResult] = useState<SearchSupplementResponse | null>(review === 'found' ? REVIEW_FOUND : null)
   const polls = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const alive = useRef(true)
@@ -59,16 +62,17 @@ export function StoreSupplement({ query, review }: StoreSupplementProps) {
     }
   }, [query])
 
-  if (view === 'hidden') return null
+  if (view === 'hidden' || sources.length === 0) return null
 
   const q = query.q
+  const sites = siteList(sources, locale)
   return (
     <div aria-live="polite" className="mt-6" data-supplement={view}>
       {view === 'offer' && (
         <div className="card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="break-words font-bold">{t('offerTitle', { q })}</p>
-            <p className="mt-1 max-w-[62ch] text-sm text-fg-2">{t('offerBody')}</p>
+            <p className="mt-1 max-w-[62ch] text-sm text-fg-2">{t('offerBody', { sites })}</p>
           </div>
           <button type="button" className="btn shrink-0" onClick={() => void ask()}>
             {t('offerAction')}
@@ -76,10 +80,13 @@ export function StoreSupplement({ query, review }: StoreSupplementProps) {
         </div>
       )}
       {view === 'searching' && (
-        <p className="card flex items-center gap-3 text-fg-2">
-          <Loader2 size={18} aria-hidden className="shrink-0 animate-spin text-mcp motion-reduce:animate-none" />
-          {t('searching')}
-        </p>
+        <div className="card flex items-start gap-3">
+          <Loader2 size={18} aria-hidden className="mt-0.5 shrink-0 animate-spin text-mcp motion-reduce:animate-none" />
+          <div className="min-w-0">
+            <p className="text-fg-2">{t('searching')}</p>
+            <p className="mt-0.5 text-[13px] text-fg-3">{sites}</p>
+          </div>
+        </div>
       )}
       {view === 'none' && (
         <p className="card break-words text-fg-2">
@@ -110,10 +117,15 @@ export function StoreSupplement({ query, review }: StoreSupplementProps) {
 
 function Found({ result }: { result: SearchSupplementResponse }) {
   const t = useTranslations('store.supplement')
+  const locale = useLocale()
+  const via: Record<string, string> = {}
+  for (const [id, sites] of Object.entries(result.foundOn ?? {})) {
+    if (sites.length) via[id] = t('foundVia', { sites: siteList(sites, locale) })
+  }
   return (
     <div>
       <h2 className="mb-4 text-lg font-bold">{t('foundTitle')}</h2>
-      {result.resources.length > 0 && <ResourceRows resources={result.resources} showCategory={false} label={t('foundTitle')} />}
+      {result.resources.length > 0 && <ResourceRows resources={result.resources} showCategory={false} label={t('foundTitle')} via={via} />}
       {result.listings.length > 0 && (
         <>
           <p className="mb-3 mt-5 text-sm text-fg-3">{t('listingsNote')}</p>

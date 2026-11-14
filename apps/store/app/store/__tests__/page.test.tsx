@@ -47,9 +47,9 @@ mock.module('@/lib/catalog', () => ({
     return { ok: true, resources, nextOffset: null }
   },
   getResource: async () => null,
-  supplementEnabled: async () => {
+  supplementSources: async () => {
     probes++
-    return enabled
+    return enabled ? ['clawhub', 'skillhub', 'skillsmp'] : []
   },
   searchSupplement: async () => null,
 }))
@@ -146,7 +146,7 @@ describe('StorePage', () => {
     try {
       const { container } = await renderPage({ q: 'zzz-no-such-package' })
       expect(container.querySelector('[data-supplement="offer"]')).not.toBeNull()
-      expect(container.textContent).toContain('会把搜索词发给第三方技能目录站点')
+      expect(container.textContent).toContain('搜索词将发送至第三方站点 ClawHub、SkillHub、SkillsMP')
       expect(screen.getByRole('button', { name: '发送并查找' })).toBeInTheDocument()
     } finally {
       enabled = false
@@ -166,7 +166,13 @@ describe('StorePage', () => {
 
   test('?state=empty&supplement= opens a supplement state for review', async () => {
     const { container } = await renderPage({ state: 'empty', q: 'zzz', supplement: 'unavailable' })
-    expect(container.querySelector('[data-supplement="unavailable"]')?.textContent).toContain('暂时没法查询其他技能目录')
+    expect(container.querySelector('[data-supplement="unavailable"]')?.textContent).toContain('暂时无法查询其他技能目录')
+    expect(probes).toBe(0)
+    cleanup()
+    const found = await renderPage({ state: 'results', q: 'brainstorming', supplement: 'found' })
+    expect(found.container.querySelector('[data-supplement="found"]')).not.toBeNull()
+    // Local rows stay above the supplement.
+    expect(screen.getAllByText('brainstorming').length).toBeGreaterThan(0)
   })
 
   test('there is no verified-only switch the API cannot filter on, and no favorites', async () => {

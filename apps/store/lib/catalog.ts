@@ -1,4 +1,4 @@
-import type { ResourceDetail, ResourceKind, ResourceSummary, SearchSupplementResponse } from '@as/types'
+import type { ExternalSite, ResourceDetail, ResourceKind, ResourceSummary, SearchSupplementResponse } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import type { StoreQuery } from './resource'
 
@@ -42,12 +42,14 @@ export async function getResource(id: string): Promise<ResourceDetail | null> {
 }
 
 /**
- * Whether this deployment looks queries up on other skill directories. Asked with an
- * empty query, which the API never sends anywhere.
+ * The skill directories this deployment sends a looked-up query to; empty when the
+ * supplement is off or the API cannot say. Asked with an empty query, which the API
+ * never sends anywhere.
  */
-export async function supplementEnabled(): Promise<boolean> {
+export async function supplementSources(): Promise<ExternalSite[]> {
   const { data } = await probe.searchSupplement({ q: '' })
-  return data !== null && data.status !== 'disabled'
+  if (!data || data.status === 'disabled') return []
+  return Array.isArray(data.sources) ? data.sources : []
 }
 
 /** Starts or joins a lookup on other skill directories; only after the visitor agreed to send the query. */

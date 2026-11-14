@@ -107,6 +107,11 @@ export type SearchSupplementStatus = 'disabled' | 'not_needed' | 'searching' | '
 
 export interface SearchSupplementResponse {
   status: SearchSupplementStatus
+  /**
+   * The sites this deployment sends a looked-up query to, in the order it asks them;
+   * empty for `disabled`. The UI names exactly these before sending anything.
+   */
+  sources: ExternalSite[]
   /** Why the catalog's own results were not enough; null for `disabled` and `not_needed`. */
   reason: 'no_results' | 'few_results' | 'low_relevance' | null
   /**
@@ -116,6 +121,8 @@ export interface SearchSupplementResponse {
    */
   resources: ResourceSummary[]
   listings: ExternalListing[]
+  /** Resource id → the sites whose listings led to it (the skill itself or its GitHub repo). */
+  foundOn: Record<string, ExternalSite[]>
   /** A site did not answer or was over its quota, so more may exist. */
   partial: boolean
   retryAfterSeconds: number | null

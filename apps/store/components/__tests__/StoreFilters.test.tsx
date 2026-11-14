@@ -109,3 +109,16 @@ test('"/" focuses the search box', () => {
   fireEvent.keyDown(window, { key: '/' })
   expect(document.activeElement).toBe(input)
 })
+
+test('"/" typed into another field stays there', () => {
+  render(
+    <>
+      <input aria-label="其他输入框" />
+      <SearchInput />
+    </>,
+  )
+  const other = screen.getByRole('textbox', { name: '其他输入框' })
+  other.focus()
+  fireEvent.keyDown(other, { key: '/' })
+  expect(document.activeElement === other).toBe(true)
+})
