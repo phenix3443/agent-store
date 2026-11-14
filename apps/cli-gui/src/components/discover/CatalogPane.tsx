@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, ExternalLink, Heart } from 'lucide-react'
-import type { CatalogResourceDetail, InstalledItem } from '@as/types'
+import type { CatalogResourceDetail, InstalledItem, Project } from '@as/types'
 import { callRpc, errorText } from '../../lib/rpc'
 import { formatInstalls, formatVersion, installedEntryFor, resourceItem, storePageUrl } from '../../lib/catalog'
 import { installStepsOf, requiredKeys, typeFacts, type SelectedDetail } from '../../lib/detailContent'
@@ -25,6 +25,7 @@ export function CatalogPane({
   updating,
   onUpdate,
   onManage,
+  into,
   onClose,
 }: {
   id: string
@@ -34,6 +35,8 @@ export function CatalogPane({
   updating: boolean
   onUpdate: (slug: string) => void
   onManage: (slug: string, category: Kind) => void
+  /** Discover was opened from this project's page: installing defaults to it. */
+  into?: Pick<Project, 'id' | 'name'>
   onClose: () => void
 }) {
   const { locale, t } = useI18n()
@@ -91,7 +94,16 @@ export function CatalogPane({
   const when = resource.origin.upstreamUpdatedAt ?? resource.origin.syncedAt
 
   let actions
-  if (resource.kind === 'provider') {
+  if (into && resource.kind !== 'provider') {
+    actions = (
+      <>
+        <Button variant="primary" disabled={!!notInstallable} title={notInstallable} onClick={() => requestInstall(resource.id)}>
+          {notInstallable ? t('catalog.notInstallable') : t('pj.into.install').replace('{0}', into.name)}
+        </Button>
+        {entry && <Button onClick={() => onManage(entry.slug, entry.category)}>{t('act.manage')}</Button>}
+      </>
+    )
+  } else if (resource.kind === 'provider') {
     actions = (
       <>
         <Button variant="primary" onClick={() => requestInstall(resource.id)}>

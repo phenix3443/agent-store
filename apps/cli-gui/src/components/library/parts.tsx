@@ -154,7 +154,7 @@ export function copyText(text: string, t: (k: string) => string) {
 export function CodeLine({ text, prompt, extra }: { text: string; prompt?: boolean; extra?: ReactNode }) {
   const t = useT()
   return (
-    <div className="relative flex items-start gap-1.5 break-all rounded-[9px] border border-line bg-code py-[9px] pl-[11px] pr-2 font-mono text-xs leading-[1.65] text-fg">
+    <div className="relative flex items-start gap-1.5 whitespace-pre-wrap break-all rounded-[9px] border border-line bg-code py-[9px] pl-[11px] pr-2 font-mono text-xs leading-[1.65] text-fg">
       <span className="min-w-0 flex-1 pt-px">
         {prompt && <span className="text-kind">$ </span>}
         {text}

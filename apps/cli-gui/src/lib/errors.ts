@@ -18,7 +18,7 @@ export function describeError(err: unknown, t: TFn, context: 'action' | 'uninsta
   const { reason, tool, target } = err.fields
   const toolLabel = TOOL_LABEL[tool ?? target ?? ''] ?? t('errors.theClient')
   const known = (key: string, extra: Partial<FriendlyError> = {}): FriendlyError => ({
-    message: t(`errors.${key}`).replace('{tool}', toolLabel),
+    message: t(key.includes('.') ? key : `errors.${key}`).replace('{tool}', toolLabel),
     detail: raw,
     ...extra,
   })
@@ -51,6 +51,26 @@ export function describeError(err: unknown, t: TFn, context: 'action' | 'uninsta
       return known('catalogDown')
     case 'McpNotInstallableError':
       return known('notInstallable')
+    case 'ProjectConflictError':
+      if (reason === 'name-clash') return known('pj.err.nameClash')
+      if (reason === 'modified') return known(context === 'uninstall' ? 'pj.err.modifiedUn' : 'pj.err.modified')
+      return known(context === 'uninstall' ? 'pj.err.notOursUn' : 'pj.err.notOurs')
+    case 'ProjectPathError':
+      if (reason === 'already-registered') return known('pj.err.already')
+      return known(reason === 'not-a-directory' ? 'pj.err.notDir' : 'pj.err.pathMissing')
+    case 'ProjectNotFoundError':
+      return known('pj.err.notFound')
+    case 'ProjectItemNotInstalledError':
+      return known('pj.err.notInstalled')
+    case 'ProjectMcpUnsupportedError':
+      if (reason === 'not-portable') return known('pj.err.notPortable')
+      if (reason === 'sse') return known('pj.err.sse')
+      if (reason === 'codex-reference') return known('pj.err.codexRef')
+      return known('pj.err.envName')
   }
+  // Plain errors the project service tags with a reason only.
+  if (reason === 'project-missing') return known('pj.err.projectMissing')
+  if (reason === 'unsupported') return known('pj.err.unsupported')
+  if (reason === 'incompatible') return known('incompatible')
   return { message: raw }
 }

@@ -28,7 +28,9 @@ export function sectionTarget(section: Section) {
   return TARGETS[section]
 }
 
-export function currentSection(view: NavView, category: CategoryFilter): Section {
+/** null on the project pages, which are not one of the numbered sections. */
+export function currentSection(view: NavView, category: CategoryFilter): Section | null {
+  if (view === 'projects' || view === 'project') return null
   if (view === 'overview') return 'usage'
   if (view === 'settings') return 'settings'
   if (category === 'skill') return 'skills'

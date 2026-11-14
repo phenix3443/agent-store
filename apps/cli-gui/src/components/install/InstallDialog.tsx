@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check, Globe } from 'lucide-react'
-import type { CatalogResourceDetail, InstalledItem, InstallOutcome, InstallResult, Item, TargetStatus, ToolTarget } from '@as/types'
+import type {
+  CatalogResourceDetail, InstalledItem, InstallOutcome, InstallResult, Item, ProjectDetail, ProjectInstallResult, TargetStatus, ToolTarget,
+} from '@as/types'
 import { callRpc, errorText, RpcError } from '../../lib/rpc'
 import { formatVersion, installedEntryFor, resourceItem } from '../../lib/catalog'
 import { describeError, type FriendlyError } from '../../lib/errors'
@@ -9,7 +11,10 @@ import { routeDeepLink } from '../../lib/deepLinkRoute'
 import { focusMainWindow } from '../../lib/focusWindow'
 import { installStepsOf, requiredKeys, typeFacts, type Category, type SelectedDetail } from '../../lib/detailContent'
 import { AGENTS, TARGET_LABEL, joinNames } from '../../lib/agents'
+import { relPath } from '../../lib/projects'
+import { useOpenProject } from '../../lib/useNavigate'
 import { useAppState } from '../../state/AppState'
+import { useProjects } from '../../state/Projects'
 import { useTerminalLog } from '../../state/TerminalLog'
 import { useI18n, type TFn } from '../../i18n'
 import { CategoryIcon } from '../CategoryIcon'
@@ -17,10 +22,13 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogTitle } from '../ui/dialog'
 import { Banner, Spinner } from '../ui/states'
+import { Select } from '../ui/input'
 import { Switch } from '../ui/switch'
 import { cn } from '../ui/cn'
 import { AgentList, ErrorDetails, Section, Steps } from '../library/parts'
 import { SecretInput, upperSnake, type ConfigSchema } from '../library/McpPane'
+import { AddProjectForm } from '../projects/AddProjectForm'
+import { useSaveEnv } from '../projects/EnvDialog'
 
 type NoticeReason = 'invalid' | 'notFound' | 'catalogError' | 'installed' | 'mismatch'
 type StepState = 'wait' | 'run' | 'ok' | 'skip' | 'bad'
@@ -42,8 +50,10 @@ type Phase =
   | { kind: 'vars' }
   | { kind: 'progress' }
   | { kind: 'conflict'; target: ToolTarget }
-  | { kind: 'failed'; error: FriendlyError }
+  | { kind: 'failed'; error: FriendlyError; forceable?: boolean }
   | { kind: 'done' }
+  | { kind: 'addProject' }
+  | { kind: 'projectVars'; names: string[] }
 
 interface Flow {
   from: 'app' | 'web'
@@ -61,10 +71,18 @@ interface Flow {
   steps: Step[]
   slug?: string
   results: Partial<Record<ToolTarget, AgentResult>>
+  /** Install location: '' for global, else a registered project's id. Skills and MCP only. */
+  loc: string
+  /** Already installed globally; only a project can be chosen. */
+  globalEntry?: { slug: string; category: Category }
+  /** Replace a project copy Agent Store installed even though it was edited since. */
+  force?: boolean
+  /** Variables the project install references that have no value on this machine. */
+  missingAfter?: string[]
 }
 
 type Lookup =
-  | { status: 'installed'; slug: string; category: Category }
+  | { status: 'installed'; slug: string; category: Category; resource?: CatalogResourceDetail }
   | { status: 'available'; resource: CatalogResourceDetail; providerEntry?: string }
   | { status: 'notFound' }
   | { status: 'catalogError'; detail: string }
@@ -88,7 +106,7 @@ async function lookup(ref: string): Promise<Lookup> {
   const list = await callRpc<InstalledItem[]>('list').catch(() => [] as InstalledItem[])
   const entry = installedEntryFor(resource, list)
   // Every provider install is one more config of the same provider, so it is never "already installed".
-  if (entry && resource.kind !== 'provider') return { status: 'installed', slug: entry.slug, category: entry.category }
+  if (entry && resource.kind !== 'provider') return { status: 'installed', slug: entry.slug, category: entry.category, resource }
   return { status: 'available', resource, providerEntry: resource.kind === 'provider' ? entry?.slug : undefined }
 }
 
@@ -131,8 +149,11 @@ export function resetLaunchLinksForTest() {
  */
 export function InstallDialog() {
   const { locale, t } = useI18n()
-  const { installRef, requestInstall, setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug, bumpInstalledVersion } = useAppState()
+  const { installRef, requestInstall, setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug, bumpInstalledVersion, installInto } = useAppState()
   const { appendLine } = useTerminalLog()
+  const { projects, reload: reloadProjects } = useProjects()
+  const openProject = useOpenProject()
+  const saveEnv = useSaveEnv()
   const [flow, setFlow] = useState<Flow | null>(null)
   const flowRef = useRef<Flow | null>(null)
   flowRef.current = flow
@@ -153,12 +174,21 @@ export function InstallDialog() {
     setSelectedSlug(slug)
   }
 
+  function targetsOf(resource: CatalogResourceDetail, loc: string): Partial<Flow> {
+    const item = resourceItem(resource)
+    const tg: Flow['tg'] = {}
+    for (const a of AGENTS) tg[a.id] = !preReason(item, a.id, t)
+    return { phase: { kind: 'targets' }, resource, item, tg, ref: resource.id, loc: resource.kind === 'provider' ? '' : loc }
+  }
+
   async function start(ref: string, from: Flow['from'], category?: Category) {
     const current = flowRef.current
     // The launch link can arrive twice (once from the launch read, once as an event).
     if (current && (current.ref === ref || current.linkRef === ref) && ['loading', 'targets'].includes(current.phase.kind)) return
     const mine = ++seq.current
-    const base: Flow = { from, ref, linkRef: ref, phase: { kind: 'loading' }, tg: {}, vals: {}, skipVars: false, steps: [], results: {} }
+    const base: Flow = { from, ref, linkRef: ref, phase: { kind: 'loading' }, tg: {}, vals: {}, skipVars: false, steps: [], results: {}, loc: '' }
+    // Only the app's own buttons come from a project's 添加到这个项目; a web link starts global.
+    const preset = from === 'app' ? projects.find((p) => p.id === installInto && p.exists) : undefined
     flowRef.current = base
     setFlow(base)
     const found = await lookup(ref)
@@ -169,17 +199,16 @@ export function InstallDialog() {
     const actual = found.status === 'installed' ? found.category : found.resource.kind
     if (category && category !== actual) return update(mine, { phase: { kind: 'notice', reason: 'mismatch', shown } })
     if (found.status === 'installed') {
-      return update(mine, { phase: { kind: 'notice', reason: 'installed', shown, slug: found.slug, category: actual } })
+      const globalEntry = { slug: found.slug, category: actual }
+      if (preset && found.resource) return update(mine, { ...targetsOf(found.resource, preset.id), globalEntry })
+      return update(mine, { phase: { kind: 'notice', reason: 'installed', shown, slug: found.slug, category: actual }, resource: found.resource, globalEntry })
     }
-    const item = resourceItem(found.resource)
-    const tg: Flow['tg'] = {}
-    for (const a of AGENTS) tg[a.id] = !preReason(item, a.id, t)
     if (from === 'web') {
       setCategoryFilter('all')
       setNavView('browse')
       setSelectedSlug(found.resource.id)
     }
-    update(mine, { phase: { kind: 'targets' }, resource: found.resource, item, providerEntry: found.providerEntry, tg, ref: found.resource.id })
+    update(mine, { ...targetsOf(found.resource, preset?.id ?? ''), providerEntry: found.providerEntry })
   }
 
   async function handleLink(raw: string) {
@@ -188,7 +217,7 @@ export function InstallDialog() {
     void focusMainWindow()
     if (route.kind === 'invalid') {
       seq.current += 1
-      setFlow({ from: 'web', ref: raw, linkRef: raw, phase: { kind: 'notice', reason: 'invalid' }, tg: {}, vals: {}, skipVars: false, steps: [], results: {} })
+      setFlow({ from: 'web', ref: raw, linkRef: raw, phase: { kind: 'notice', reason: 'invalid' }, tg: {}, vals: {}, skipVars: false, steps: [], results: {}, loc: '' })
       return
     }
     await start(route.ref, 'web', route.category)
@@ -235,7 +264,61 @@ export function InstallDialog() {
     return () => cancelAnimationFrame(id)
   }, [phaseKind, flow?.from])
 
+  async function runProject(f: Flow) {
+    const mine = seq.current
+    const item = f.item!
+    const project = projects.find((p) => p.id === f.loc)
+    if (!project) return
+    const compatible = AGENTS.filter((a) => item.compatibleWith.includes(a.id)).map((a) => a.id)
+    const chosen = AGENTS.filter((a) => f.tg[a.id])
+    const targets = chosen.length === compatible.length ? undefined : chosen.map((a) => a.id)
+    const files = chosen.map((a) => (item.category === 'skill' ? a.projectSkills : a.projectMcp)).join(', ')
+    const steps: Step[] = [{ key: 'install', text: t('pj.inst.step').replace('{0}', project.name).replace('{1}', files), st: 'run' }]
+    update(mine, { phase: { kind: 'progress' }, steps, results: {}, missingAfter: undefined })
+    const options = { ...(targets ? { targets } : {}), ...(f.force ? { force: true } : {}) }
+    appendLine(`$ aas install ${f.ref} --project ${project.path}${targets?.length === 1 ? ` --target ${targets[0]}` : ''}${f.force ? ' --force' : ''}`)
+    try {
+      const result = await callRpc<ProjectInstallResult>('installToProject', Object.keys(options).length ? [project.id, f.ref, options] : [project.id, f.ref])
+      appendLine(`✓ ${t('pj.log.installed').replace('{0}', result.name).replace('{1}', project.name)}`, 'green')
+      const results: Flow['results'] = {}
+      for (const w of result.installed) results[w.agent] = { on: true, note: relPath(project, w.file) }
+      for (const sk of result.skipped) {
+        results[sk.agent] = { on: false, note: sk.reason === 'sse' ? t('pj.err.sse') : sk.reason === 'codex-reference' ? t('pj.err.codexRef') : sk.message }
+      }
+      let missing: string[] = []
+      if (result.env.length) {
+        const d = await callRpc<ProjectDetail>('getProject', [project.id]).catch(() => null)
+        missing = result.env.filter((n) => !d?.env.find((v) => v.name === n)?.stored)
+      }
+      update(mine, (cur) => ({
+        steps: cur.steps.map((st) => ({ ...st, st: 'ok' as const })),
+        slug: result.slug,
+        results,
+        missingAfter: missing,
+        vals: {},
+        phase: missing.length ? { kind: 'projectVars', names: missing } : { kind: 'done' },
+      }))
+    } catch (err) {
+      appendLine(`✗ ${errorText(err)}`, 'red')
+      const forceable = !f.force && err instanceof RpcError && err.code === 'ProjectConflictError' && err.fields.reason === 'modified'
+      update(mine, (cur) => ({
+        steps: cur.steps.map((st) => ({ ...st, st: 'bad' as const })),
+        phase: { kind: 'failed', error: describeError(err, t), forceable },
+      }))
+    }
+    reloadProjects()
+  }
+
+  async function saveProjectVars(f: Flow) {
+    const mine = seq.current
+    const names = f.phase.kind === 'projectVars' ? f.phase.names : []
+    update(mine, { phase: { kind: 'progress' } })
+    const { failed } = await saveEnv(f.loc, Object.fromEntries(names.map((n) => [n, f.vals[n] ?? ''])))
+    update(mine, { missingAfter: names.filter((n) => !f.vals[n] || failed.includes(n)), phase: { kind: 'done' } })
+  }
+
   async function run(f: Flow) {
+    if (f.loc) return runProject(f)
     const mine = seq.current
     const item = f.item!
     const ref = f.ref
@@ -380,10 +463,19 @@ export function InstallDialog() {
   }
 
   function openResult() {
+    if (flow?.loc) {
+      const id = flow.loc
+      close()
+      openProject(id)
+      return
+    }
     if (!flow?.slug || !flow.item) return
     show(flow.slug, flow.item.category)
     close()
   }
+
+  const backToTargets = (loc?: string) => setFlow((f) => (f ? { ...f, ...(loc ? { loc } : {}), phase: { kind: 'targets' } } : f))
+  const firstProject = projects.find((p) => p.exists)
 
   const item = flow?.item
 
@@ -399,21 +491,39 @@ export function InstallDialog() {
         onPointerDownOutside={(e) => busy && e.preventDefault()}
         onInteractOutside={(e) => busy && e.preventDefault()}
       >
-        {flow && <Body flow={flow} setFlow={setFlow} onSubmitVars={() => void run({ ...flow, skipVars: false })} />}
-        <DialogFooter>
-          <Footer
-            flow={flow}
-            close={close}
-            onNext={(next) => setFlow((f) => (f ? { ...f, ...next } : f))}
-            onRun={(f) => void run(f)}
-            onSkipConflict={() => conflictResume.current?.()}
-            onView={(slug, category) => {
-              show(slug, category)
-              close()
-            }}
-            onOpenResult={openResult}
-          />
-        </DialogFooter>
+        {flow?.phase.kind === 'addProject' ? (
+          <AddProjectForm cancelLabel={t('pj.new.back')} onCancel={() => backToTargets()} onDone={(p) => backToTargets(p.id)} onOpenExisting={(p) => backToTargets(p.id)} />
+        ) : (
+          <>
+            {flow && (
+              <Body
+                flow={flow}
+                setFlow={setFlow}
+                onSubmitVars={() => void (flow.phase.kind === 'projectVars' ? saveProjectVars(flow) : run({ ...flow, skipVars: false }))}
+              />
+            )}
+            <DialogFooter>
+              <Footer
+                flow={flow}
+                close={close}
+                onNext={(next) => setFlow((f) => (f ? { ...f, ...next } : f))}
+                onRun={(f) => void run(f)}
+                onSaveVars={(f) => void saveProjectVars(f)}
+                onSkipConflict={() => conflictResume.current?.()}
+                onView={(slug, category) => {
+                  show(slug, category)
+                  close()
+                }}
+                onToProject={
+                  flow?.resource && flow.resource.kind !== 'provider' && firstProject
+                    ? () => setFlow((f) => (f?.resource ? { ...f, ...targetsOf(f.resource, firstProject.id) } : f))
+                    : undefined
+                }
+                onOpenResult={openResult}
+              />
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -482,9 +592,57 @@ function StepList({ steps }: { steps: Step[] }) {
   )
 }
 
+/** Global, a registered project, or 添加项目…; skills and MCP only. */
+function LocationSection({ flow, setFlow }: { flow: Flow; setFlow: (fn: (f: Flow | null) => Flow | null) => void }) {
+  const t = useI18n().t
+  const { projects } = useProjects()
+  const project = projects.find((p) => p.id === flow.loc)
+  return (
+    <Section title={<label htmlFor="install-location">{t('pj.inst.loc')}</label>} className="mt-0">
+      <Select
+        id="install-location"
+        value={flow.loc}
+        onChange={(e) => {
+          const v = e.target.value
+          setFlow((f) => (f ? (v === '__add' ? { ...f, phase: { kind: 'addProject' } } : { ...f, loc: v }) : f))
+        }}
+      >
+        <option value="" disabled={!!flow.globalEntry}>
+          {t(flow.globalEntry ? 'pj.inst.globalTaken' : 'pj.inst.global')}
+        </option>
+        {projects.map((p) => (
+          <option key={p.id} value={p.id} disabled={!p.exists}>
+            {`${t('pj.inst.proj').replace('{0}', p.name)} · ${p.path}${p.exists ? '' : ` · ${t('pj.missingChip')}`}`}
+          </option>
+        ))}
+        <option value="__add">{t('pj.addMore')}</option>
+      </Select>
+      {project && (
+        <p className="mt-1.5 text-[11.5px] text-fg-3">
+          {t('pj.inst.vcs')}
+          {flow.item?.category === 'mcp' && ` ${t('pj.inst.approve')}`}
+        </p>
+      )}
+    </Section>
+  )
+}
+
+/** What a project install writes, per chosen agent; required values become variable references. */
+function projectWrites(flow: Flow, projectPath: string, schema: ConfigSchema, required: string[], t: TFn): string[] {
+  const item = flow.item!
+  const chosen = AGENTS.filter((a) => flow.tg[a.id])
+  if (item.category === 'skill') return chosen.map((a) => t('pj.inst.skillTo').replace('{0}', `${projectPath}/${a.projectSkills}/`))
+  const lines = chosen.map((a) => t('pj.inst.mcpTo').replace('{0}', `${projectPath}/${a.projectMcp}`).replace('{1}', `${a.mcpKey}.${item.slug}`))
+  const refs = required.filter((k) => schema.properties?.[k]?.default === undefined).map((k) => `\${${schema.properties?.[k]?.['x-env'] ?? upperSnake(k)}}`)
+  if (refs.length) lines.push(t('pj.inst.ref').replace('{0}', refs.join(', ')))
+  return lines
+}
+
 function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: Flow | null) => Flow | null) => void; onSubmitVars: () => void }) {
   const { locale, t } = useI18n()
+  const { projects } = useProjects()
   const { phase, item, resource } = flow
+  const project = flow.loc ? projects.find((p) => p.id === flow.loc) : undefined
 
   if (phase.kind === 'loading') {
     return (
@@ -522,16 +680,17 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
       <DialogBody>
         <DialogTitle>{flow.from === 'web' ? t('inst.confirm') : t('inst.title').replace('{0}', item.name)}</DialogTitle>
         <ItemSummary item={item} resource={resource} />
+        {!provider && <LocationSection flow={flow} setFlow={setFlow} />}
         {provider ? (
           <p className="text-[12.5px] text-fg-2">{flow.providerEntry ? t('inst.provAgain') : t('inst.providerNext')}</p>
         ) : (
-          <Section title={t('inst.targets')} className="mt-0">
+          <Section title={t('inst.targets')}>
             <AgentList
               lines={AGENTS.map((agent) => {
                 const reason = preReason(item, agent.id, t)
                 return {
                   agent,
-                  note: reason ?? (item.category === 'skill' ? `${agent.skills}/` : agent.mcp),
+                  note: reason ?? (project ? (item.category === 'skill' ? `${agent.projectSkills}/` : agent.projectMcp) : item.category === 'skill' ? `${agent.skills}/` : agent.mcp),
                   noteMono: !reason,
                   right: (
                     <Switch
@@ -554,6 +713,10 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
               <ErrorDetails detail={resource.installError} />
             </Banner>
           </div>
+        ) : project ? (
+          <Section title={t('pj.inst.writes')}>
+            <Steps lines={[...projectWrites(flow, project.path, schema, required, t), ...typeFacts(detail, t)]} />
+          </Section>
         ) : (
           <Section title={t('sec.writes')}>
             <Steps lines={[...installStepsOf(detail, t), ...typeFacts(detail, t)]} />
@@ -606,6 +769,36 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
     )
   }
 
+  if (phase.kind === 'projectVars') {
+    return (
+      <DialogBody>
+        <form
+          id="install-vars"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (phase.names.some((n) => flow.vals[n])) onSubmitVars()
+          }}
+        >
+          <DialogTitle>{t('pj.inst.varsT')}</DialogTitle>
+          <p className="mb-3.5 text-[13px] text-fg-2">{t('pj.inst.varsD')}</p>
+          {phase.names.map((name, i) => {
+            const id = `install-pvar-${name}`
+            return (
+              <div key={name} className="mb-3">
+                <label htmlFor={id} className="mb-[5px] block font-mono text-[11.5px] font-semibold text-fg-2">
+                  {name}
+                </label>
+                <div {...(i === 0 ? { 'data-autofocus-wrap': true } : {})}>
+                  <SecretInput id={id} secret value={flow.vals[name] ?? ''} placeholder={name} onChange={(v) => setFlow((f) => (f ? { ...f, vals: { ...f.vals, [name]: v } } : f))} />
+                </div>
+              </div>
+            )
+          })}
+        </form>
+      </DialogBody>
+    )
+  }
+
   if (phase.kind === 'progress' || phase.kind === 'conflict' || phase.kind === 'failed') {
     return (
       <DialogBody>
@@ -625,8 +818,39 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
               <p>{phase.error.message}</p>
               <ErrorDetails detail={phase.error.detail} />
             </Banner>
+            {phase.forceable && <p className="mt-2 text-[12px] text-fg-2">{t('pj.inst.forceHint')}</p>}
           </div>
         )}
+      </DialogBody>
+    )
+  }
+
+  if (project) {
+    const written = AGENTS.filter((a) => flow.results[a.id]?.on)
+    const lede = `${t('pj.inst.doneLede').replace('{0}', project.name)}${locale === 'en' ? ' ' : ''}${t(flow.missingAfter?.length ? 'pj.inst.nokey' : 'pj.inst.commit')}`
+    return (
+      <DialogBody>
+        <div data-kind={item.category} className="grid justify-items-center gap-1.5 pb-1 pt-3.5 text-center">
+          <span className="mb-2 grid h-16 w-16 place-items-center rounded-full bg-kind text-canvas shadow-[0_0_0_8px_rgb(var(--kind-rgb)/0.14),0_0_60px_rgb(var(--kind-rgb)/0.7)]">
+            <Check size={30} strokeWidth={2.6} />
+          </span>
+          <DialogTitle className="text-[17px]">{t('inst.done').replace('{0}', item.name)}</DialogTitle>
+          <p className="max-w-[44ch] text-[13px] text-fg-2">{lede}</p>
+          {item.category === 'mcp' && written.length > 0 && <p className="max-w-[44ch] text-[12px] text-fg-3">{t('pj.inst.approve')}</p>}
+        </div>
+        <div className="mt-3.5">
+          <AgentList
+            lines={AGENTS.map((agent) => {
+              const r = flow.results[agent.id]
+              return {
+                agent,
+                note: r?.note ?? (flow.tg[agent.id] ? '' : t('inst.notChosen')),
+                noteMono: !!r?.on,
+                right: <Badge tone={r?.on ? 'ok' : 'neutral'}>{t(r?.on ? 'pj.inst.written' : 'pj.inst.notWritten')}</Badge>,
+              }
+            })}
+          />
+        </div>
       </DialogBody>
     )
   }
@@ -672,20 +896,27 @@ function Footer({
   close,
   onNext,
   onRun,
+  onSaveVars,
   onSkipConflict,
   onView,
+  onToProject,
   onOpenResult,
 }: {
   flow: Flow | null
   close: () => void
   onNext: (patch: Partial<Flow>) => void
   onRun: (f: Flow) => void
+  onSaveVars: (f: Flow) => void
   onSkipConflict: () => void
   onView: (slug: string, category: Category) => void
+  /** The item is installed globally; a project can still get it. */
+  onToProject?: () => void
   onOpenResult: () => void
 }): ReactNode {
   const t = useI18n().t
+  const { projects } = useProjects()
   if (!flow) return null
+  const project = flow.loc ? projects.find((p) => p.id === flow.loc) : undefined
   const { phase, item, resource } = flow
   const web = flow.from === 'web'
 
@@ -697,6 +928,7 @@ function Footer({
         <Button data-autofocus onClick={close}>
           {t('ui.close')}
         </Button>
+        {phase.reason === 'installed' && onToProject && <Button onClick={onToProject}>{t('pj.inst.toProject')}</Button>}
         {phase.reason === 'installed' && phase.slug && phase.category && (
           <Button variant="primary" onClick={() => onView(phase.slug!, phase.category!)}>
             {t('inst.view')}
@@ -709,6 +941,26 @@ function Footer({
   if (!item || !resource) return null
   const required = requiredKeys({ ...item, installed: false, resource })
   const chosen = AGENTS.filter((a) => flow.tg[a.id])
+
+  if (phase.kind === 'targets' && flow.loc) {
+    const none = chosen.length === 0
+    return (
+      <>
+        <Button {...(web ? { 'data-autofocus': true } : {})} onClick={close}>
+          {t('common.cancel')}
+        </Button>
+        <Button
+          variant="primary"
+          {...(web ? {} : { 'data-autofocus': true })}
+          disabled={!!resource.installError || none || !project?.exists}
+          title={none ? t('pj.inst.noAgent') : undefined}
+          onClick={() => onRun({ ...flow, force: false })}
+        >
+          {t('pj.into.install').replace('{0}', project?.name ?? '')}
+        </Button>
+      </>
+    )
+  }
 
   if (phase.kind === 'targets') {
     const provider = item.category === 'provider'
@@ -749,6 +1001,18 @@ function Footer({
     )
   }
 
+  if (phase.kind === 'projectVars') {
+    const any = phase.names.some((n) => flow.vals[n])
+    return (
+      <>
+        <Button onClick={() => onNext({ phase: { kind: 'done' } })}>{t('inst.later')}</Button>
+        <Button variant="primary" type="submit" form="install-vars" disabled={!any} onClick={(e) => { e.preventDefault(); if (any) onSaveVars(flow) }}>
+          {t('common.save')}
+        </Button>
+      </>
+    )
+  }
+
   if (phase.kind === 'progress') {
     return (
       <>
@@ -775,8 +1039,24 @@ function Footer({
         <Button data-autofocus onClick={close}>
           {t('ui.close')}
         </Button>
+        {phase.forceable && (
+          <Button variant="danger" onClick={() => onRun({ ...flow, force: true })}>
+            {t('pj.inst.force')}
+          </Button>
+        )}
         <Button variant="primary" onClick={() => onNext({ phase: { kind: 'targets' }, steps: [], results: {} })}>
           {t('ui.retry')}
+        </Button>
+      </>
+    )
+  }
+
+  if (flow.loc) {
+    return (
+      <>
+        <Button onClick={close}>{t('inst.finish')}</Button>
+        <Button variant="primary" data-autofocus onClick={onOpenResult}>
+          {t('pj.open')}
         </Button>
       </>
     )

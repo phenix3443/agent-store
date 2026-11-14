@@ -52,6 +52,8 @@ export const libraryZh: Dict = {
   },
   ag: { soon: '更多即将支持', soonD: '已支持 Claude Code、Codex，更多 agent 陆续加入。', swOn: '对 {0} 启用', swOff: '对 {0} 停用' },
   lib: {
+    globalHint: '这里只列出全局安装的内容。项目里的条目在各自的项目页。',
+    globalGo: '查看项目',
     skillTitle: '技能',
     skillSub: '技能存放在本机技能库，按 agent 单独启用、停用。',
     mcpTitle: 'MCP',
@@ -246,6 +248,8 @@ export const libraryEn: Dict = {
   },
   ag: { soon: 'More coming', soonD: 'Claude Code and Codex are supported today. More agents are on the way.', swOn: 'Enable for {0}', swOff: 'Disable for {0}' },
   lib: {
+    globalHint: 'Only global installs are listed here. Project items are on each project page.',
+    globalGo: 'View projects',
     skillTitle: 'Skills',
     skillSub: 'Skills live in a local library and are enabled or disabled per agent.',
     mcpTitle: 'MCP',

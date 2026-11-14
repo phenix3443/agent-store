@@ -31,6 +31,7 @@ const PATHS = {
     </>
   ),
   usage: <path d="M5 20V11M11 20V5M17 20v-7M2 20h20" />,
+  folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />,
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />

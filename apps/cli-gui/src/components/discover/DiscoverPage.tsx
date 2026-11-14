@@ -14,6 +14,8 @@ import { Banner, EmptyState, LoadingRows } from '../ui/states'
 import { ListBox, ListRow, PageWithPane, ViewHeader } from '../library/parts'
 import { useUpdater } from '../library/common'
 import { CatalogPane } from './CatalogPane'
+import { useProjects } from '../../state/Projects'
+import { useOpenProject } from '../../lib/useNavigate'
 
 const PAGE = 50
 const SEARCH_DEBOUNCE_MS = 250
@@ -43,8 +45,11 @@ export function DiscoverPage() {
   const t = useT()
   const {
     selectedSlug, setSelectedSlug, setNavView, setCategoryFilter, setCatalogOffline,
-    searchSeed, setSearchSeed, discoverKind, setDiscoverKind, requestInstall,
+    searchSeed, setSearchSeed, discoverKind, setDiscoverKind, requestInstall, installInto, setInstallInto,
   } = useAppState()
+  const { projects } = useProjects()
+  const openProject = useOpenProject()
+  const into = projects.find((p) => p.id === installInto && p.exists)
   const { appendLine } = useTerminalLog()
   const { installed, updates } = useInstalledIndex()
   const updater = useUpdater()
@@ -122,6 +127,13 @@ export function DiscoverPage() {
 
   function action(r: CatalogResource) {
     const entry = installedEntryFor(r, installed)
+    if (into && r.kind !== 'provider') {
+      return (
+        <Button size="sm" variant="kind" onClick={() => requestInstall(r.id)}>
+          {t('act.install')}
+        </Button>
+      )
+    }
     if (r.kind === 'provider') {
       return (
         <Button size="sm" variant="kind" onClick={() => requestInstall(r.id)}>
@@ -219,6 +231,26 @@ export function DiscoverPage() {
   const view = (
     <>
       <ViewHeader title={t('disc.title')} sub={t('disc.sub')} />
+      {into && (
+        <div className="mb-3">
+          <Banner
+            tone="info"
+            title={t('pj.into.title').replace('{0}', into.name)}
+            actions={
+              <>
+                <Button size="sm" onClick={() => openProject(into.id)}>
+                  {t('pj.into.back')}
+                </Button>
+                <Button size="sm" onClick={() => setInstallInto(null)}>
+                  {t('pj.into.clear')}
+                </Button>
+              </>
+            }
+          >
+            <p>{t('pj.into.sub')}</p>
+          </Banner>
+        </div>
+      )}
       {offline && (
         <div className="mb-3">
           <Banner tone="warn" title={t('disc.offT')} actions={<Button size="sm" onClick={() => setNonce((n) => n + 1)}>{t('ui.retry')}</Button>}>
@@ -292,6 +324,7 @@ export function DiscoverPage() {
             updating={updater.busy}
             onUpdate={(slug) => void updater.update([slug])}
             onManage={manage}
+            into={into}
             onClose={() => setSelectedSlug(null)}
           />
         ) : null

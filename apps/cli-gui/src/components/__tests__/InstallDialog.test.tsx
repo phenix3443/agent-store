@@ -3,6 +3,7 @@ import { render, screen, cleanup, fireEvent, waitFor, act, within } from '@testi
 import { AppStateProvider, useAppState } from '../../state/AppState'
 import { useEffect } from 'react'
 import { TerminalLogProvider, useTerminalLog } from '../../state/TerminalLog'
+import { ProjectsProvider, useProjects } from '../../state/Projects'
 import * as rpcModule from '../../lib/rpc'
 import { settleRpc } from '../../test/settle'
 
@@ -84,7 +85,7 @@ function mockRpc(overrides: Record<string, (...args: unknown[]) => unknown> = {}
 }
 
 function Probe() {
-  const { selectedSlug, navView, categoryFilter, editingConfigSlug } = useAppState()
+  const { selectedSlug, navView, categoryFilter, editingConfigSlug, projectId } = useAppState()
   const { lines } = useTerminalLog()
   return (
     <div>
@@ -93,6 +94,7 @@ function Probe() {
       <span data-testid="category">{categoryFilter}</span>
       <span data-testid="editing">{editingConfigSlug ?? ''}</span>
       <span data-testid="log">{lines.map((l) => l.text).join('|')}</span>
+      <span data-testid="project">{projectId ?? ''}</span>
     </div>
   )
 }
@@ -427,4 +429,232 @@ test('the sign-in callback is left to the auth handler', async () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(calls).toHaveLength(0)
   expect(focusMock).not.toHaveBeenCalled()
+})
+
+// ── Install location: a registered project (#166) ────────────────────────────
+
+const demo = { id: 'p1', path: '/w/demo', name: 'demo', addedAt: '2026-11-01T00:00:00Z', exists: true }
+const gone = { id: 'p2', path: '/w/gone', name: 'gone', addedAt: '2026-11-01T00:00:00Z', exists: false }
+const skillId = 'github:io.example/pdf-tools'
+const mcpId = 'mcp-registry:io.example/filesystem'
+
+function projectResult(overrides: Record<string, unknown> = {}) {
+  return {
+    projectId: 'p1', slug: 'pdf-tools', kind: 'skill', version: '0.8.1', name: 'pdf-tools',
+    installed: [{ agent: 'claude', file: '/w/demo/.claude/skills/pdf-tools' }], skipped: [], env: [], codexTrusted: false,
+    ...overrides,
+  }
+}
+
+async function renderWithProjects(extra?: React.ReactNode) {
+  render(
+    <AppStateProvider>
+      <TerminalLogProvider>
+        <ProjectsProvider>
+          <Probe />
+          {extra}
+          <InstallDialog />
+        </ProjectsProvider>
+      </TerminalLogProvider>
+    </AppStateProvider>
+  )
+  await waitFor(() => expect(handlers.size).toBe(1))
+  await waitFor(() => expect(rpc('listProjects')).toHaveLength(1))
+  await settleRpc(5)
+}
+
+function location(dialog: HTMLElement) {
+  return within(dialog).getByRole('combobox', { name: '安装位置' }) as HTMLSelectElement
+}
+
+test('a skill can go into a registered project instead of the global library', async () => {
+  mockRpc({ listProjects: () => [demo, gone], installToProject: () => projectResult() })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(skillId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(dialog).toHaveTextContent('PDF Tools'))
+
+  const select = location(dialog)
+  expect(select.value).toBe('')
+  const options = Array.from(select.options)
+  expect(options.map((o) => o.textContent)).toEqual(['全局 · 对所有项目生效', '项目 demo · /w/demo', '项目 gone · /w/gone · 目录不存在', '添加项目…'])
+  expect(options[2].disabled).toBe(true)
+
+  await act(async () => {
+    fireEvent.change(select, { target: { value: 'p1' } })
+  })
+  expect(dialog).toHaveTextContent('会写入项目目录并随版本库提交')
+  expect(dialog).toHaveTextContent('复制到 /w/demo/.claude/skills/')
+  expect(dialog).not.toHaveTextContent('~/.agent-store/skills')
+  await click('安装到 demo')
+
+  const done = await screen.findByRole('dialog', { name: '已安装 PDF Tools' })
+  expect(done).toHaveTextContent('已写入项目 demo。提交到版本库后，队友拉取即可使用。')
+  expect(done).toHaveTextContent('.claude/skills/pdf-tools')
+  expect(rpc('installToProject')).toEqual([{ method: 'installToProject', args: ['p1', skillId] }])
+  expect(installCalls()).toHaveLength(0)
+  expect(screen.getByTestId('log')).toHaveTextContent(`$ aas install ${skillId} --project /w/demo`)
+
+  await click('打开项目')
+  expect(screen.getByTestId('nav')).toHaveTextContent('project')
+  expect(screen.getByTestId('project')).toHaveTextContent('p1')
+})
+
+test('a project MCP install writes references, then stores the keys on this machine', async () => {
+  const withKey = catalog.map((r) =>
+    r.id === mcpId ? { ...r, install: { ...r.install, configSchema: { properties: { token: { 'x-secret': true, 'x-env': 'FS_TOKEN' } }, required: ['token'] } } } : r
+  )
+  mockRpc({
+    listProjects: () => [demo],
+    getResource: (ref) => withKey.find((r) => r.id === ref || r.slug === ref),
+    installToProject: () => projectResult({ slug: 'filesystem', kind: 'mcp', name: 'filesystem', installed: [{ agent: 'claude', file: '/w/demo/.mcp.json' }], env: ['FS_TOKEN'] }),
+    getProject: () => ({ ...demo, codexTrusted: false, skills: [], mcps: [], env: [{ name: 'FS_TOKEN', stored: false, usedBy: ['filesystem'] }] }),
+    setProjectEnv: () => undefined,
+  })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(mcpId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(dialog).toHaveTextContent('Filesystem'))
+  await act(async () => {
+    fireEvent.change(location(dialog), { target: { value: 'p1' } })
+  })
+  expect(dialog).toHaveTextContent('Claude Code 首次使用需批准，Codex 需信任该项目后才生效。')
+  expect(dialog).toHaveTextContent('写入 /w/demo/.mcp.json › mcpServers.filesystem')
+  expect(dialog).toHaveTextContent('必填值只写变量引用 ${FS_TOKEN}')
+  await click('安装到 demo')
+
+  await screen.findByRole('dialog', { name: '把密钥存到本机' })
+  expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
+  fireEvent.change(screen.getByLabelText('FS_TOKEN'), { target: { value: 'tok-9' } })
+  await click('保存')
+
+  const done = await screen.findByRole('dialog', { name: '已安装 Filesystem' })
+  expect(done).toHaveTextContent('提交到版本库后，队友拉取即可使用。')
+  expect(rpc('setProjectEnv')).toEqual([{ method: 'setProjectEnv', args: ['p1', 'FS_TOKEN', 'tok-9'] }])
+  expect(rpc('setConfig')).toHaveLength(0)
+  expect(installCalls()).toHaveLength(0)
+  expect(screen.getByTestId('log')).not.toHaveTextContent('tok-9')
+})
+
+test('skipping the keys of a project install says where to enter them later', async () => {
+  mockRpc({
+    listProjects: () => [demo],
+    installToProject: () => projectResult({ slug: 'filesystem', kind: 'mcp', name: 'filesystem', env: ['FS_TOKEN'] }),
+    getProject: () => ({ ...demo, codexTrusted: false, skills: [], mcps: [], env: [{ name: 'FS_TOKEN', stored: false, usedBy: ['filesystem'] }] }),
+  })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(mcpId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(dialog).toHaveTextContent('Filesystem'))
+  await act(async () => {
+    fireEvent.change(location(dialog), { target: { value: 'p1' } })
+  })
+  await click('安装到 demo')
+  await screen.findByRole('dialog', { name: '把密钥存到本机' })
+  await click('稍后填写')
+  expect(await screen.findByText(/本机还没有填写密钥，可在项目页填写。/)).toBeInTheDocument()
+})
+
+test('an edited project copy is replaced only after 仍然替换', async () => {
+  let n = 0
+  mockRpc({
+    listProjects: () => [demo],
+    installToProject: () => {
+      n += 1
+      if (n === 1) throw new rpcModule.RpcError('edited since; pass --force', 'ProjectConflictError', { reason: 'modified', tool: 'claude' })
+      return projectResult()
+    },
+  })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(skillId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(dialog).toHaveTextContent('PDF Tools'))
+  await act(async () => {
+    fireEvent.change(location(dialog), { target: { value: 'p1' } })
+  })
+  await click('安装到 demo')
+
+  const failed = await screen.findByRole('dialog', { name: 'PDF Tools 没有装上' })
+  expect(failed).toHaveTextContent('Agent Store 写入的 Claude Code 条目之后被改过，没有替换。')
+  await click('仍然替换')
+  await screen.findByRole('dialog', { name: '已安装 PDF Tools' })
+  expect(rpc('installToProject').map((c) => c.args)).toEqual([['p1', skillId], ['p1', skillId, { force: true }]])
+})
+
+test('an MCP that runs downloaded files is refused for a project, with the reason', async () => {
+  mockRpc({
+    listProjects: () => [demo],
+    installToProject: () => {
+      throw new rpcModule.RpcError('runs files Agent Store downloads', 'ProjectMcpUnsupportedError', { reason: 'not-portable' })
+    },
+  })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(mcpId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(dialog).toHaveTextContent('Filesystem'))
+  await act(async () => {
+    fireEvent.change(location(dialog), { target: { value: 'p1' } })
+  })
+  await click('安装到 demo')
+  const failed = await screen.findByRole('dialog', { name: 'Filesystem 没有装上' })
+  expect(failed).toHaveTextContent('队友没有这些文件，只能全局安装')
+  expect(screen.queryByRole('button', { name: '仍然替换' })).not.toBeInTheDocument()
+})
+
+test('from a project page, an item installed globally goes straight to that project', async () => {
+  mockRpc({ listProjects: () => [demo], list: () => [{ slug: 'filesystem', category: 'mcp', resourceId: mcpId }] })
+  // As from a project page: the project list has loaded before 安装 is pressed.
+  function Ask() {
+    const { requestInstall, setInstallInto } = useAppState()
+    const { projects } = useProjects()
+    useEffect(() => {
+      if (!projects.length) return
+      setInstallInto('p1')
+      requestInstall(mcpId)
+    }, [projects.length, requestInstall, setInstallInto])
+    return null
+  }
+  await renderWithProjects(<Ask />)
+  const dialog = await screen.findByRole('dialog', { name: '安装 Filesystem' })
+  const select = location(dialog)
+  expect(select.value).toBe('p1')
+  expect(select.options[0].textContent).toBe('全局 · 已安装')
+  expect(select.options[0].disabled).toBe(true)
+  expect(within(dialog).getByRole('button', { name: '安装到 demo' })).toBeEnabled()
+})
+
+test('the already-installed notice offers a project when one is registered', async () => {
+  mockRpc({ listProjects: () => [demo], list: () => [{ slug: 'filesystem', category: 'mcp', resourceId: mcpId }] })
+  await renderWithProjects()
+  await openLink('agent-store://install?slug=filesystem')
+  await screen.findByRole('dialog', { name: '已经安装过了' })
+  await click('安装到项目…')
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  expect(location(dialog).value).toBe('p1')
+})
+
+test('添加项目… in the location list registers a folder and comes back with it chosen', async () => {
+  const list = [demo]
+  const added = { id: 'p3', path: '/w/new', name: 'new', addedAt: '2026-11-14T00:00:00Z', exists: true }
+  mockRpc({
+    listProjects: () => [...list],
+    addProject: () => {
+      list.push(added)
+      return added
+    },
+  })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(skillId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(dialog).toHaveTextContent('PDF Tools'))
+  await act(async () => {
+    fireEvent.change(location(dialog), { target: { value: '__add' } })
+  })
+  await screen.findByRole('dialog', { name: '添加项目' })
+  fireEvent.change(screen.getByLabelText('项目目录'), { target: { value: '/w/new' } })
+  await click('添加项目')
+
+  const back = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(location(back).value).toBe('p3'))
+  expect(rpc('addProject')).toEqual([{ method: 'addProject', args: ['/w/new'] }])
 })
