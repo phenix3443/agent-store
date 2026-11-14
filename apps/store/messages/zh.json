@@ -527,7 +527,8 @@
             "Free：浏览与安装资源、本地代理转发（失败降级最多两家）、用量仪表盘",
             "Pro 月付：{monthly} / 月",
             "Pro 年付：{yearly} / 年",
-            "终身买断：{lifetime}，一次付费，永久 Pro"
+            "终身买断：{lifetime}，一次付费，永久 Pro",
+            "取消与恢复：在个人面板的「订阅」页操作。取消后 Pro 保留到本期结束，到期前可以恢复；订单和付款记录在 Waffo 账单页查看"
           ]
         }
       ]
@@ -681,8 +682,53 @@
       "logoutBody": "退出后，订阅仍在账号里。",
       "logout": "退出登录",
       "planError": "暂时查不到订阅状态。稍后刷新再看。",
-      "active": "生效中",
-      "manage": "需要取消或变更订阅，写信到 <mail>support@panghuli.tech</mail>。",
+      "status": {
+        "active": "生效中",
+        "trialing": "试用中",
+        "canceling": "到期后取消",
+        "canceled": "已取消",
+        "past_due": "付款未成功"
+      },
+      "line": {
+        "renews": "{date} 自动续费。",
+        "renewsUndated": "到期自动续费。",
+        "lifetime": "终身买断，没有续费。",
+        "canceling": "Pro 保留到 {date}，之后回到 Free，不再扣款。",
+        "cancelingUndated": "Pro 保留到本期结束，之后回到 Free，不再扣款。",
+        "canceled": "订阅已于 {date} 结束，现在是 Free。",
+        "canceledUndated": "订阅已结束，现在是 Free。",
+        "pastDue": "最近一次续费没有扣款成功，Pro 已暂停。付款情况在 Waffo 账单页查看。"
+      },
+      "cancel": "取消订阅",
+      "resume": "恢复订阅",
+      "resubscribe": "重新订阅",
+      "portal": "查看订单与付款",
+      "portalNote": "订单、订阅和付款记录由 Waffo 保管，在它的账单页查看。",
+      "working": {
+        "cancel": "正在取消…",
+        "resume": "正在恢复…",
+        "portal": "正在打开…"
+      },
+      "failed": {
+        "cancel": "没能取消订阅，请稍后刷新查看。",
+        "resume": "没能恢复订阅，请稍后刷新查看。",
+        "portal": "没能打开 Waffo 账单页，请稍后再试。"
+      },
+      "done": {
+        "cancel": "已设为到期后取消。",
+        "resume": "订阅已恢复。"
+      },
+      "confirm": {
+        "title": "取消订阅？",
+        "happens": "Pro 保留到 {date}，之后回到 Free，不再自动续费。",
+        "happensUndated": "Pro 保留到本期结束，之后回到 Free，不再自动续费。",
+        "notHappens": "取消不会退回已付的费用；到期前随时可以恢复。",
+        "keep": "保留 Pro",
+        "confirm": "确认取消",
+        "close": "关闭"
+      },
+      "retry": "重试",
+      "loading": "正在加载",
       "perks": "Pro 包含",
       "billing": "账单",
       "merchant": "代收方",

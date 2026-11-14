@@ -7,7 +7,8 @@ import { verifyWebhook, type WebhookEvent, type WebhookEventData } from '@waffo/
 import { getDb, type DbEnv } from './db/client'
 import type { AuthEnv } from './auth-token'
 import { getWaffoClient, proProductId, checkoutSuccessUrl, trialFlag, type WaffoEnv, type BillingPlan } from './waffo'
-import { subscriptionRecordFromEvent } from './billing'
+import { canCancel, canResume, subscriptionRecordFromEvent, subscriptionView, type SubscriptionStatus } from './billing'
+import { cancelSubscription, customerPortalUrl, resumeSubscription } from './billing-management'
 import { getAuthUser } from './auth'
 import { resourceRoutes } from './catalog/routes'
 import { catalogReader, searchSupplement } from './catalog/runtime'
@@ -16,6 +17,8 @@ import {
   recordWebhook,
   getPlanByEmail,
   getPlanByUserId,
+  getSubscriptionByUserId,
+  setSubscriptionStatus,
 } from './subscription-queries'
 
 // Under Bun.serve, c.env is the Bun server object with none of these keys, so
@@ -29,19 +32,22 @@ app.use('/api/*', cors())
 
 // One JSON line per failure so Workers logs can be searched by requestId, which is
 // also returned to the caller.
-function fail(c: Context<Env>, status: ContentfulStatusCode, message: string, cause: unknown) {
-  const id = c.get('requestId')
+function logError(c: Context<Env>, message: string, cause: unknown) {
   console.error(
     JSON.stringify({
       level: 'error',
-      requestId: id,
+      requestId: c.get('requestId'),
       method: c.req.method,
       path: c.req.path,
       message,
       cause: cause instanceof Error ? cause.message : String(cause),
     })
   )
-  return c.json({ error: message, requestId: id }, status)
+}
+
+function fail(c: Context<Env>, status: ContentfulStatusCode, message: string, cause: unknown) {
+  logError(c, message, cause)
+  return c.json({ error: message, requestId: c.get('requestId') }, status)
 }
 
 app.get('/', (c) => c.json({ ok: true, service: 'as-api' }))
@@ -173,6 +179,86 @@ app.get('/api/me/entitlements', async (c) => {
     return c.json({ plan })
   } catch (e) {
     return fail(c, 500, 'Failed to resolve entitlements', e)
+  }
+})
+
+type SubscriptionRow = NonNullable<Awaited<ReturnType<typeof getSubscriptionByUserId>>>
+
+// The signed-in user and their subscription row, or the response to send instead.
+async function mySubscription(c: Context<Env>): Promise<{ userId: string; row: SubscriptionRow | undefined } | Response> {
+  const user = await getAuthUser(c.env, c.req.header('Authorization'))
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  try {
+    return { userId: user.id, row: await getSubscriptionByUserId(c.env, user.id) }
+  } catch (e) {
+    return fail(c, 500, 'Failed to read subscription', e)
+  }
+}
+
+function waffoClient(c: Context<Env>) {
+  try {
+    return getWaffoClient(c.env)
+  } catch {
+    return null
+  }
+}
+
+// The signed-in user's subscription for the dashboard: { subscription }, null
+// for a user who never bought one.
+app.get('/api/me/subscription', async (c) => {
+  const me = await mySubscription(c)
+  if (me instanceof Response) return me
+  return c.json({ subscription: me.row ? subscriptionView(me.row) : null })
+})
+
+const STORED_STATUSES: readonly string[] = ['active', 'canceling', 'canceled'] satisfies SubscriptionStatus[]
+
+// Cancel (at period end) or resume the subscription through a Waffo customer
+// session, then return the subscription as it now stands.
+for (const action of ['cancel', 'resume'] as const) {
+  app.post(`/api/me/subscription/${action}`, async (c) => {
+    const me = await mySubscription(c)
+    if (me instanceof Response) return me
+    if (!me.row) return c.json({ error: 'No subscription' }, 404)
+    const view = subscriptionView(me.row)
+    if (action === 'cancel' ? !canCancel(view) : !canResume(view)) {
+      return c.json({ error: action === 'cancel' ? 'Subscription cannot be canceled' : 'Subscription is not canceling' }, 409)
+    }
+    const client = waffoClient(c)
+    if (!client) return c.json({ error: 'Billing not configured' }, 501)
+    let status: string
+    try {
+      status = await (action === 'cancel' ? cancelSubscription : resumeSubscription)(client, me.userId, me.row)
+    } catch (e) {
+      return fail(c, 502, `Failed to ${action} subscription`, e)
+    }
+    if (STORED_STATUSES.includes(status)) {
+      try {
+        await setSubscriptionStatus(c.env, me.row.waffoOrderId, status as SubscriptionStatus)
+        view.status = status as SubscriptionStatus
+      } catch (e) {
+        // Waffo has applied the change; its webhook records it.
+        logError(c, 'Failed to record subscription status', e)
+      }
+    }
+    return c.json({ subscription: view })
+  })
+}
+
+// A link that signs the user into the store's Waffo customer portal (orders,
+// subscriptions, payments). It carries a bearer token: not cached, not logged.
+app.post('/api/me/subscription/portal', async (c) => {
+  const me = await mySubscription(c)
+  if (me instanceof Response) return me
+  if (!me.row) return c.json({ error: 'No subscription' }, 404)
+  const client = waffoClient(c)
+  if (!client) return c.json({ error: 'Billing not configured' }, 501)
+  try {
+    const portalUrl = await customerPortalUrl(client, me.userId, me.row)
+    c.header('Cache-Control', 'no-store')
+    return c.json({ portalUrl })
+  } catch (e) {
+    return fail(c, 502, 'Failed to open the billing portal', e)
   }
 })
 
