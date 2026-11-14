@@ -10,9 +10,10 @@ import { CommandPalette } from './components/shell/CommandPalette'
 import { ShellDialogs } from './components/shell/ShellDialogs'
 import { ResourceList } from './components/ResourceList'
 import { DetailPanel } from './components/DetailPanel'
-import { Overview } from './components/Overview'
+import { UsagePage } from './components/usage/UsagePage'
 import { SettingsView } from './components/SettingsView'
 import { InstallLinkDialog } from './components/InstallLinkDialog'
+import { useFirstRunWelcome } from './components/WelcomeDialog'
 import { Toaster } from './components/ui/toast'
 import { TooltipProvider } from './components/ui/tooltip'
 import { useShortcuts } from './lib/useShortcuts'
@@ -20,7 +21,7 @@ import { useShortcuts } from './lib/useShortcuts'
 function MainArea() {
   const { navView } = useAppState()
 
-  if (navView === 'overview') return <Overview />
+  if (navView === 'overview') return <UsagePage />
   if (navView === 'settings') return <SettingsView />
 
   return (
@@ -33,6 +34,7 @@ function MainArea() {
 
 function AppShell() {
   useShortcuts()
+  useFirstRunWelcome()
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden rounded-[14px] border border-line-strong bg-canvas-2 font-sans text-fg">
       <TitleBar />

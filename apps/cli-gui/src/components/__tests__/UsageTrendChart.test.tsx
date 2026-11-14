@@ -31,8 +31,16 @@ test('renders an svg polyline and a filled area path with one point per distinct
   expect(container.querySelectorAll('circle')).toHaveLength(2)
 })
 
-test('renders a flat line with no crash when there is no data', () => {
+test('renders nothing when there is no data; the page shows the empty state', () => {
   const { container } = render(<UsageTrendChart rows={[]} />)
-  expect(container.querySelector('svg')).not.toBeNull()
-  expect(screen.getByText('暂无用量数据')).toBeInTheDocument()
+  expect(container.querySelector('svg')).toBeNull()
+})
+
+test('a single day is one point without a line, and the scale shows dollars', () => {
+  const { container } = render(<UsageTrendChart rows={[row({ date: '2026-07-01', costUsd: 0.03 })]} />)
+  expect(container.querySelector('polyline')).toBeNull()
+  expect(container.querySelectorAll('circle')).toHaveLength(1)
+  expect(screen.getByRole('img', { name: '每日费用折线图' })).toBeInTheDocument()
+  expect(screen.getByText('$0.05')).toBeInTheDocument()
+  expect(screen.getByText('7/1')).toBeInTheDocument()
 })

@@ -16,9 +16,9 @@ test('exports as CSV and shows the returned file path', async () => {
   }) as typeof rpcModule.callRpc)
 
   render(<UsageExport />)
-  fireEvent.click(screen.getByText('CSV'))
+  fireEvent.click(screen.getByRole('button', { name: '导出 CSV' }))
 
-  await waitFor(() => expect(screen.getByText(/已导出到.*usage-2026\.csv/)).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/已导出到 .*usage-2026\.csv/))
   expect(calls[0]).toEqual(['exportUsage', 'csv', 30])
 })
 
@@ -28,7 +28,7 @@ test('shows a failure message when the export RPC throws', async () => {
   }) as typeof rpcModule.callRpc)
 
   render(<UsageExport />)
-  fireEvent.click(screen.getByText('JSON'))
+  fireEvent.click(screen.getByRole('button', { name: '导出 JSON' }))
 
   await waitFor(() => expect(screen.getByText('导出失败')).toBeInTheDocument())
 })
