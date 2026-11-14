@@ -37,6 +37,12 @@ export type {
   ProjectUninstallOptions, ProjectUninstallResult,
 } from './projects'
 export type { DeviceAuthorization, DevicePoll, AccessToken } from './auth'
+export type {
+  BackupItemCategory, BackupItemRef, BackupConnectOptions, BackupConflictReason, BackupConflict, BackupConflictChoice,
+  BackupMissingSecret, BackupFailure, BackupLocalOnly, BackupExcludedFile, BackupStatus, BackupConnectResult,
+  BackupChangeAction, BackupAppliedChange, BackupSyncResult, BackupResolveResult, BackupSnapshot, BackupRestoreResult,
+  BackupHistoryEntry,
+} from './backup'
 export type { Plan, SubscriptionStatus, SubscriptionPeriod, MySubscription, Entitlements } from './entitlement'
 export { PRICING, formatPrice } from './pricing'
 export type { BillingPeriod } from './pricing'

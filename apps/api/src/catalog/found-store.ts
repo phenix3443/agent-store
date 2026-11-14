@@ -35,7 +35,8 @@ export interface FoundExport {
     githubRepo: string | null
     firstSeenAt: string
   }>
-  repos: Array<{ fullName: string; source: string; firstSeenAt: string }>
+  /** lastAttemptAt and lastStatus: the API's latest scan of the repo; null when it never scanned it. */
+  repos: Array<{ fullName: string; source: string; firstSeenAt: string; lastAttemptAt: string | null; lastStatus: string | null }>
 }
 
 export interface StoredLookup {
@@ -121,13 +122,17 @@ export class FoundStore {
       .run()
   }
 
-  /** Replaces the skills held for one repo with what a scan of it read. */
-  saveResources(repo: string, records: CatalogRecord[], stamp: string): void {
+  /**
+   * Stores the skills a scan of one repo read. A scan of the whole repo replaces what was
+   * held for it; a scan of some of its skills (`replace: false`) replaces only those.
+   */
+  saveResources(repo: string, records: CatalogRecord[], stamp: string, options: { replace: boolean } = { replace: true }): void {
+    const skills = records.filter((r) => r.kind === 'skill')
     this.db.transaction(
       (tx) => {
-        tx.delete(foundResources).where(eq(foundResources.githubRepo, repo)).run()
-        for (const r of records) {
-          if (r.kind !== 'skill') continue
+        if (options.replace) tx.delete(foundResources).where(eq(foundResources.githubRepo, repo)).run()
+        else if (skills.length) tx.delete(foundResources).where(inArray(foundResources.id, skills.map((r) => summaryOf(r, stamp).id))).run()
+        for (const r of skills) {
           const summary = summaryOf(r, stamp)
           tx.insert(foundResources)
             .values({
@@ -204,7 +209,10 @@ export class FoundStore {
       source: foundListings.source, listingId: foundListings.listingId, skillKey: foundListings.skillKey, name: foundListings.name,
       url: foundListings.url, githubRepo: foundListings.githubRepo, firstSeenAt: foundListings.firstSeenAt,
     }).from(foundListings).orderBy(desc(foundListings.lastSeenAt), asc(foundListings.source), asc(foundListings.listingId)).limit(limit).all()
-    const repos = this.db.select({ fullName: foundRepos.fullName, source: foundRepos.source, firstSeenAt: foundRepos.firstSeenAt })
+    const repos = this.db.select({
+      fullName: foundRepos.fullName, source: foundRepos.source, firstSeenAt: foundRepos.firstSeenAt,
+      lastAttemptAt: foundRepos.lastAttemptAt, lastStatus: foundRepos.lastStatus,
+    })
       .from(foundRepos).orderBy(desc(foundRepos.firstSeenAt), asc(foundRepos.fullName)).limit(limit).all()
     return { generatedAt: now, listings, repos }
   }

@@ -11,6 +11,8 @@ import type {
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectUninstallOptions, ProjectUninstallResult,
   AccessToken, DeviceAuthorization, DevicePoll, FavoriteEntry,
+  BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
+  BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
@@ -20,6 +22,7 @@ import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, remov
 import { createAdapters, type KindAdapter } from './adapters'
 import { ProjectService } from './projects/service'
 import { AccountService } from './account'
+import { BackupService } from './backup/service'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
@@ -60,6 +63,8 @@ export interface EngineOptions {
   catalog?: Catalog
   /** Origin of the store's /api/auth/*; `storeUrl` when unset (they share one origin when deployed). */
   authUrl?: string
+  /** Skills larger than this stay out of the backup; 100 MB by default. */
+  backupMaxItemBytes?: number
 }
 
 /**
@@ -74,6 +79,7 @@ export class EngineImpl implements Engine {
   private readonly catalog: Catalog
   private readonly projects: ProjectService
   private readonly account: AccountService
+  private readonly backup: BackupService
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
@@ -81,6 +87,11 @@ export class EngineImpl implements Engine {
     this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
     this.projects = new ProjectService(this.paths, this.catalog)
     this.account = new AccountService(options.authUrl ? new StoreClient(options.authUrl, { timeoutMs: 8000 }) : this.client, this.client)
+    this.backup = new BackupService(this.paths, {
+      engine: this,
+      engineFor: catalog => new EngineImpl(this.paths, storeUrl, { ...options, catalog }),
+      maxItemBytes: options.backupMaxItemBytes,
+    })
     this.adapters = createAdapters({
       paths: this.paths,
       startRelay: options.startRelay,
@@ -572,5 +583,41 @@ export class EngineImpl implements Engine {
 
   getProjectEnvValues(ref: string): Promise<Record<string, string>> {
     return this.projects.envValues(ref)
+  }
+
+  getBackupStatus(options?: { fetch?: boolean }): Promise<BackupStatus> {
+    return this.backup.status(options)
+  }
+
+  connectBackup(options: BackupConnectOptions): Promise<BackupConnectResult> {
+    return this.backup.connect(options)
+  }
+
+  backupNow(): Promise<BackupSyncResult> {
+    return this.backup.backupNow()
+  }
+
+  pullBackup(): Promise<BackupSyncResult> {
+    return this.backup.pull()
+  }
+
+  resolveBackupConflict(item: string, choice: BackupConflictChoice): Promise<BackupResolveResult> {
+    return this.backup.resolve(item, choice)
+  }
+
+  listBackupSnapshots(): Promise<BackupSnapshot[]> {
+    return this.backup.snapshots()
+  }
+
+  restoreBackupSnapshot(id: string): Promise<BackupRestoreResult> {
+    return this.backup.restore(id)
+  }
+
+  listBackupHistory(options?: { limit?: number }): Promise<BackupHistoryEntry[]> {
+    return this.backup.history(options)
+  }
+
+  disconnectBackup(): Promise<void> {
+    return this.backup.disconnect()
   }
 }
