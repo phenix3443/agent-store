@@ -11,6 +11,7 @@ on:
       - 'scripts/ci-app-db.mjs'
       - 'scripts/ci-demo-session.mjs'
       - 'scripts/ci-entitlements-proxy.mjs'
+      - 'scripts/ci-local-api.mjs'
       - '.github/workflows/store-screenshots.yml'
   workflow_dispatch:
 
@@ -56,6 +57,8 @@ jobs:
           echo "SHOT_SESSIONS=$(node scripts/ci-demo-session.mjs "$RUNNER_TEMP/db/app.db")" >> "$GITHUB_ENV"
           chmod 666 "$RUNNER_TEMP/db"/app.db*
           nohup node scripts/ci-entitlements-proxy.mjs "$TEST_URL" 4010 > "$RUNNER_TEMP/proxy.log" 2>&1 &
+          # Stands in for a running desktop client, for the installed-state shots.
+          nohup node scripts/ci-local-api.mjs http://localhost:3000 github:vercel-labs/skills/find-skills > "$RUNNER_TEMP/local-api.log" 2>&1 &
           docker run -d --name store -p 3000:3000 --add-host=host.docker.internal:host-gateway \
             -e API_URL=http://host.docker.internal:4010 -e BETTER_AUTH_URL=http://localhost:3000 -e BETTER_AUTH_SECRET \
             -v "$RUNNER_TEMP/db:/var/lib/agent-store" store-shots:ci
