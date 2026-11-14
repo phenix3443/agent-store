@@ -19,9 +19,12 @@ export class McpChangedOutsideError extends Error {
 }
 
 export class McpNotRestorableError extends Error {
-  constructor(readonly tool: ToolTarget, readonly entry: string, readonly keys: string[]) {
+  /** `no-cli`: the tool's CLI is not installed, so the restore cannot be tried; `inexact`: it would not come back the same. */
+  readonly reason: 'no-cli' | 'inexact'
+  constructor(readonly tool: ToolTarget, readonly entry: string, readonly keys: string[], noCli = false) {
     super(`Cannot take over the ${TOOL[tool]} MCP entry "${entry}": the ${tool} CLI could not put it back exactly (not restorable: ${keys.join(', ')}). Nothing was changed; rename or remove that entry yourself, then enable again.`)
     this.name = 'McpNotRestorableError'
+    this.reason = noCli ? 'no-cli' : 'inexact'
   }
 }
 

@@ -172,6 +172,8 @@ components:
 | 筛选分段 | 一组 `aria-pressed` 按钮 | `src/components/ui/segmented.tsx` |
 | 下拉选择（含安装位置） | 原生 `<select>`，外框同输入框 | `src/components/ui/input.tsx` 的 `Select` |
 | 选择目录（添加项目、重新定位） | 系统的目录选择框，`@tauri-apps/plugin-dialog` 2.7 与 `tauri-plugin-dialog` 2.7（2.8 起要 Rust 1.90，`rust-toolchain.toml` 固定 1.85）；权限只开 `dialog:allow-open` | `src/lib/folderPicker.ts`、`src-tauri/capabilities/dialog.json` |
+| 在文件管理器中显示 | `tauri-plugin-opener` 2.5 的 `revealItemInDir` 与 `@tauri-apps/plugin-opener` 2.5.5（2.6 起要 Rust 1.90）；权限只开 `opener:allow-reveal-item-in-dir`，不开打开文件和网址 | `src/lib/reveal.ts`、`src/components/ui/reveal.tsx`、`src-tauri/capabilities/opener.json` |
+| 多选（技能、MCP 列表） | 原生 `<input type="checkbox">`，颜色用 `accent-kind` | `src/components/ui/checkbox.tsx` |
 | 命令面板 | `cmdk`，放在 Radix 对话框里（带隐藏标题） | `src/components/shell/CommandPalette.tsx` |
 | 拖动排序（供应商优先级） | `@dnd-kit/core` 6.3.1、`@dnd-kit/sortable` 10.0.0、`@dnd-kit/utilities` 3.2.2；指针和键盘两种传感器，读屏器播报用 i18n 文案 | `src/components/library/ProvidersPage.tsx` |
 | 提示条 | `sonner`，底部居中，样式改成本文的浮层 | `src/components/ui/toast.tsx` |
@@ -208,15 +210,21 @@ components:
 
 发现、技能、MCP、供应商四页都是「左边列表、右边详情栏」：详情栏宽 430px，窗口不超过 1040px 时盖在列表上（不透明的 `--bg-3`），Esc 关闭。列表行整行是一个按钮，行尾的开关和按钮浮在它上面。代码在 `src/components/discover/` 和 `src/components/library/`。
 
+技能和 MCP 列表每行前有复选框，表头是全选。选中任意一项时，表头换成批量操作条：已选几项、「启用」「停用」（菜单里选所有 agent 或某一个）、「卸载」、「取消选择」。批量操作一次调用引擎的 `batch`，逐项执行、逐项报告，一项失败不影响其余；结果在对话框里逐项列出，失败的项可以「查看」打开详情单独处理。批量卸载先确认，批量操作不带强制卸载和替换。表头的「全部更新（N）」逐项更新，按钮上显示进度，结束后在列表上方列出每一项的结果。
+
+MCP 启用时 agent 里已有同名、不是 Agent Store 写入的条目，安装对话框的冲突步骤和详情栏的失败提示都给出「替换现有条目」，并列出会改动和不会改动的内容：先用该 agent 的命令行在临时目录里试写一次原条目，能原样写回才替换；原条目存进 `~/.agent-store/mcps/<slug>/targets.json`；停用或卸载时写回并核对。没装该 agent 的命令行时引擎拒绝替换，界面说明原因。替换过的 agent 在详情栏里注明「原条目已保存」，卸载确认里列出会写回哪些原条目。技能详情的「技能库位置」显示引擎给出的实际目录，旁边是「在文件管理器中显示」。
+
 所有安装都走同一个对话框 `src/components/install/InstallDialog.tsx`：应用内的「安装」按钮和网页发来的 `agent-store://install` 链接。步骤是：选 agent → 填必填项（只有 MCP 有必填项时）→ 进度 → 完成，另有冲突、失败、已安装和各种无法识别的链接。网页链接打开时焦点在「取消」，回车不会安装。
 
 技能和 MCP 在选 agent 之前多一项「安装位置」：全局（默认）、某个已登记的项目（目录不存在的置灰）、「添加项目…」（在同一个对话框里登记目录，完成后回到这一步并选中它）。选了项目时走 `installToProject`：MCP 不先填必填项，装完后列出本机还没有值的变量，填写的值经 `setProjectEnv` 存到本机，也可以稍后在项目页填；完成页的主按钮是「打开项目」。项目里被改过的副本可以「仍然替换」（`force`）。已全局安装的条目，「已经安装过了」的提示里有「安装到项目…」；从项目页的「添加到这个项目」进入发现页时，发现页顶部提示正在为哪个项目挑选，安装位置预选为这个项目，全局一项标「已安装」并置灰。
 
-项目列表和项目页在 `src/components/projects/`。项目页没有详情栏，分技能、MCP、密钥三块：每一条写明对哪些 agent 生效、来源（由 Agent Store 安装 / 项目自带）、是否被改过，下面逐个 agent 列出写在哪个文件，MCP 另列 Claude Code 的批准状态、本机条目覆盖、Codex 是否因未信任而不读取。与全局同名的 MCP 带「覆盖全局」，点开在行下展开说明。缺少密钥的 MCP 带「缺少密钥」，点开填写；密钥一块列出每个变量的状态，可填写、修改、清除，输入框不回显已存的值，并写明值只在 `aas projects exec` 或 `aas projects env` 启动的 agent 里生效。Codex 未信任项目时顶部提示，并给出可复制的 `~/.codex/config.toml` 两行；客户端不改这项设置。移除项目、重新定位、从项目卸载都先确认，确认框列出会改动和不会改动的内容。
+安装位置里，Agent Store 已经装进去的项目置灰并标「已在这个项目中」（按 `projectSummaries` 里的安装记录判断）。侧栏每个项目显示它的条目数（技能加 MCP，含项目自带的），同样来自 `projectSummaries`，一次调用读完所有项目。
+
+项目列表和项目页在 `src/components/projects/`。页头有「在文件管理器中显示」，每个文件位置前有同样的图标按钮。目录还在时，客户端把读到的内容存进应用数据目录（`agent-store-cli/project-snapshots.json`）；目录不存在时，警示下面只读显示上次读到的内容和读取时间。项目页没有详情栏，分技能、MCP、密钥三块：每一条写明对哪些 agent 生效、来源（由 Agent Store 安装 / 项目自带）、是否被改过，下面逐个 agent 列出写在哪个文件，MCP 另列 Claude Code 的批准状态、本机条目覆盖、Codex 是否因未信任而不读取。与全局同名的 MCP 带「覆盖全局」，点开在行下展开说明。缺少密钥的 MCP 带「缺少密钥」，点开填写；密钥一块列出每个变量的状态，可填写、修改、清除，输入框不回显已存的值，并写明值只在 `aas projects exec` 或 `aas projects env` 启动的 agent 里生效。Codex 未信任项目时顶部提示，并给出可复制的 `~/.codex/config.toml` 两行；客户端不改这项设置。移除项目、重新定位、从项目卸载都先确认，确认框列出会改动和不会改动的内容。
 
 ## 用量、设置与首次启动
 
-- 用量页（#165）只读本机 `usage.db` 的按天汇总：一次取近 30 天，「今日」「近 7 天」「近 30 天」在界面里按 UTC 日期筛。汇总数是费用、Tokens、请求数、成功率、模型数；明细是一组分页：按供应商、按模型、按 agent（各带费用占比）和全部明细（供应商 × 模型 × agent 的组合），加载、没有数据、读取失败各有状态。预算与导出按 `advancedUsageAnalytics` 开放，供应商健康按 `smartRouting` 开放，Free 显示 Pro 说明和升级按钮。本地中转卡片：状态、监听地址、今日请求和成功率，带启动 / 停止按钮。
+- 用量页（#165）只读本机 `usage.db` 的按天汇总：一次取近 30 天，「今日」「近 7 天」「近 30 天」在界面里按 UTC 日期筛。汇总数是费用、Tokens、请求数、成功率、模型数；明细是一组分页：按供应商、按模型、按 agent（各带费用占比）和全部明细（供应商 × 模型 × agent 的组合），加载、没有数据、读取失败各有状态。预算与导出按 `advancedUsageAnalytics` 开放，供应商健康按 `smartRouting` 开放，Free 显示 Pro 说明和升级按钮。本地中转卡片：状态、监听地址、今日请求和成功率，带启动 / 停止按钮。导出成功后，提示旁边有「在文件管理器中显示」。
 - 本地中转（#192）：供应商页和用量页的中转卡片、命令面板都能启动和停止（`startRelay` / `stopRelay`，与 `aas relay start|stop` 是同一个后台进程）。状态取自后台进程自己报告的监听结果：端口被占时显示端口号和原因，进程每 3 秒重试；agent 是否接入中转按 agent 配置文件里实际写的地址判断，不按 `local` 条目。还有 agent 指向中转时，停止前先确认，并写明停止不会改回 agent 配置。卡片底部可展开的说明照引擎的做法写：启动、停止不改配置；对 agent 启用第一个供应商时改写配置（另存原值），停用最后一个时改回。agent 连接的地址固定是 `127.0.0.1:18780`，`local` 详情栏只读显示它。
 - 供应商列表的顺序与中转一致：Level 从小到大，同级按安装顺序。行尾的把手可拖动，也可以聚焦后按空格拿起、方向键移动、空格放下；放下后把整列写成 Level 1、2、3…（`setProviderOrder`，只改 `level`），原来同级的会被分开。Free 只用前 2 个上游的规则不变，链路里第 3 个起变淡。
 - 供应商详情栏的「测试连接」（`testProvider`，命令行 `aas test <slug>`）：按中转会用的地址、认证方式和第一把密钥发一个请求体为空的 POST，供应商不会生成内容；不经过中转，不计入用量、请求日志和供应商健康。逐个 agent 显示结果、状态码、延迟和供应商返回的原因，原因里的密钥（包括部分回显）替换成 `***`。

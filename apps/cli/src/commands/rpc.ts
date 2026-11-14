@@ -1,5 +1,5 @@
-import { resolvePaths, runDoctor } from '@as/client-core'
-import type { Engine, BackupConflictChoice, BackupConnectOptions, AddProjectOptions, ProjectInstallOptions, ProjectUninstallOptions, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
+import { errorFields, resolvePaths, runDoctor } from '@as/client-core'
+import type { Engine, BackupConflictChoice, BackupConnectOptions, AddProjectOptions, BatchOperation, ProjectInstallOptions, ProjectUninstallOptions, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
 
@@ -46,7 +46,9 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   getBudget: (e) => e.getBudget(),
   setBudget: (e, a) => e.setBudget(a[0] as BudgetConfig),
   getBudgetStatus: (e) => e.getBudgetStatus(),
+  batch: (e, a) => e.batch(a[0] as BatchOperation[]),
   listProjects: (e) => e.listProjects(),
+  projectSummaries: (e) => e.projectSummaries(),
   addProject: (e, a) => e.addProject(a[0] as string, a[1] as AddProjectOptions | undefined),
   removeProject: (e, a) => e.removeProject(a[0] as string),
   relocateProject: (e, a) => e.relocateProject(a[0] as string, a[1] as string),
@@ -65,20 +67,6 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   listBackupHistory: (e, a) => e.listBackupHistory(a[0] as { limit?: number } | undefined),
   disconnectBackup: (e) => e.disconnectBackup(),
   doctor: () => runDoctor(resolvePaths()),
-}
-
-/**
- * `code` is the error class name; `reason` / `tool` / `target` / `state` are the engine error's own
- * fields. The desktop client turns them into what the user should do next.
- */
-function errorFields(err: unknown): Record<string, string> {
-  if (!(err instanceof Error)) return {}
-  const fields: Record<string, string> = { code: err.name }
-  for (const key of ['reason', 'tool', 'target', 'state'] as const) {
-    const value = (err as unknown as Record<string, unknown>)[key]
-    if (typeof value === 'string') fields[key] = value
-  }
-  return fields
 }
 
 export async function readFirstLine(input: AsyncIterable<Uint8Array | string> = process.stdin): Promise<string> {
