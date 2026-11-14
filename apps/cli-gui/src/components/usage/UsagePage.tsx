@@ -213,7 +213,7 @@ export function UsagePage() {
           )}
         </Card>
 
-        <div className="grid grid-cols-5 gap-3 max-[1040px]:grid-cols-2">
+        <div className="grid grid-cols-5 gap-3">
           <Stat label={t('usagePage.cost')} value={rows ? formatUsd(totals.costUsd) : '—'} />
           <Stat label={t('usagePage.tokens')} value={rows ? formatTokens(totals.tokens) : '—'} />
           <Stat label={t('usagePage.requests')} value={rows ? totals.requests.toLocaleString('en-US') : '—'} />
@@ -221,25 +221,25 @@ export function UsagePage() {
           <Stat label={t('usagePage.models')} value={rows ? String(totals.models) : '—'} />
         </div>
 
-        <div className="grid items-start gap-3 [grid-template-columns:minmax(0,1.5fr)_minmax(0,1fr)] max-[1040px]:grid-cols-1">
-          <div className="flex min-w-0 flex-col gap-3">
-            {(rows === null || inPeriod.length > 0) && (
-              <Card>
-                <CardTitle
-                  actions={
-                    <Button size="sm" onClick={() => setShellDialog('requestLog')}>
-                      {t('usagePage.requestLog')}
-                    </Button>
-                  }
-                >
-                  {t('usagePage.by')}
-                </CardTitle>
-                {rows === null ? <Skeleton className="mt-3 h-24 w-full" /> : <BreakdownTable rows={inPeriod} />}
-                {totals.unpriced > 0 && (
-                  <p className="mt-2 text-xs text-fg-3">{t('usagePage.unpriced').replace('{n}', String(totals.unpriced))}</p>
-                )}
-              </Card>
+        {(rows === null || inPeriod.length > 0) && (
+          <Card>
+            <CardTitle
+              actions={
+                <Button size="sm" onClick={() => setShellDialog('requestLog')}>
+                  {t('usagePage.requestLog')}
+                </Button>
+              }
+            >
+              {t('usagePage.by')}
+            </CardTitle>
+            {rows === null ? <Skeleton className="mt-3 h-24 w-full" /> : <BreakdownTable rows={inPeriod} />}
+            {totals.unpriced > 0 && (
+              <p className="mt-2 text-xs text-fg-3">{t('usagePage.unpriced').replace('{n}', String(totals.unpriced))}</p>
             )}
+          </Card>
+        )}
+        <div className="grid items-start gap-3 [grid-template-columns:minmax(0,1fr)_minmax(0,1fr)] max-[860px]:grid-cols-1">
+          <div className="flex min-w-0 flex-col gap-3">
             <RelayCard status={relay} port={port} today={today} />
           </div>
           <div className="flex min-w-0 flex-col gap-3">
