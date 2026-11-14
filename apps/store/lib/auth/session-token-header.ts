@@ -4,8 +4,11 @@
 // /device/token body, so no response needs that header.
 export function withoutSessionTokenHeader(res: Response): Response {
   if (!res.headers.has('set-auth-token')) return res
-  const headers = new Headers(res.headers)
-  headers.delete('set-auth-token')
+  const headers = new Headers()
+  res.headers.forEach((value, key) => {
+    if (key !== 'set-cookie' && key !== 'set-auth-token') headers.append(key, value)
+  })
+  for (const cookie of res.headers.getSetCookie()) headers.append('set-cookie', cookie)
   const exposed = headers
     .get('access-control-expose-headers')
     ?.split(',')
