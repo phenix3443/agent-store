@@ -13,6 +13,8 @@ export interface ToggleFailure extends FriendlyError {
   lead: string
   /** Enabling again with `force` gets past it (a skill folder Agent Store did not put there). */
   forceable: boolean
+  /** The agent has its own MCP entry with this name; enabling with `replace` takes it over. */
+  replaceable: boolean
 }
 
 const SKILL_FORCEABLE = new Set(['SkillDeployRefusedError', 'SkillConflictError'])
@@ -25,13 +27,14 @@ export function useTargetToggle() {
   const [busy, setBusy] = useState<string | null>(null)
   const [failure, setFailure] = useState<ToggleFailure | null>(null)
 
-  async function toggle(slug: string, target: ToolTarget, enabled: boolean, force = false): Promise<ToggleFailure | null> {
-    const action = enabled && !force ? 'disable' : 'enable'
+  async function toggle(slug: string, target: ToolTarget, enabled: boolean, force = false, replace = false): Promise<ToggleFailure | null> {
+    const action = enabled && !force && !replace ? 'disable' : 'enable'
+    const options = force ? { force: true } : replace ? { replace: true } : undefined
     setBusy(`${slug}:${target}`)
-    appendLine(`$ aas ${action} ${slug} --for ${target}${force ? ' --force' : ''}`)
+    appendLine(`$ aas ${action} ${slug} --for ${target}${force ? ' --force' : ''}${replace ? ' --replace' : ''}`)
     let result: ToggleFailure | null = null
     try {
-      await callRpc(action, force ? [slug, target, { force: true }] : [slug, target])
+      await callRpc(action, options ? [slug, target, options] : [slug, target])
       appendLine(`✓ ${t(action === 'enable' ? 'lib.enabledLog' : 'lib.disabledLog').replace('{0}', TARGET_LABEL[target])} ${slug}`, 'green')
       setFailure(null)
     } catch (err) {
@@ -43,6 +46,7 @@ export function useTargetToggle() {
         lead: t(action === 'enable' ? 'policy.enableFailed' : 'policy.disableFailed').replace('{tool}', TARGET_LABEL[target]),
         ...describeError(err, t),
         forceable: action === 'enable' && !force && code !== undefined && SKILL_FORCEABLE.has(code),
+        replaceable: action === 'enable' && !replace && code === 'McpConflictError',
       }
       setFailure(result)
     } finally {

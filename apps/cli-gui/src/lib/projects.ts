@@ -1,4 +1,5 @@
-import type { Project, ProjectDetail, ProjectMcp, ToolTarget } from '@as/types'
+import type { CatalogResource, Project, ProjectDetail, ProjectMcp, ProjectSummary, ToolTarget } from '@as/types'
+import { installedEntryFor } from './catalog'
 
 /** A path inside the project shown relative to it; anything else (~/.claude.json) as is. */
 export function relPath(project: Pick<Project, 'path'>, abs: string): string {
@@ -43,4 +44,10 @@ export function mcpEnv(m: ProjectMcp): string[] {
 /** The agents an item was written for in the project, in display order. */
 export function writtenFor(locations: { agent: ToolTarget; managed: boolean }[]): ToolTarget[] {
   return (['claude', 'codex'] as const).filter((a) => locations.some((l) => l.agent === a && l.managed))
+}
+
+/** Agent Store already installed this catalog entry into the project, as its records say. */
+export function projectHas(summary: ProjectSummary | undefined, resource: Pick<CatalogResource, 'id' | 'slug' | 'kind'> | undefined): boolean {
+  if (!summary || !resource) return false
+  return !!installedEntryFor(resource, summary.installed.map((i) => ({ slug: i.slug, category: i.kind, resourceId: i.resourceId })))
 }

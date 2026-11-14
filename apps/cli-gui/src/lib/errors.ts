@@ -18,7 +18,7 @@ export function describeError(err: unknown, t: TFn, context: 'action' | 'uninsta
   const { reason, tool, target } = err.fields
   const toolLabel = TOOL_LABEL[tool ?? target ?? ''] ?? t('errors.theClient')
   const known = (key: string, extra: Partial<FriendlyError> = {}): FriendlyError => ({
-    message: t(key.includes('.') ? key : `errors.${key}`).replace('{tool}', toolLabel),
+    message: t(key.includes('.') ? key : `errors.${key}`).replace(/\{tool\}/g, toolLabel),
     detail: raw,
     ...extra,
   })
@@ -35,6 +35,8 @@ export function describeError(err: unknown, t: TFn, context: 'action' | 'uninsta
       return known(context === 'uninstall' ? 'changedOutsideUninstall' : 'changedOutside')
     case 'McpConflictError':
       return known('conflict')
+    case 'McpNotRestorableError':
+      return known(reason === 'no-cli' ? 'takeover.errCli' : 'takeover.errInexact')
     case 'SkillConflictError':
       if (reason === 'name-clash') return known('nameClash')
       if (reason === 'not-ours') return known('skillNotOurs')
