@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Schibsted_Grotesk, JetBrains_Mono, Noto_Sans_SC } from 'next/font/google'
+import { Plus_Jakarta_Sans, Geist_Mono, Noto_Sans_SC } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -9,17 +9,16 @@ import { Header } from '@/components/Header'
 import { SiteFooter } from '@/components/SiteFooter'
 import { InstallNoticeProvider } from '@/components/InstallNotice'
 import { SkipLink } from '@/components/SkipLink'
-import { ThemeProvider } from '@/components/ThemeProvider'
 import { getCurrentUser } from '@/lib/auth'
 import './globals.css'
 
-const grotesk = Schibsted_Grotesk({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
 })
 
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',
@@ -29,7 +28,6 @@ const jetbrainsMono = JetBrains_Mono({
 // shapes are wrong for ja/ko, which keep the system CJK font. preload is off because
 // the font ships as unicode-range slices that load only for characters on the page.
 const notoSansSC = Noto_Sans_SC({
-  weight: ['400', '500'],
   variable: '--font-cjk',
   display: 'swap',
   preload: false,
@@ -69,16 +67,19 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${grotesk.variable} ${jetbrainsMono.variable} ${locale.startsWith('zh') ? notoSansSC.variable : ''}`}
-      suppressHydrationWarning
+      className={`${jakarta.variable} ${geistMono.variable} ${locale.startsWith('zh') ? notoSansSC.variable : ''}`}
     >
-      <body className="min-h-screen bg-paper font-sans text-ink antialiased">
+      <body className="min-h-screen bg-bg font-sans text-fg antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ThemeProvider>
-            <ClientStateProvider>
-              <InstallNoticeProvider>
+          <ClientStateProvider>
+            <InstallNoticeProvider>
               <SkipLink />
-              <div className="flex min-h-screen flex-col">
+              <div className="relative isolate flex min-h-screen flex-col">
+                <div aria-hidden className="aurora -z-10 !bottom-auto h-[760px]">
+                  <i />
+                  <i />
+                  <i />
+                </div>
                 <Header user={user} />
                 <main id="main" tabIndex={-1} className="flex-1 outline-none">
                   {children}
@@ -86,9 +87,8 @@ export default async function RootLayout({
                 <SiteFooter />
               </div>
               {drawer}
-              </InstallNoticeProvider>
-            </ClientStateProvider>
-          </ThemeProvider>
+            </InstallNoticeProvider>
+          </ClientStateProvider>
         </NextIntlClientProvider>
         <SpeedInsights />
         <Analytics />

@@ -34,8 +34,9 @@ const SORT_STATES = [
   // A mouse click opens the native list (not in the screenshot) and leaves mouse focus.
   { name: 'store-sortclick', act: (page) => page.locator('select').first().click() },
 ]
+// The narrow-screen nav menu; the bar shows the menu button below 1024px.
+const MENU = { name: 'menu', path: '/store', button: 'header button[aria-expanded]', maxWidth: 1023 }
 const WIDTHS = [390, 820, 1440]
-const THEMES = ['light', 'dark']
 const LOCALES = ['zh', 'en']
 
 const browser = await chromium.launch()
@@ -43,48 +44,59 @@ const failures = []
 await mkdir(out, { recursive: true })
 
 for (const locale of LOCALES) {
-  for (const theme of THEMES) {
-    for (const width of WIDTHS) {
-      const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, deviceScaleFactor: 1 })
-      await context.addCookies([{ name: 'locale', value: locale, url: base }])
-      const page = await context.newPage()
-      const errors = []
-      page.on('pageerror', (e) => errors.push(e.message))
-      for (const p of PAGES) {
-        const file = `${out}/${p.name}-${width}-${theme}-${locale}.png`
-        try {
-          const res = await page.goto(base + p.path, { waitUntil: 'networkidle', timeout: 60_000 })
-          if (!res || res.status() >= 400) throw new Error(`HTTP ${res?.status()}`)
-          if (p.click) {
-            await page.locator(p.click).first().click()
-            await page.locator('[data-item-drawer]').waitFor({ timeout: 30_000 })
-            await page.waitForLoadState('networkidle')
-          }
-          await page.evaluate(() => document.fonts.ready)
-          await page.screenshot({ path: file, fullPage: !p.click })
-          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
-          if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
-          console.log(`ok ${file}`)
-        } catch (e) {
-          failures.push(`${file}: ${e.message}`)
+  for (const width of WIDTHS) {
+    const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: 'dark', deviceScaleFactor: 1 })
+    await context.addCookies([{ name: 'locale', value: locale, url: base }])
+    const page = await context.newPage()
+    const errors = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    for (const p of PAGES) {
+      const file = `${out}/${p.name}-${width}-${locale}.png`
+      try {
+        const res = await page.goto(base + p.path, { waitUntil: 'networkidle', timeout: 60_000 })
+        if (!res || res.status() >= 400) throw new Error(`HTTP ${res?.status()}`)
+        if (p.click) {
+          await page.locator(p.click).first().click()
+          await page.locator('[data-item-drawer]').waitFor({ timeout: 30_000 })
+          await page.waitForLoadState('networkidle')
         }
+        await page.evaluate(() => document.fonts.ready)
+        await page.screenshot({ path: file, fullPage: !p.click })
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+        if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
+        console.log(`ok ${file}`)
+      } catch (e) {
+        failures.push(`${file}: ${e.message}`)
       }
-      for (const st of SORT_STATES) {
-        const file = `${out}/${st.name}-${width}-${theme}-${locale}.png`
-        try {
-          await page.goto(base + SORT_PATH, { waitUntil: 'networkidle', timeout: 60_000 })
-          await page.evaluate(() => document.fonts.ready)
-          await st.act(page)
-          await page.screenshot({ path: file })
-          await page.keyboard.press('Escape')
-          console.log(`ok ${file}`)
-        } catch (e) {
-          failures.push(`${file}: ${e.message}`)
-        }
-      }
-      if (errors.length) failures.push(`${locale}/${theme}/${width}: page errors: ${errors.join(' | ')}`)
-      await context.close()
     }
+    for (const st of SORT_STATES) {
+      const file = `${out}/${st.name}-${width}-${locale}.png`
+      try {
+        await page.goto(base + SORT_PATH, { waitUntil: 'networkidle', timeout: 60_000 })
+        await page.evaluate(() => document.fonts.ready)
+        await st.act(page)
+        await page.screenshot({ path: file })
+        await page.keyboard.press('Escape')
+        console.log(`ok ${file}`)
+      } catch (e) {
+        failures.push(`${file}: ${e.message}`)
+      }
+    }
+    if (width <= MENU.maxWidth) {
+      const file = `${out}/${MENU.name}-${width}-${locale}.png`
+      try {
+        await page.goto(base + MENU.path, { waitUntil: 'networkidle', timeout: 60_000 })
+        await page.evaluate(() => document.fonts.ready)
+        await page.locator(MENU.button).click()
+        await page.locator('[role="dialog"]').waitFor({ timeout: 10_000 })
+        await page.screenshot({ path: file })
+        console.log(`ok ${file}`)
+      } catch (e) {
+        failures.push(`${file}: ${e.message}`)
+      }
+    }
+    if (errors.length) failures.push(`${locale}/${width}: page errors: ${errors.join(' | ')}`)
+    await context.close()
   }
 }
 

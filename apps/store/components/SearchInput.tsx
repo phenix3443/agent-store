@@ -57,7 +57,7 @@ export function SearchInput({ className = '' }: { className?: string }) {
         commit(value.trim())
         commit.flush()
       }}
-      className={`flex h-9 items-center gap-2 border border-line bg-plate px-3 focus-within:border-ink ${className}`}
+      className={`flex h-9 items-center gap-2 rounded-control border border-line bg-well pl-2.5 pr-1.5 text-fg-3 transition-[border-color,box-shadow] duration-200 hover:border-line-strong focus-within:border-mcp/70 focus-within:shadow-[0_0_0_4px_rgb(var(--mcp-rgb)/0.14)] ${className}`}
     >
       {isPending ? (
         <Loader2 size={15} aria-hidden className="shrink-0 animate-spin motion-reduce:animate-none" />
@@ -78,11 +78,11 @@ export function SearchInput({ className = '' }: { className?: string }) {
         aria-label={t('label')}
         aria-keyshortcuts="/ Meta+K Control+K"
         autoComplete="off"
-        className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-2 [&::-webkit-search-cancel-button]:appearance-none"
+        className="h-full min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none"
       />
       <kbd
         title={t('shortcut')}
-        className="hidden h-5 min-w-5 shrink-0 place-items-center border border-line px-1 font-mono text-xs text-ink-2 sm:grid"
+        className="kbd hidden !h-[22px] shrink-0 text-[11px] sm:!grid"
       >
         /
       </kbd>
