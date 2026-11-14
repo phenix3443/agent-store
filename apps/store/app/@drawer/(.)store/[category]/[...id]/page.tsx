@@ -3,7 +3,7 @@ import { getResource } from '@/lib/catalog'
 import { idFromSegments } from '@/lib/resource'
 import { DrawerTitle } from '@/components/DrawerTitle'
 import { InterceptedDetail } from '@/components/InterceptedDetail'
-import { ItemDetail, TITLE_CLASS } from '@/components/ItemDetail'
+import { DRAWER_TITLE_CLASS, ItemDetail } from '@/components/ItemDetail'
 import { ItemReadme, ItemReadmeFallback } from '@/components/ItemReadme'
 
 interface InterceptedDetailProps {
@@ -22,7 +22,8 @@ export default async function InterceptedDetailDrawer({ params }: InterceptedDet
     <InterceptedDetail resource={{ id: resource.id, kind: resource.kind }}>
       <ItemDetail
         resource={resource}
-        title={<DrawerTitle className={TITLE_CLASS}>{resource.name}</DrawerTitle>}
+        layout="drawer"
+        title={<DrawerTitle className={DRAWER_TITLE_CLASS}>{resource.name}</DrawerTitle>}
         readme={
           <Suspense fallback={<ItemReadmeFallback />}>
             <ItemReadme resource={resource} />

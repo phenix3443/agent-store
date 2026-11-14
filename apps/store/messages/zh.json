@@ -45,22 +45,19 @@
     },
     "filters": {
       "category": "类别",
-      "clear": "清除搜索和筛选"
+      "clear": "清除筛选",
+      "title": "筛选与排序",
+      "done": "查看结果"
     },
     "list": {
       "title": "商店",
-      "colCategory": "类别",
-      "colPackage": "包",
-      "colPublisher": "发布者",
-      "colInstalls": "安装量",
       "copied": "已复制",
       "copyFailed": "复制失败",
       "copyLabel": "复制 {name} 的安装命令",
       "copiedAnnounce": "已复制安装命令：{command}",
       "copyFailedAnnounce": "复制失败，请手动选中命令复制：{command}",
-      "emptyTitle": "没有符合条件的包",
-      "emptyBody": "换个关键词或类别，或清除搜索和筛选后再看。",
-      "colInstall": "安装",
+      "emptyTitle": "没有找到匹配的包",
+      "emptyBody": "换个关键词，或清除筛选。",
       "copyCommand": "复制命令",
       "noInstalls": "没有安装量数据",
       "stars": "GitHub 星标 {count}",
@@ -72,8 +69,13 @@
       "retry": "重试",
       "loadMore": "加载更多",
       "loadingMore": "正在加载…",
-      "errorTitle": "目录暂时不可用",
-      "errorBody": "商店没能连上目录服务，请稍后重试。"
+      "errorTitle": "目录暂时连不上",
+      "errorBody": "稍后再试。",
+      "hero": "7 万多个技能和 MCP，搜到就能装。",
+      "all": "全部",
+      "results": "「{q}」的结果",
+      "installsUnit": "安装",
+      "starsUnit": "星标"
     },
     "tier": {
       "official": "官方",
@@ -84,15 +86,10 @@
       "breadcrumb": "商店",
       "expand": "展开为整页",
       "close": "关闭详情",
-      "installs": "{count} 次安装",
-      "stars": "GitHub 星标 {count}",
-      "favorite": "收藏",
-      "unfavorite": "取消收藏",
-      "runsTitle": "安装后会执行",
-      "runCommand": "运行",
-      "runConnect": "连接",
+      "runsTitle": "安装内容",
+      "runCommand": "命令",
+      "runConnect": "地址",
       "providerNote": "安装时写入接入地址，你只需补充 API Key。",
-      "installTitle": "安装命令",
       "specsTitle": "规格",
       "version": "版本",
       "compatible": "兼容",
@@ -103,9 +100,9 @@
       "content": "技能内容",
       "notFound": "没有找到这个包",
       "runNeeds": "需要填写",
-      "runFiles": "复制文件",
-      "runsNone": "这个条目没有列出可安装的包或远程地址。",
-      "localNote": "桌面客户端自带的本地转发，不下载任何东西，也不需要密钥。",
+      "runFiles": "文件来源",
+      "runsNone": "上游没有列出安装方式，请到代码仓库查看。",
+      "localNote": "客户端自带，不需要另外下载，也不需要密钥。",
       "repository": "代码仓库",
       "files": "文件",
       "fileCount": "{count} 个文件",
@@ -115,7 +112,14 @@
       "deprecated": "发布者已将这个服务标为弃用。",
       "executable": "可执行",
       "symlink": "符号链接",
-      "moreFiles": "另有 {count} 个"
+      "moreFiles": "另有 {count} 个",
+      "upstream": "上游登记",
+      "by": "发布者",
+      "installsLabel": "安装量",
+      "starsLabel": "GitHub 星标",
+      "upstreamDoc": "摘自上游",
+      "filesTitle": "文件",
+      "breadcrumbLabel": "面包屑"
     },
     "lang": {
       "zh": "中文",
@@ -129,12 +133,13 @@
       "opened": "已在客户端中打开",
       "openedShort": "已打开",
       "download": "下载桌面客户端",
-      "fallbackNote": "唤不起客户端时会复制安装命令，并提示下载客户端。",
       "phoneNote": "在电脑上运行这条命令，或用桌面客户端安装。",
       "noCommand": "这条记录里没有能转成安装命令的包或远程地址，请到代码仓库查看配置方法。",
       "noteSkill": "将技能安装到 Claude Code 或 Codex。",
       "noteMcp": "把这个服务加进 Claude Code。命令里尖括号中的占位换成你自己的值。",
-      "noteProvider": "运行 Agent Store 命令行工具。"
+      "noteProvider": "运行 Agent Store 命令行工具。",
+      "note": "没装客户端也行，复制下面的命令。",
+      "commandTitle": "安装命令"
     },
     "notice": {
       "label": "提示",
@@ -145,6 +150,33 @@
       "downloadAlt": "前往下载页获取桌面客户端",
       "close": "关闭提示",
       "noCommandBody": "打开包的详情查看安装命令，或先下载桌面客户端。"
+    },
+    "hot": {
+      "title": "热门",
+      "note": "按安装量排序",
+      "unit": "次安装"
+    },
+    "sources": {
+      "skillCount": "8,391 个技能",
+      "skillFrom": "来自 GitHub 上的技能仓库。",
+      "mcpCount": "61,815 个 MCP 服务",
+      "mcpFrom": "来自官方 MCP Registry。",
+      "providerCount": "供应商预设",
+      "providerFrom": "接入地址已填好，补上你的 API Key 就能用。",
+      "note": "数字截至 2026-11-13，目录每 6 小时更新。"
+    },
+    "supplement": {
+      "offerTitle": "到其他技能目录里找找「{q}」",
+      "offerBody": "会把搜索词发给第三方技能目录站点 ClawHub、SkillHub、SkillsMP。只发送搜索词，不带账号或其他信息。",
+      "offerAction": "发送并查找",
+      "searching": "正在其他技能目录里查找…",
+      "foundTitle": "其他技能目录里的结果",
+      "listingsNote": "以下技能还没收录进商店，安装方式请到原站点查看。",
+      "viewOn": "在 {site} 查看",
+      "partial": "有的站点没有响应，结果可能不全。",
+      "none": "其他技能目录里也没有找到「{q}」。",
+      "unavailable": "暂时没法查询其他技能目录。",
+      "retry": "重试"
     }
   },
   "site": {

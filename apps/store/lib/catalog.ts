@@ -1,4 +1,4 @@
-import type { ResourceDetail, ResourceSummary } from '@as/types'
+import type { ResourceDetail, ResourceKind, ResourceSummary, SearchSupplementResponse } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import type { StoreQuery } from './resource'
 
@@ -11,6 +11,9 @@ const API_URL =
 // revalidate: 300s balances catalog freshness against serving stale-but-cached data
 // (via Next's Data Cache) when the API server is briefly unreachable.
 const client = new StoreClient(API_URL, { fetchInit: { next: { revalidate: 300 } } as RequestInit })
+// The supplement endpoint holds a request up to 10 s while a lookup runs.
+const live = new StoreClient(API_URL, { fetchInit: { cache: 'no-store' }, timeoutMs: 15_000 })
+const probe = new StoreClient(API_URL, { fetchInit: { next: { revalidate: 300 } } as RequestInit, timeoutMs: 3_000 })
 
 export const PAGE_SIZE = 50
 
@@ -36,4 +39,19 @@ export async function getResource(id: string): Promise<ResourceDetail | null> {
   if (result.data) return result.data
   if (result.status === 404) return null
   throw new Error(`Catalog unavailable: ${result.error}`)
+}
+
+/**
+ * Whether this deployment looks queries up on other skill directories. Asked with an
+ * empty query, which the API never sends anywhere.
+ */
+export async function supplementEnabled(): Promise<boolean> {
+  const { data } = await probe.searchSupplement({ q: '' })
+  return data !== null && data.status !== 'disabled'
+}
+
+/** Starts or joins a lookup on other skill directories; only after the visitor agreed to send the query. */
+export async function searchSupplement(q: string, kind: ResourceKind | null, wait: number): Promise<SearchSupplementResponse | null> {
+  const { data } = await live.searchSupplement({ q, kind: kind ?? undefined, wait })
+  return data
 }

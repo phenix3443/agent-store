@@ -5,6 +5,7 @@
   --edge: #221f33;
   --panel: rgba(255, 255, 255, 0.04);
   --panel-2: rgba(255, 255, 255, 0.065);
+  --panel-3: rgba(255, 255, 255, 0.12);
   --code: rgba(0, 0, 0, 0.35);
   --well: rgba(0, 0, 0, 0.25);
   --nav: rgba(15, 13, 24, 0.88);
@@ -24,6 +25,7 @@
   --provider: #5fd6a4;
   --warn: #ffb86b;
   --bad: #ff7a90;
+  --warn-rgb: 255 184 107;
   --skill-rgb: 183 156 255;
   --mcp-rgb: 98 184 255;
   --provider-rgb: 95 214 164;
@@ -2041,43 +2043,345 @@
     margin-top: 40px;
   }
 
-  /* Corner marks of the previous design. Kept dim until the pages that use them are redone. */
-  .plate {
-    position: relative;
-  }
-
-  .plate-mark {
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    pointer-events: none;
-  }
-
-  .plate-mark::before,
-  .plate-mark::after {
-    content: '';
-    position: absolute;
-    background: var(--line-strong);
-  }
-
-  .plate-mark::before {
-    left: 7px;
-    top: 0;
-    width: 1px;
-    height: 15px;
-  }
-
-  .plate-mark::after {
-    top: 7px;
-    left: 0;
-    height: 1px;
-    width: 15px;
-  }
-
   /* While a filter or search navigation is in flight (set by useStoreQuery). */
   [data-store-pending] .store-results {
     opacity: 0.55;
     transition: opacity 150ms 120ms;
+  }
+
+  .searchbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 60px;
+    padding: 0 14px 0 18px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-lg);
+    background: var(--nav);
+    color: var(--fg-3);
+    transition:
+      border-color 200ms,
+      box-shadow 250ms;
+  }
+
+  .searchbar:hover {
+    border-color: var(--line-hover);
+  }
+
+  .searchbar:focus-within {
+    border-color: rgb(var(--mcp-rgb) / 0.75);
+    box-shadow:
+      0 0 0 5px rgb(var(--mcp-rgb) / 0.13),
+      0 20px 60px rgb(var(--mcp-rgb) / 0.16);
+  }
+
+  .searchbar input {
+    height: 100%;
+    min-width: 0;
+    flex: 1;
+    background: transparent;
+    color: var(--fg);
+    font-size: 17px;
+    outline: none;
+  }
+
+  .searchbar input::placeholder {
+    color: var(--fg-3);
+  }
+
+  .searchbar input::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
+  /* The row scrolls, which would clip an outer ring. */
+  .seg {
+    scrollbar-width: none;
+  }
+
+  .seg > button:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .seg button[data-kind][aria-pressed='true'] {
+    background: rgb(var(--kind-rgb) / 0.2);
+    box-shadow:
+      0 0 0 1px rgb(var(--kind-rgb) / 0.45) inset,
+      0 4px 18px rgb(var(--kind-rgb) / 0.2);
+  }
+
+  .kind-tile {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgb(var(--kind-rgb) / 0.38);
+    border-radius: 12px;
+    background: linear-gradient(160deg, rgb(var(--kind-rgb) / 0.3), rgb(var(--kind-rgb) / 0.06));
+    color: var(--kind);
+    box-shadow: 0 6px 22px rgb(var(--kind-rgb) / 0.18);
+  }
+
+  .kind-tile-lg {
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
+  }
+
+  .sk {
+    display: block;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--panel-2) 25%, var(--panel-3) 50%, var(--panel-2) 75%);
+    background-size: 200% 100%;
+    animation: sk 1.3s linear infinite;
+  }
+
+  /* The list's rows lay out by the width of the list, which shrinks beside the detail drawer. */
+  .store-rows {
+    container-type: inline-size;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .store-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 12px;
+    padding: 14px;
+    border-top: 1px solid var(--line);
+    transition: background-color 200ms;
+  }
+
+  .store-row:first-child {
+    border-top: 0;
+  }
+
+  .store-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--kind);
+    opacity: 0;
+    transform: scaleY(0.4);
+    transition:
+      opacity 250ms var(--ease),
+      transform 250ms var(--ease);
+  }
+
+  .store-row:hover,
+  .store-row[data-current] {
+    background: linear-gradient(90deg, rgb(var(--kind-rgb) / 0.12), transparent 55%);
+  }
+
+  .store-row:hover::before,
+  .store-row[data-current]::before {
+    opacity: 1;
+    transform: none;
+  }
+
+  .store-row .kind-tile {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--r);
+  }
+
+  .store-row-desc {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--fg-2);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .store-row-stat {
+    display: none;
+    color: var(--fg-2);
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 13.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .store-row-stat small {
+    display: block;
+    color: var(--fg-3);
+    font-family: var(--font-sans), sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .store-row-act {
+    position: relative;
+    z-index: 1;
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  @container (min-width: 560px) {
+    .store-row {
+      grid-template-columns: 44px minmax(0, 1fr) 84px auto;
+      gap: 6px 16px;
+      padding: 14px 18px;
+    }
+
+    .store-row .kind-tile {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+    }
+
+    .store-row-stat {
+      display: block;
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .store-row-stat-2 {
+      display: none;
+    }
+
+    .store-row-meta-stat {
+      display: none;
+    }
+
+    .store-row-act {
+      grid-column: 4;
+    }
+  }
+
+  @container (min-width: 900px) {
+    .store-row {
+      grid-template-columns: 44px minmax(0, 1.1fr) minmax(0, 1.5fr) 84px 84px auto;
+    }
+
+    .store-row-desc {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    .store-row-stat {
+      grid-column: 4;
+    }
+
+    .store-row-stat-2 {
+      display: block;
+      grid-column: 5;
+    }
+
+    .store-row-act {
+      grid-column: 6;
+    }
+  }
+
+  .hot-card {
+    position: relative;
+    display: flex;
+    min-height: 150px;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    transition:
+      transform 250ms var(--ease),
+      border-color 200ms,
+      background-color 200ms;
+  }
+
+  .hot-card:hover {
+    transform: translateY(-3px);
+    border-color: rgb(var(--kind-rgb) / 0.45);
+    background: rgb(var(--kind-rgb) / 0.07);
+  }
+
+  .install-card {
+    border-color: rgb(var(--kind-rgb) / 0.38);
+    background: linear-gradient(165deg, rgb(var(--kind-rgb) / 0.2), rgba(255, 255, 255, 0.03) 55%);
+    box-shadow: 0 24px 70px rgb(var(--kind-rgb) / 0.14);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--line);
+  }
+
+  .stats > div {
+    min-width: 0;
+    padding: 16px 18px;
+    background: var(--bg-2);
+  }
+
+  .stats dt {
+    color: var(--fg-3);
+    font-size: 12.5px;
+  }
+
+  .stats dd {
+    overflow: hidden;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stats dd.mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.9;
+  }
+
+  .notice {
+    border: 1px solid rgb(var(--warn-rgb) / 0.4);
+    border-radius: var(--r);
+    background: rgb(var(--warn-rgb) / 0.08);
+    padding: 12px 14px;
+    color: var(--fg-2);
+    font-size: 14px;
+  }
+
+  .radio-row {
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    gap: 12px;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .radio-row:has(input:checked) {
+    background: rgb(var(--kind-rgb) / 0.14);
+  }
+
+  .radio-row input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--kind);
+  }
+}
+
+@keyframes sk {
+  to {
+    background-position: -200% 0;
   }
 }
 
@@ -2133,11 +2437,16 @@
   }
 }
 
+/* The store's own search bar replaces the one in the nav while it is on the page. */
+body:has([data-store-search]) [data-nav-search] {
+  display: none !important;
+}
+
 @media (min-width: 1024px) {
   /* The drawer takes the right 520px, so the list keeps its own column
      instead of running underneath it. */
   body:has([data-item-drawer]) .store-shell {
-    padding-right: calc(520px + 2.5rem);
+    padding-right: calc(520px + 10px + 24px);
   }
 }
 

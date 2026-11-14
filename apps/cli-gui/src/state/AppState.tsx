@@ -5,8 +5,8 @@ export type NavView = 'browse' | 'overview' | 'settings'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
 export type ListFilter =
   | 'all' | 'featured' | 'popular' | 'recent' | 'recommended' | 'installed' | 'enabled' | 'disabled' | 'updates'
-export type SettingsTab = 'account' | 'general' | 'about'
-export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | null
+export type SettingsTab = 'general' | 'agents' | 'data' | 'account' | 'cli' | 'about'
+export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | 'welcome' | null
 
 interface AppStateValue {
   agentApp: AgentApp

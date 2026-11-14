@@ -13,7 +13,7 @@ const config: Config = {
       colors: {
         bg: { DEFAULT: 'var(--bg)', 2: 'var(--bg-2)', 3: 'var(--bg-3)' },
         fg: { DEFAULT: 'var(--fg)', 2: 'var(--fg-2)', 3: 'var(--fg-3)' },
-        panel: { DEFAULT: 'var(--panel)', 2: 'var(--panel-2)' },
+        panel: { DEFAULT: 'var(--panel)', 2: 'var(--panel-2)', 3: 'var(--panel-3)' },
         line: { DEFAULT: 'var(--line)', strong: 'var(--line-strong)' },
         edge: 'var(--edge)',
         code: 'var(--code)',
@@ -26,19 +26,6 @@ const config: Config = {
         provider: kind('provider'),
         warn: 'var(--warn)',
         bad: 'var(--bad)',
-
-        // Names from the previous design, still used by the store list and detail that #161 redoes.
-        // Remove each once nothing references it.
-        paper: 'var(--bg)',
-        plate: 'var(--bg-2)',
-        ink: { DEFAULT: 'var(--fg)', 2: 'var(--fg-2)' },
-        sel: 'var(--panel-2)',
-        fill: 'var(--panel)',
-        danger: 'var(--bad)',
-      },
-      // The old design drew section rules in ink; at full text brightness they glare on the dark ground.
-      borderColor: {
-        ink: 'var(--fg-3)',
       },
       boxShadow: {
         nav: '0 10px 40px rgba(0, 0, 0, 0.35)',

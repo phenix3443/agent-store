@@ -4,7 +4,6 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
-import { ClientStateProvider } from '@/components/ClientStateProvider'
 import { Header } from '@/components/Header'
 import { SiteFooter } from '@/components/SiteFooter'
 import { InstallNoticeProvider } from '@/components/InstallNotice'
@@ -72,24 +71,22 @@ export default async function RootLayout({
     >
       <body className="min-h-screen bg-bg font-sans text-fg antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ClientStateProvider>
-            <InstallNoticeProvider>
-              <SkipLink />
-              <div className="relative isolate flex min-h-screen flex-col">
-                <div aria-hidden className="aurora -z-10 !bottom-auto h-[760px]">
-                  <i />
-                  <i />
-                  <i />
-                </div>
-                <Header user={user} loginProviders={enabledLoginProviders()} />
-                <main id="main" tabIndex={-1} className="flex-1 outline-none">
-                  {children}
-                </main>
-                <SiteFooter />
+          <InstallNoticeProvider>
+            <SkipLink />
+            <div className="relative isolate flex min-h-screen flex-col">
+              <div aria-hidden className="aurora -z-10 !bottom-auto h-[760px]">
+                <i />
+                <i />
+                <i />
               </div>
-              {drawer}
-            </InstallNoticeProvider>
-          </ClientStateProvider>
+              <Header user={user} loginProviders={enabledLoginProviders()} />
+              <main id="main" tabIndex={-1} className="flex-1 outline-none">
+                {children}
+              </main>
+              <SiteFooter />
+            </div>
+            {drawer}
+          </InstallNoticeProvider>
         </NextIntlClientProvider>
         <SpeedInsights />
         <Analytics />

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
-# catalog switch (#125), the skill library (#111) and the window shell (#163). Each step is driven by an
+# catalog switch (#125), the skill library (#111), the window shell (#163) and the
+# welcome, usage and settings pages (#165). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -60,11 +61,19 @@ LIB=$HOME/.agent-store/skills
 (cd /work && bun test/desktop-linux/seed-old-home.ts "$HOME")
 check "seeded the old ~/.agents layout" '[ -f "$HOME/.agents/registry.json" ] && links_to "$HOME/.claude/skills/legacy-skill" "$HOME/.agents/skills/legacy-skill"'
 
-# 1. First launch: the app's first sidecar call moves ~/.agents to ~/.agent-store.
+# 1. First launch: the app's first sidecar call moves ~/.agents to ~/.agent-store,
+#    and the welcome opens once. Enter (focus is on 开始使用) closes it for good.
 "$APP" >"$OUT/app-first.log" 2>&1 &
 sleep "$SETTLE"
-shot 00-first-launch-discover
+shot 00-first-launch-welcome
+WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
+eval "$(xdotool getwindowgeometry --shell "$WIN")"
+xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT - 60))
+xdotool key Return
+sleep 2
+shot 00b-first-launch-discover
 stop_app
+check "the welcome was recorded as seen" '[ -n "$(find "$XDG_DATA_HOME" -path "*agent-store-cli/welcome.json" 2>/dev/null)" ]'
 check "migration moved the registry" '[ -f "$HOME/.agent-store/registry.json" ] && [ ! -e "$HOME/.agents/registry.json" ]'
 check "migrated skill is in the library" '[ -f "$LIB/legacy-skill/SKILL.md" ] && [ ! -e "$HOME/.agents/skills/legacy-skill" ]'
 check "Claude link points at the library" 'links_to "$HOME/.claude/skills/legacy-skill" "$LIB/legacy-skill"'
@@ -141,8 +150,10 @@ shot 13-installed-list
 stop_app
 
 # 10. The window shell, driven by its shortcuts: sidebar counts, the command
-#     palette, the usage and settings pages, the shortcut list and the narrow
-#     window with the icon-only sidebar.
+#     palette, the usage page on seeded relay usage, each settings tab, the
+#     shortcut list and the narrow window with the icon-only sidebar.
+(cd /work && bun test/desktop-linux/seed-usage.ts "$HOME/.agent-store")
+check "seeded relay usage" '[ -f "$HOME/.agent-store/usage.db" ]'
 "$APP" >"$OUT/app-shell.log" 2>&1 &
 sleep "$SETTLE"
 WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
@@ -159,11 +170,33 @@ shot 15-command-palette
 xdotool key Escape
 sleep 1
 xdotool key ctrl+5
-sleep 6
+sleep 8
 shot 16-usage
 xdotool key ctrl+6
 sleep 2
-shot 17-settings
+shot 17-settings-general
+# The settings tabs sit 118px below the title bar's top edge; focus the first and
+# arrow along (Radix Tabs activates the focused tab).
+settings_tab() {
+  xdotool mousemove $((X + 204 + 22 + 20)) $((Y + 118)) click 1
+  sleep 1
+  for _ in $(seq "$1"); do xdotool key Right; sleep 0.3; done
+  sleep "${2:-2}"
+}
+settings_tab 1
+# Tab leaves the tab list for the panel, then reaches 开始检查.
+xdotool key Tab Tab Return
+sleep 10
+shot 17b-settings-agents-doctor
+settings_tab 2 4
+shot 17c-settings-data
+settings_tab 3
+shot 17d-settings-account
+settings_tab 4
+shot 17e-settings-cli
+settings_tab 5
+shot 17f-settings-about
+xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2))
 xdotool key question
 sleep 1
 shot 18-shortcuts
@@ -172,6 +205,9 @@ xdotool key ctrl+1
 xdotool windowsize "$WIN" 960 680
 sleep 4
 shot 19-narrow-window
+xdotool key ctrl+5
+sleep 8
+shot 20-narrow-usage
 stop_app
 
 cli search find-skills --kind skill
