@@ -35,12 +35,10 @@ const config: Config = {
         warn: rgb('warn'),
         bad: rgb('bad'),
         kind: rgb('kind'),
-        // Legacy names for the pages #164 and #165 rebuild.
+        // Legacy names for the pages #164 rebuilds.
         store: {
-          win: 'var(--win)',
           sidebar: 'var(--sidebar)',
           content: 'var(--content)',
-          chrome: 'var(--chrome)',
           panel: 'var(--panel)',
           'panel-2': 'var(--panel-2)',
           border: 'var(--border)',
@@ -56,13 +54,7 @@ const config: Config = {
           'amber-soft': 'var(--amber-soft)',
           red: 'var(--red)',
           'red-soft': 'var(--red-soft)',
-          provider: 'var(--provider)',
-          'provider-soft': 'var(--provider-soft)',
-          purple: 'var(--purple)',
-          'purple-soft': 'var(--purple-soft)',
           'term-bg': 'var(--term-bg)',
-          'code-bg': 'var(--code-bg)',
-          bg: 'var(--bg)',
         },
       },
     },

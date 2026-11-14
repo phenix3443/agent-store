@@ -1,3 +1,4 @@
+import { resolvePaths, runDoctor } from '@as/client-core'
 import type { Engine, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
@@ -41,6 +42,7 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   getBudget: (e) => e.getBudget(),
   setBudget: (e, a) => e.setBudget(a[0] as BudgetConfig),
   getBudgetStatus: (e) => e.getBudgetStatus(),
+  doctor: () => runDoctor(resolvePaths()),
 }
 
 /**

@@ -29,10 +29,10 @@ test('shows spend vs limit and percentage when a budget is set', async () => {
 
   render(<BudgetCard />)
 
-  expect(await screen.findByText('$42.00')).toBeInTheDocument()
-  expect(screen.getByText('/ $100.00')).toBeInTheDocument()
-  expect(screen.getByText('42%')).toBeInTheDocument()
-  expect(screen.getByText('预计月末 $84.00')).toBeInTheDocument()
+  expect(await screen.findByText((_, el) => el?.tagName === 'DD' && el.textContent === '$42.00 / $100.0042%')).toBeInTheDocument()
+  expect(screen.getByText('预计月末')).toBeInTheDocument()
+  expect(screen.getByText('$84.00')).toBeInTheDocument()
+  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '42')
 })
 
 test('shows the input to set a budget when no limit exists', async () => {
@@ -45,6 +45,24 @@ test('shows the input to set a budget when no limit exists', async () => {
 
   expect(await screen.findByLabelText('月度预算')).toBeInTheDocument()
   expect(screen.getByText('保存')).toBeInTheDocument()
+  expect(await screen.findByText('尚未设置预算。')).toBeInTheDocument()
+})
+
+test('rejects a negative limit without calling setBudget', async () => {
+  let saved: BudgetConfig | undefined
+  mockRpc(
+    { monthlyLimitUsd: null, spentUsd: 0, monthStart: '2026-07-01', fraction: null, projectedUsd: 0, projectedOverBudget: false, alertLevel: 'none' },
+    { monthlyLimitUsd: null, alertThresholds: [0.8, 1] },
+    (c) => { saved = c }
+  )
+
+  render(<BudgetCard />)
+
+  fireEvent.change(await screen.findByLabelText('月度预算'), { target: { value: '-5' } })
+  fireEvent.click(screen.getByText('保存'))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('请输入不小于 0 的数字')
+  expect(saved).toBeUndefined()
 })
 
 test('saving a budget calls setBudget with the entered limit', async () => {
@@ -73,4 +91,15 @@ test('renders an over-budget warning when alertLevel is over', async () => {
   render(<BudgetCard />)
 
   expect(await screen.findByText('已超出预算')).toBeInTheDocument()
+})
+
+test('renders a near-limit warning when alertLevel is warn', async () => {
+  mockRpc(
+    { monthlyLimitUsd: 20, spentUsd: 17, monthStart: '2026-07-01', fraction: 0.85, projectedUsd: 30, projectedOverBudget: true, alertLevel: 'warn' },
+    { monthlyLimitUsd: 20, alertThresholds: [0.8, 1] }
+  )
+
+  render(<BudgetCard />)
+
+  expect(await screen.findByText('接近预算上限')).toBeInTheDocument()
 })

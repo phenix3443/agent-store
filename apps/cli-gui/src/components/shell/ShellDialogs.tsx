@@ -7,6 +7,7 @@ import { Button } from '../ui/button'
 import { Kbd } from '../ui/badge'
 import { EmptyState } from '../ui/states'
 import { ProxyLogModal } from '../ProxyLogModal'
+import { WelcomeDialog } from '../WelcomeDialog'
 import { cn } from '../ui/cn'
 
 const LINE_COLOR = { default: 'text-fg-2', green: 'text-provider', red: 'text-bad' } as const
@@ -89,6 +90,7 @@ export function ShellDialogs() {
         </DialogContent>
       </Dialog>
       <ProxyLogModal open={shellDialog === 'requestLog'} onOpenChange={close} />
+      <WelcomeDialog />
     </>
   )
 }

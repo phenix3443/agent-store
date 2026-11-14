@@ -29,8 +29,8 @@ test('shows title and subtitle with relay address', async () => {
 
   render(<ProxyLogModal open onOpenChange={() => {}} />)
 
-  expect(await screen.findByText('本地代理 · 请求日志')).toBeInTheDocument()
-  expect(await screen.findByText((_, el) => el?.textContent === '127.0.0.1:8787 · 按 Level 顺序转发，失败自动降级')).toBeInTheDocument()
+  expect(await screen.findByText('本地中转 · 请求日志')).toBeInTheDocument()
+  expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === '127.0.0.1:8787 · 最近的请求：转发到了哪个供应商，是否降级。')).toBeInTheDocument()
 })
 
 test('shows recent request rows with provider route and fallback badge', async () => {
@@ -50,6 +50,23 @@ test('does not show fallback badge for non-fallback rows', async () => {
 
   await screen.findByText((_, el) => el?.textContent === '→ p1')
   expect(screen.queryByText('降级')).not.toBeInTheDocument()
+})
+
+test('shows the status code, agent name and an error status in the bad color', async () => {
+  mockRpc([row({ id: 3, statusCode: 502, target: 'codex' })])
+
+  render(<ProxyLogModal open onOpenChange={() => {}} />)
+
+  expect(await screen.findByText('502')).toHaveClass('text-bad')
+  expect(screen.getByText('Codex')).toBeInTheDocument()
+})
+
+test('shows an empty state when the relay has no requests yet', async () => {
+  mockRpc([])
+
+  render(<ProxyLogModal open onOpenChange={() => {}} />)
+
+  expect(await screen.findByText('还没有经过本地中转的请求。')).toBeInTheDocument()
 })
 
 test('does not fetch when closed', () => {
