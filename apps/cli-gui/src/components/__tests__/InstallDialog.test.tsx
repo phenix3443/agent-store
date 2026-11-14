@@ -275,6 +275,27 @@ test('a same-name MCP entry pauses the install until the agent is skipped', asyn
   expect(dialog).toHaveTextContent('已跳过：保留了原有的同名条目')
 })
 
+test('a same-name MCP entry can be replaced from the install, saying what changes and what does not', async () => {
+  mockRpc({
+    enable: (_s, _t, opts) => {
+      if (!(opts as { replace?: boolean } | undefined)?.replace) throw new rpcModule.RpcError('exists', 'McpConflictError', { tool: 'claude' })
+    },
+  })
+  await renderDialog()
+  await openLink('agent-store://install?slug=filesystem')
+  await screen.findByRole('button', { name: '安装' })
+  await click('安装')
+
+  const paused = await screen.findByRole('dialog', { name: '正在安装 Filesystem' })
+  await waitFor(() => expect(paused).toHaveTextContent('把原条目保存到 ~/.agent-store/mcps/filesystem/targets.json'))
+  expect(paused).toHaveTextContent('先用 Claude Code 的命令行在临时目录里试写一次原条目')
+  expect(paused).toHaveTextContent('~/.claude.json 里的其他 MCP 条目')
+  await click('替换现有条目')
+  const dialog = await screen.findByRole('dialog', { name: '已安装 Filesystem' })
+  expect(dialog).toHaveTextContent('已替换原有条目，原条目已保存')
+  expect(rpc('enable').map((c) => c.args)).toEqual([['filesystem', 'claude'], ['filesystem', 'claude', { replace: true }]])
+})
+
 test('a skill shows its library path and is installed and linked in one call', async () => {
   mockRpc()
   await renderDialog()
@@ -657,4 +678,22 @@ test('添加项目… in the location list registers a folder and comes back wit
   const back = await screen.findByRole('dialog', { name: '确认安装' })
   await waitFor(() => expect(location(back).value).toBe('p3'))
   expect(rpc('addProject')).toEqual([{ method: 'addProject', args: ['/w/new'] }])
+})
+
+test('a project that already has the item is greyed out in the location list', async () => {
+  const other = { id: 'p2', path: '/w/other', name: 'other', addedAt: '2026-11-01T00:00:00Z', exists: true }
+  mockRpc({
+    listProjects: () => [demo, other],
+    projectSummaries: () => [
+      { ...demo, skills: 1, mcps: 0, installed: [{ kind: 'skill', slug: 'pdf-tools', resourceId: skillId, name: 'pdf-tools' }] },
+      { ...other, skills: 0, mcps: 0, installed: [] },
+    ],
+  })
+  await renderWithProjects()
+  await openLink(`agent-store://install?id=${encodeURIComponent(skillId)}`)
+  const dialog = await screen.findByRole('dialog', { name: '确认安装' })
+  await waitFor(() => expect(location(dialog).options[1].disabled).toBe(true))
+  const select = location(dialog)
+  expect(select.options[1].textContent).toContain('已在这个项目中')
+  expect(select.options[2].disabled).toBe(false)
 })

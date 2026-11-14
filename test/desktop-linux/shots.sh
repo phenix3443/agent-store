@@ -332,7 +332,102 @@ shot 27-project-trusted-key-stored
 stop_app
 cli projects show "$PROJ"
 
-# 12. Sign-in and favorites (#195), against mock-store.ts: the store's device sign-in and
+# 12. Library gaps (#194). 在文件管理器中显示 goes to the desktop's file manager over D-Bus; a
+#     stand-in records what it was asked to show.
+REVEAL_LOG=$OUT/reveal.txt
+python3 /work/test/desktop-linux/fake-filemanager.py "$REVEAL_LOG" >"$OUT/fake-filemanager.log" 2>&1 &
+sleep 2
+"$APP" >"$OUT/app-library.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+2
+sleep 15
+# From the page search: the four filter buttons, select all, the row's checkbox, then the row.
+xdotool key slash
+xdotool type --delay 60 'legacy'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab Tab Tab Return
+sleep 4
+shot 28-skill-pane-library-path
+# The row's two switches, the pane's close button and its two switches, then 在文件管理器中显示.
+xdotool key Tab Tab Tab Tab Tab Tab Return
+sleep 3
+shot 28b-skill-revealed
+check "在文件管理器中显示 handed the skill's library folder to the file manager" 'grep -q "^items file://$LIB/legacy-skill$" "$REVEAL_LOG"'
+
+# Select both skills, then 停用 › Codex for all of them in one batch.
+xdotool key Escape
+sleep 1
+xdotool key slash ctrl+a BackSpace
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+shot 29-bulk-bar
+xdotool key Tab Tab Return
+sleep 1
+xdotool key Down Down Return
+sleep 12
+shot 29b-bulk-disable-results
+check "bulk 停用 › Codex removed the Codex link and kept Claude's" '[ ! -e "$HOME/.codex/skills/legacy-skill" ] && links_to "$HOME/.claude/skills/legacy-skill" "$LIB/legacy-skill"'
+xdotool key Escape
+sleep 1
+stop_app
+
+# 替换现有条目: Claude Code already has its own entry under context7's name. Taking it over needs
+# the claude CLI, which tries the restore in a scratch config first.
+CLAUDE_CLI=/opt/claude-cli/bin/claude
+CTX=$(printf '[]\n' | "$SIDECAR" __rpc list - | python3 -c 'import json,sys; print(next(e["slug"] for e in json.load(sys.stdin)["data"] if e.get("resourceId") == sys.argv[1]))' "$NPM_MCP_ID")
+cli uninstall "$CTX"
+"$CLAUDE_CLI" mcp add-json --scope user "$CTX" '{"type":"stdio","command":"echo","args":["mine"]}' >>"$OUT/cli.txt" 2>&1
+check "the user's own context7 entry is in ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\")" "$HOME/.claude.json" "$CTX"'
+export AS_CLAUDE_BIN=$CLAUDE_CLI CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+install_link "$NPM_MCP_ID"
+confirm 25
+shot 30-takeover-conflict
+# Focus is on 跳过 Claude Code; the next button is 替换现有条目.
+xdotool key Tab Return
+sleep 30
+shot 31-takeover-done
+check "替换现有条目 saved the user's entry in targets.json" 'python3 -c "import json,sys; p=json.load(open(sys.argv[1]))[\"claude\"][\"previous\"]; sys.exit(p[\"command\"] != \"echo\")" "$HOME/.agent-store/mcps/$CTX/targets.json"'
+check "替换现有条目 wrote Agent Store's entry in its place" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(\"@upstash/context7-mcp\" not in json.dumps(e))" "$HOME/.claude.json" "$CTX"'
+stop_app
+
+# Bulk 卸载 on the MCP page: confirmed, then the entry it replaced is written back.
+"$APP" >"$OUT/app-bulk-uninstall.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+3
+sleep 20
+xdotool key slash
+xdotool type --delay 60 'context7'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+xdotool key Tab Tab Tab Return
+sleep 2
+shot 32-bulk-uninstall-confirm
+# The confirmation opens on 取消; 卸载 is next.
+xdotool key Tab Return
+sleep 25
+shot 32b-bulk-uninstall-results
+check "bulk 卸载 wrote the user's own entry back to ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\" or e[\"args\"] != [\"mine\"])" "$HOME/.claude.json" "$CTX"'
+check "bulk 卸载 removed context7 from the library" '[ ! -e "$HOME/.agent-store/mcps/$CTX" ]'
+stop_app
+unset AS_CLAUDE_BIN CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+
+# A project folder that is gone: the page shows what it last read there, read-only.
+check "the project page remembered what it last read" '[ -n "$(find "$XDG_DATA_HOME" -path "*agent-store-cli/project-snapshots.json" 2>/dev/null)" ]'
+mv "$PROJ" "$PROJ.moved"
+"$APP" >"$OUT/app-project-missing.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+shot 33-sidebar-project-missing
+open_project
+shot 33b-project-missing-last-read
+stop_app
+mv "$PROJ.moved" "$PROJ"
+
+# 13. Sign-in and favorites (#195), against mock-store.ts: the store's device sign-in and
 #     account endpoints, the rest forwarded to the live test store. First without a Secret
 #     Service (the sign-in lasts one run and says so), then with GNOME Keyring running.
 MOCK_PORT=18790
@@ -364,18 +459,18 @@ no_token_on_disk() {
 start_app
 palette 'act:signin'
 sleep 3
-shot 28-signin-waiting
+shot 34-signin-waiting
 sleep 18
-shot 29-signed-in-not-saved
+shot 35-signed-in-not-saved
 check "the device sign-in got a session" '[ "$(mock "len(s[\"issued\"])")" = 1 ]'
 check "the local favorite was added to the account" '[ "$(mock "s[\"favorites\"][0]")" = "$SKILL_ID" ]'
 palette 'go:favorites'
 sleep 10
-shot 30-favorites
+shot 36-favorites
 stop_app
 check "no session token under ~/.agent-store, the app data folder, ~/.config or a sidecar command line" 'no_token_on_disk'
 start_app
-shot 31-restart-without-keyring-signed-out
+shot 37-restart-without-keyring-signed-out
 stop_app
 check "without Secret Service the sign-in did not outlive the app" '[ "$(mock "sum(s[\"exchanges\"].values())")" = 1 ]'
 
@@ -386,21 +481,21 @@ check "GNOME Keyring answers on the session bus" 'printf x | secret-tool store -
 start_app
 palette 'act:signin'
 sleep 22
-shot 32-signed-in-saved
+shot 38-signed-in-saved
 stop_app
 SESSION=$(mock 's["issued"][-1]')
 check "the session token is in Secret Service" '[ -n "$SESSION" ] && [ "$(keyring_secret)" = "$SESSION" ]'
 check "still no session token on disk" 'no_token_on_disk'
 before=$(mock "s['exchanges'].get('$SESSION', 0)")
 start_app
-shot 33-restart-still-signed-in
+shot 39-restart-still-signed-in
 stop_app
 check "a restart signs in from Secret Service" '[ "$(mock "s[\"exchanges\"].get(\"$SESSION\", 0)")" -gt "$before" ]'
 curl -fs -X POST "$MOCK/__revoke" >/dev/null
 AS_STORE_URL=$MOCK "$APP" >>"$OUT/app-auth.log" 2>&1 &
 # The notice toast stays 12 s.
 sleep 8
-shot 34-session-revoked
+shot 40-session-revoked
 stop_app
 check "a revoked session signs out and leaves Secret Service" '[ -z "$(keyring_secret)" ]'
 start_app
@@ -409,7 +504,7 @@ sleep 22
 SESSION=$(mock 's["issued"][-1]')
 palette 'act:signout'
 sleep 5
-shot 35-signed-out
+shot 41-signed-out
 stop_app
 check "sign-out ends the session on the server" '[ "$(mock "\"$SESSION\" in s[\"signOuts\"]")" = True ]'
 check "sign-out deletes the credential" '[ -z "$(keyring_secret)" ]'

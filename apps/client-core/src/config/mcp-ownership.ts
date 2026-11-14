@@ -118,7 +118,7 @@ export async function enableMcpEntry(
     let adopted = previous
     let cliVersion = record?.cliVersion
     if (adopted === null) {
-      if (!s.cli) throw new McpNotRestorableError(tool, name, [`(the ${tool} CLI is not installed; --replace needs it to check the restore)`])
+      if (!s.cli) throw new McpNotRestorableError(tool, name, [`(the ${tool} CLI is not installed; --replace needs it to check the restore)`], true)
       const lost = await s.cli.trialRestore(name, current)
       if (lost.length) throw new McpNotRestorableError(tool, name, lost)
       adopted = current

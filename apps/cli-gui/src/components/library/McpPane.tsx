@@ -15,6 +15,8 @@ import { Banner } from '../ui/states'
 import { AgentList, AgentSwitch, DetailPane, ErrorDetails, FailureBanner, PaneHead, Section } from './parts'
 import { DangerSection, VersionSection } from './common'
 import type { TargetToggle } from './useTargetToggle'
+import { TakeoverDialog, type TakeoverRequest } from './Takeover'
+import { toast } from '../ui/toast'
 
 export interface SchemaProperty {
   title?: string
@@ -134,6 +136,7 @@ export function McpPane({
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState<{ message: string; detail?: string } | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [takeover, setTakeover] = useState<TakeoverRequest | null>(null)
 
   async function refreshStatus() {
     setStatus(await callRpc<TargetStatus[]>('getTargetStatus', [slug]))
@@ -204,7 +207,13 @@ export function McpPane({
       />
       {(failure || saveError || warn) && (
         <div className="mt-3 flex flex-col gap-2">
-          {failure && <FailureBanner failure={failure} onDismiss={toggle.dismiss} />}
+          {failure && (
+            <FailureBanner
+              failure={failure}
+              onReplace={() => setTakeover({ slug, name: row.name, target: failure.target, dir: row.dir })}
+              onDismiss={toggle.dismiss}
+            />
+          )}
           {saveError && (
             <Banner tone="error" title={t('policy.saveFailed')}>
               <p>{saveError.message}</p>
@@ -221,9 +230,10 @@ export function McpPane({
             const s = status.find((x) => x.target === agent.id)
             const on = s ? s.enabled : !!row.enabledFor[agent.id]
             const reason = blockerText(s, agent.name, t)
+            const replaced = on && !!row.replacedFor?.includes(agent.id)
             return {
               agent,
-              note: on ? `${agent.mcp} › ${agent.mcpKey}.${slug}` : (reason ?? t('st.off')),
+              note: on ? `${agent.mcp} › ${agent.mcpKey}.${slug}${replaced ? ` · ${t('takeover.saved')}` : ''}` : (reason ?? t('st.off')),
               noteMono: on,
               right: (
                 <AgentSwitch
@@ -279,6 +289,15 @@ export function McpPane({
 
       <VersionSection row={row} onUpdate={onUpdate} updating={updating} />
       <DangerSection label={t('act.uninstall')} onClick={onUninstall} />
+      <TakeoverDialog
+        request={takeover}
+        onClose={() => setTakeover(null)}
+        onReplace={async (r) => {
+          const failed = await toggle.toggle(r.slug, r.target, false, false, true)
+          if (!failed) toast(t('takeover.done'))
+          return failed
+        }}
+      />
     </DetailPane>
   )
 }
