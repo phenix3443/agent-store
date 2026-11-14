@@ -42,7 +42,7 @@ export type {
   BackupChangeAction, BackupAppliedChange, BackupSyncResult, BackupResolveResult, BackupSnapshot, BackupRestoreResult,
   BackupHistoryEntry,
 } from './backup'
-export type { Plan, SubscriptionStatus, Entitlements } from './entitlement'
+export type { Plan, SubscriptionStatus, SubscriptionPeriod, MySubscription, Entitlements } from './entitlement'
 export { PRICING, formatPrice } from './pricing'
 export type { BillingPeriod } from './pricing'
 export type {

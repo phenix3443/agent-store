@@ -1,6 +1,7 @@
-// CI only (store-screenshots.yml): adds two signed-in demo users to an app.db built
-// by ci-app-db.mjs and prints their session cookies as JSON, {"free": "...", "pro": "..."}.
-// ci-entitlements-proxy.mjs answers "pro" for the user whose email starts with pro.
+// CI only (store-screenshots.yml): adds signed-in demo users to an app.db built by
+// ci-app-db.mjs and prints their session cookies as JSON, {"free": "...", "pro": "...", ...}.
+// ci-entitlements-proxy.mjs answers each user's plan and subscription from the
+// first word of their email (free, pro, canceling, canceled).
 // The cookie is Better Auth's: "<token>.<base64 HMAC-SHA256 of token>", URL-encoded.
 //
 // Usage: BETTER_AUTH_SECRET=... node scripts/ci-demo-session.mjs <app.db>
@@ -18,7 +19,7 @@ const db = new DatabaseSync(file)
 const now = new Date().toISOString()
 const expires = new Date(Date.now() + 7 * 864e5).toISOString()
 const cookies = {}
-for (const plan of ['free', 'pro']) {
+for (const plan of ['free', 'pro', 'canceling', 'canceled']) {
   const userId = randomUUID()
   const token = randomUUID().replaceAll('-', '')
   db.prepare('INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt, username) VALUES (?, ?, ?, 1, NULL, ?, ?, ?)').run(

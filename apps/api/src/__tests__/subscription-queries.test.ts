@@ -19,6 +19,8 @@ function record(overrides: Partial<SubscriptionRecord> = {}): SubscriptionRecord
     storeId: 'STO_1',
     mode: 'prod',
     eventTimestamp: '2026-07-06T00:00:00.000Z',
+    billingPeriod: null,
+    currentPeriodEnd: null,
     ...overrides,
   }
 }

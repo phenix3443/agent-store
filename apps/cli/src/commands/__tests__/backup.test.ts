@@ -1,6 +1,7 @@
 import { test, expect } from 'bun:test'
 import type { BackupStatus, BackupSyncResult, Engine } from '@as/types'
 import { runBackup, type BackupIo } from '../backup'
+import { runRpc } from '../rpc'
 
 type TestIo = BackupIo & { lines: string[]; asked: number }
 
@@ -69,4 +70,14 @@ test('resolve takes a slug and one of local, remote, both', async () => {
   expect(o.lines.join('\n')).toContain('db-desktop')
   expect(o.lines.join('\n')).toContain('aas backup restore s1')
   expect(await runBackup(e, ['resolve', 'db', 'mine'], io())).toBe(2)
+})
+
+test('connectBackup over RPC takes its token from the stdin line, not argv', async () => {
+  let got: unknown
+  const e = engine({ connectBackup: async (o: unknown) => { got = o; return { status, remoteItems: 0 } } })
+  const out: string[] = []
+  const line = JSON.stringify([{ remote: 'https://h/r.git', token: 'secret-tok' }])
+  expect(await runRpc(e, ['connectBackup', '-'], s => out.push(s), async () => line)).toBe(0)
+  expect(got).toEqual({ remote: 'https://h/r.git', token: 'secret-tok' })
+  expect(JSON.parse(out[0]).ok).toBe(true)
 })

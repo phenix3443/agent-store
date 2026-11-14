@@ -29,6 +29,9 @@ export const subscriptions = sqliteTable('subscriptions', {
   waffoStoreId: text('waffo_store_id').notNull(),
   mode: text('mode').notNull().default('prod'),
   eventTimestamp: timestamp('event_timestamp'),
+  // As Waffo sends them: 'monthly' / 'yearly', or 'lifetime' for the one-time order.
+  billingPeriod: text('billing_period'),
+  currentPeriodEnd: text('current_period_end'),
   createdAt: timestamp('created_at').notNull().default(isoNow),
   updatedAt: timestamp('updated_at').notNull().default(isoNow),
 }, (t) => [
