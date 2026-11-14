@@ -154,3 +154,25 @@ test('listLocalConfigs dispatches to engine.listLocalConfigs', async () => {
   expect(calls).toEqual([[]])
   expect(JSON.parse(lines[0]).data).toEqual([])
 })
+
+test('doctor reads the paths from the environment and reports no findings for an empty home', async () => {
+  const { mkdtempSync } = await import('fs')
+  const { tmpdir } = await import('os')
+  const { join } = await import('path')
+  const root = mkdtempSync(join(tmpdir(), 'rpc-doctor-'))
+  const saved = { AS_HOME: process.env['AS_HOME'], CLAUDE_CONFIG_DIR: process.env['CLAUDE_CONFIG_DIR'], CODEX_HOME: process.env['CODEX_HOME'] }
+  process.env['AS_HOME'] = join(root, 'as')
+  process.env['CLAUDE_CONFIG_DIR'] = join(root, 'claude')
+  process.env['CODEX_HOME'] = join(root, 'codex')
+  try {
+    const lines: string[] = []
+    const code = await runRpc(makeEngine(), ['doctor'], s => lines.push(s))
+    expect(code).toBe(0)
+    expect(JSON.parse(lines[0])).toEqual({ ok: true, data: [] })
+  } finally {
+    for (const [k, v] of Object.entries(saved)) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+  }
+})

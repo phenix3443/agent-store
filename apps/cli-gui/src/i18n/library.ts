@@ -116,7 +116,7 @@ export const libraryZh: Dict = {
     advD: '模型白名单、模型映射、可用性监控',
     dup: '再添加一份配置',
   },
-  relay: {
+  relayCard: {
     title: '本地中转',
     on: '运行中',
     off: '已停止',
@@ -310,7 +310,7 @@ export const libraryEn: Dict = {
     advD: 'Model whitelist, model mapping, availability monitoring',
     dup: 'Add another config',
   },
-  relay: {
+  relayCard: {
     title: 'Local relay',
     on: 'Running',
     off: 'Stopped',

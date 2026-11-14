@@ -3,8 +3,8 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 export type AgentApp = 'claude' | 'codex'
 export type NavView = 'browse' | 'overview' | 'settings'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
-export type SettingsTab = 'account' | 'general' | 'about'
-export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | null
+export type SettingsTab = 'general' | 'agents' | 'data' | 'account' | 'cli' | 'about'
+export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | 'welcome' | null
 export type DiscoverKind = 'all' | 'skill' | 'mcp' | 'provider'
 
 interface AppStateValue {

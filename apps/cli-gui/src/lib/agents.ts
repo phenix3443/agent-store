@@ -4,15 +4,16 @@ export interface AgentMeta {
   id: ToolTarget
   name: string
   mark: string
-  /** Where the engine links or copies a skill, by default (CLAUDE_CONFIG_DIR / CODEX_HOME move it). */
-  skillsDir: string
-  mcpFile: string
+  /** Default locations from apps/client-core/src/paths.ts; `env` moves them. */
+  skills: string
+  mcp: string
   mcpKey: string
+  env: string
 }
 
 export const AGENTS: AgentMeta[] = [
-  { id: 'claude', name: 'Claude Code', mark: 'C', skillsDir: '~/.claude/skills', mcpFile: '~/.claude.json', mcpKey: 'mcpServers' },
-  { id: 'codex', name: 'Codex', mark: 'X', skillsDir: '~/.codex/skills', mcpFile: '~/.codex/config.toml', mcpKey: 'mcp_servers' },
+  { id: 'claude', name: 'Claude Code', mark: 'Cc', skills: '~/.claude/skills', mcp: '~/.claude.json', mcpKey: 'mcpServers', env: 'CLAUDE_CONFIG_DIR' },
+  { id: 'codex', name: 'Codex', mark: 'Cx', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', mcpKey: 'mcp_servers', env: 'CODEX_HOME' },
 ]
 
 export const TARGET_LABEL: Record<ToolTarget, string> = { claude: 'Claude Code', codex: 'Codex' }

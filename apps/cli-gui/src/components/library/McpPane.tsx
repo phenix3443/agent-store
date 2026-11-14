@@ -223,7 +223,7 @@ export function McpPane({
             const reason = blockerText(s, agent.name, t)
             return {
               agent,
-              note: on ? `${agent.mcpFile} › ${agent.mcpKey}.${slug}` : (reason ?? t('st.off')),
+              note: on ? `${agent.mcp} › ${agent.mcpKey}.${slug}` : (reason ?? t('st.off')),
               noteMono: on,
               right: (
                 <AgentSwitch

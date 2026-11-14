@@ -52,26 +52,26 @@ export function InstallNoticeProvider({ children }: { children: React.ReactNode 
             onOpenChange={(open) => {
               if (!open) setNotice(null)
             }}
-            className="pointer-events-auto border border-ink bg-plate p-4 shadow-[0_12px_28px_-12px_rgba(22,24,26,0.35)]"
+            className="pointer-events-auto rounded-card border border-line-strong bg-pop p-4 shadow-sheet"
           >
             <div className="flex items-start justify-between gap-4">
-              <Toast.Title className="text-[15px] font-medium leading-6">{t('missingTitle')}</Toast.Title>
-              <Toast.Close aria-label={t('close')} className="-mr-1.5 -mt-1 grid h-8 w-8 shrink-0 place-items-center hover:bg-sel">
+              <Toast.Title className="text-[15px] font-bold leading-6">{t('missingTitle')}</Toast.Title>
+              <Toast.Close aria-label={t('close')} className="-mr-1.5 -mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-control text-fg-2 hover:bg-panel-2 hover:text-fg">
                 <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden>
                   <path d="m1.5 1.5 10 10M11.5 1.5l-10 10" stroke="currentColor" strokeWidth="1.3" />
                 </svg>
               </Toast.Close>
             </div>
-            <Toast.Description className="mt-1 text-sm leading-[22px] text-ink-2">
+            <Toast.Description className="mt-1 text-sm leading-[22px] text-fg-2">
               {notice.command === null ? t('noCommandBody') : notice.copied ? t('missingBody') : t('copyFailedBody')}
             </Toast.Description>
             {notice.command !== null && (
-              <code className="mt-2.5 block border border-line bg-paper px-3 py-2 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
+              <code className="mt-2.5 block rounded-control border border-line bg-code px-3 py-2 font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
                 {notice.command}
               </code>
             )}
             <Toast.Action altText={t('downloadAlt')} asChild>
-              <Link href="/download" className="btn mt-3 min-h-9">
+              <Link href="/download" className="btn mt-3">
                 {t('download')}
               </Link>
             </Toast.Action>

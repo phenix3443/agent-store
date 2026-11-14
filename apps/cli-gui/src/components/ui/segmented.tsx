@@ -3,31 +3,34 @@ import { cn } from './cn'
 
 type Kind = 'skill' | 'mcp' | 'provider'
 
-export interface SegmentOption<T extends string> {
+export interface SegmentOption<T extends string | number> {
   value: T
   label: ReactNode
+  /** Tints the selected segment with that category's color. */
   kind?: Kind
 }
 
-/** A row of mutually exclusive filter buttons; each is a toggle button, so Tab and Space work as usual. */
-export function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
+/** A few mutually exclusive choices shown at once (a filter, a time range, the language); each is a toggle button. */
+export function Segmented<T extends string | number>({
   label,
+  value,
+  options,
+  onChange,
+  className,
 }: {
-  options: SegmentOption<T>[]
-  value: T
-  onChange: (v: T) => void
   label: string
+  value: T
+  options: SegmentOption<T>[]
+  onChange: (value: T) => void
+  className?: string
 }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex gap-0.5 rounded-ctl border border-line bg-panel p-[3px]">
+    <div role="group" aria-label={label} className={cn('inline-flex gap-0.5 rounded-ctl border border-line bg-panel p-[3px]', className)}>
       {options.map((o) => {
         const on = o.value === value
         return (
           <button
-            key={o.value}
+            key={String(o.value)}
             type="button"
             data-kind={o.kind}
             aria-pressed={on}

@@ -26,7 +26,7 @@ export function VerifiedLabel({ className = '' }: { className?: string }) {
 export function VerifiedMark() {
   const t = useTranslations('store.tier')
   return (
-    <span className="inline-flex text-ink" data-tier="verified" title={t('verified')}>
+    <span className="inline-flex text-fg-2" data-tier="verified" title={t('verified')}>
       <Tick />
       <span className="sr-only">{t('verified')}</span>
     </span>

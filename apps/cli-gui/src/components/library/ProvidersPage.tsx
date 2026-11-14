@@ -83,24 +83,24 @@ export function ProvidersPage() {
             relay?.running ? 'bg-provider shadow-[0_0_0_3px_rgb(var(--provider-rgb)/0.18),0_0_10px_rgb(var(--provider-rgb)/0.8)]' : 'bg-fg-3'
           )}
         />
-        {t('relay.title')}
-        {relay && <Badge tone={relay.running ? 'ok' : 'neutral'}>{t(relay.running ? 'relay.on' : 'relay.off')}</Badge>}
+        {t('relayCard.title')}
+        {relay && <Badge tone={relay.running ? 'ok' : 'neutral'}>{t(relay.running ? 'relayCard.on' : 'relayCard.off')}</Badge>}
         <span className="flex-1" />
         <Button size="sm" onClick={() => setShellDialog('requestLog')}>
           <SquareTerminal />
-          {t('relay.log')}
+          {t('relayCard.log')}
         </Button>
         {local && (
           <Button size="sm" onClick={() => setSelectedSlug('local')}>
-            {t('relay.settings')}
+            {t('relayCard.settings')}
           </Button>
         )}
       </h3>
-      <p className="mt-1.5 max-w-[74ch] text-xs text-fg-3">{t('relay.d')}</p>
+      <p className="mt-1.5 max-w-[74ch] text-xs text-fg-3">{t('relayCard.d')}</p>
       {relay && !relay.running && (
         <div className="mt-3">
           <Banner tone="warn">
-            <p className="text-fg">{t('relay.stoppedD')}</p>
+            <p className="text-fg">{t('relayCard.stoppedD')}</p>
           </Banner>
         </div>
       )}
@@ -122,7 +122,7 @@ export function ProvidersPage() {
                   {chain.length === 0 ? (
                     <>
                       <span className="text-fg-3">→</span>
-                      <span className="text-warn">{t('relay.noChain')}</span>
+                      <span className="text-warn">{t('relayCard.noChain')}</span>
                     </>
                   ) : (
                     chain.map((r, i) => {
@@ -130,7 +130,7 @@ export function ProvidersPage() {
                       return (
                         <span key={r.slug} className="contents">
                           <span className="text-fg-3">→</span>
-                          <Node on={!cut} dim={cut} title={cut ? t('relay.free2') : undefined}>
+                          <Node on={!cut} dim={cut} title={cut ? t('relayCard.free2') : undefined}>
                             <Level n={levelOf(r)} />
                             {nameOf(r)}
                           </Node>
@@ -140,12 +140,12 @@ export function ProvidersPage() {
                   )}
                 </>
               ) : (
-                <span className="text-fg-3">{t('relay.notWired')}</span>
+                <span className="text-fg-3">{t('relayCard.notWired')}</span>
               )}
             </div>
           )
         })}
-      <p className="mt-3 text-xs text-fg-3">{t(pro ? 'relay.rulePro' : 'relay.ruleFree')}</p>
+      <p className="mt-3 text-xs text-fg-3">{t(pro ? 'relayCard.rulePro' : 'relayCard.ruleFree')}</p>
     </div>
   )
 

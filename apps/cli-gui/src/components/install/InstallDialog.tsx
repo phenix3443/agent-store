@@ -253,7 +253,7 @@ export function InstallDialog() {
       }
       for (const target of chosen) {
         const a = AGENTS.find((x) => x.id === target)!
-        steps.push({ key: target, text: t('inst.pEnable').replace('{0}', `${a.mcpFile} › ${a.mcpKey}.${item.slug}`), st: 'wait' })
+        steps.push({ key: target, text: t('inst.pEnable').replace('{0}', `${a.mcp} › ${a.mcpKey}.${item.slug}`), st: 'wait' })
       }
     }
     const results: Flow['results'] = {}
@@ -531,7 +531,7 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
                 const reason = preReason(item, agent.id, t)
                 return {
                   agent,
-                  note: reason ?? (item.category === 'skill' ? `${agent.skillsDir}/` : agent.mcpFile),
+                  note: reason ?? (item.category === 'skill' ? `${agent.skills}/` : agent.mcp),
                   noteMono: !reason,
                   right: (
                     <Switch

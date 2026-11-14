@@ -38,9 +38,8 @@ do's and don'ts) before implementing or reviewing any desktop screen. The intera
 copy source is the approved prototype on the `design/redesign-prototype` branch,
 `docs/design/mockups/client-app/` (`app.css`, `app.js`, `i18n.js`, `ux.html`,
 `INVENTORY.md`); read its source, not a memory of it. Tokens live in
-`apps/cli-gui/src/globals.css`; change them there and in `DESIGN.md` together. Screens not
-yet rebuilt (#165) still carry the old layout from `docs/ui/Agent Store.dc.html`;
-that file no longer constrains new work.
+`apps/cli-gui/src/globals.css`; change them there and in `DESIGN.md` together. Every screen has been
+rebuilt; `docs/ui/Agent Store.dc.html` no longer constrains new work.
 
 ## Tests that touch the DOM
 

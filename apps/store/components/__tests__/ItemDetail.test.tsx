@@ -28,7 +28,12 @@ afterEach(() => { cleanup() })
 const { ItemDetail } = await import('../ItemDetail')
 const { DetailDrawer } = await import('../DetailDrawer')
 const { DrawerTitle } = await import('../DrawerTitle')
-const { ClientStateProvider } = await import('../ClientStateProvider')
+
+/** The value under a label in the stats row. */
+function stat(label: string): string | null | undefined {
+  const dt = [...document.querySelectorAll('.stats dt')].find((el) => el.textContent === label)
+  return dt?.nextElementSibling?.textContent
+}
 
 function renderPage(resource: Parameters<typeof ItemDetail>[0]['resource'] = providerResource) {
   return render(<ItemDetail resource={resource} title={<h1>{resource.name}</h1>} />)
@@ -36,11 +41,9 @@ function renderPage(resource: Parameters<typeof ItemDetail>[0]['resource'] = pro
 
 function renderDrawer(onOpenChange: (open: boolean) => void = () => {}) {
   return render(
-    <ClientStateProvider>
-      <DetailDrawer resource={skillResource} open onOpenChange={onOpenChange}>
-        <ItemDetail resource={skillResource} title={<DrawerTitle>{skillResource.name}</DrawerTitle>} />
-      </DetailDrawer>
-    </ClientStateProvider>
+    <DetailDrawer resource={skillResource} open onOpenChange={onOpenChange}>
+      <ItemDetail resource={skillResource} layout="drawer" title={<DrawerTitle>{skillResource.name}</DrawerTitle>} />
+    </DetailDrawer>
   )
 }
 
@@ -52,9 +55,10 @@ test('the drawer and the page render the same detail: name, description, author 
     expect(screen.getByRole('link', { name: 'obra' }).getAttribute('href')).toBe('https://github.com/obra')
     expect(screen.queryByText('GitHub · skills.sh')).toBeNull()
     expect(screen.queryByText('上游标识')).toBeNull()
-    expect(screen.getByText('12.4K 次安装')).toBeInTheDocument()
-    expect(screen.getByText('GitHub 星标 152.3K')).toBeInTheDocument()
-    expect(screen.getByText('安装后会执行')).toBeInTheDocument()
+    expect(stat('安装量')).toBe('12.4K')
+    expect(stat('GitHub 星标')).toBe('152.3K')
+    expect(screen.getByRole('heading', { name: /^安装内容/ })).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('收藏')
     cleanup()
   }
 })
@@ -82,13 +86,13 @@ test('a provider shows its endpoint, models and the verified mark, and no instal
   expect(screen.getByText('https://openrouter.ai/api')).toBeInTheDocument()
   expect(screen.getByText('anthropic/claude-sonnet-4')).toBeInTheDocument()
   expect(screen.getByText('已验证')).toBeInTheDocument()
-  expect(container.textContent).not.toContain('次安装')
+  expect(stat('安装量')).toBeUndefined()
   expect(container.textContent).not.toContain('星标')
 })
 
 test('an MCP server shows its GitHub stars', () => {
   renderPage(mcpResource)
-  expect(screen.getByText('GitHub 星标 1.3K')).toBeInTheDocument()
+  expect(stat('GitHub 星标')).toBe('1.3K')
 })
 
 test('an entry gone upstream says so', () => {
@@ -98,7 +102,7 @@ test('an entry gone upstream says so', () => {
 
 test('an MCP record with nothing to install explains instead of showing a command', () => {
   renderPage({ ...mcpResource, packages: [], remotes: [] })
-  expect(screen.getByText('这个条目没有列出可安装的包或远程地址。')).toBeInTheDocument()
+  expect(screen.getByText('上游没有列出安装方式，请到代码仓库查看。')).toBeInTheDocument()
   expect(screen.getByText(/没有能转成安装命令的包或远程地址/)).toBeInTheDocument()
 })
 
@@ -140,6 +144,14 @@ test('the drawer links to the full page and closes through onOpenChange', () => 
   expect(screen.getByRole('link', { name: '展开为整页' }).getAttribute('href')).toBe('/store/skill/github:obra/superpowers/brainstorming')
   fireEvent.click(screen.getByLabelText('关闭详情'))
   expect(onOpenChange).toHaveBeenCalledWith(false)
+})
+
+test('the drawer stacks the detail in one column and the page puts install beside it', () => {
+  const { container } = renderPage(mcpResource)
+  expect(container.querySelector('[class*="lg:grid-cols-[minmax(0,1fr)_380px]"]')).not.toBeNull()
+  cleanup()
+  renderDrawer()
+  expect(document.querySelector('[data-item-drawer] [class*="lg:grid-cols"]')).toBeNull()
 })
 
 test('the package name opens the header, with no category label above it', () => {

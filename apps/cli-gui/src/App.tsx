@@ -11,9 +11,10 @@ import { ShellDialogs } from './components/shell/ShellDialogs'
 import { DiscoverPage } from './components/discover/DiscoverPage'
 import { LibraryPage } from './components/library/LibraryPage'
 import { ProvidersPage } from './components/library/ProvidersPage'
-import { Overview } from './components/Overview'
+import { UsagePage } from './components/usage/UsagePage'
 import { SettingsView } from './components/SettingsView'
 import { InstallDialog } from './components/install/InstallDialog'
+import { useFirstRunWelcome } from './components/WelcomeDialog'
 import { Toaster } from './components/ui/toast'
 import { TooltipProvider } from './components/ui/tooltip'
 import { useShortcuts } from './lib/useShortcuts'
@@ -21,7 +22,7 @@ import { useShortcuts } from './lib/useShortcuts'
 function MainArea() {
   const { navView, categoryFilter } = useAppState()
 
-  if (navView === 'overview') return <Overview />
+  if (navView === 'overview') return <UsagePage />
   if (navView === 'settings') return <SettingsView />
   if (categoryFilter === 'skill') return <LibraryPage key="skill" kind="skill" />
   if (categoryFilter === 'mcp') return <LibraryPage key="mcp" kind="mcp" />
@@ -31,6 +32,7 @@ function MainArea() {
 
 function AppShell() {
   useShortcuts()
+  useFirstRunWelcome()
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden rounded-[14px] border border-line-strong bg-canvas-2 font-sans text-fg">
       <TitleBar />

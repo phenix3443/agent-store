@@ -165,6 +165,7 @@ components:
 | 能力 | 用什么 | 位置 |
 |---|---|---|
 | 对话框 | `@radix-ui/react-dialog`，外框统一用 `DialogContent` | `src/components/ui/dialog.tsx` |
+| 分页（设置页的六个分页） | `@radix-ui/react-tabs` | `src/components/ui/tabs.tsx` |
 | 菜单、语言选择 | `@radix-ui/react-dropdown-menu` | `src/components/ui/menu.tsx` |
 | 悬停提示 | `@radix-ui/react-tooltip` | `src/components/ui/tooltip.tsx` |
 | 开关（每个 agent 一个） | `@radix-ui/react-switch`，打开时轨道用类别色 | `src/components/ui/switch.tsx` |
@@ -173,6 +174,9 @@ components:
 | 命令面板 | `cmdk`，放在 Radix 对话框里（带隐藏标题） | `src/components/shell/CommandPalette.tsx` |
 | 提示条 | `sonner`，底部居中，样式改成本文的浮层 | `src/components/ui/toast.tsx` |
 | 按钮、输入框、徽标、按键、类别标签 | 自写的薄封装，只管样式变体 | `src/components/ui/` |
+| 卡片、统计数字、设置行 | 自写 | `src/components/ui/card.tsx` |
+| 分段选择（时间范围、语言、目标 agent） | 自写，一组带 `aria-pressed` 的按钮 | `src/components/ui/segmented.tsx` |
+| 用量趋势图 | 自写的 SVG 折线，颜色用设计变量；用量数据是按天汇总的，「今日」只有一个点 | `src/components/UsageTrendChart.tsx` |
 | 空状态、加载骨架、转圈、通知条 | 自写 | `src/components/ui/states.tsx` |
 | 图标 | 类别和导航图标取自原型，其余用 `lucide-react` | `src/components/ui/icons.tsx` |
 
@@ -204,6 +208,12 @@ components:
 
 所有安装都走同一个对话框 `src/components/install/InstallDialog.tsx`：应用内的「安装」按钮和网页发来的 `agent-store://install` 链接。步骤是：选 agent → 填必填项（只有 MCP 有必填项时）→ 进度 → 完成，另有冲突、失败、已安装和各种无法识别的链接。网页链接打开时焦点在「取消」，回车不会安装。
 
-## 尚未迁移的页面
+## 用量、设置与首次启动
 
-用量是改版前的概览页，设置也未改完，由 #165 重做。它们用的旧变量名（`--accent`、`--text-2` 等，Tailwind 的 `store-*`）在 `globals.css` 里映射到新值；这些页面重做完后删掉旧名字。新代码不要再用旧名字。
+- 用量页（#165）只读本机 `usage.db` 的按天汇总：一次取近 30 天，「今日」「近 7 天」「近 30 天」在界面里按 UTC 日期筛。汇总数是费用、Tokens、请求数、成功率、模型数；明细按供应商、模型、agent 合并。预算与导出按 `advancedUsageAnalytics` 开放，供应商健康按 `smartRouting` 开放，Free 显示 Pro 说明和升级按钮。本地中转卡片只读：状态、监听地址、今日请求和成功率；启动、停止只能在命令行里做（`aas relay start|stop`），界面不放开关。
+- 设置页分通用、Agent、数据、账号、命令行、关于六页。「检查配置一致性」调用 `doctor`（与 `aas doctor` 相同，只读）。「资源更新」检查已安装的资源，不是客户端自身；客户端新版本只给官网下载页。没有跨设备同步，不出现这一项。
+- 首次启动介绍：应用数据目录里没有 `agent-store-cli/welcome.json` 时弹出一次，点「开始使用」或按 Esc 后写入，之后不再出现；设置 › 通用里可以重新打开。客户端不检测本机装了哪些 agent，介绍里只列出支持的 agent 和它们的默认配置位置，不显示「已检测到 / 未检测到」。
+
+## 旧变量名
+
+改版前的变量名（`--accent`、`--text-2`、Tailwind 的 `store-*` 等）已随所有页面重做删除，不要再加回来。

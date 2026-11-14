@@ -224,7 +224,7 @@ export function ProviderPane({
     <DetailPane label={slug} kind="provider" status={<SavedMark saving={saving} saved={saved} />} onClose={onClose}>
       <PaneHead
         kind="provider"
-        title={isLocal ? t('relay.title') : values.name || slug}
+        title={isLocal ? t('relayCard.title') : values.name || slug}
         by={
           <>
             <KindLabel kind="provider">{t('categories.provider')}</KindLabel>
