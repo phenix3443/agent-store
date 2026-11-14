@@ -1,4 +1,5 @@
 import type {
+  FavoritesResponse,
   Plan,
   ResourceDetail,
   ResourceKind,
@@ -111,6 +112,37 @@ export class StoreClient {
       if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}` }
       if (!json.plan) return { data: null, error: 'No plan in response' }
       return { data: { plan: json.plan }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** GET /api/me/favorites: the signed-in user's favorites, newest first. */
+  async listFavorites(token: string): Promise<Result<FavoritesResponse>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/me/favorites`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = (await res.json().catch(() => ({}))) as Partial<FavoritesResponse> & { error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
+      if (!Array.isArray(json.favorites)) return { data: null, error: 'No favorites in response' }
+      return { data: { favorites: json.favorites }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** PUT (on) or DELETE (off) /api/me/favorites/<id>; both are idempotent. */
+  async setFavorite(token: string, id: string, on: boolean): Promise<Result<{ id: string; favorited: boolean }>> {
+    try {
+      const path = id.split('/').map(encodeURIComponent).join('/')
+      const res = await this._fetch(`${this.baseUrl}/api/me/favorites/${path}`, {
+        method: on ? 'PUT' : 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = (await res.json().catch(() => ({}))) as { id?: string; favorited?: boolean; error?: string }
+      if (!res.ok) return { data: null, error: json.error ?? `HTTP ${res.status}`, status: res.status }
+      return { data: { id, favorited: json.favorited ?? on }, error: null }
     } catch (err) {
       return { data: null, error: err instanceof Error ? err.message : String(err) }
     }

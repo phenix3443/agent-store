@@ -188,6 +188,21 @@ export class CatalogReader {
     return { ...toSummary(row), ...decodeDetail(row.kind, row.detail) } as ResourceDetail
   }
 
+  /** Unavailable resources included, like `get`; ids the catalog lacks are left out. */
+  summaries(ids: string[]): Map<string, ResourceSummary> {
+    const db = this.handle()
+    const out = new Map<string, ResourceSummary>()
+    // SQLite caps bound parameters per statement (999 before 3.32).
+    for (let i = 0; i < ids.length; i += 500) {
+      const chunk = ids.slice(i, i + 500)
+      const rows = db
+        .query(`SELECT ${summaryColumns(this.stars)} FROM resources r WHERE r.id IN (${chunk.map(() => '?').join(',')})`)
+        .all(...chunk) as Row[]
+      for (const row of rows) out.set(row.id, toSummary(row))
+    }
+    return out
+  }
+
   has(id: string): boolean {
     return this.handle().query('SELECT 1 FROM resources WHERE id = ? AND unavailable_at IS NULL').get(id) !== null
   }

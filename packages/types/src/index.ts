@@ -63,6 +63,8 @@ export type {
   ProviderConnection,
   ProviderResourceDetail,
   ResourceDetail,
+  FavoriteEntry,
+  FavoritesResponse,
 } from './resources'
 export { resourceSlug, resourceLongSlug } from './catalog'
 export type { CatalogResource, CatalogResourceDetail, CatalogSearchResult } from './catalog'

@@ -276,3 +276,15 @@ export interface ProviderResourceDetail extends ResourceSummary {
 }
 
 export type ResourceDetail = McpResourceDetail | SkillResourceDetail | ProviderResourceDetail
+
+/** A saved catalog id; `resource` is null when the catalog no longer has it. */
+export interface FavoriteEntry {
+  id: string
+  createdAt: string
+  resource: ResourceSummary | null
+}
+
+/** GET /api/me/favorites, newest first. */
+export interface FavoritesResponse {
+  favorites: FavoriteEntry[]
+}
