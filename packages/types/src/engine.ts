@@ -3,6 +3,10 @@ import type { Publisher } from './publisher'
 import type { Entitlements } from './entitlement'
 import type { CatalogResourceDetail, CatalogSearchResult } from './catalog'
 import type { ResourceKind, ResourceSort } from './resources'
+import type {
+  AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
+  ProjectUninstallOptions, ProjectUninstallResult,
+} from './projects'
 
 /** The canonical union for supported tool targets */
 export type ToolTarget = 'claude' | 'codex'
@@ -357,4 +361,23 @@ export interface Engine {
   setBudget(config: BudgetConfig): Promise<BudgetConfig>
   /** Computes current-month spend against the budget, with projection and alert level. */
   getBudgetStatus(): Promise<BudgetStatus>
+  /** Registered project directories; `exists` is false for one that is gone. */
+  listProjects(): Promise<Project[]>
+  /** Registers an existing directory; the same directory (through any path) is registered once. */
+  addProject(path: string, options?: AddProjectOptions): Promise<Project>
+  /** Stops managing a project (`ref`: id or path). No file is deleted. */
+  removeProject(ref: string): Promise<void>
+  /** Points a project at its new directory; what Agent Store installed there stays managed. */
+  relocateProject(ref: string, newPath: string): Promise<Project>
+  /** The skills and MCP servers the agents actually use in the project, installed by Agent Store or not. */
+  getProject(ref: string): Promise<ProjectDetail>
+  /** Installs a catalog skill or MCP server into the project's own files; nothing is written at user level. */
+  installToProject(ref: string, itemRef: string, options?: ProjectInstallOptions): Promise<ProjectInstallResult>
+  /** Removes only what Agent Store installed into the project. */
+  uninstallFromProject(ref: string, slug: string, options?: ProjectUninstallOptions): Promise<ProjectUninstallResult>
+  /** Stores a value for a variable the project's MCP entries reference; kept on this machine only. */
+  setProjectEnv(ref: string, name: string, value: string): Promise<void>
+  unsetProjectEnv(ref: string, name: string): Promise<void>
+  /** The stored values, for starting an agent with them in its environment. */
+  getProjectEnvValues(ref: string): Promise<Record<string, string>>
 }

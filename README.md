@@ -21,7 +21,7 @@ Claude Code 和 Codex 的应用商店加本地管理客户端：在网页上找�
 |---|---|
 | `apps/store` | 网页商店，Next.js；同时负责登录（Better Auth） |
 | `apps/api` | API，Hono + Bun；目录读 `catalog.db`，用户、订阅等数据在 `app.db`（SQLite） |
-| `apps/cli` | 命令行 `aas`：搜索、安装、启用/停用、本地代理、用量 |
+| `apps/cli` | 命令行 `aas`：搜索、安装、启用/停用、项目级安装、本地代理、用量 |
 | `apps/client-core` | `aas` 和桌面客户端共用的安装逻辑：各工具的配置读写、技能库、安装记录 |
 | `apps/cli-gui` | 桌面客户端，Tauri 2；把 `aas` 作为附带程序打进安装包，处理网页上的 `agent-store://` 安装链接 |
 | `packages/types`、`packages/sdk` | 共享类型和 API 客户端 |
@@ -38,6 +38,21 @@ bun apps/cli/src/index.ts install github:obra/superpowers/brainstorming
 ```
 
 `aas` 默认连测试环境，设 `AS_STORE_URL` 可以换成别的 API 地址。
+
+### 项目级技能和 MCP
+
+技能和 MCP 也可以装进某个项目自己的文件，随版本库共享给队友，不写用户级配置：
+
+```sh
+aas projects add ~/code/web                        # 登记已有目录
+aas install github:obra/superpowers/brainstorming --project ~/code/web
+aas install mcp-registry:io.github.github/github-mcp-server --project ~/code/web
+aas projects show ~/code/web                       # 项目里实际生效的技能和 MCP，含不是 Agent Store 装的
+aas projects set-env ~/code/web GITHUB_PERSONAL_ACCESS_TOKEN   # 从标准输入读值，只存在本机
+aas projects exec ~/code/web -- claude             # 带上本机保存的值启动 agent
+```
+
+技能复制到 `.claude/skills/` 和 `.agents/skills/`；MCP 写进 `.mcp.json`（Claude Code）和 `.codex/config.toml`（Codex，项目被 Codex 信任后才生效）。这些文件里只写环境变量名，密钥的值存在 `~/.agent-store/project-env.json`，由 `aas projects exec` 或 `eval "$(aas projects env <项目>)"` 交给 agent。`aas uninstall <slug> --project <项目>` 只删 Agent Store 装的内容。细节见 [`docs/project-scope.md`](docs/project-scope.md)。
 
 ## 本地开发
 
@@ -62,5 +77,6 @@ make dev-env   # 同时启动 API、网页商店和桌面客户端
 - [`AGENTS.md`](AGENTS.md)：改代码的规则，网页和桌面端界面各以什么为准
 - [`docs/DEPLOY.md`](docs/DEPLOY.md)：测试环境、发布流程、目录同步、登录和支付配置
 - [`docs/global-skills-mcp.md`](docs/global-skills-mcp.md)：技能和 MCP 在 Claude Code、Codex 里的存放方式，以及安装逻辑的设计
+- [`docs/project-scope.md`](docs/project-scope.md)：项目级技能和 MCP：写到哪里、什么时候生效、密钥怎么留在本机
 - [`apps/store/DESIGN.md`](apps/store/DESIGN.md)、[`apps/store/PRODUCT.md`](apps/store/PRODUCT.md)：网页商店的视觉规范和产品说明
 - [`test/e2e/README.md`](test/e2e/README.md)、[`test/desktop-linux/README.md`](test/desktop-linux/README.md)：两套端到端测试
