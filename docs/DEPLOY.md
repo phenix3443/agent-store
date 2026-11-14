@@ -190,6 +190,22 @@ Better Auth 跑在商店里（`apps/store/lib/auth/server.ts`），用 Node 内�
 
 API 已接入：`POST /api/billing/checkout` 建订单，`POST /api/webhooks/waffo` 收 webhook 写 `subscriptions`，`GET /api/me/entitlements` 返回当前套餐。
 
+订阅管理（个人面板的「订阅」页）走下面四个接口，都要登录（`Authorization: Bearer <JWT>`），只操作当前用户自己的订单：
+
+| 接口 | 做什么 | Waffo 调用 |
+|---|---|---|
+| `GET /api/me/subscription` | 返回套餐、状态、计费周期和本期结束日；没买过返回 `null` | 不调用，读 `subscriptions` |
+| `POST /api/me/subscription/cancel` | 到期后取消：状态变成 `canceling`，Pro 保留到本期结束 | `auth.issueSessionToken` + `customer().cancelSubscription` |
+| `POST /api/me/subscription/resume` | 撤回取消，状态回到 `active` | `auth.issueSessionToken` + `customer().reactivateSubscription` |
+| `POST /api/me/subscription/portal` | 返回 Waffo 客户门户的登录链接（订单、订阅、付款记录），带 `Cache-Control: no-store` | `auth.createCustomerPortalLink` |
+
+- 取消和恢复用 Waffo 的买家会话（customer session），令牌按 `buyerIdentity`（即用户 id）签发，Waffo 只允许操作该身份名下的订单。环境取订单记录里的 `mode`（`test` / `prod`）。门户的环境跟 API 私钥走，测试私钥打开测试门户。
+- 取消、恢复成功后先把 Waffo 返回的状态写进 `subscriptions`，再等 webhook（`subscription.canceling`、`subscription.uncanceled`）补上结束日；本期结束时 Waffo 发 `subscription.canceled`，状态才变成已取消、套餐回到 Free。API 不按日期自己判断到期。
+- 计费周期和本期结束日来自 webhook 的 `billingPeriod`、`currentPeriodEnd`（`order.completed` 记为 `lifetime`）。`subscription.payment_succeeded` 不带这两个字段，收到时保留原值。还没收到过带这两个字段的事件时，页面不写日期，写「本期结束」。
+- 一个用户有多条订单时，仍在生效的（`active`、`canceling`、`trialing`）优先，其次取最近的一条；`/api/me/entitlements` 用同一条。
+- 终身买断和已取消、付款未成功的订阅不能取消（409）。没有订单返回 404，没配 Waffo 返回 501，Waffo 出错返回 502。
+- 客户门户里能做哪些操作以 Waffo 为准。
+
 | 变量 | 用途 |
 |---|---|
 | `WAFFO_MERCHANT_ID` | 商户 ID |

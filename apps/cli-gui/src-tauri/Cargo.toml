@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.2.2"
+version = "0.3.0"
 description = "Desktop client for Agent Store: install and manage skills, MCP servers and model providers for Claude Code and Codex"
 authors = ["phenix3443"]
 license = ""
