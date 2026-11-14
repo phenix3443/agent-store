@@ -63,8 +63,8 @@
   function mask(v) { return v ? v.slice(0, 6) + '••••••••' + v.slice(-4) : ''; }
   function ofKind(k) { return S.installed.filter(function (e) { return e.kind === k; }); }
   function updates() { return S.installed.filter(function (e) { return e.latest; }); }
-  /* 项目级技能目录。项目级 MCP 只写 <项目>/.mcp.json，目前只对 Claude Code 生效。 */
-  var PDIR = { claude: '.claude/skills', codex: '.agents/skills' };
+  /* 项目级的技能目录和 MCP 配置文件，路径相对项目根。 */
+  var PDIR = { claude: '.claude/skills', codex: '.agents/skills' }, PMCP = { claude: '.mcp.json', codex: '.codex/config.toml' }, PKEY = { claude: 'mcpServers', codex: 'mcp_servers' };
   function joinNames(a) { return a.join(S.lang === 'en' ? ', ' : '、'); }
   function projNeeds(x) { var it = A.item(x.id); return x.kind !== 'mcp' ? [] : x.needs || (it ? A.needs(it).map(function (n) { return n.key; }) : []); }
   function projMiss(x) { return projNeeds(x).some(function (k) { return !(x.vars || {})[k]; }); }
@@ -239,7 +239,7 @@
   function writes(it, slug, lp, tg) {
     var out = [];
     if (lp && it.kind === 'skill') A.AGENTS.forEach(function (a) { if (!tg || tg[a.id]) out.push(t('p.mcp.write') + ' ' + lp.path + '/' + PDIR[a.id] + '/' + it.name); });
-    else if (lp && it.kind === 'mcp') { var ptr = A.transport(it); out.push((ptr.remote ? t('w.mcp.connect') : t('w.mcp.run')) + ' ' + ptr.text); out.push(t('p.mcp.write') + ' ' + lp.path + '/.mcp.json'); A.needs(it).forEach(function (n) { out.push(t('w.pj.ref') + ' ${' + n.key + '}'); }); }
+    else if (lp && it.kind === 'mcp') { var ptr = A.transport(it); out.push((ptr.remote ? t('w.mcp.connect') : t('w.mcp.run')) + ' ' + ptr.text); A.AGENTS.forEach(function (a) { if (!tg || tg[a.id]) out.push(t('p.mcp.write') + ' ' + lp.path + '/' + PMCP[a.id]); }); if (!tg || tg.claude) A.needs(it).forEach(function (n) { out.push(t('w.pj.ref') + ' ${' + n.key + '}'); }); }
     else if (it.kind === 'skill') { out.push(t('w.skill.fetch') + ' ~/.agent-store/skills/' + slug); out.push(t('w.skill.link')); }
     else if (it.kind === 'mcp') { var tr = A.transport(it); out.push((tr.remote ? t('w.mcp.connect') : t('w.mcp.run')) + ' ' + tr.text); A.needs(it).forEach(function (n) { out.push(t('w.mcp.needs') + ' ' + n.key); }); out.push(t('w.mcp.write')); }
     else out.push(it.id === 'builtin:local' ? t('w.prov.local') : t('w.prov.preset'));
@@ -506,8 +506,8 @@
     }).join('') + '</div></div>';
   }
   function pjWhere(p, x) {
-    if (x.kind === 'mcp') return ['.mcp.json › mcpServers.' + x.name, p.path + '/.mcp.json'];
     var ags = A.AGENTS.filter(function (a) { return x.on[a.id]; });
+    if (x.kind === 'mcp') return [ags.map(function (a) { return PMCP[a.id] + ' › ' + PKEY[a.id] + '.' + x.name; }).join(' · '), p.path + '/' + PMCP[ags[0] ? ags[0].id : 'claude']];
     return [ags.map(function (a) { return PDIR[a.id] + '/' + x.name; }).join(' · '), p.path + '/' + PDIR[ags[0] ? ags[0].id : 'claude'] + '/' + x.name];
   }
   function pjRow(p, x) {
@@ -539,7 +539,8 @@
     if (R.q.state === 'error') return '<div class="view">' + head + banner('err', '<b>' + t('pj.err.t') + '</b><p>' + t('pj.err.d') + '</p>', '<div class="acts"><button type="button" class="btn btn-sm" data-act="retry">' + t('off.retry') + '</button></div>') + '</div>';
     var gone = p.missing ? banner('', '<b>' + t('pj.missing.t') + '</b><p>' + t('pj.missing.d', '<code class="mono">' + esc(p.path) + '</code>') + '</p>', '<div class="acts"><button type="button" class="btn btn-sm" data-act="pj-relocate" data-arg="' + esc(p.id) + '">' + t('pj.rel') + '</button><button type="button" class="btn btn-sm btn-bad" data-act="pj-remove" data-arg="' + esc(p.id) + '">' + t('pj.rm') + '</button></div>') : '';
     if (!p.items.length || R.q.state === 'empty') return '<div class="view">' + head + gone + (p.missing ? '' : empty('folder', t('pj.empty.t'), t('pj.empty.d'), '<button type="button" class="btn btn-pri" data-act="pj-addto" data-arg="' + esc(p.id) + '">' + t('pj.addto') + '</button>')) + '</div>';
-    return '<div class="view">' + head + gone + '<p class="pj-hint">' + ic('info') + '<span>' + t(p.missing ? 'pj.missing.last' : 'pj.vcs') + '</span></p>' + pjSec(p, 'skill') + pjSec(p, 'mcp') + '</div>';
+    var trust = !p.missing && p.codexUntrusted && A.detected('codex') && p.items.some(function (x) { return x.kind === 'mcp' && x.on.codex; }) ? banner('', '<b>' + t('pj.trust.t') + '</b><p>' + t('pj.trust.d') + '</p>') : '';
+    return '<div class="view">' + head + gone + trust + '<p class="pj-hint">' + ic('info') + '<span>' + t(p.missing ? 'pj.missing.last' : 'pj.vcs') + '</span></p>' + pjSec(p, 'skill') + pjSec(p, 'mcp') + '</div>';
   }
 
   /* ---------- 设置 ---------- */
@@ -625,7 +626,6 @@
   function dlgItem(it, slug) { return '<div class="dl-item" data-kind="' + it.kind + '">' + tile(it.kind) + '<div><b>' + esc(it.name) + '</b><small>' + esc(it.id) + ' · ' + esc(ver(it.version)) + '</small></div></div>'; }
   function tgReason(it, a, vals, loc) {
     if (!A.detected(a.id)) return t('ag.missing', a.name);
-    if (loc && it.kind === 'mcp' && a.id === 'codex') return t('pj.mcp.codex');
     var b = A.blocker(it, a.id, vals || { apiKey: 1 });
     return b === 'incompatible' ? t('err.incompatible', a.name) : b === 'sse' ? t('err.codexSse') : '';
   }
@@ -646,7 +646,7 @@
       body = '<h2>' + t(d.from === 'web' ? 'inst.confirm' : 'inst.h', it.name) + '</h2>' + dlgItem(it) + locSec +
         '<div class="sec"' + (locSec ? '' : ' style="margin-top:0"') + '><h3>' + t(it.kind === 'provider' ? 'inst.targets.prov' : 'inst.targets') + '</h3><div class="ag">' + A.AGENTS.map(function (a) {
           var why = tgReason(it, a, null, d.loc);
-          return '<div class="ag-r"><span class="ag-ic" style="color:' + a.color + '">' + a.mark + '</span><div class="ag-t"><b>' + a.name + '</b><small class="wrap">' + esc(why || (lp ? lp.path + '/' + (it.kind === 'skill' ? PDIR[a.id] + '/' : '.mcp.json') : it.kind === 'skill' ? a.skills + '/' : it.kind === 'mcp' ? a.mcp : t('prov.via'))) + '</small></div><button type="button" class="sw" role="switch" data-kind="' + it.kind + '" aria-checked="' + !!d.tg[a.id] + '" data-act="tg" data-arg="' + a.id + '"' + (why ? ' disabled' : '') + ' aria-label="' + a.name + '"></button></div>';
+          return '<div class="ag-r"><span class="ag-ic" style="color:' + a.color + '">' + a.mark + '</span><div class="ag-t"><b>' + a.name + '</b><small class="wrap">' + esc(why || (lp ? lp.path + '/' + (it.kind === 'skill' ? PDIR[a.id] + '/' : PMCP[a.id]) : it.kind === 'skill' ? a.skills + '/' : it.kind === 'mcp' ? a.mcp : t('prov.via'))) + '</small></div><button type="button" class="sw" role="switch" data-kind="' + it.kind + '" aria-checked="' + !!d.tg[a.id] + '" data-act="tg" data-arg="' + a.id + '"' + (why ? ' disabled' : '') + ' aria-label="' + a.name + '"></button></div>';
         }).join('') + '<div class="ag-r soon"><span class="ag-ic soon">+</span><div class="ag-t"><b>' + t('ag.soon') + '</b><small>' + t('ag.soon.d') + '</small></div></div></div></div>' +
         '<div class="sec"><h3>' + t('sec.writes') + '</h3><ul class="steps">' + writes(it, d.slug, lp, d.tg).map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul></div>' + web;
       foot = cancel + '<button type="button" class="btn btn-pri" data-act="d-next"' + (d.from === 'web' ? '' : ' data-autofocus') + (lp && !any ? ' disabled title="' + t('inst.loc.noagent') + '"' : '') + '>' + t(!any && it.kind !== 'provider' ? 'inst.only' : nd.length ? 'inst.next' : 'act.install') + '</button>';
@@ -654,7 +654,7 @@
       var full = nd.every(function (n) { return d.vals[n.key]; });
       body = '<h2>' + t('inst.vars') + '</h2><p class="lede">' + t(it.kind === 'provider' ? 'inst.vars.prov' : 'inst.vars.d') + '</p>' + nd.map(function (n, i) {
         return '<div class="fld"><label for="v-' + i + '">' + esc(n.key === 'apiKey' ? t('prov.key') : n.key) + ' <span class="req">*</span></label><input class="inp mono" id="v-' + i + '" type="password" autocomplete="off" data-val="' + esc(n.key) + '" value="' + esc(d.vals[n.key] || '') + '" placeholder="' + esc(n.key === 'apiKey' ? 'sk-…' : n.key) + '"' + (i === 0 ? ' data-autofocus' : '') + '>' + (n.bearer && d.tg.codex ? '<p class="hint">' + t('mcp.codexenv') + ' <code class="mono">export ' + esc(n.key) + '=…</code></p>' : '') + '</div>';
-      }).join('') + '<p style="font-size:12px;color:var(--fg3)">' + (d.loc ? esc(t('inst.vars.pj', nd[0].key)) : t('inst.vars.store')) + '</p>';
+      }).join('') + '<p style="font-size:12px;color:var(--fg3)">' + (d.loc ? (d.tg.claude ? esc(t('inst.vars.pj', nd[0].key)) : t('inst.vars.pj.local')) : t('inst.vars.store')) + '</p>';
       foot = '<button type="button" class="btn" data-act="d-back">' + t('back') + '</button><span class="sp"></span><button type="button" class="btn" data-act="d-skip">' + t('inst.later') + '</button><button type="button" class="btn btn-pri" id="d-go" data-act="d-install"' + (full ? '' : ' disabled') + '>' + t('act.install') + '</button>';
     } else if (d.step === 'progress' || d.step === 'conflict' || d.step === 'failed') {
       body = '<h2>' + t(d.step === 'failed' ? 'inst.failed' : 'inst.running', it.name) + '</h2>' + dlgItem(it) + '<ul class="prog" data-kind="' + it.kind + '">' + d.prog.map(function (s) {
@@ -728,13 +728,13 @@
     } else if (d.type === 'pj-un') {
       var up = A.project(d.pid), ux = A.projItem(up, d.key), ul = [];
       if (ux.kind === 'skill') A.AGENTS.forEach(function (a) { if (ux.on[a.id]) ul.push(t('un.skill.1', up.path + '/' + PDIR[a.id] + '/' + ux.name)); });
-      else { ul.push(t('pj.un.mcp', up.path + '/.mcp.json')); if (Object.keys(ux.vars || {}).length) ul.push(t('pj.un.vars')); if (projOver(ux)) ul.push(t('pj.un.over', ux.name)); }
+      else { A.AGENTS.forEach(function (a) { if (ux.on[a.id]) ul.push(t('pj.un.mcp', up.path + '/' + PMCP[a.id])); }); if (Object.keys(ux.vars || {}).length) ul.push(t('pj.un.vars')); if (projOver(ux)) ul.push(t('pj.un.over', ux.name)); }
       body = '<h2>' + t('pj.un.h', esc(ux.name), esc(up.name)) + '</h2><p class="lede">' + t('un.d') + '</p><ul class="steps" data-kind="' + ux.kind + '">' + ul.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul><p class="loc-note">' + t('pj.un.vcs') + '</p>';
       foot = '<button type="button" class="btn" data-act="d-close" data-autofocus>' + t('cancel') + '</button><button type="button" class="btn btn-bad" data-act="pj-un-go">' + t('act.uninstall') + '</button>';
     } else if (d.type === 'pj-vars') {
       var vx = A.projItem(A.project(d.pid), d.key);
       body = '<h2>' + t('pj.vars.h', esc(vx.name)) + '</h2><p class="lede">' + t('pj.vars.d') + '</p>' + projNeeds(vx).map(function (k, i) {
-        return '<div class="fld"><label for="pv-' + i + '">' + esc(k) + '</label><input class="inp mono" id="pv-' + i + '" type="password" autocomplete="off" data-pv="' + esc(k) + '" value="' + esc((vx.vars || {})[k] || '') + '" placeholder="' + esc(k) + '"' + (i === 0 ? ' data-autofocus' : '') + '><p class="hint">' + t('pj.vars.ref') + ' <code class="mono">${' + esc(k) + '}</code></p></div>';
+        return '<div class="fld"><label for="pv-' + i + '">' + esc(k) + '</label><input class="inp mono" id="pv-' + i + '" type="password" autocomplete="off" data-pv="' + esc(k) + '" value="' + esc((vx.vars || {})[k] || '') + '" placeholder="' + esc(k) + '"' + (i === 0 ? ' data-autofocus' : '') + '>' + (vx.on.claude ? '<p class="hint">' + t('pj.vars.ref') + ' <code class="mono">${' + esc(k) + '}</code></p>' : '') + '</div>';
       }).join('');
       foot = '<button type="button" class="btn" data-act="d-close">' + t('cancel') + '</button><button type="button" class="btn btn-pri" data-act="pj-vars-save">' + t('save') + '</button>';
     } else if (d.type === 'shortcuts') {
@@ -761,7 +761,7 @@
       steps.push({ text: t('p.pj.fetch') + ' ' + it.id });
       if (it.kind === 'skill') A.AGENTS.forEach(function (a) { if (d.tg[a.id]) steps.push({ text: t('p.mcp.write') + ' ' + lp.path + '/' + PDIR[a.id] + '/' + it.name }); });
       else {
-        steps.push({ text: t('p.mcp.write') + ' ' + lp.path + '/.mcp.json › mcpServers.' + d.slug });
+        A.AGENTS.forEach(function (a) { if (d.tg[a.id]) steps.push({ text: t('p.mcp.write') + ' ' + lp.path + '/' + PMCP[a.id] + ' › ' + PKEY[a.id] + '.' + d.slug }); });
         if (A.needs(it).length) steps.push(d.skip ? { text: t('p.pj.vars'), skip: true, note: t('p.pj.novars') } : { text: t('p.pj.vars') });
       }
       d.prog = steps; d.i = 0; d.step = 'progress'; d.resolved = false; d.skipped = d.replaced = null;
@@ -890,6 +890,7 @@
       row(t('pc.size'), seg('size', [['auto', t('pc.auto')], ['full', '1200×764'], ['narrow', '900×640']])) +
       row(t('pc.lang'), seg('lang', [['zh', '中文'], ['en', 'English']])) +
       row(t('pc.projects'), '<div class="seg">' + [['sample', t('pc.projects.sample')], ['none', t('pc.projects.none')]].map(function (o) { return '<button type="button" data-act="pc-projects" data-arg="' + o[0] + '" aria-pressed="' + ((S.projects.length ? 'sample' : 'none') === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>') +
+      row(t('pc.trust'), '<div class="seg">' + [['no', t('pc.trust.no')], ['yes', t('pc.trust.yes')]].map(function (o) { var tp = A.project('agent-store'); return '<button type="button" data-act="pc-trust" data-arg="' + o[0] + '"' + (tp ? '' : ' disabled') + ' aria-pressed="' + (!!tp && (tp.codexUntrusted ? 'no' : 'yes') === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>') +
       row(t('pc.net'), seg('offline', [[false, t('pc.online')], [true, t('pc.offline')]])) +
       row(t('pc.link'), '<div class="fld-row"><select class="inp" id="sim" aria-label="' + t('pc.link') + '">' + Object.keys(LINKS).map(function (k) { return '<option value="' + k + '">' + t('pc.link.' + k) + '</option>'; }).join('') + '</select><button type="button" class="btn btn-sm" data-act="sim">' + t('pc.send') + '</button></div>') +
       '<div class="fld-row"><button type="button" class="btn btn-sm" data-act="rewelcome" style="flex:1">' + t('set.welcome.btn') + '</button><button type="button" class="btn btn-sm btn-bad" data-act="reset" style="flex:1">' + t('pc.reset') + '</button></div></div>';
@@ -1029,6 +1030,7 @@
       case 'sim': c = $('#sim') ? $('#sim').value : arg; U.pc = false; renderPc(); incoming(LINKS[c] || LINKS.skill); break;
       case 'reset': A.reset(); S = A.state; U = { menu: false, pc: false, loading: false, err: null, reveal: {}, lib: {}, period: '7', busy: {}, updMsg: '' }; toast(t('pc.reset.done')); go('welcome'); break;
       case 'pc-projects': S.projects = arg === 'none' ? [] : A.seedProjects(); A.save(); if (R.view === 'project' && !A.project(R.arg)) go('projects'); else render(); break;
+      case 'pc-trust': e = A.project('agent-store'); if (e) { if (arg === 'no') e.codexUntrusted = true; else delete e.codexUntrusted; A.save(); render(); } break;
       /* 项目 */
       case 'pj-new': U.menu = false; openDlg({ type: 'pj-new', path: '' }); break;
       case 'pj-relocate': e = A.project(arg); openDlg({ type: 'pj-new', relocate: arg, path: e.path }); break;

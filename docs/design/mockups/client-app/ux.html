@@ -56,7 +56,7 @@ ol.q b{color:var(--fg)}
 <h1>桌面客户端原型 · 交互说明</h1>
 <p>这份说明对应同目录下的可点击原型。功能来自对现有代码的盘点（见 <a href="INVENTORY.md">INVENTORY.md</a>），视觉沿用网站原型的方向。每个界面和状态都有独立地址，下文的链接直接打开对应状态。</p>
 <div class="top"><a class="btn pri" href="index.html?lang=zh#/welcome">从首次启动开始</a><a class="btn" href="index.html?lang=zh#/discover">直接进入「发现」</a><a class="btn" href="index.html?lang=en#/discover">English</a></div>
-<p class="note">原型右下角的「原型控制」不属于产品：切换登录状态、Free / Pro、检测到的 agent、窗口控件样式、窗口尺寸、语言、项目（示例项目 / 一个都没有）、目录在线 / 离线，模拟网页安装链接，以及重置。状态存在浏览器的 sessionStorage 里，关掉标签页即清空。</p>
+<p class="note">原型右下角的「原型控制」不属于产品：切换登录状态、Free / Pro、检测到的 agent、窗口控件样式、窗口尺寸、语言、项目（示例项目 / 一个都没有）、Codex 是否信任示例项目、目录在线 / 离线，模拟网页安装链接，以及重置。状态存在浏览器的 sessionStorage 里，关掉标签页即清空。</p>
 
 <h2>一、界面地图</h2>
 <div class="map">
@@ -153,7 +153,7 @@ ol.q b{color:var(--fg)}
 </ol>
 
 <h3>9. 项目 <span class="tag">提案，现有客户端没有</span></h3>
-<p>项目级的技能和 MCP 写在项目目录内，随版本库提交：技能写入 <code>&lt;项目&gt;/.claude/skills</code>（Claude Code）和 <code>&lt;项目&gt;/.agents/skills</code>（Codex），MCP 写入项目根的 <code>.mcp.json</code>（目前只对 Claude Code）。同名时项目覆盖全局。密钥的值只存在本机：<code>.mcp.json</code> 里只写变量引用（如 <code>${CONTEXT7_API_KEY}</code>）。模型服务商没有项目级。</p>
+<p>项目级的技能和 MCP 写在项目目录内，随版本库提交：技能写入 <code>&lt;项目&gt;/.claude/skills</code>（Claude Code）和 <code>&lt;项目&gt;/.agents/skills</code>（Codex），MCP 写入项目根的 <code>.mcp.json</code>（Claude Code，首次使用需批准）和 <code>&lt;项目&gt;/.codex/config.toml</code> 的 <code>[mcp_servers.&lt;名字&gt;]</code>（Codex，只在项目被信任时生效）。同名时项目覆盖全局。密钥的值只存在本机：<code>.mcp.json</code> 里只写变量引用（如 <code>${CONTEXT7_API_KEY}</code>）。模型服务商没有项目级。</p>
 <ol class="flow" style="--k:var(--warn)">
   <li><b>侧栏分组</b>「项目」下列出已登记的项目和条目数，末尾「添加项目」；目录不存在的项目带警示图标。窄窗口收成一个图标，进入项目列表。<a href="index.html?lang=zh#/projects">打开</a></li>
   <li><b>添加项目</b>选择目录（原型用预设路径和输入框代替系统的目录选择框）。添加只是登记，不改动目录里的文件。<a href="index.html?lang=zh#/projects">在列表页点「添加项目」</a></li>
@@ -162,11 +162,12 @@ ol.q b{color:var(--fg)}
   <li><b>覆盖全局</b>项目里的 MCP 与全局同名时带「覆盖全局」标记，悬停有说明，点开在行下展开说明并可跳到全局的那一条。<kbd>Esc</kbd> 收起。</li>
   <li><b>缺少密钥</b>队友提交了需要密钥的 MCP、本机还没填值时，行上显示「缺少密钥」，点开填写。值只存本机。示例里的 admux 是这种情形。</li>
   <li><b>添加到这个项目</b>进入「发现」，顶部提示正在为哪个项目挑选；安装对话框的安装位置已预选为这个项目。<a href="index.html?lang=zh#/discover?into=agent-store">打开</a></li>
-  <li><b>安装位置</b>安装对话框在选 agent 之前多一项：全局（默认）、某个已登记的项目、「添加项目…」。只对技能和 MCP 出现。选了项目时说明会随版本库提交、队友拉取后可用、Claude Code 首次使用项目里的 MCP 需要批准；MCP 的 Codex 一行置灰并写明原因。网页安装链接走同一个对话框。<a href="index.html?lang=zh#/discover/mcp-registry%3Aio.github.ruvnet%2Fclaude-flow?do=install&into=agent-store">打开</a></li>
+  <li><b>安装位置</b>安装对话框在选 agent 之前多一项：全局（默认）、某个已登记的项目、「添加项目…」。只对技能和 MCP 出现。选了项目时说明会写入项目目录并随版本库提交；MCP 另说明 Claude Code 首次使用需批准、Codex 需信任该项目后才生效。每个 agent 一行写明写到哪个文件。网页安装链接走同一个对话框。<a href="index.html?lang=zh#/discover/mcp-registry%3Aio.github.ruvnet%2Fclaude-flow?do=install&into=agent-store">打开</a></li>
   <li><b>填密钥</b>必填项一步写明：<code>.mcp.json</code> 里只写变量引用，值存本机。可「稍后填写」，装完后在项目页显示「缺少密钥」。</li>
   <li><b>完成</b>写明装到了哪个项目、对哪些 agent 生效；主按钮「打开项目」跳到项目页。</li>
   <li><b>卸载项目里的条目</b>先确认，列出会删除或改动的文件，并提示改动需要提交后队友才会同步。</li>
   <li><b>移除项目</b>先确认。只是不再管理，不删除任何文件，可以随时重新添加。</li>
+  <li class="alt"><b>Codex 尚未信任这个项目</b>项目页顶部提示：项目里的 MCP 对 Codex 不生效，并说明在该目录启动 Codex 并选择信任。示例里的 agent-store 是这种情形，可在原型控制里切换。<a href="index.html?lang=zh#/project/agent-store">打开</a></li>
   <li class="alt"><b>重复登记</b>同一目录不能登记两次，对话框里指出已有的那个项目并可直接打开。</li>
   <li class="alt"><b>目录不存在</b>提示目录可能已移动、改名或删除，可「重新定位」或「移除项目」，其余操作禁用；下方保留最后一次读到的内容。<a href="index.html?lang=zh#/project/old-site">打开</a></li>
   <li class="alt"><b>项目里已有同名条目</b>安装位置里这个项目置灰，注明「已安装」或「已有同名条目」。</li>
@@ -183,7 +184,7 @@ ol.q b{color:var(--fg)}
 <tr><td>供应商</td><td><a href="index.html?lang=zh#/providers">总览</a></td><td>—</td><td><a href="index.html?lang=zh#/providers?state=empty">还没有配置</a></td><td>缺少密钥；中转已停止；不支持该 agent；Free 超过 2 个上游的部分变淡</td></tr>
 <tr><td>用量</td><td><a href="index.html?lang=zh#/usage">示例数据</a></td><td>—</td><td><a href="index.html?lang=zh#/usage?state=empty">暂无用量数据</a></td><td>Free：预算与导出显示为 Pro 说明</td></tr>
 <tr><td>项目列表</td><td><a href="index.html?lang=zh#/projects">列表</a>，目录不存在 / 缺少密钥标记</td><td><a href="index.html?lang=zh#/projects?state=loading">骨架</a></td><td><a href="index.html?lang=zh#/projects?state=empty">还没有项目</a></td><td>—</td></tr>
-<tr><td>项目页</td><td><a href="index.html?lang=zh#/project/agent-store">技能与 MCP 两个区块</a></td><td><a href="index.html?lang=zh#/project/agent-store?state=loading">骨架</a></td><td><a href="index.html?lang=zh#/project/blog">没有项目级内容</a>；单个区块为空时区块内提示</td><td><a href="index.html?lang=zh#/project/agent-store?state=error">读取失败</a>；<a href="index.html?lang=zh#/project/old-site">目录不存在</a>；缺少密钥；<a href="index.html?lang=zh#/project/none">没有这个项目</a></td></tr>
+<tr><td>项目页</td><td><a href="index.html?lang=zh#/project/agent-store">技能与 MCP 两个区块</a></td><td><a href="index.html?lang=zh#/project/agent-store?state=loading">骨架</a></td><td><a href="index.html?lang=zh#/project/blog">没有项目级内容</a>；单个区块为空时区块内提示</td><td><a href="index.html?lang=zh#/project/agent-store?state=error">读取失败</a>；<a href="index.html?lang=zh#/project/old-site">目录不存在</a>；缺少密钥；Codex 尚未信任；<a href="index.html?lang=zh#/project/none">没有这个项目</a></td></tr>
 <tr><td>安装对话框</td><td>选 agent → 必填项 → 进度 → 完成</td><td>网页链接到达时「正在从目录获取」</td><td>没有可用 agent 时按钮变为「只安装，不启用」</td><td>同名条目冲突；目录取不到；六种链接提示</td></tr>
 <tr><td>设置</td><td>六个分页</td><td>检查更新时「正在检查…」</td><td>—</td><td>离线时检查更新失败；跨设备同步为禁用的「即将推出」</td></tr>
 </tbody></table></div>
@@ -228,11 +229,13 @@ ol.q b{color:var(--fg)}
 
 <h3>新增设计：项目（提案）</h3>
 <p>整个「项目」功能是提案，现有客户端和引擎都没有：侧栏分组、项目列表、项目页、添加 / 重新定位 / 移除项目、安装对话框里的「安装位置」、「覆盖全局」和「缺少密钥」标记。界面里的行为全部是模拟。</p>
-<p><b style="color:var(--fg)">已定的规则。</b>项目级内容一律进版本库，不区分私有和共享：技能写入 <code>&lt;项目&gt;/.claude/skills</code>（Claude Code）和 <code>&lt;项目&gt;/.agents/skills</code>（Codex）；MCP 写入项目根的 <code>.mcp.json</code>（Claude Code），队友拉取后首次使用需要批准。同名时项目覆盖全局。密钥只存本机，<code>.mcp.json</code> 里只写变量引用。模型服务商不做项目级。</p>
-<p><b style="color:var(--fg)">第一期只做：</b>登记项目、查看项目里的技能和 MCP（含不是 Agent Store 装的，只读）、安装时选择安装位置、覆盖全局的提示、缺少密钥的提示与填写、卸载由 Agent Store 安装的条目。</p>
+<p><b style="color:var(--fg)">已定的规则。</b>项目级内容一律进版本库，不区分私有和共享：技能写入 <code>&lt;项目&gt;/.claude/skills</code>（Claude Code）和 <code>&lt;项目&gt;/.agents/skills</code>（Codex）；MCP 写入项目根的 <code>.mcp.json</code>（Claude Code，首次使用需要批准）和项目里的 <code>.codex/config.toml</code>（Codex）。同名时项目覆盖全局。密钥只存本机，<code>.mcp.json</code> 里只写变量引用。模型服务商不做项目级。</p>
+<p><b style="color:var(--fg)">已确认的事实。</b>Codex 支持项目级 MCP（官方文档，codex-cli 0.166.0 实测）：读取项目里 <code>.codex/config.toml</code> 的 <code>[mcp_servers.&lt;名字&gt;]</code>，只在项目被信任时生效，未信任的项目里这份配置整个被忽略。<code>codex mcp add</code> 没有范围选项，项目级只能直接写这个文件。</p>
+<p><b style="color:var(--fg)">第一期只做：</b>登记项目、查看项目里的技能和 MCP（含不是 Agent Store 装的，只读）、安装时选择安装位置、覆盖全局的提示、Codex 尚未信任项目的提示、缺少密钥的提示与填写、卸载由 Agent Store 安装的条目。</p>
 <p><b style="color:var(--fg)">后续再做：</b>项目内容与技能库的差异比对和双向同步；按项目停用某一条；命令行 <code>aas projects</code> 子命令。原型里没有这些入口。</p>
 <ol class="q">
-  <li><b>Codex 的项目级 MCP 是否支持？</b> 待核实 Codex 是否读取项目里的 <code>.codex/config.toml</code>。核实之前，项目级 MCP 只支持 Claude Code，安装对话框里 Codex 一行置灰并写明原因。</li>
+  <li><b>Codex 项目级 MCP 的密钥如何留在本机？</b> <code>.codex/config.toml</code> 的变量传递方式待定。Claude Code 一侧在 <code>.mcp.json</code> 里写 <code>${VAR}</code> 引用；Codex 一侧界面上没有写具体机制。</li>
+  <li><b>Codex 是否信任某个项目，客户端怎样得知？</b> 原型用一个示例状态表现「尚未信任」的提示，没有设计检测方式。</li>
   <li><b>是否需要「只在本机、不进版本库」的项目级 MCP？</b> Claude Code 支持这种写法（记在 <code>~/.claude.json</code> 里该项目名下）。当前不做，项目级 MCP 只有进版本库这一种。</li>
   <li><b>密钥的值存在本机的什么位置，怎样交给 agent？</b> 原型只表现了「<code>.mcp.json</code> 写变量引用、值存本机、每人各填一次」，没有设计存放位置和注入方式。</li>
   <li><b>拉取下来的条目怎样判断是不是 Agent Store 装的？</b> 队友用 Agent Store 装进项目、我拉取之后，本机没有安装记录。原型把这种条目显示为「项目自带」（只读）。要不要在项目里留标记，让它在每个人的机器上都能更新和卸载？</li>

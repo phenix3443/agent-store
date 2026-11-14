@@ -6,13 +6,13 @@
     { id: 'codex', name: 'Codex', mark: 'Cx', dir: '~/.codex', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', mcpKey: 'mcp_servers', env: 'CODEX_HOME', color: '#5fd6a4' }
   ];
 
-  /* 项目示例：old-site 的目录已不存在；admux 模拟队友提交、本机还没填密钥的情形。 */
+  /* 项目示例：old-site 的目录已不存在；admux 模拟队友提交、本机还没填密钥的情形；agent-store 还没被 Codex 信任。 */
   function seedProjects() {
     return [
-      { id: 'agent-store', name: 'agent-store', path: '~/code/agent-store', items: [
+      { id: 'agent-store', name: 'agent-store', path: '~/code/agent-store', codexUntrusted: true, items: [
         { key: 'handoff', kind: 'skill', name: 'handoff', id: 'github:mattpocock/skills/handoff', ours: true, version: '9b1d44e07c21', on: { claude: true, codex: true } },
         { key: 'release-checklist', kind: 'skill', name: 'release-checklist', id: null, ours: false, on: { claude: true, codex: false } },
-        { key: 'context7', kind: 'mcp', name: 'context7', id: 'mcp-registry:io.github.upstash/context7', ours: true, version: '4.7.0', on: { claude: true, codex: false }, vars: { CONTEXT7_API_KEY: 'ctx7sk-88d0c3a917f2' } },
+        { key: 'context7', kind: 'mcp', name: 'context7', id: 'mcp-registry:io.github.upstash/context7', ours: true, version: '4.7.0', on: { claude: true, codex: true }, vars: { CONTEXT7_API_KEY: 'ctx7sk-88d0c3a917f2' } },
         { key: 'admux', kind: 'mcp', name: 'admux', id: null, ours: false, on: { claude: true, codex: false }, needs: ['ADMUX_API_KEY'], vars: {} }
       ] },
       { id: 'blog', name: 'blog', path: '~/code/blog', items: [] },
