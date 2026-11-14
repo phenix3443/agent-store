@@ -1,5 +1,5 @@
 import { test, expect, mock, afterEach, beforeEach } from 'bun:test'
-import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
+import { act, render, screen, cleanup, fireEvent, within } from '@testing-library/react'
 import { intlMock } from '../../test-intl'
 
 const refresh = mock(() => {})
@@ -94,10 +94,21 @@ test('the search button on narrow screens opens the same menu', () => {
   expect(within(screen.getByRole('dialog')).getByRole('searchbox', { name: '搜索' })).toBeInTheDocument()
 })
 
-test('the account menu holds the dashboard and sign-out', () => {
+test('the account menu holds the dashboard, favorites and sign-out', () => {
   render(<Header user={{ initial: 'Y', username: 'you', email: 'you@dev' }} />)
   openMenu('账号菜单')
   expect(screen.getByRole('menuitem', { name: '个人面板' }).getAttribute('href')).toBe('/dashboard')
+  expect(screen.getByRole('menuitem', { name: '收藏' }).getAttribute('href')).toBe('/dashboard?tab=favorites')
   expect(screen.getByRole('menuitem', { name: '退出登录' }).getAttribute('href')).toBe('/auth/logout')
-  expect(screen.queryByRole('menuitem', { name: '收藏' })).toBeNull()
+})
+
+test('a log-in request from the page opens the dialog with its reason and return path', async () => {
+  const { requestLogin } = await import('@/lib/login-request')
+  render(<Header user={null} />)
+  act(() => requestLogin({ next: '/store?category=skill', body: '登录后就能收藏。' }))
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog.textContent).toContain('登录后就能收藏。')
+  expect(within(dialog).getByRole('link', { name: '用 GitHub 登录' }).getAttribute('href')).toBe(
+    '/auth/login?provider=github&next=%2Fstore%3Fcategory%3Dskill'
+  )
 })

@@ -187,6 +187,48 @@ describe('StoreClient.searchSupplement', () => {
   })
 })
 
+describe('StoreClient favorites', () => {
+  test('listFavorites sends the token and returns the list', async () => {
+    const originalFetch = globalThis.fetch
+    let seen: { url: string; auth?: string } | undefined
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      seen = { url: String(url), auth: (init?.headers as Record<string, string>)['Authorization'] }
+      return new Response(JSON.stringify({ favorites: [{ id: 'github:a/b/c', createdAt: '2026-11-14T00:00:00.000Z', resource: null }] }))
+    }) as typeof fetch
+    const result = await new StoreClient('https://api.example').listFavorites('jwt')
+    globalThis.fetch = originalFetch
+    expect(seen).toEqual({ url: 'https://api.example/api/me/favorites', auth: 'Bearer jwt' })
+    expect(result.data?.favorites[0]?.id).toBe('github:a/b/c')
+  })
+
+  test('setFavorite PUTs to add and DELETEs to remove, encoding each id segment', async () => {
+    const originalFetch = globalThis.fetch
+    const calls: string[] = []
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(`${init?.method} ${String(url)}`)
+      return new Response(JSON.stringify({ favorited: init?.method === 'PUT' }))
+    }) as typeof fetch
+    const client = new StoreClient('https://api.example')
+    const on = await client.setFavorite('jwt', 'mcp-registry:io.github.x/y z', true)
+    const off = await client.setFavorite('jwt', 'mcp-registry:io.github.x/y z', false)
+    globalThis.fetch = originalFetch
+    expect(calls).toEqual([
+      'PUT https://api.example/api/me/favorites/mcp-registry%3Aio.github.x/y%20z',
+      'DELETE https://api.example/api/me/favorites/mcp-registry%3Aio.github.x/y%20z',
+    ])
+    expect(on.data?.favorited).toBe(true)
+    expect(off.data?.favorited).toBe(false)
+  })
+
+  test('an HTTP error keeps its status', async () => {
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async () => new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })) as typeof fetch
+    const result = await new StoreClient('https://api.example').setFavorite('jwt', 'github:a/b/c', true)
+    globalThis.fetch = originalFetch
+    expect(result).toEqual({ data: null, error: 'Unauthorized', status: 401 })
+  })
+})
+
 describe('StoreClient subscription methods', () => {
   const originalFetch = globalThis.fetch
   const active = { plan: 'pro', status: 'active', period: 'monthly', currentPeriodEnd: '2026-12-01' } as const

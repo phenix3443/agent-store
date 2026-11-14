@@ -8,12 +8,23 @@ mock.module('next/link', () => ({
   ),
 }))
 mock.module('next/headers', () => ({ headers: async () => new Headers() }))
+mock.module('next/navigation', () => ({
+  useRouter: () => ({ refresh: () => {}, replace: () => {}, push: () => {} }),
+  usePathname: () => '/dashboard',
+  useSearchParams: () => new URLSearchParams(),
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND')
+  },
+  redirect: () => {
+    throw new Error('NEXT_REDIRECT')
+  },
+}))
 mock.module('next-intl', () => intlMock)
 mock.module('next-intl/server', () => intlServerMock)
-mock.module('next/navigation', () => ({ useRouter: () => ({ refresh: () => {} }) }))
 
 let user: Record<string, string> | null = null
 let plan: string | null = 'free'
+let favorites: unknown[] | null = []
 type Sub = { plan: string; status: string; period: string | null; currentPeriodEnd: string | null }
 let subscription: Sub | null | undefined = null
 const active: Sub = { plan: 'pro', status: 'active', period: 'monthly', currentPeriodEnd: '2026-12-01' }
@@ -31,6 +42,9 @@ mock.module('@as/sdk', () => ({
     async getMyEntitlements() {
       return plan ? { data: { plan }, error: null } : { data: null, error: 'HTTP 401' }
     }
+    async listFavorites() {
+      return favorites ? { data: { favorites }, error: null } : { data: null, error: 'HTTP 500', status: 500 }
+    }
     async getMySubscription() {
       return subscription === undefined ? { data: null, error: 'HTTP 500' } : { data: { subscription }, error: null }
     }
@@ -40,6 +54,7 @@ mock.module('@as/sdk', () => ({
 beforeEach(() => {
   user = { name: 'Octo Cat', username: 'octocat', email: 'octo@example.com' }
   plan = 'free'
+  favorites = []
   subscription = null
 })
 afterEach(() => cleanup())
@@ -64,7 +79,7 @@ test('the account tab shows the real account fields and the sign-in method', asy
   for (const v of ['octocat', 'octo@example.com', 'GitHub', 'Free']) expect(text).toContain(v)
   expect(screen.getByRole('link', { name: '账户' }).getAttribute('aria-current')).toBe('page')
   expect(screen.getByRole('link', { name: '退出登录' }).getAttribute('href')).toBe('/auth/logout')
-  for (const word of ['收藏', '同步']) expect(text).not.toContain(word)
+  expect(text).not.toContain('同步')
 })
 
 test('Free: the subscription tab sends you to pricing', async () => {
@@ -144,4 +159,42 @@ test('?state= opens the loading and error states for review', async () => {
   cleanup()
   await page('subscription', 'error')
   expect(screen.getByRole('alert').textContent).toContain('暂时查不到订阅状态')
+})
+
+const skill = {
+  id: 'github:anthropics/skills/frontend-design',
+  kind: 'skill',
+  name: 'frontend-design',
+  author: { name: 'anthropics' },
+}
+
+test('the favorites tab lists each favorite with a link to it and a remove button', async () => {
+  favorites = [
+    { id: skill.id, createdAt: '2026-11-14T00:00:00.000Z', resource: skill },
+    { id: 'github:gone/repo/skill', createdAt: '2026-11-13T00:00:00.000Z', resource: null },
+  ]
+  await page('favorites')
+  expect(screen.getByRole('link', { name: '收藏' }).getAttribute('aria-current')).toBe('page')
+  expect(document.body.textContent).toContain('2 个')
+  expect(screen.getByRole('link', { name: '查看 frontend-design' }).getAttribute('href')).toBe(
+    '/store/skill/github:anthropics/skills/frontend-design'
+  )
+  expect(screen.getByRole('button', { name: '从收藏移除 frontend-design' })).toBeTruthy()
+  // One the catalog dropped can still be removed, but has nothing to open.
+  expect(document.body.textContent).toContain('目录里已没有这个条目')
+  expect(screen.getByRole('button', { name: '从收藏移除 github:gone/repo/skill' })).toBeTruthy()
+  expect(screen.queryByRole('link', { name: /查看 github:gone/ })).toBeNull()
+})
+
+test('no favorites: an empty state that sends you to the store', async () => {
+  await page('favorites')
+  expect(document.body.textContent).toContain('还没有收藏')
+  expect(screen.getByRole('link', { name: '去商店' }).getAttribute('href')).toBe('/store')
+})
+
+test('an unreadable favorites list is said so, not shown as empty', async () => {
+  favorites = null
+  await page('favorites')
+  expect(screen.getByRole('status').textContent).toContain('暂时查不到收藏')
+  expect(document.body.textContent).not.toContain('还没有收藏')
 })
