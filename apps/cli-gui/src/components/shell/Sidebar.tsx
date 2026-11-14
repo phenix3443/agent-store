@@ -160,6 +160,11 @@ export function Sidebar() {
     callRpc<RelayStatus>('getRelayStatus').then(setRelay, () => undefined)
   }, [installedVersion])
 
+  // The relay changes outside the app too (a port freed, aas relay stop), so each page change re-reads it.
+  useEffect(() => {
+    callRpc<RelayStatus>('getRelayStatus').then(setRelay, () => undefined)
+  }, [navView, categoryFilter])
+
   const updatable = new Set(updates.map((u) => u.slug))
   const count = (kind: Kind) => installed.filter((i) => i.category === kind).length
   const hasUpdate = (kind: Kind) => installed.some((i) => i.category === kind && updatable.has(i.slug))

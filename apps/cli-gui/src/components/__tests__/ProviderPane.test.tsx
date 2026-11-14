@@ -258,8 +258,8 @@ test('测试连接 waits for a key', async () => {
   renderPanel()
   const key = await screen.findByDisplayValue('sk-real')
   fireEvent.change(key, { target: { value: '' } })
-  expect(await screen.findByText('先填写 API 密钥')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '测试连接' })).toBeDisabled()
+  await waitFor(() => expect(screen.getByRole('button', { name: '测试连接' })).toBeDisabled())
+  expect(screen.getByRole('button', { name: '测试连接' }).nextElementSibling).toHaveTextContent('先填写 API 密钥')
 })
 
 test('a test that cannot run shows why', async () => {

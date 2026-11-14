@@ -48,11 +48,11 @@ function mockRpc({
   const calls: [string, unknown[]][] = []
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args: unknown[] = []) => {
     calls.push([method, args])
+    if (relay?.[method]) return relay[method]!(args)
     if (method === 'getUsageSummary') {
       if (fail) throw new Error('db locked')
       return rows
     }
-    if (relay?.[method]) return relay[method]!(args)
     if (method === 'getRelayStatus') return running ? { running, pid: 42, listeners: LISTENING, routedAgents: {} } : { running, routedAgents: {} }
     if (method === 'listLocalConfigs') return [{ id: 'default', name: 'default', port: 18100, enabled: true, enabledFor: {} }]
     if (method === 'getEntitlements') return plan
@@ -120,8 +120,8 @@ test('breaks usage down by provider, model and agent', async () => {
   renderPage()
 
   const bodyRows = async () => within(await screen.findByRole('table')).getAllByRole('row').slice(1).map((r) => r.textContent)
-  expect(screen.getByRole('tab', { name: '按供应商' })).toHaveAttribute('aria-selected', 'true')
   expect(await bodyRows()).toEqual(['openrouter1100.0%00$0.9064.3%', 'skyapi580.0%00$0.5035.7%'])
+  expect(screen.getByRole('tab', { name: '按供应商' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByText('1 次请求没有价格数据，未计入费用。')).toBeInTheDocument()
 
   fireEvent.mouseDown(screen.getByRole('tab', { name: '按模型' }))
