@@ -27,6 +27,9 @@ stop_app() { for p in $(app_pids); do kill "$p"; done; sleep 3; }
 # Keys go to the frontmost app through System Events (needs Accessibility for this shell).
 keys() { osascript -e 'tell application "Agent Store" to activate' -e 'delay 1' -e "tell application \"System Events\" to $1" >>"$OUT/osascript.log" 2>&1; }
 confirm() { keys 'key code 48' && sleep 1 && keys 'key code 36'; sleep 20; }
+# The live catalog sometimes answers 503 for a moment: if an install did not land, the link is
+# opened and confirmed once more. The first attempt's screenshot stays in the artifact.
+retry_link() { eval "$2" && return; log "RETRY: $3 did not land; opening the link once more"; open "$1"; sleep "$SETTLE"; confirm; shot "$3-retry"; }
 windows_of() { swift "$ROOT/test/desktop-smoke/windows.swift" "$1" 2>>"$OUT/swift.log"; }
 new_crash_reports() { find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -newer "$STAMP" \( -name 'app*' -o -name 'aas*' -o -name 'Agent Store*' \) 2>/dev/null; }
 
@@ -80,7 +83,10 @@ sleep 10
 shot gatekeeper-quarantined
 log "quarantined app running after open: $([ -n "$(app_pids)" ] && echo yes || echo no)"
 log "open returned while the dialog was up: $(kill -0 "$OPEN_PID" 2>/dev/null && echo no || echo yes)"
-bounded 30 osascript -e 'tell application "System Events" to key code 53' >>"$OUT/osascript.log" 2>&1
+bounded 30 osascript -e 'tell application "System Events" to tell process "CoreServicesUIAgent" to click button "Done" of window 1' >>"$OUT/osascript.log" 2>&1 \
+  || bounded 30 osascript -e 'tell application "System Events" to key code 53' >>"$OUT/osascript.log" 2>&1
+sleep 2
+shot gatekeeper-dismissed
 sleep 2
 kill "$OPEN_PID" 2>/dev/null
 stop_app
@@ -122,6 +128,7 @@ shot 01-link-confirm
 check "a link starts the closed app" '[ -n "$(app_pids)" ]'
 confirm
 shot 02-link-installed
+retry_link "agent-store://install?id=$(enc "$SKILL_ID")" '[ -f "$HOME/.agent-store/skills/$SKILL_SLUG/.agent-store.json" ]' 02-link-installed
 log "skills: $(ls "$HOME/.agent-store/skills" 2>/dev/null | tr '\n' ' ')"
 check "a cold-start link installs $SKILL_SLUG" '[ -f "$HOME/.agent-store/skills/$SKILL_SLUG/.agent-store.json" ]'
 check "Claude Code gets the skill" '[ -e "$HOME/.claude/skills/find-skills/SKILL.md" ]'
@@ -137,6 +144,7 @@ log "instances while warm: $(app_pids | wc -l | tr -d ' ')"
 check "a warm link does not start a second instance" '[ "$(app_pids | wc -l | tr -d " ")" = 1 ]'
 confirm
 shot 04-warm-installed
+retry_link "agent-store://install?id=$(enc "$MCP_ID")" 'grep -q "@upstash/context7-mcp" "$HOME/.claude.json" 2>/dev/null' 04-warm-installed
 check "a warm link installs context7 for Claude Code" 'grep -q "@upstash/context7-mcp" "$HOME/.claude.json" 2>/dev/null'
 stop_app
 

@@ -48,6 +48,13 @@ function Confirm([int]$wait = 20) {
   Start-Sleep $wait
 }
 function OpenLink($url) { Start-Process $url; Start-Sleep $Settle }
+# The live catalog sometimes answers 503 for a moment: if an install did not land, the link is
+# opened and confirmed once more. The first attempt's screenshot stays in the artifact.
+function RetryLink($url, [scriptblock]$landed, $name) {
+  if (& $landed) { return }
+  Log "RETRY: $name did not land; opening the link once more"
+  OpenLink $url; Confirm; Shot "$name-retry"
+}
 function Enc($s) { [uri]::EscapeDataString($s) }
 
 Push-Location "$Root\apps\cli-gui"
@@ -156,6 +163,7 @@ Shot '01-link-confirm'
 Check 'a link starts the closed app' { (AppProcs).Count -ge 1 }
 Confirm
 Shot '02-link-installed'
+RetryLink "agent-store://install?id=$(Enc $SkillId)" { Test-Path "$env:USERPROFILE\.agent-store\skills\$SkillSlug\.agent-store.json" } '02-link-installed'
 $lib = "$env:USERPROFILE\.agent-store\skills\$SkillSlug"
 Check "a cold-start link installs $SkillSlug" { Test-Path "$lib\.agent-store.json" }
 $deployed = Get-Item "$env:USERPROFILE\.claude\skills\find-skills" -ErrorAction SilentlyContinue
@@ -172,6 +180,7 @@ Log "instances while warm: $((AppProcs).Count)"
 Check 'a warm link does not leave a second instance' { (AppProcs).Count -eq 1 }
 Confirm
 Shot '04-warm-installed'
+RetryLink "agent-store://install?id=$(Enc $McpId)" { (Get-Content "$env:USERPROFILE\.claude.json" -Raw -ErrorAction SilentlyContinue) -match '@upstash/context7-mcp' } '04-warm-installed'
 Check 'a warm link installs context7 for Claude Code' { (Get-Content "$env:USERPROFILE\.claude.json" -Raw -ErrorAction SilentlyContinue) -match '@upstash/context7-mcp' }
 StopApp
 
@@ -197,6 +206,7 @@ Log "second skill: $($other.id) ($($other.slug))"
 OpenLink "agent-store://install?id=$(Enc $other.id)"
 Confirm
 Shot '05-npm-claude-skill-installed'
+if ($other) { RetryLink "agent-store://install?id=$(Enc $other.id)" { Test-Path "$env:USERPROFILE\.agent-store\skills\$($other.slug)\.agent-store.json" } '05-npm-claude-skill-installed' }
 Check "with npm's Claude Code on PATH, a link still installs a skill" { $other -and (Test-Path "$env:USERPROFILE\.agent-store\skills\$($other.slug)\.agent-store.json") }
 StopApp
 
