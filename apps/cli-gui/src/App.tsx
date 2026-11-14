@@ -1,6 +1,7 @@
 import { AppStateProvider, useAppState } from './state/AppState'
 import { EntitlementProvider } from './state/Entitlement'
 import { AuthProvider } from './state/Auth'
+import { FavoritesProvider } from './state/Favorites'
 import { TerminalLogProvider } from './state/TerminalLog'
 import { ProjectsProvider } from './state/Projects'
 import { I18nProvider } from './i18n'
@@ -9,6 +10,7 @@ import { Sidebar } from './components/shell/Sidebar'
 import { StatusBar } from './components/shell/StatusBar'
 import { CommandPalette } from './components/shell/CommandPalette'
 import { ShellDialogs } from './components/shell/ShellDialogs'
+import { SignInDialog } from './components/shell/SignInDialog'
 import { DiscoverPage } from './components/discover/DiscoverPage'
 import { LibraryPage } from './components/library/LibraryPage'
 import { ProvidersPage } from './components/library/ProvidersPage'
@@ -51,6 +53,7 @@ function AppShell() {
       <StatusBar />
       <CommandPalette />
       <ShellDialogs />
+      <SignInDialog />
       <InstallDialog />
       <ProjectDialogs />
       <Toaster />
@@ -64,13 +67,15 @@ export function App() {
       <AppStateProvider>
         <EntitlementProvider>
           <AuthProvider>
-            <TerminalLogProvider>
-              <ProjectsProvider>
-                <TooltipProvider delayDuration={300}>
-                  <AppShell />
-                </TooltipProvider>
-              </ProjectsProvider>
-            </TerminalLogProvider>
+            <FavoritesProvider>
+              <TerminalLogProvider>
+                <ProjectsProvider>
+                  <TooltipProvider delayDuration={300}>
+                    <AppShell />
+                  </TooltipProvider>
+                </ProjectsProvider>
+              </TerminalLogProvider>
+            </FavoritesProvider>
           </AuthProvider>
         </EntitlementProvider>
       </AppStateProvider>

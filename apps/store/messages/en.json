@@ -784,6 +784,57 @@
         "returning": "Logged in. Returning to the app",
         "returningHint": "If your browser didn't open the app, use the button below.",
         "openApp": "Open Agent Store"
+      },
+      "device": {
+        "home": "Back to home",
+        "loading": {
+          "title": "Reading the sign-in request…"
+        },
+        "working": {
+          "title": "Working…"
+        },
+        "signIn": {
+          "title": "Log in to connect the desktop app",
+          "body": "After you log in, confirm the code the app shows and the app finishes signing in.",
+          "github": "Continue with GitHub",
+          "google": "Continue with Google"
+        },
+        "confirm": {
+          "title": "Let the desktop app sign in?",
+          "body": "The Agent Store app wants to sign in as {email}.",
+          "codeLabel": "Sign-in code",
+          "check": "Check that the app shows the same code. If you didn't start this, choose Deny.",
+          "allow": "Allow",
+          "deny": "Deny"
+        },
+        "approved": {
+          "title": "Allowed",
+          "body": "Go back to the app; it finishes signing in on its own. You can close this page."
+        },
+        "denied": {
+          "title": "Denied",
+          "body": "The app won't sign in. To sign in, start again from the app."
+        },
+        "expired": {
+          "title": "This sign-in request has expired",
+          "body": "Codes are valid for 10 minutes. Sign in again from the app."
+        },
+        "used": {
+          "title": "This sign-in request was already handled",
+          "body": "Each code works once. To sign in again, start again from the app."
+        },
+        "otherAccount": {
+          "title": "This sign-in request belongs to another account",
+          "body": "Another account opened it, so it can't be approved here. Sign in again from the app."
+        },
+        "invalid": {
+          "title": "Sign-in request not found",
+          "body": "The link may be incomplete. Sign in again from the app."
+        },
+        "failed": {
+          "title": "Something went wrong",
+          "body": "Try again later, or sign in again from the app."
+        }
       }
     },
     "legal": {

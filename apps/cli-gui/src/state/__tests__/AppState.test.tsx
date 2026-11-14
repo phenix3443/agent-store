@@ -8,7 +8,7 @@ function Probe() {
   const {
     navView, setNavView, categoryFilter, setCategoryFilter,
     selectedSlug, setSelectedSlug,
-    favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
+    discoverFavorites, setDiscoverFavorites, terminalExpanded, setTerminalExpanded,
     installedVersion, bumpInstalledVersion,
   } = useAppState()
   return (
@@ -16,13 +16,13 @@ function Probe() {
       <span data-testid="nav">{navView}</span>
       <span data-testid="category">{categoryFilter}</span>
       <span data-testid="selected">{selectedSlug ?? 'none'}</span>
-      <span data-testid="favorites">{[...favoriteSlugs].join(',')}</span>
+      <span data-testid="favorites">{String(discoverFavorites)}</span>
       <span data-testid="terminal">{String(terminalExpanded)}</span>
       <span data-testid="installed-version">{installedVersion}</span>
       <button onClick={() => setNavView('overview')}>set-nav</button>
       <button onClick={() => setCategoryFilter('provider')}>set-category</button>
       <button onClick={() => setSelectedSlug('filesystem')}>select</button>
-      <button onClick={() => toggleFavorite('filesystem')}>toggle-fav</button>
+      <button onClick={() => setDiscoverFavorites(true)}>show-favorites</button>
       <button onClick={() => setTerminalExpanded(true)}>expand-terminal</button>
       <button onClick={bumpInstalledVersion}>bump-installed-version</button>
     </div>
@@ -37,12 +37,12 @@ function renderProbe() {
   )
 }
 
-test('defaults: discover (browse) nav, all category, no selection, no favorites, terminal collapsed', () => {
+test('defaults: discover (browse) nav, all category, no selection, the catalog not favorites, terminal collapsed', () => {
   renderProbe()
   expect(screen.getByTestId('nav').textContent).toBe('browse')
   expect(screen.getByTestId('category').textContent).toBe('all')
   expect(screen.getByTestId('selected').textContent).toBe('none')
-  expect(screen.getByTestId('favorites').textContent).toBe('')
+  expect(screen.getByTestId('favorites').textContent).toBe('false')
   expect(screen.getByTestId('terminal').textContent).toBe('false')
   expect(screen.getByTestId('installed-version').textContent).toBe('0')
 })
@@ -59,12 +59,10 @@ test('setters update their respective fields', () => {
   expect(screen.getByTestId('terminal').textContent).toBe('true')
 })
 
-test('toggleFavorite adds then removes a slug', () => {
+test('Discover can be switched to the favorites', () => {
   renderProbe()
-  fireEvent.click(screen.getByText('toggle-fav'))
-  expect(screen.getByTestId('favorites').textContent).toBe('filesystem')
-  fireEvent.click(screen.getByText('toggle-fav'))
-  expect(screen.getByTestId('favorites').textContent).toBe('')
+  fireEvent.click(screen.getByText('show-favorites'))
+  expect(screen.getByTestId('favorites').textContent).toBe('true')
 })
 
 test('bumpInstalledVersion increments the counter', () => {

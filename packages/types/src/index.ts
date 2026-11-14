@@ -39,6 +39,7 @@ export type {
   ClaudeMcpApproval, ProjectEnvVar, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectUninstallOptions, ProjectUninstallResult, ProjectSummary,
 } from './projects'
+export type { DeviceAuthorization, DevicePoll, AccessToken } from './auth'
 export type {
   BackupItemCategory, BackupItemRef, BackupConnectOptions, BackupConflictReason, BackupConflict, BackupConflictChoice,
   BackupMissingSecret, BackupFailure, BackupLocalOnly, BackupExcludedFile, BackupStatus, BackupConnectResult,

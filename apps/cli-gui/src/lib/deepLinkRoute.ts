@@ -11,6 +11,7 @@ const ID = /^(mcp-registry|github|builtin):[A-Za-z0-9._~@/-]{1,300}$/
 export type InvalidReason = 'malformed' | 'scheme' | 'action' | 'slug' | 'category'
 
 export type DeepLinkRoute =
+  /** What the store's old /auth/desktop page sends. Ignored since #195: a web page could open it with someone else's token. */
   | { kind: 'auth-callback' }
   /** `ref` is the catalog id when the link has one (web store links since #121), else the slug. */
   | { kind: 'install'; ref: string; slug?: string; category?: Category }

@@ -7,6 +7,7 @@ export type Locale = (typeof LOCALES)[number]
 
 import { libraryEn, libraryZh } from './library'
 import { projectsEn, projectsZh } from './projects'
+import { accountEn, accountZh } from './account'
 import { manageEn, manageZh } from './manage'
 
 type Dict = Record<string, unknown>
@@ -14,6 +15,7 @@ type Dict = Record<string, unknown>
 const zh: Dict = {
   ...libraryZh,
   ...projectsZh,
+  ...accountZh,
   ...manageZh,
   catalog: {"source": {"mcp-registry": "MCP Registry", "github": "GitHub", "builtin": "内置"}, "loadMore": "加载更多", "offline": "目录暂时取不到，显示的是上次缓存的结果", "empty": "没有找到匹配的资源", "notInstallable": "暂不能安装", "skillClients": "适用客户端", "forceEnable": "强制启用", "codexUnsupported": "Codex 不支持这个 MCP", "skillFetch": "下载技能目录到", "skillLink": "链接到已启用客户端的 skills 目录", "mcpRun": "启动", "mcpNeeds": "需要填写", "mcpConnect": "连接", "providerPreset": "写入接入配置", "factSource": "来源：", "sourceLabel": "来源", "sourceRepo": "源码仓库", "homepage": "主页"},
   readme: {"overview": "概述", "install": "安装", "steps": "安装步骤", "useCases": "适用场景", "useCaseProvider": "安装后作为可切换的 API 端点预设，一键切换即可对全部会话生效。", "useCaseSkill": "安装后 agent 会在相关任务中自动加载该技能，无需额外配置。", "useCaseMcp": "安装后自动注册为 MCP 服务器，agent 可直接调用其暴露的工具。", "writeConfig": "写入配置", "skillDownloadTo": "下载 skill 内容到", "skillRegister": "注册到已启用的工具目录", "mcpBuild": "拉取并构建服务器二进制", "writeMcp": "写入", "remoteEndpoint": "远程端点", "writeEndpointPreset": "写入端点预设", "syncToCli": "同步到 Claude 与 Codex 配置", "factModels": "支持的模型：", "factTransport": "传输方式：", "factStartCommand": "启动命令：", "factServiceUrl": "服务地址：", "factDownloadUrl": "下载地址：", "footType": "类型：", "footMaintainer": "维护者：", "footVersion": "当前版本："},
@@ -33,7 +35,7 @@ const zh: Dict = {
   common: { install: '安装', installed: '已安装', cancel: '取消', save: '保存', saving: '保存中…', saved: '已保存', currentPrefix: '当前：' },
   nav: { store: '商店', overview: '概览', settings: '设置', discover: '发现', local: '本机', skills: '技能', mcp: 'MCP', providers: '供应商', usage: '用量', projects: '项目', main: '主导航' },
   shell: { search: '搜索目录与操作', online: '目录在线', offline: '目录离线', relayTitle: '本地中转', relayOn: '中转运行中', relayOff: '中转已停止', updateAvailable: '可更新', activityTitle: '操作记录', activityDesc: '客户端执行过的每一步，与命令行 aas 的写法一致。', activityNone: '还没有操作记录', activityNoneDesc: '安装、启用或更新之后，记录显示在这里。' },
-  account: { out: '未登录', outSub: '登录', outHint: '不登录也能浏览、安装和管理全部资源。登录用于开通和识别 Pro。', menu: '账户菜单', settings: '账号设置', signout: '退出登录', upgrade: '升级到 Pro', planFree: 'Free 方案', planPro: 'Pro 方案', signedOut: '已退出登录' },
+  account: { out: '未登录', outSub: '登录', outHint: '不登录也能浏览、安装和管理全部资源。登录用于开通和识别 Pro，收藏也随账号保存。', menu: '账户菜单', settings: '账号设置', signout: '退出登录', upgrade: '升级到 Pro', planFree: 'Free 方案', planPro: 'Pro 方案', signedOut: '已退出登录' },
   palette: { title: '命令面板', projects: '项目', addProject: '添加项目', placeholder: '搜索目录、已安装的内容或操作', go: '前往', actions: '操作', installed: '已安装', catalog: '目录', none: '没有匹配的结果', move: '移动', run: '执行', lang: '切换到 English', searchFor: '在目录中搜索「{q}」', checkUpdates: '检查更新', updatesFound: '{n} 项可更新', upToDate: '已安装的资源都是最新版本', checkFailed: '检查失败：目录暂时取不到' },
   keys: { title: '键盘快捷键', palette: '打开命令面板', nav: '切换到发现、技能、MCP、供应商、用量、设置', settings: '打开设置', search: '聚焦当前页的搜索框', esc: '关闭菜单或对话框', tab: '在控件之间移动', help: '显示这张表' },
   ui: { close: '关闭', loading: '加载中', retry: '重试', copied: '已复制', copyFail: '复制失败，请手动选中复制', soon: '即将推出' },
@@ -50,7 +52,7 @@ const zh: Dict = {
     data: { home: '数据位置', homeSub: '可用环境变量 AS_HOME 改位置', skills: '技能库', skillsSub: '{n} 个技能', backups: '配置备份', backupsSub: '改写 agent 配置文件前保存的副本', exports: '用量导出', copy: '复制路径' },
     account: {
       notSignedIn: '未登录',
-      notSignedInSub: '不登录也能浏览、安装和管理全部资源。登录用于开通和识别 Pro。',
+      notSignedInSub: '不登录也能浏览、安装和管理全部资源。登录用于开通和识别 Pro，收藏也随账号保存。',
       signedIn: '已登录',
       signedInSub: '已登录。退出后本机已安装的内容不受影响。',
       logout: '退出登录',
@@ -75,6 +77,7 @@ const zh: Dict = {
 const en: Dict = {
   ...libraryEn,
   ...projectsEn,
+  ...accountEn,
   ...manageEn,
   catalog: {"source": {"mcp-registry": "MCP Registry", "github": "GitHub", "builtin": "Built-in"}, "loadMore": "Load more", "offline": "The catalog couldn't be reached; showing the last cached results", "empty": "No matching resources", "notInstallable": "Can't be installed yet", "skillClients": "Clients", "forceEnable": "Force enable", "codexUnsupported": "Codex doesn't support this MCP", "skillFetch": "download the skill folder to", "skillLink": "link into each enabled client's skills folder", "mcpRun": "run", "mcpNeeds": "needs", "mcpConnect": "connect to", "providerPreset": "write the access preset", "factSource": "Source: ", "sourceLabel": "Source", "sourceRepo": "Source repo", "homepage": "Homepage"},
   readme: {"overview": "Overview", "install": "Install", "steps": "Install steps", "useCases": "Use cases", "useCaseProvider": "Installs as a switchable API endpoint preset — one click applies it to all sessions.", "useCaseSkill": "Once installed, the agent auto-loads this skill for relevant tasks, with no extra config.", "useCaseMcp": "Installs and registers as an MCP server; the agent can call its exposed tools directly.", "writeConfig": "write config", "skillDownloadTo": "download skill content to", "skillRegister": "register to the enabled tools directory", "mcpBuild": "fetch and build the server binary", "writeMcp": "write", "remoteEndpoint": "remote endpoint", "writeEndpointPreset": "write endpoint preset", "syncToCli": "sync to Claude & Codex config", "factModels": "Supported models: ", "factTransport": "Transport: ", "factStartCommand": "Start command: ", "factServiceUrl": "Service URL: ", "factDownloadUrl": "Download URL: ", "footType": "Type: ", "footMaintainer": "Maintainer: ", "footVersion": "Current version: "},
@@ -94,7 +97,7 @@ const en: Dict = {
   common: { install: 'Install', installed: 'Installed', cancel: 'Cancel', save: 'Save', saving: 'Saving…', saved: 'Saved', currentPrefix: 'Current: ' },
   nav: { store: 'Store', overview: 'Overview', settings: 'Settings', discover: 'Discover', local: 'On this machine', skills: 'Skills', mcp: 'MCP', providers: 'Providers', usage: 'Usage', projects: 'Projects', main: 'Main navigation' },
   shell: { search: 'Search the catalog and actions', online: 'Catalog online', offline: 'Catalog offline', relayTitle: 'Local relay', relayOn: 'Relay running', relayOff: 'Relay stopped', updateAvailable: 'Update available', activityTitle: 'Activity log', activityDesc: 'Every step the app has run, written the way the aas CLI would run it.', activityNone: 'No activity yet', activityNoneDesc: 'Installs, toggles and updates show up here.' },
-  account: { out: 'Not signed in', outSub: 'Log in', outHint: 'You can browse, install and manage everything without an account. Signing in is for Pro.', menu: 'Account menu', settings: 'Account settings', signout: 'Log out', upgrade: 'Upgrade to Pro', planFree: 'Free plan', planPro: 'Pro plan', signedOut: 'Logged out' },
+  account: { out: 'Not signed in', outSub: 'Log in', outHint: 'You can browse, install and manage everything without an account. Signing in is for Pro, and keeps your favorites with your account.', menu: 'Account menu', settings: 'Account settings', signout: 'Log out', upgrade: 'Upgrade to Pro', planFree: 'Free plan', planPro: 'Pro plan', signedOut: 'Logged out' },
   palette: { title: 'Command palette', projects: 'Projects', addProject: 'Add project', placeholder: 'Search the catalog, installed items or actions', go: 'Go to', actions: 'Actions', installed: 'Installed', catalog: 'Catalog', none: 'No matches', move: 'Move', run: 'Run', lang: '切换到中文', searchFor: 'Search the catalog for "{q}"', checkUpdates: 'Check for updates', updatesFound: '{n} update(s) available', upToDate: 'Everything installed is up to date', checkFailed: "Couldn't check: the catalog can't be reached" },
   keys: { title: 'Keyboard shortcuts', palette: 'Open the command palette', nav: 'Go to Discover, Skills, MCP, Providers, Usage, Settings', settings: 'Open Settings', search: "Focus the page's search field", esc: 'Close the menu or dialog', tab: 'Move between controls', help: 'Show this list' },
   ui: { close: 'Close', loading: 'Loading', retry: 'Try again', copied: 'Copied', copyFail: "Couldn't copy. Select the text and copy it manually.", soon: 'Coming soon' },
@@ -111,7 +114,7 @@ const en: Dict = {
     data: { home: 'Data location', homeSub: 'Relocate with the AS_HOME environment variable', skills: 'Skill library', skillsSub: '{n} skill(s)', backups: 'Config backups', backupsSub: 'Copies saved before an agent config file is rewritten', exports: 'Usage exports', copy: 'Copy path' },
     account: {
       notSignedIn: 'Not signed in',
-      notSignedInSub: 'You can browse, install and manage everything without an account. Signing in is for Pro.',
+      notSignedInSub: 'You can browse, install and manage everything without an account. Signing in is for Pro, and keeps your favorites with your account.',
       signedIn: 'Signed in',
       signedInSub: 'Signed in. Logging out leaves everything installed on this machine as it is.',
       logout: 'Log out',

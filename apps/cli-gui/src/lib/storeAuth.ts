@@ -1,34 +1,31 @@
-// Desktop OAuth config. OAuth providers only redirect to https URLs, so the
-// desktop signs in via the web store's relay page (/auth/desktop), which
-// deep-links a JWT back to the app's custom scheme.
+// The web store's address and the claims the desktop reads from its JWTs.
 
-/** The OAuth relay deep-links a JWT back to this build's custom scheme. Dev builds
- * use a distinct scheme + bundle id (see src-tauri/tauri.dev.conf.json) so they
- * never collide with a release or installed build's `agent-store://` registration. */
-export function getAuthScheme(): string {
-  const env = (import.meta as { env?: Record<string, unknown> }).env
-  const scheme = env?.['VITE_AUTH_SCHEME']
-  return typeof scheme === 'string' && scheme ? scheme : 'agent-store'
-}
-
-/** The custom-scheme deep-link callback URL for the current build. */
-export const AUTH_REDIRECT_URL = `${getAuthScheme()}://auth-callback`
-
-/** Base URL of the web store, which hosts the OAuth relay page. Override for local dev with VITE_STORE_URL. */
+/** Base URL of the web store, for links to its pages. Override for local dev with VITE_STORE_URL. */
 export function getStoreBaseUrl(): string {
   const env = (import.meta as { env?: Record<string, string | undefined> }).env
   return env?.['VITE_STORE_URL'] || 'https://agent-store-test.panghuli.tech'
 }
 
-/** Best-effort decode of the `email` claim from a Better Auth JWT. */
-export function emailFromJwt(token: string): string | null {
+function claims(token: string): Record<string, unknown> | null {
   try {
     const part = token.split('.')[1]
     if (!part) return null
     const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'))
-    const payload = JSON.parse(json) as { email?: unknown }
-    return typeof payload.email === 'string' ? payload.email : null
+    const payload = JSON.parse(json) as unknown
+    return payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
   } catch {
     return null
   }
+}
+
+/** Best-effort decode of the `email` claim from a Better Auth JWT. */
+export function emailFromJwt(token: string): string | null {
+  const email = claims(token)?.['email']
+  return typeof email === 'string' ? email : null
+}
+
+/** The account id (`sub`) of a Better Auth JWT. */
+export function userIdFromJwt(token: string): string | null {
+  const sub = claims(token)?.['sub']
+  return typeof sub === 'string' && sub ? sub : null
 }

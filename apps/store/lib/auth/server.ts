@@ -1,5 +1,5 @@
 import { betterAuth } from 'better-auth'
-import { jwt } from 'better-auth/plugins'
+import { bearer, deviceAuthorization, jwt } from 'better-auth/plugins'
 import { nextCookies } from 'better-auth/next-js'
 import { openAppDb } from '../app-db'
 import { syncGithubUsername } from './github-username'
@@ -12,6 +12,12 @@ import { syncGithubUsername } from './github-username'
 // The API never sees the session cookie. Browsers and the desktop app call
 // /api/auth/token for a short-lived JWT (EdDSA), and the API verifies it against
 // /api/auth/jwks. `username` is the GitHub login, carried in the token.
+//
+// The desktop client signs in with the device authorization grant (RFC 8628,
+// #195): it gets a session of its own from /api/auth/device/token and sends that
+// session token as `Authorization: Bearer` to /api/auth/token and /sign-out.
+const DESKTOP_CLIENT_ID = 'agent-store-desktop'
+
 export function createAuth() {
   const baseURL = process.env.BETTER_AUTH_URL
   const db = openAppDb()
@@ -55,6 +61,13 @@ export function createAuth() {
           }),
         },
       }),
+      deviceAuthorization({
+        verificationUri: '/auth/device',
+        expiresIn: '10m',
+        interval: '5s',
+        validateClient: (clientId) => clientId === DESKTOP_CLIENT_ID,
+      }),
+      bearer(),
       // Must stay last: lets server actions set cookies through next/headers.
       nextCookies(),
     ],

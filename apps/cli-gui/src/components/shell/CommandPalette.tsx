@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Command } from 'cmdk'
-import { FolderPlus, Github, Globe, Keyboard, LogOut, RefreshCw, Search, SquareTerminal, Radio } from 'lucide-react'
+import { FolderPlus, Github, Globe, Heart, Keyboard, LogOut, RefreshCw, Search, SquareTerminal, Radio } from 'lucide-react'
 import type { InstalledItem, UpdateAvailable } from '@as/types'
 import { useAppState } from '../../state/AppState'
 import { useAuth } from '../../state/Auth'
@@ -47,7 +47,7 @@ const GROUP =
 
 export function CommandPalette() {
   const { locale, setLocale, t } = useI18n()
-  const { paletteOpen, setPaletteOpen, setShellDialog, setSelectedSlug, setEditingConfigSlug, setSearchSeed, installedVersion } = useAppState()
+  const { paletteOpen, setPaletteOpen, setShellDialog, setSelectedSlug, setEditingConfigSlug, setSearchSeed, installedVersion, setDiscoverFavorites } = useAppState()
   const { signedIn, configured } = useAuth()
   const account = useAccountActions()
   const navigate = useNavigate()
@@ -111,6 +111,19 @@ export function CommandPalette() {
               ))}
               <Item value="go:projects" keywords={[t('nav.projects'), 'projects']} icon={<Glyph name="folder" />} onSelect={() => run(() => openProject(null))}>
                 {t('nav.projects')}
+              </Item>
+              <Item
+                value="go:favorites"
+                keywords={[t('fav.palette'), t('fav.filter'), 'favorites']}
+                icon={<Heart />}
+                onSelect={() =>
+                  run(() => {
+                    setDiscoverFavorites(true)
+                    navigate('discover')
+                  })
+                }
+              >
+                {t('fav.palette')}
               </Item>
             </Command.Group>
             <Command.Group heading={t('palette.actions')} className={GROUP}>

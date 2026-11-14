@@ -9,9 +9,8 @@ mock.module('../../lib/deepLink', () => ({ onDeepLink: async () => () => {} }))
 
 mock.module('../../lib/storeAuth', () => ({
   getStoreBaseUrl: () => 'https://store.test',
-  getAuthScheme: () => 'agent-store',
   emailFromJwt: () => 'dev@example.com',
-  AUTH_REDIRECT_URL: 'agent-store://auth-callback',
+  userIdFromJwt: () => 'u1',
 }))
 
 const { SettingsView } = await import('../SettingsView')
@@ -156,13 +155,17 @@ test('Account: signed out with both sign-ins, the free plan, upgrade and the Pro
 })
 
 for (const provider of ['GitHub', 'Google']) {
-  test(`使用 ${provider} 登录 opens the store relay page`, async () => {
+  test(`使用 ${provider} 登录 starts a device sign-in and opens its approval page`, async () => {
     localStorage.setItem('as-locale', 'zh')
-    renderView()
+    renderView((method) =>
+      method === 'startSignIn'
+        ? { deviceCode: 'dev-1', userCode: 'ABCDEFGH', verificationUriComplete: 'https://store.test/auth/device?user_code=ABCDEFGH', expiresIn: 600, interval: 1 }
+        : undefined
+    )
     openTab('账号')
     fireEvent.click(screen.getByRole('button', { name: `使用 ${provider} 登录` }))
     await waitFor(() =>
-      expect(openMock).toHaveBeenCalledWith(`https://store.test/auth/desktop?provider=${provider.toLowerCase()}&scheme=agent-store`)
+      expect(openMock).toHaveBeenCalledWith(`https://store.test/auth/device?user_code=ABCDEFGH&provider=${provider.toLowerCase()}`)
     )
   })
 }

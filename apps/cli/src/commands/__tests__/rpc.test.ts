@@ -229,6 +229,22 @@ test('readFirstLine accepts input that ends without a newline', async () => {
   expect(await readFirstLine(chunks())).toBe('["x"]')
 })
 
+test('a refused favorite reaches the client with its error class and reason', async () => {
+  class FavoriteRejectedError extends Error {
+    constructor(readonly reason: string) {
+      super('At most 500 favorites')
+      this.name = 'FavoriteRejectedError'
+    }
+  }
+  const setFavorite = async () => {
+    throw new FavoriteRejectedError('full')
+  }
+  const lines: string[] = []
+  const code = await runRpc(makeEngine({ setFavorite } as Partial<Engine>), ['setFavorite', '-'], (s) => lines.push(s), async () => '["jwt","github:a/b/c",true]')
+  expect(code).toBe(1)
+  expect(JSON.parse(lines[0])).toEqual({ ok: false, error: 'At most 500 favorites', code: 'FavoriteRejectedError', reason: 'full' })
+})
+
 test('runRpc passes the batch steps through and returns each outcome', async () => {
   let got: unknown
   const batch = async (ops: unknown) => {

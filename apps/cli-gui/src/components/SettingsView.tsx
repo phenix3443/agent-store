@@ -266,8 +266,8 @@ function DataTab() {
 }
 
 function AccountTab() {
-  const { t } = useI18n()
-  const { email, signedIn, configured } = useAuth()
+  const { locale, t } = useI18n()
+  const { email, signedIn, configured, persisted, notice } = useAuth()
   const { entitlements, has } = useEntitlement()
   const account = useAccountActions()
   const isPro = entitlements.plan !== 'free'
@@ -278,6 +278,20 @@ function AccountTab() {
 
   return (
     <>
+      {signedIn && !persisted && (
+        <div className="mb-4">
+          <Banner tone="warn" title={t('auth.notSavedT')}>
+            <p>{t('auth.notSavedD')}</p>
+          </Banner>
+        </div>
+      )}
+      {!signedIn && notice === 'expired' && (
+        <div className="mb-4">
+          <Banner tone="warn" title={t('auth.expiredT')}>
+            <p>{t('auth.expiredD')}</p>
+          </Banner>
+        </div>
+      )}
       <RowGroup>
         {signedIn ? (
           <Row
@@ -289,7 +303,7 @@ function AccountTab() {
                 {email ?? t('settings.account.signedIn')}
               </>
             }
-            sub={t('settings.account.signedInSub')}
+            sub={persisted ? [t('settings.account.signedInSub'), t('auth.saved')].join(locale === 'zh' ? '' : ' ') : t('settings.account.signedInSub')}
           >
             <Button size="sm" onClick={() => void account.signOut()} disabled={!configured || account.busy}>
               {t('settings.account.logout')}

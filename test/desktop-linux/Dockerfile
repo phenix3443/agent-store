@@ -42,6 +42,14 @@ RUN cd apps/cli-gui && pnpm bundle:appimage \
   && cp src-tauri/target/release/bundle/appimage/*.AppImage /bundles/ \
   && chmod a+rx /bundles/*
 
+# GNOME Keyring for the sign-in checks in shots.sh (#195). Its D-Bus activation files are moved
+# aside, so the keyring runs only once shots.sh starts it and the first checks see a desktop
+# without a Secret Service.
+RUN apt-get update && apt-get install -y --no-install-recommends gnome-keyring libsecret-tools \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /usr/share/dbus-1/services-disabled \
+  && for f in /usr/share/dbus-1/services/*secrets* /usr/share/dbus-1/services/*keyring*; do [ -e "$f" ] && mv "$f" /usr/share/dbus-1/services-disabled/; done; true
+
 # A disposable home: the client writes skills and MCP config under it.
 # The deb is installed at run time by run.sh; appimage.sh runs the AppImage.
 RUN useradd -m -u 1001 tester && chmod -R a+rX /work \

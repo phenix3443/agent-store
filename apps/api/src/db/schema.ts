@@ -179,6 +179,20 @@ export const authJwks = sqliteTable('jwks', {
   crv: text('crv'),
 })
 
+// The deviceAuthorization plugin's table: the desktop client's sign-in (#195).
+export const authDeviceCode = sqliteTable('deviceCode', {
+  id: text('id').primaryKey(),
+  deviceCode: text('deviceCode').notNull().unique(),
+  userCode: text('userCode').notNull().unique(),
+  userId: text('userId').references(() => authUser.id, { onDelete: 'cascade' }),
+  expiresAt: authDate('expiresAt').notNull(),
+  status: text('status').notNull(),
+  lastPolledAt: authDate('lastPolledAt'),
+  pollingInterval: integer('pollingInterval'),
+  clientId: text('clientId'),
+  scope: text('scope'),
+})
+
 // ── Favorites ────────────────────────────────────────────────────────────────
 // Catalog ids a signed-in user saved (src/favorites.ts). No foreign key to the
 // catalog: catalog.db is a separate file, and a favorite outlives a resource that

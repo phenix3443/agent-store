@@ -61,7 +61,7 @@ test('migrate creates the file in WAL mode with every table, and running it agai
     .map((t) => t.name)
   sqlite.close()
   expect(journal_mode).toBe('wal')
-  for (const t of ['user', 'session', 'account', 'verification', 'jwks', 'subscriptions', 'processed_webhooks']) {
+  for (const t of ['user', 'session', 'account', 'verification', 'jwks', 'deviceCode', 'subscriptions', 'processed_webhooks']) {
     expect(tables).toContain(t)
   }
 })

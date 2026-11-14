@@ -2,7 +2,8 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164), the welcome, usage and settings pages (#165) and projects (#166). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166)
+# and the desktop sign-in with favorites (#195). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -425,6 +426,89 @@ open_project
 shot 33b-project-missing-last-read
 stop_app
 mv "$PROJ.moved" "$PROJ"
+
+# 13. Sign-in and favorites (#195), against mock-store.ts: the store's device sign-in and
+#     account endpoints, the rest forwarded to the live test store. First without a Secret
+#     Service (the sign-in lasts one run and says so), then with GNOME Keyring running.
+MOCK_PORT=18790
+MOCK=http://127.0.0.1:$MOCK_PORT
+MOCK_STATE=$OUT/mock-store.json
+(cd /work && MOCK_PORT=$MOCK_PORT MOCK_STATE=$MOCK_STATE MOCK_FAVORITES="$NPM_MCP_ID" bun test/desktop-linux/mock-store.ts >"$OUT/mock-store.log" 2>&1 &)
+for _ in $(seq 30); do curl -fs "$MOCK/__state" >/dev/null && break; sleep 1; done
+check "the store stand-in is up" 'curl -fs "$MOCK/__state" >/dev/null'
+APPDATA=$(dirname "$(find "$XDG_DATA_HOME" -path '*agent-store-cli/welcome.json' | head -1)")
+# A favorite saved while signed out, with the catalog summary the client keeps next to it.
+python3 - "$MOCK" "$SKILL_ID" "$APPDATA/favorites.json" <<'PY'
+import json, sys, urllib.parse, urllib.request
+base, rid, out = sys.argv[1:]
+r = json.load(urllib.request.urlopen(f'{base}/__summary?id={urllib.parse.quote(rid, safe="")}'))['resource']
+keep = ['id', 'kind', 'name', 'description', 'author', 'version', 'homepageUrl', 'installs', 'stars', 'verified', 'tags', 'transports', 'origin']
+json.dump({'version': 1, 'local': [{'id': rid, 'resource': {k: r.get(k) for k in keep}}], 'pending': [], 'account': None}, open(out, 'w'))
+PY
+check "seeded a favorite saved while signed out" '[ -s "$APPDATA/favorites.json" ] && grep -q "$SKILL_ID" "$APPDATA/favorites.json"'
+mock() { python3 -c 'import json,sys; s=json.load(open(sys.argv[1])); print(eval(sys.argv[2]))' "$MOCK_STATE" "$1"; }
+palette() { xdotool key ctrl+k; sleep 2; xdotool type --delay 50 "$1"; sleep 2; xdotool key Return; }
+start_app() { AS_STORE_URL=$MOCK "$APP" >>"$OUT/app-auth.log" 2>&1 & sleep "$SETTLE"; point_at_window; }
+keyring_secret() { secret-tool lookup service com.aas.cli-gui username store-session 2>/dev/null; }
+no_token_on_disk() {
+  for t in $(mock '" ".join(s["issued"])'); do
+    if grep -rqs "$t" "$HOME/.agent-store" "$APPDATA" "$XDG_CONFIG_HOME" "$ARGV_LOG"; then return 1; fi
+  done
+}
+
+start_app
+palette 'act:signin'
+sleep 3
+shot 34-signin-waiting
+sleep 18
+shot 35-signed-in-not-saved
+check "the device sign-in got a session" '[ "$(mock "len(s[\"issued\"])")" = 1 ]'
+check "the local favorite was added to the account" '[ "$(mock "s[\"favorites\"][0]")" = "$SKILL_ID" ]'
+palette 'go:favorites'
+sleep 10
+shot 36-favorites
+stop_app
+check "no session token under ~/.agent-store, the app data folder, ~/.config or a sidecar command line" 'no_token_on_disk'
+start_app
+shot 37-restart-without-keyring-signed-out
+stop_app
+check "without Secret Service the sign-in did not outlive the app" '[ "$(mock "sum(s[\"exchanges\"].values())")" = 1 ]'
+
+printf 'ci-keyring' | gnome-keyring-daemon --unlock --components=secrets >"$OUT/keyring.env" 2>"$OUT/keyring.log"
+set -a; . "$OUT/keyring.env"; set +a
+sleep 2
+check "GNOME Keyring answers on the session bus" 'printf x | secret-tool store --label=probe ci probe && secret-tool lookup ci probe | grep -qx x'
+start_app
+palette 'act:signin'
+sleep 22
+shot 38-signed-in-saved
+stop_app
+SESSION=$(mock 's["issued"][-1]')
+check "the session token is in Secret Service" '[ -n "$SESSION" ] && [ "$(keyring_secret)" = "$SESSION" ]'
+check "still no session token on disk" 'no_token_on_disk'
+before=$(mock "s['exchanges'].get('$SESSION', 0)")
+start_app
+shot 39-restart-still-signed-in
+stop_app
+check "a restart signs in from Secret Service" '[ "$(mock "s[\"exchanges\"].get(\"$SESSION\", 0)")" -gt "$before" ]'
+curl -fs -X POST "$MOCK/__revoke" >/dev/null
+AS_STORE_URL=$MOCK "$APP" >>"$OUT/app-auth.log" 2>&1 &
+# The notice toast stays 12 s.
+sleep 8
+shot 40-session-revoked
+stop_app
+check "a revoked session signs out and leaves Secret Service" '[ -z "$(keyring_secret)" ]'
+start_app
+palette 'act:signin'
+sleep 22
+SESSION=$(mock 's["issued"][-1]')
+palette 'act:signout'
+sleep 5
+shot 41-signed-out
+stop_app
+check "sign-out ends the session on the server" '[ "$(mock "\"$SESSION\" in s[\"signOuts\"]")" = True ]'
+check "sign-out deletes the credential" '[ -z "$(keyring_secret)" ]'
+check "no session token on disk at the end" 'no_token_on_disk'
 
 cli search find-skills --kind skill
 cli info "$SKILL_ID"
