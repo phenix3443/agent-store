@@ -290,3 +290,32 @@ test('a project that is no longer registered says so', async () => {
   )
   expect(await screen.findByText('没有这个项目')).toBeInTheDocument()
 })
+
+test('a folder that is gone shows, read-only, what was last read while it existed', async () => {
+  const snapshots = await import('../../lib/projectSnapshots')
+  spyOn(snapshots, 'loadProjectSnapshot').mockImplementation(async () => ({ at: '2026-11-10T08:00:00Z', detail: makeDetail() as never }))
+  mockRpc({
+    listProjects: () => [{ ...project, exists: false }],
+    getProject: () => ({ ...project, exists: false, codexTrusted: false, skills: [], mcps: [], env: [] }),
+  })
+  await renderPage()
+  expect(await screen.findByText('下面是目录还在时最后一次读到的内容，重新定位之前不能操作。')).toBeInTheDocument()
+  expect(screen.getByText('pdf-tools')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '卸载 · pdf-tools' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '在文件管理器中显示' })).toBeDisabled()
+})
+
+test('a folder that exists is remembered for when it is gone, and can be shown in the file manager', async () => {
+  const snapshots = await import('../../lib/projectSnapshots')
+  const save = spyOn(snapshots, 'saveProjectSnapshot').mockImplementation(async () => {})
+  const reveal = await import('../../lib/reveal')
+  const shown = spyOn(reveal, 'revealPath').mockImplementation(async () => {})
+  mockRpc()
+  await renderPage()
+  await screen.findByText('pdf-tools')
+  await waitFor(() => expect(save).toHaveBeenCalled())
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: '在文件管理器中显示' })) })
+  expect(shown).toHaveBeenCalledWith('/w/demo')
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: '在文件管理器中显示 · Codex · .agents/skills/pdf-tools' })) })
+  expect(shown).toHaveBeenLastCalledWith('/w/demo/.agents/skills/pdf-tools')
+})

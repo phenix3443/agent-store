@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import type { Project } from '@as/types'
+import type { Project, ProjectSummary } from '@as/types'
 import { callRpc, errorText } from '../lib/rpc'
 
 export type ProjectDialog =
@@ -9,6 +9,8 @@ export type ProjectDialog =
 
 interface ProjectsValue {
   projects: Project[]
+  /** Counts and what Agent Store installed, per project id; read after the list, so it can lag behind it. */
+  summaries: Record<string, ProjectSummary>
   /** True until the first listProjects answers. */
   loading: boolean
   error: string | null
@@ -23,6 +25,7 @@ const ProjectsContext = createContext<ProjectsValue | null>(null)
 
 export function ProjectsProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([])
+  const [summaries, setSummaries] = useState<Record<string, ProjectSummary>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
@@ -43,6 +46,10 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     )
+    callRpc<ProjectSummary[]>('projectSummaries').then(
+      (list) => !cancelled && setSummaries(Object.fromEntries((list ?? []).map((p) => [p.id, p]))),
+      () => undefined
+    )
     return () => {
       cancelled = true
     }
@@ -51,13 +58,14 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(() => setVersion((v) => v + 1), [])
 
   return (
-    <ProjectsContext.Provider value={{ projects, loading, error, version, reload, dialog, openDialog }}>{children}</ProjectsContext.Provider>
+    <ProjectsContext.Provider value={{ projects, summaries, loading, error, version, reload, dialog, openDialog }}>{children}</ProjectsContext.Provider>
   )
 }
 
 // Outside a provider (component tests of other pages) there are simply no projects.
 const NONE: ProjectsValue = {
   projects: [],
+  summaries: {},
   loading: false,
   error: null,
   version: 0,

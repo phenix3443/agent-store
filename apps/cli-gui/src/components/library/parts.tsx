@@ -266,11 +266,13 @@ export function ErrorDetails({ detail }: { detail?: string }) {
 export function FailureBanner({
   failure,
   onForce,
+  onReplace,
   onDismiss,
   forceLabel,
 }: {
-  failure: Pick<ToggleFailure, 'lead' | 'message' | 'detail' | 'forceable'>
+  failure: Pick<ToggleFailure, 'lead' | 'message' | 'detail' | 'forceable'> & { replaceable?: boolean }
   onForce?: () => void
+  onReplace?: () => void
   onDismiss: () => void
   forceLabel?: string
 }) {
@@ -286,6 +288,11 @@ export function FailureBanner({
               {forceLabel ?? t('catalog.forceEnable')}
             </Button>
           )}
+          {failure.replaceable && onReplace && (
+            <Button size="sm" variant="kind" data-kind="mcp" onClick={onReplace}>
+              {t('takeover.btn')}
+            </Button>
+          )}
           <Button size="sm" onClick={onDismiss}>
             {t('ui.close')}
           </Button>
@@ -298,11 +305,20 @@ export function FailureBanner({
   )
 }
 
-/** Column header of a library list: the count, then one column per agent. */
-export function AgentColumns({ label, trailing }: { label: string; trailing?: ReactNode }) {
+/** Column header of a library list: the count, then one column per agent; `bar` (bulk actions) takes their place. */
+export function AgentColumns({ label, trailing, lead, bar }: { label: string; trailing?: ReactNode; lead?: ReactNode; bar?: ReactNode }) {
   const t = useT()
+  if (bar) {
+    return (
+      <div className="flex min-h-[30px] flex-wrap items-center gap-2 px-3 pb-1.5 text-[11.5px] text-fg-3">
+        {lead}
+        {bar}
+      </div>
+    )
+  }
   return (
-    <div className="flex items-center gap-3 px-3 pb-1.5 text-[11.5px] text-fg-3">
+    <div className="flex min-h-[30px] items-center gap-3 px-3 pb-1.5 text-[11.5px] text-fg-3">
+      {lead}
       <span className="flex-1">{label}</span>
       {AGENTS.map((a) => (
         <span key={a.id} className="w-[78px] flex-none text-center max-[1040px]:w-[64px]">
@@ -332,10 +348,13 @@ export function ListRow({
   subMono,
   right,
   dim,
+  select,
 }: {
   kind: Kind
   selected: boolean
   onOpen: () => void
+  /** A checkbox for bulk actions, before the row's main button. */
+  select?: ReactNode
   lead?: ReactNode
   title: string
   chips?: ReactNode
@@ -353,6 +372,7 @@ export function ListRow({
         selected && 'bg-kind/[0.09] before:absolute before:bottom-2.5 before:left-0 before:top-2.5 before:w-[3px] before:rounded-r-[3px] before:bg-kind before:shadow-[0_0_10px_rgb(var(--kind-rgb)/0.8)]'
       )}
     >
+      {select && <div className="relative z-[1] flex flex-none items-center">{select}</div>}
       <button
         type="button"
         data-row-main

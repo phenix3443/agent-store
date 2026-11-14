@@ -354,7 +354,102 @@ shot 27-project-trusted-key-stored
 stop_app
 cli projects show "$PROJ"
 
-# 12. Importing what the user already has (#193): Settings › Agents › 查找 opens the guide's
+# 12. Library gaps (#194). 在文件管理器中显示 goes to the desktop's file manager over D-Bus; a
+#     stand-in records what it was asked to show.
+REVEAL_LOG=$OUT/reveal.txt
+python3 /work/test/desktop-linux/fake-filemanager.py "$REVEAL_LOG" >"$OUT/fake-filemanager.log" 2>&1 &
+sleep 2
+"$APP" >"$OUT/app-library.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+2
+sleep 15
+# From the page search: the four filter buttons, select all, the row's checkbox, then the row.
+xdotool key slash
+xdotool type --delay 60 'legacy'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab Tab Tab Return
+sleep 4
+shot 28-skill-pane-library-path
+# The row's two switches, the pane's close button and its two switches, then 在文件管理器中显示.
+xdotool key Tab Tab Tab Tab Tab Tab Return
+sleep 3
+shot 28b-skill-revealed
+check "在文件管理器中显示 handed the skill's library folder to the file manager" 'grep -q "^items file://$LIB/legacy-skill$" "$REVEAL_LOG"'
+
+# Select both skills, then 停用 › Codex for all of them in one batch.
+xdotool key Escape
+sleep 1
+xdotool key slash ctrl+a BackSpace
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+shot 29-bulk-bar
+xdotool key Tab Tab Return
+sleep 1
+xdotool key Down Down Return
+sleep 12
+shot 29b-bulk-disable-results
+check "bulk 停用 › Codex removed the Codex link and kept Claude's" '[ ! -e "$HOME/.codex/skills/legacy-skill" ] && links_to "$HOME/.claude/skills/legacy-skill" "$LIB/legacy-skill"'
+xdotool key Escape
+sleep 1
+stop_app
+
+# 替换现有条目: Claude Code already has its own entry under context7's name. Taking it over needs
+# the claude CLI, which tries the restore in a scratch config first.
+CLAUDE_CLI=/opt/claude-cli/bin/claude
+CTX=$(printf '[]\n' | "$SIDECAR" __rpc list - | python3 -c 'import json,sys; print(next(e["slug"] for e in json.load(sys.stdin)["data"] if e.get("resourceId") == sys.argv[1]))' "$NPM_MCP_ID")
+cli uninstall "$CTX"
+"$CLAUDE_CLI" mcp add-json --scope user "$CTX" '{"type":"stdio","command":"echo","args":["mine"]}' >>"$OUT/cli.txt" 2>&1
+check "the user's own context7 entry is in ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\")" "$HOME/.claude.json" "$CTX"'
+export AS_CLAUDE_BIN=$CLAUDE_CLI CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+install_link "$NPM_MCP_ID"
+confirm 25
+shot 30-takeover-conflict
+# Focus is on 跳过 Claude Code; the next button is 替换现有条目.
+xdotool key Tab Return
+sleep 30
+shot 31-takeover-done
+check "替换现有条目 saved the user's entry in targets.json" 'python3 -c "import json,sys; p=json.load(open(sys.argv[1]))[\"claude\"][\"previous\"]; sys.exit(p[\"command\"] != \"echo\")" "$HOME/.agent-store/mcps/$CTX/targets.json"'
+check "替换现有条目 wrote Agent Store's entry in its place" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(\"@upstash/context7-mcp\" not in json.dumps(e))" "$HOME/.claude.json" "$CTX"'
+stop_app
+
+# Bulk 卸载 on the MCP page: confirmed, then the entry it replaced is written back.
+"$APP" >"$OUT/app-bulk-uninstall.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+3
+sleep 20
+xdotool key slash
+xdotool type --delay 60 'context7'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+xdotool key Tab Tab Tab Return
+sleep 2
+shot 32-bulk-uninstall-confirm
+# The confirmation opens on 取消; 卸载 is next.
+xdotool key Tab Return
+sleep 25
+shot 32b-bulk-uninstall-results
+check "bulk 卸载 wrote the user's own entry back to ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\" or e[\"args\"] != [\"mine\"])" "$HOME/.claude.json" "$CTX"'
+check "bulk 卸载 removed context7 from the library" '[ ! -e "$HOME/.agent-store/mcps/$CTX" ]'
+stop_app
+unset AS_CLAUDE_BIN CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+
+# A project folder that is gone: the page shows what it last read there, read-only.
+check "the project page remembered what it last read" '[ -n "$(find "$XDG_DATA_HOME" -path "*agent-store-cli/project-snapshots.json" 2>/dev/null)" ]'
+mv "$PROJ" "$PROJ.moved"
+"$APP" >"$OUT/app-project-missing.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+shot 33-sidebar-project-missing
+open_project
+shot 33b-project-missing-last-read
+stop_app
+mv "$PROJ.moved" "$PROJ"
+
+# 13. Importing what the user already has (#193): Settings › Agents › 查找 opens the guide's
 #     second step with everything importable checked except the skill in ~/.agents/skills
 #     (other tools read it) and without the catalog lookup; 导入所选 takes them over, then
 #     撤销 in Settings puts every file back. Compared on disk before and after.
@@ -374,13 +469,13 @@ point_at_window
 xdotool key ctrl+6
 sleep 2
 settings_tab 1 4
-shot 28-settings-agents-detected
+shot 34-settings-agents-detected
 xdotool key Tab Tab Tab Return
 sleep 20
-shot 29-import-found
+shot 35-import-found
 xdotool key Return
 sleep 20
-shot 30-import-done
+shot 36-import-done
 check "the imported skill is in the library, linked back for both agents" 'links_to "$HOME/.claude/skills/my-notes" "$LIB/my-notes" && links_to "$HOME/.codex/skills/my-notes" "$LIB/my-notes" && [ -f "$LIB/my-notes/.agent-store.json" ]'
 check "the skill in ~/.agents/skills was left unchecked and untouched" '[ -d "$HOME/.agents/skills/users-own" ] && [ ! -L "$HOME/.agents/skills/users-own" ]'
 check "the skill linked from dotfiles was not imported" 'links_to "$HOME/.claude/skills/dot-linked" "$HOME/dotfiles/dot-linked"'
@@ -390,15 +485,15 @@ xdotool key Return
 sleep 3
 xdotool key ctrl+2
 sleep 15
-shot 31-skills-library-imported
+shot 37-skills-library-imported
 xdotool key ctrl+6
 sleep 2
 settings_tab 1 6
-shot 32-settings-last-import
+shot 38-settings-last-import
 # Panel, 重新检测, 查找, then 撤销 on the latest import.
 xdotool key Tab Tab Tab Tab Return
 sleep 15
-shot 33-import-undone
+shot 39-import-undone
 stop_app
 check "undo put every file back as it was before the import" '[ "$(user_state)" = "$BEFORE_IMPORT" ]'
 check "undo removed the library copy and the MCP record" '[ ! -e "$LIB/my-notes" ] && [ ! -e "$HOME/.agent-store/mcps/my-fs" ]'

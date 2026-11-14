@@ -9,7 +9,7 @@ import type {
   UsageSummaryRow, UsageSummaryOptions, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
-  ProjectUninstallOptions, ProjectUninstallResult,
+  ProjectSummary, ProjectUninstallOptions, ProjectUninstallResult, BatchOperation, BatchOutcome,
   BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
   BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
   AgentDetection, ImportApplyResult, ImportRecordSummary, ImportScan, ImportScanOptions, ImportUndoOptions, ImportUndoResult,
@@ -28,6 +28,8 @@ import { BackupService } from './backup/service'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
+import { readMcpTargets } from './config/mcp-targets'
+import { batchError } from './error-fields'
 import { getDailySummary, getRecentRequests } from './usage/queries'
 import { readProviderHealth, resetProviderHealth } from './usage/provider-health'
 import { exportUsageToFile } from './usage/export'
@@ -257,6 +259,21 @@ export class EngineImpl implements Engine {
     await this._setEnabled(slug, target, false)
   }
 
+  async batch(operations: BatchOperation[]): Promise<BatchOutcome[]> {
+    const outcomes: BatchOutcome[] = []
+    for (const op of operations) {
+      try {
+        if (op.action === 'uninstall') await this.uninstall(op.slug)
+        else if (op.action === 'enable') await this.enable(op.slug, op.target)
+        else await this.disable(op.slug, op.target)
+        outcomes.push({ ...op, ok: true })
+      } catch (e) {
+        outcomes.push({ ...op, ok: false, error: batchError(e) })
+      }
+    }
+    return outcomes
+  }
+
   async getConfigSchema(slug: string): Promise<{ schema: JsonSchema; current: Record<string, unknown> }> {
     const entry = await this._entry(slug)
     const dir = itemDir(this.paths.aasHome, entry.category, slug)
@@ -388,8 +405,15 @@ export class EngineImpl implements Engine {
     try {
       currentConfig = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) as Record<string, unknown>
     } catch { /* skills have no config.json */ }
+    let replacedFor: ToolTarget[] | undefined
+    if (entry.category === 'mcp') {
+      const targets = await readMcpTargets(dir)
+      replacedFor = TARGETS.filter(t => targets[t]?.previous != null)
+    }
     return {
       ...entry,
+      dir,
+      ...(replacedFor ? { replacedFor } : {}),
       name: manifest.name,
       description: manifest.description,
       publisher: manifest.publisher,
@@ -537,6 +561,10 @@ export class EngineImpl implements Engine {
 
   relocateProject(ref: string, newPath: string): Promise<Project> {
     return this.projects.relocate(ref, newPath)
+  }
+
+  projectSummaries(): Promise<ProjectSummary[]> {
+    return this.projects.summaries()
   }
 
   getProject(ref: string): Promise<ProjectDetail> {

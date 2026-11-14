@@ -11,6 +11,7 @@ import { useNavigate } from '../lib/useNavigate'
 import { AgentMark } from './AgentMark'
 import { Badge, Kbd } from './ui/badge'
 import { Button } from './ui/button'
+import { Checkbox } from './ui/checkbox'
 import { Row, RowGroup } from './ui/card'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogTitle } from './ui/dialog'
 import { Banner, Spinner } from './ui/states'
@@ -126,8 +127,9 @@ export function AgentRows({ agents, showEnv = false }: { agents: Load<AgentDetec
   )
 }
 
-function Candidate({ id, checked, disabled, onToggle, title, children, badge }: {
+function Candidate({ id, kind, checked, disabled, onToggle, title, children, badge }: {
   id: string
+  kind: 'skill' | 'mcp'
   checked: boolean
   disabled?: boolean
   onToggle: (id: string) => void
@@ -137,9 +139,9 @@ function Candidate({ id, checked, disabled, onToggle, title, children, badge }: 
 }) {
   return (
     <label className={`flex items-start gap-3 border-b border-line px-3.5 py-[10px] last:border-b-0 ${disabled ? 'opacity-60' : 'cursor-pointer hover:bg-panel'}`}>
-      <input
-        type="checkbox"
-        className="mt-0.5 h-4 w-4 flex-none accent-skill disabled:cursor-not-allowed"
+      <Checkbox
+        data-kind={kind}
+        className="mt-0.5"
         checked={checked}
         disabled={disabled}
         onChange={() => onToggle(id)}
@@ -162,6 +164,7 @@ function SkillRow({ s, checked, onToggle }: { s: SkillCandidate; checked: boolea
   return (
     <Candidate
       id={s.id}
+      kind="skill"
       checked={checked}
       disabled={!s.importable}
       onToggle={onToggle}
@@ -186,6 +189,7 @@ function McpRow({ m, checked, onToggle }: { m: McpCandidate; checked: boolean; o
   return (
     <Candidate
       id={m.id}
+      kind="mcp"
       checked={checked}
       onToggle={onToggle}
       title={m.name}
@@ -350,9 +354,8 @@ export function WelcomeDialog() {
         <DialogTitle className="text-[22px] leading-tight">{t('onboard.import.title')}</DialogTitle>
         <DialogDescription className="mb-4 mt-2 max-w-[60ch] text-[13px]">{t('onboard.import.lede')}</DialogDescription>
         <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-box border border-line px-3.5 py-[10px] hover:bg-panel">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 flex-none accent-skill"
+          <Checkbox
+            className="mt-0.5"
             checked={matchCatalog}
             disabled={scan.status === 'loading' || busy !== null}
             onChange={() => {
