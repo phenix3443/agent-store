@@ -4,6 +4,9 @@ import { DiscoverPage } from '../discover/DiscoverPage'
 import * as rpcModule from '../../lib/rpc'
 import { AppStateProvider, useAppState } from '../../state/AppState'
 import { TerminalLogProvider } from '../../state/TerminalLog'
+import { EntitlementProvider } from '../../state/Entitlement'
+import { AuthProvider } from '../../state/Auth'
+import { FavoritesProvider } from '../../state/Favorites'
 import { TooltipProvider } from '../ui/tooltip'
 import { settleRpc } from '../../test/settle'
 
@@ -45,12 +48,18 @@ function Probe() {
 function renderPage() {
   return render(
     <AppStateProvider>
-      <TerminalLogProvider>
-        <TooltipProvider>
-          <DiscoverPage />
-          <Probe />
-        </TooltipProvider>
-      </TerminalLogProvider>
+      <EntitlementProvider>
+        <AuthProvider>
+          <FavoritesProvider>
+            <TerminalLogProvider>
+              <TooltipProvider>
+                <DiscoverPage />
+                <Probe />
+              </TooltipProvider>
+            </TerminalLogProvider>
+          </FavoritesProvider>
+        </AuthProvider>
+      </EntitlementProvider>
     </AppStateProvider>
   )
 }
@@ -137,4 +146,23 @@ test('no results offers to clear the filters', async () => {
   renderPage()
   expect(await screen.findByText('没有匹配的结果')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '清除筛选' })).toBeInTheDocument()
+})
+
+test('收藏 lists the favorites, narrowed by kind and search, without asking the catalog', async () => {
+  const calls = mockRpc()
+  renderPage()
+  fireEvent.click(await screen.findByText('Context7'))
+  const pane = await screen.findByRole('complementary', { name: 'mcp-registry:io.github.upstash/context7' })
+  await waitFor(() => expect(pane).toHaveTextContent('aas install'))
+  fireEvent.click(within(pane).getByRole('button', { name: '收藏' }))
+  fireEvent.keyDown(window, { key: 'Escape' })
+  const searches = calls.filter((c) => c.method === 'search').length
+
+  fireEvent.click(screen.getByRole('button', { name: /^收藏/, pressed: false }))
+  expect(await screen.findByText('未登录，收藏保存在本机。登录后并入账号，与网页共用。')).toBeInTheDocument()
+  expect(screen.getByText('Context7')).toBeInTheDocument()
+  expect(screen.queryByText('find-skills')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: '技能' }))
+  expect(await screen.findByText('没有匹配的收藏')).toBeInTheDocument()
+  expect(calls.filter((c) => c.method === 'search').length).toBe(searches)
 })

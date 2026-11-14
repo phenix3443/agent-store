@@ -10,6 +10,7 @@ import type {
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectUninstallOptions, ProjectUninstallResult,
+  AccessToken, DeviceAuthorization, DevicePoll, FavoriteEntry,
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
@@ -18,6 +19,7 @@ import { resourceLongSlug } from '@as/types'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
 import { createAdapters, type KindAdapter } from './adapters'
 import { ProjectService } from './projects/service'
+import { AccountService } from './account'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
@@ -56,6 +58,8 @@ export interface EngineOptions {
   startRelay?: () => Promise<void>
   /** Where install and search read from; /api/resources on `storeUrl` by default. */
   catalog?: Catalog
+  /** Origin of the store's /api/auth/*; `storeUrl` when unset (they share one origin when deployed). */
+  authUrl?: string
 }
 
 /**
@@ -69,12 +73,14 @@ export class EngineImpl implements Engine {
   private readonly adapters: Record<Category, KindAdapter>
   private readonly catalog: Catalog
   private readonly projects: ProjectService
+  private readonly account: AccountService
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
     this.client = new StoreClient(storeUrl, { timeoutMs: 8000 })
     this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
     this.projects = new ProjectService(this.paths, this.catalog)
+    this.account = new AccountService(options.authUrl ? new StoreClient(options.authUrl, { timeoutMs: 8000 }) : this.client, this.client)
     this.adapters = createAdapters({
       paths: this.paths,
       startRelay: options.startRelay,
@@ -481,6 +487,30 @@ export class EngineImpl implements Engine {
     const result = await this.client.createCheckout({ period }, { token })
     if (result.error || !result.data) throw new Error(result.error ?? 'Failed to create checkout session')
     return result.data
+  }
+
+  startSignIn(): Promise<DeviceAuthorization> {
+    return this.account.startSignIn()
+  }
+
+  pollSignIn(deviceCode: string): Promise<DevicePoll> {
+    return this.account.pollSignIn(deviceCode)
+  }
+
+  getAccessToken(sessionToken: string): Promise<AccessToken> {
+    return this.account.getAccessToken(sessionToken)
+  }
+
+  signOutSession(sessionToken: string): Promise<void> {
+    return this.account.signOut(sessionToken)
+  }
+
+  listFavorites(token: string): Promise<FavoriteEntry[]> {
+    return this.account.listFavorites(token)
+  }
+
+  setFavorite(token: string, id: string, on: boolean): Promise<void> {
+    return this.account.setFavorite(token, id, on)
   }
 
   async clearEntitlement(): Promise<Entitlements> {

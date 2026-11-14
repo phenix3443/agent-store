@@ -5,7 +5,7 @@ import { openExternal } from './openExternal'
 
 /** Sign-in, sign-out and upgrade with one busy flag, shared by the account menu and the settings page. */
 export function useAccountActions() {
-  const { accessToken, signIn, signOut } = useAuth()
+  const { getAccessToken, signIn, signOut } = useAuth()
   const [busy, setBusy] = useState(false)
 
   async function run(label: string, fn: () => Promise<void>): Promise<boolean> {
@@ -24,11 +24,16 @@ export function useAccountActions() {
 
   return {
     busy,
-    signIn: (provider: AuthProviderName) => run('auth', () => signIn(provider)),
+    // The sign-in dialog shows the rest; the menus stay usable while the browser is open.
+    signIn: (provider: AuthProviderName) => {
+      void signIn(provider)
+      return Promise.resolve(true)
+    },
     signOut: () => run('auth', () => signOut()),
     upgrade: () =>
       run('billing', async () => {
-        const { checkoutUrl } = await callRpc<{ checkoutUrl: string }>('createCheckout', ['monthly', accessToken ?? undefined])
+        const token = await getAccessToken()
+        const { checkoutUrl } = await callRpc<{ checkoutUrl: string }>('createCheckout', ['monthly', token ?? undefined])
         await openExternal(checkoutUrl)
       }),
   }

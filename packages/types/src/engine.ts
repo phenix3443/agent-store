@@ -2,7 +2,8 @@ import type { JsonSchema } from './items'
 import type { Publisher } from './publisher'
 import type { Entitlements } from './entitlement'
 import type { CatalogResourceDetail, CatalogSearchResult } from './catalog'
-import type { ResourceKind, ResourceSort } from './resources'
+import type { FavoriteEntry, ResourceKind, ResourceSort } from './resources'
+import type { AccessToken, DeviceAuthorization, DevicePoll } from './auth'
 import type {
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectUninstallOptions, ProjectUninstallResult,
@@ -351,6 +352,18 @@ export interface Engine {
   syncEntitlement(token: string): Promise<Entitlements>
   /** Creates a Pro checkout session and returns its URL. Pass the session token to bind the subscription to the user. */
   createCheckout(period: 'monthly' | 'yearly' | 'lifetime', token?: string): Promise<{ checkoutUrl: string }>
+  /** Starts a desktop sign-in on the store (device authorization grant). */
+  startSignIn(): Promise<DeviceAuthorization>
+  /** One poll of a started sign-in; `approved` carries this device's session token. */
+  pollSignIn(deviceCode: string): Promise<DevicePoll>
+  /** A short-lived API token for the desktop session; SessionExpiredError when the session is gone. */
+  getAccessToken(sessionToken: string): Promise<AccessToken>
+  /** Deletes the desktop session on the server. */
+  signOutSession(sessionToken: string): Promise<void>
+  /** The signed-in user's favorites, newest first. */
+  listFavorites(token: string): Promise<FavoriteEntry[]>
+  /** Adds or removes one favorite; FavoriteRejectedError when the API refuses it for good. */
+  setFavorite(token: string, id: string, on: boolean): Promise<void>
   /** Clears the locally cached plan back to free (e.g. on sign-out). */
   clearEntitlement(): Promise<Entitlements>
   /** Exports usage rollups to a CSV/JSON file under the AAS home and returns the file path. */

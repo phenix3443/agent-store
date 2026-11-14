@@ -1,4 +1,7 @@
 import type {
+  AccessToken,
+  DeviceAuthorization,
+  DevicePoll,
   FavoritesResponse,
   MySubscription,
   Plan,
@@ -149,6 +152,99 @@ export class StoreClient {
     }
   }
 
+  /** POST /api/auth/device/code: starts a desktop sign-in (RFC 8628). */
+  async startDeviceAuth(clientId: string): Promise<Result<DeviceAuthorization>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/auth/device/code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: clientId }),
+      })
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) return { data: null, error: authError(json, res.status), status: res.status }
+      const { device_code, user_code, verification_uri_complete, expires_in, interval } = json
+      if (typeof device_code !== 'string' || typeof user_code !== 'string' || typeof verification_uri_complete !== 'string') {
+        return { data: null, error: 'Malformed device authorization', status: res.status }
+      }
+      return {
+        data: {
+          deviceCode: device_code,
+          userCode: user_code,
+          verificationUriComplete: verification_uri_complete,
+          expiresIn: typeof expires_in === 'number' ? expires_in : 600,
+          interval: typeof interval === 'number' ? interval : 5,
+        },
+        error: null,
+      }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** POST /api/auth/device/token: one poll. Waiting, denied and expired are answers, not errors. */
+  async pollDeviceAuth(clientId: string, deviceCode: string): Promise<Result<DevicePoll>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/auth/device/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grant_type: 'urn:ietf:params:oauth:grant-type:device_code', device_code: deviceCode, client_id: clientId }),
+      })
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (res.ok) {
+        const sessionToken = json['access_token']
+        const expiresIn = json['expires_in']
+        if (typeof sessionToken !== 'string') return { data: null, error: 'No access_token in response', status: res.status }
+        return { data: { status: 'approved', sessionToken, expiresIn: typeof expiresIn === 'number' ? expiresIn : 0 }, error: null }
+      }
+      switch (json['error']) {
+        case 'authorization_pending':
+          return { data: { status: 'pending' }, error: null }
+        case 'slow_down':
+          return { data: { status: 'slow_down' }, error: null }
+        case 'access_denied':
+          return { data: { status: 'denied' }, error: null }
+        case 'expired_token':
+        case 'invalid_grant':
+          return { data: { status: 'expired' }, error: null }
+      }
+      return { data: null, error: authError(json, res.status), status: res.status }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** GET /api/auth/token with the desktop session as bearer: a fresh API token. 401 = the session is gone. */
+  async getAccessToken(sessionToken: string): Promise<Result<AccessToken>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/auth/token`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      })
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) return { data: null, error: authError(json, res.status), status: res.status }
+      const token = json['token']
+      if (typeof token !== 'string') return { data: null, error: 'No token in response', status: res.status }
+      return { data: { token, expiresAt: jwtExp(token) }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** POST /api/auth/sign-out with the desktop session as bearer: deletes that session on the server. */
+  async signOutSession(sessionToken: string): Promise<Result<{ success: boolean }>> {
+    try {
+      const res = await this._fetch(`${this.baseUrl}/api/auth/sign-out`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+      if (!res.ok) return { data: null, error: authError(json, res.status), status: res.status }
+      return { data: { success: json['success'] !== false }, error: null }
+    } catch (err) {
+      return { data: null, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
   /** Creates a Pro checkout session; pass the session token to bind the subscription to the user. */
   async createCheckout(
     body: { period: 'monthly' | 'yearly' | 'lifetime'; email?: string; trial?: boolean },
@@ -223,4 +319,23 @@ export class StoreClient {
 function subscriptionOf(json: Record<string, unknown>): { subscription: MySubscription } | null {
   const subscription = json['subscription']
   return subscription && typeof subscription === 'object' ? { subscription: subscription as MySubscription } : null
+}
+
+function authError(json: Record<string, unknown>, status: number): string {
+  for (const key of ['error_description', 'message', 'error']) {
+    const value = json[key]
+    if (typeof value === 'string' && value) return value
+  }
+  return `HTTP ${status}`
+}
+
+function jwtExp(token: string): number | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    const payload = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: unknown }
+    return typeof payload.exp === 'number' ? payload.exp : null
+  } catch {
+    return null
+  }
 }

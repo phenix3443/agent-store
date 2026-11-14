@@ -179,7 +179,11 @@ API 本地的 `catalog.db` 是下载来的只读副本，每次发布都会被�
 
 Better Auth 跑在商店里（`apps/store/lib/auth/server.ts`），用 Node 内置的 `node:sqlite` 打开 `app.db`（`apps/store/lib/app-db.ts`），用户、会话等表的结构由 API 的 drizzle 迁移管理，不用 Better Auth 自己的迁移器。
 
-- 浏览器和桌面端向商店的 `/api/auth/token` 换一个短期 JWT，调用 API 时放在 `Authorization: Bearer` 里。
+- 浏览器和桌面端向商店的 `/api/auth/token` 换一个短期 JWT（15 分钟），调用 API 时放在 `Authorization: Bearer` 里。
+- 桌面端用设备授权登录（RFC 8628，Better Auth 的 `deviceAuthorization` 插件，#195）：客户端 `POST /api/auth/device/code`（`client_id=agent-store-desktop`，只接受这一个），打开 `/auth/device?user_code=…` 让用户在浏览器里登录并点「允许」，同时每 5 秒 `POST /api/auth/device/token`；代码 10 分钟过期。批准后客户端拿到一条自己的会话，会话令牌存在系统凭据存储里，用 `Authorization: Bearer <会话令牌>` 调 `/api/auth/token` 换 JWT、调 `/api/auth/sign-out` 退出（`bearer` 插件）。会话按 Better Auth 默认值 7 天过期，每天最多顺延一次。
+- `bearer` 插件会在设置会话 Cookie 的响应上加 `set-auth-token` 头，`app/api/auth/[...path]/route.ts` 把它去掉，网页脚本读不到会话令牌。
+- 旧版客户端（0.3.0 及以前）仍走 `/auth/desktop`，经 `agent-store://auth-callback?token=<JWT>` 回跳；新客户端不再处理这个链接。
+- 本机开发时 API 和商店不在同一个端口：sidecar 用 `AS_STORE_URL` 访问 API，用 `AS_AUTH_URL` 访问商店的 `/api/auth/*`（`make dev-client` 已设置）；部署后两者同域，不设 `AS_AUTH_URL`。
 - API 用商店的 `/api/auth/jwks` 验签（`AUTH_JWKS_URL`，集群内直连 `http://store:3000`），并校验签发方 `AUTH_ISSUER`。
 - 令牌里的 `username` 是 GitHub 登录名，发布者按它对应。它由 `apps/store/lib/auth/github-username.ts` 在每次 GitHub 登录时用访问令牌向 GitHub 查询后写入用户表；只用 Google 登录的用户没有 `username`，用 GitHub 登录一次后补上。
 - GitHub OAuth App 的回调地址是 `https://agent-store-test.panghuli.tech/api/auth/callback/github`；Google OAuth 客户端的重定向 URI 是 `https://agent-store-test.panghuli.tech/api/auth/callback/google`。Google 只在配置了 `GOOGLE_CLIENT_ID` 时启用。

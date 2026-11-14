@@ -57,16 +57,17 @@ dev-store:
 
 ## Desktop client for local dev, in isolated /tmp dirs — never touches your real
 ## ~/.claude, ~/.codex, or ~/.agents. Built and run as a packaged debug .app with a
-## dev-only identity (com.aas.cli-gui.dev + agent-store-dev://) so macOS routes the
-## OAuth deep-link back to the running window — `tauri dev`'s unbundled binary does
-## not receive it. Reads the catalog from the local API (AS_STORE_URL) and points
-## its OAuth relay at the LOCAL store (VITE_STORE_URL) so sign-in stays local.
+## dev-only identity (com.aas.cli-gui.dev + agent-store-dev://) so macOS routes
+## agent-store-dev:// links to the running window — `tauri dev`'s unbundled binary does
+## not receive them. Reads the catalog from the local API (AS_STORE_URL) and signs in
+## against the LOCAL store's /api/auth/* (AS_AUTH_URL), so sign-in stays local.
 ## Trade-off: no frontend hot-reload — re-run `make dev-env` to pick up UI changes.
 ## Building block of `make dev-env`. (See apps/cli-gui/scripts/dev-app.sh.)
 dev-client:
 	@mkdir -p /tmp/as-gui-dev /tmp/claude-gui-dev /tmp/codex-gui-dev
 	AS_HOME=/tmp/as-gui-dev \
 	AS_STORE_URL=http://127.0.0.1:$(API_PORT) \
+	AS_AUTH_URL=http://localhost:$(STORE_PORT) \
 	VITE_STORE_URL=http://localhost:$(STORE_PORT) \
 	CLAUDE_CONFIG_DIR=/tmp/claude-gui-dev \
 	CODEX_CONFIG_DIR=/tmp/codex-gui-dev \

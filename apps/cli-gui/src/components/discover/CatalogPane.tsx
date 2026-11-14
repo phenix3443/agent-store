@@ -7,10 +7,12 @@ import { installStepsOf, requiredKeys, typeFacts, type SelectedDetail } from '..
 import { AGENTS, joinNames } from '../../lib/agents'
 import { openExternal } from '../../lib/openExternal'
 import { useAppState } from '../../state/AppState'
+import { useFavorites } from '../../state/Favorites'
 import { useI18n } from '../../i18n'
 import { Badge, KindLabel } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Banner, Skeleton } from '../ui/states'
+import { toast } from '../ui/toast'
 import { CodeLine, DetailPane, ErrorDetails, Facts, PaneHead, Section, Steps } from '../library/parts'
 import { transportLong, transportText } from '../library/McpPane'
 
@@ -40,7 +42,8 @@ export function CatalogPane({
   onClose: () => void
 }) {
   const { locale, t } = useI18n()
-  const { favoriteSlugs, toggleFavorite, requestInstall } = useAppState()
+  const { requestInstall } = useAppState()
+  const favorites = useFavorites()
   const [resource, setResource] = useState<CatalogResourceDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -86,7 +89,7 @@ export function CatalogPane({
   const item = resourceItem(resource)
   const detail: SelectedDetail = { ...item, installed: false, resource }
   const entry = installedEntryFor(resource, installed)
-  const fav = favoriteSlugs.has(resource.id)
+  const fav = favorites.isFavorite(resource.id)
   const notInstallable = resource.installError
   const mcp = item.category === 'mcp' ? item : null
   const needs = requiredKeys(detail)
@@ -180,7 +183,7 @@ export function CatalogPane({
           aria-pressed={fav}
           aria-label={t(fav ? 'act.favOff' : 'act.favOn')}
           title={t(fav ? 'act.favOff' : 'act.favOn')}
-          onClick={() => toggleFavorite(resource.id)}
+          onClick={() => toast(t(favorites.toggle(resource.id, resource) ? 'fav.added' : 'fav.removed'))}
           className={fav ? 'bg-panel-2 text-fg' : undefined}
         >
           <Heart fill={fav ? 'currentColor' : 'none'} />

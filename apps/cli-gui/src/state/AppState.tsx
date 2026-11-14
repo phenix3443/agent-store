@@ -18,8 +18,6 @@ interface AppStateValue {
   setSelectedSlug: (slug: string | null) => void
   editingConfigSlug: string | null
   setEditingConfigSlug: (slug: string | null) => void
-  favoriteSlugs: Set<string>
-  toggleFavorite: (slug: string) => void
   terminalExpanded: boolean
   setTerminalExpanded: (v: boolean) => void
   installedVersion: number
@@ -39,6 +37,9 @@ interface AppStateValue {
   /** Kind filter of the Discover page; other pages preset it when they send the user there. */
   discoverKind: DiscoverKind
   setDiscoverKind: (k: DiscoverKind) => void
+  /** Discover lists the favorites instead of the catalog. */
+  discoverFavorites: boolean
+  setDiscoverFavorites: (v: boolean) => void
   /** A catalog id the install dialog should open for; the dialog consumes it. */
   installRef: string | null
   requestInstall: (ref: string | null) => void
@@ -58,7 +59,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
   const [editingConfigSlug, setEditingConfigSlug] = useState<string | null>(null)
-  const [favoriteSlugs, setFavoriteSlugs] = useState<Set<string>>(new Set())
   const [terminalExpanded, setTerminalExpanded] = useState(false)
   const [installedVersion, setInstalledVersion] = useState(0)
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
@@ -67,6 +67,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shellDialog, setShellDialog] = useState<ShellDialog>(null)
   const [discoverKind, setDiscoverKind] = useState<DiscoverKind>('all')
+  const [discoverFavorites, setDiscoverFavorites] = useState(false)
   const [installRef, requestInstall] = useState<string | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
   const [installInto, setInstallInto] = useState<string | null>(null)
@@ -75,15 +76,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setInstalledVersion((prev) => prev + 1)
   }, [])
 
-  function toggleFavorite(slug: string) {
-    setFavoriteSlugs((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
-    })
-  }
-
   return (
     <AppStateContext.Provider
       value={{
@@ -91,7 +83,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         navView, setNavView, categoryFilter, setCategoryFilter,
         selectedSlug, setSelectedSlug,
         editingConfigSlug, setEditingConfigSlug,
-        favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
+        terminalExpanded, setTerminalExpanded,
         installedVersion, bumpInstalledVersion,
         settingsTab, setSettingsTab,
         catalogOffline, setCatalogOffline,
@@ -99,6 +91,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         paletteOpen, setPaletteOpen,
         shellDialog, setShellDialog,
         discoverKind, setDiscoverKind,
+        discoverFavorites, setDiscoverFavorites,
         installRef, requestInstall,
         projectId, setProjectId,
         installInto, setInstallInto,
