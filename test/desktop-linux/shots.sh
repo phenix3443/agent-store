@@ -2,7 +2,8 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164), the welcome, usage and settings pages (#165) and projects (#166). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166) and the
+# loopback endpoint the web store asks (#181). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -331,6 +332,101 @@ shot 27-project-trusted-key-stored
 stop_app
 cli projects show "$PROJ"
 
+# 12. Library gaps (#194). 在文件管理器中显示 goes to the desktop's file manager over D-Bus; a
+#     stand-in records what it was asked to show.
+REVEAL_LOG=$OUT/reveal.txt
+python3 /work/test/desktop-linux/fake-filemanager.py "$REVEAL_LOG" >"$OUT/fake-filemanager.log" 2>&1 &
+sleep 2
+"$APP" >"$OUT/app-library.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+2
+sleep 15
+# From the page search: the four filter buttons, select all, the row's checkbox, then the row.
+xdotool key slash
+xdotool type --delay 60 'legacy'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab Tab Tab Return
+sleep 4
+shot 28-skill-pane-library-path
+# The row's two switches, the pane's close button and its two switches, then 在文件管理器中显示.
+xdotool key Tab Tab Tab Tab Tab Tab Return
+sleep 3
+shot 28b-skill-revealed
+check "在文件管理器中显示 handed the skill's library folder to the file manager" 'grep -q "^items file://$LIB/legacy-skill$" "$REVEAL_LOG"'
+
+# Select both skills, then 停用 › Codex for all of them in one batch.
+xdotool key Escape
+sleep 1
+xdotool key slash ctrl+a BackSpace
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+shot 29-bulk-bar
+xdotool key Tab Tab Return
+sleep 1
+xdotool key Down Down Return
+sleep 12
+shot 29b-bulk-disable-results
+check "bulk 停用 › Codex removed the Codex link and kept Claude's" '[ ! -e "$HOME/.codex/skills/legacy-skill" ] && links_to "$HOME/.claude/skills/legacy-skill" "$LIB/legacy-skill"'
+xdotool key Escape
+sleep 1
+stop_app
+
+# 替换现有条目: Claude Code already has its own entry under context7's name. Taking it over needs
+# the claude CLI, which tries the restore in a scratch config first.
+CLAUDE_CLI=/opt/claude-cli/bin/claude
+CTX=$(printf '[]\n' | "$SIDECAR" __rpc list - | python3 -c 'import json,sys; print(next(e["slug"] for e in json.load(sys.stdin)["data"] if e.get("resourceId") == sys.argv[1]))' "$NPM_MCP_ID")
+cli uninstall "$CTX"
+"$CLAUDE_CLI" mcp add-json --scope user "$CTX" '{"type":"stdio","command":"echo","args":["mine"]}' >>"$OUT/cli.txt" 2>&1
+check "the user's own context7 entry is in ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\")" "$HOME/.claude.json" "$CTX"'
+export AS_CLAUDE_BIN=$CLAUDE_CLI CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+install_link "$NPM_MCP_ID"
+confirm 25
+shot 30-takeover-conflict
+# Focus is on 跳过 Claude Code; the next button is 替换现有条目.
+xdotool key Tab Return
+sleep 30
+shot 31-takeover-done
+check "替换现有条目 saved the user's entry in targets.json" 'python3 -c "import json,sys; p=json.load(open(sys.argv[1]))[\"claude\"][\"previous\"]; sys.exit(p[\"command\"] != \"echo\")" "$HOME/.agent-store/mcps/$CTX/targets.json"'
+check "替换现有条目 wrote Agent Store's entry in its place" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(\"@upstash/context7-mcp\" not in json.dumps(e))" "$HOME/.claude.json" "$CTX"'
+stop_app
+
+# Bulk 卸载 on the MCP page: confirmed, then the entry it replaced is written back.
+"$APP" >"$OUT/app-bulk-uninstall.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+3
+sleep 20
+xdotool key slash
+xdotool type --delay 60 'context7'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+xdotool key Tab Tab Tab Return
+sleep 2
+shot 32-bulk-uninstall-confirm
+# The confirmation opens on 取消; 卸载 is next.
+xdotool key Tab Return
+sleep 25
+shot 32b-bulk-uninstall-results
+check "bulk 卸载 wrote the user's own entry back to ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\" or e[\"args\"] != [\"mine\"])" "$HOME/.claude.json" "$CTX"'
+check "bulk 卸载 removed context7 from the library" '[ ! -e "$HOME/.agent-store/mcps/$CTX" ]'
+stop_app
+unset AS_CLAUDE_BIN CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+
+# A project folder that is gone: the page shows what it last read there, read-only.
+check "the project page remembered what it last read" '[ -n "$(find "$XDG_DATA_HOME" -path "*agent-store-cli/project-snapshots.json" 2>/dev/null)" ]'
+mv "$PROJ" "$PROJ.moved"
+"$APP" >"$OUT/app-project-missing.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+shot 33-sidebar-project-missing
+open_project
+shot 33b-project-missing-last-read
+stop_app
+mv "$PROJ.moved" "$PROJ"
+
 cli search find-skills --kind skill
 cli info "$SKILL_ID"
 cli info "$SKILL_SLUG"
@@ -347,6 +443,43 @@ cli doctor
   echo "\$ cat ~/.codex/config.toml"
   cat "$HOME/.codex/config.toml"
 } >>"$OUT/cli.txt" 2>&1
+
+# 13. The loopback endpoint the web store asks (#181): started by the app, answering only the
+#     store's origins and the loopback host, and gone with the app. find-skills is installed
+#     by step 2; the other id is not.
+LOCAL_API=127.0.0.1:18781
+STORE_ORIGIN=https://agent-store-test.panghuli.tech
+MISSING_ID=github:nobody/nothing/none
+# Prints the status line, the CORS header (or "-") and the body, one per line.
+ask_local() {
+  local origin=$1 host=$2 hdrs body
+  hdrs=$(mktemp); body=$(mktemp)
+  local args=(-s -o "$body" -D "$hdrs" --max-time 5 -H "Host: $host")
+  [ -n "$origin" ] && args+=(-H "Origin: $origin")
+  curl "${args[@]}" "http://$LOCAL_API/v1/installed?ids=$(enc "$SKILL_ID,$MISSING_ID")" >/dev/null 2>&1
+  head -1 "$hdrs" | awk '{print $2}'
+  grep -i '^access-control-allow-origin:' "$hdrs" | cut -d' ' -f2- | tr -d '\r' | grep . || echo -
+  cat "$body"; echo
+  rm -f "$hdrs" "$body"
+}
+listening() { python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(2); sys.exit(0 if s.connect_ex(("127.0.0.1", 18781)) == 0 else 1)'; }
+"$APP" >"$OUT/app-local-api.log" 2>&1 &
+sleep "$SETTLE"
+check "the running app listens on $LOCAL_API" 'listening'
+check "the app started the sidecar as __local-api with the store origin" 'grep -qx "__local-api $STORE_ORIGIN" "$ARGV_LOG"'
+OK_ANSWER=$(ask_local "$STORE_ORIGIN" "$LOCAL_API")
+echo "$OK_ANSWER" | sed 's/^/  store origin: /' | tee -a "$OUT/result.txt"
+check "the store origin gets 200, its own origin back, and only the installed id" '[ "$(echo "$OK_ANSWER" | sed -n 1p)" = 200 ] && [ "$(echo "$OK_ANSWER" | sed -n 2p)" = "$STORE_ORIGIN" ] && [ "$(echo "$OK_ANSWER" | sed -n 3p)" = "{\"installed\":[\"$SKILL_ID\"]}" ]'
+for case in "https://evil.example|$LOCAL_API|another origin" "|$LOCAL_API|no origin" "$STORE_ORIGIN|evil.example:18781|another host"; do
+  IFS='|' read -r o h what <<<"$case"
+  ANSWER=$(ask_local "$o" "$h")
+  echo "$ANSWER" | sed "s/^/  $what: /" | tee -a "$OUT/result.txt"
+  check "$what gets 403 without a CORS header" '[ "$(echo "$ANSWER" | sed -n 1p)" = 403 ] && [ "$(echo "$ANSWER" | sed -n 2p)" = - ]'
+done
+stop_app
+sleep 3
+check "after the app quits the port is closed" '! listening'
+check "no aas __local-api process is left" '! pgrep -f -- "__local-api" >/dev/null'
 
 check "the desktop client started the sidecar with its arguments on stdin" 'grep -qE "^__rpc [A-Za-z]+ -$" "$ARGV_LOG"'
 check "every RPC call kept its arguments off the command line" '! grep "^__rpc" "$ARGV_LOG" | grep -qvE "^__rpc [A-Za-z]+ -$"'

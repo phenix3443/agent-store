@@ -10,6 +10,7 @@ export interface TerminalLine {
 interface TerminalLogValue {
   lines: TerminalLine[]
   appendLine: (text: string, color?: LineColor) => void
+  clear: () => void
 }
 
 const TerminalLogContext = createContext<TerminalLogValue | null>(null)
@@ -22,7 +23,7 @@ export function TerminalLogProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <TerminalLogContext.Provider value={{ lines, appendLine }}>
+    <TerminalLogContext.Provider value={{ lines, appendLine, clear: () => setLines([]) }}>
       {children}
     </TerminalLogContext.Provider>
   )

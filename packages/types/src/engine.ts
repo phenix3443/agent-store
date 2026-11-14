@@ -5,8 +5,12 @@ import type { CatalogResourceDetail, CatalogSearchResult } from './catalog'
 import type { ResourceKind, ResourceSort } from './resources'
 import type {
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
-  ProjectUninstallOptions, ProjectUninstallResult,
+  ProjectSummary, ProjectUninstallOptions, ProjectUninstallResult,
 } from './projects'
+import type {
+  BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
+  BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
+} from './backup'
 
 /** The canonical union for supported tool targets */
 export type ToolTarget = 'claude' | 'codex'
@@ -234,6 +238,10 @@ export interface ItemDetail {
   headers?: Record<string, string>
   /** skill only */
   contentUrl?: string
+  /** Where the item's files live in the library (`~/.agent-store/<kind>s/<slug>`), absolute. */
+  dir?: string
+  /** mcp only: tools whose own same-name entry was taken over with `replace`; it is written back on disable or uninstall. */
+  replacedFor?: ToolTarget[]
 }
 
 /**
@@ -267,6 +275,23 @@ export interface DisableOptions {
 
 export type UninstallOptions = DisableOptions
 
+/** One step of `batch`: enable or disable needs `target`; uninstall takes the whole entry. No force or replace. */
+export type BatchOperation =
+  | { action: 'enable' | 'disable'; slug: string; target: ToolTarget }
+  | { action: 'uninstall'; slug: string }
+
+/** The engine error of a failed step, with the same fields `aas __rpc` reports. */
+export interface BatchError {
+  message: string
+  /** Error class name, e.g. McpConflictError. */
+  code?: string
+  reason?: string
+  tool?: string
+  target?: string
+}
+
+export type BatchOutcome = BatchOperation & ({ ok: true } | { ok: false; error: BatchError })
+
 /**
  * Why an item is not enabled for a tool yet. The user can fix `needs-config` and
  * `no-key`; `incompatible` and `unsupported` (the tool cannot run this item, e.g.
@@ -287,6 +312,8 @@ export interface InstallOutcome extends InstallResult {
   enabled: ToolTarget[]
   /** Installed but left disabled for these tools, with what to do next. */
   notEnabled: Array<{ target: ToolTarget; reason: EnableBlocker; message: string }>
+  /** How a tool's config was written when it wasn't the usual way (its config file edited because its CLI can't be run safely). */
+  notes?: string[]
 }
 
 export interface Engine {
@@ -361,8 +388,15 @@ export interface Engine {
   setBudget(config: BudgetConfig): Promise<BudgetConfig>
   /** Computes current-month spend against the budget, with projection and alert level. */
   getBudgetStatus(): Promise<BudgetStatus>
+  /**
+   * Runs each step in turn and reports each one; a failed step does not stop the rest.
+   * Never throws for a step's own failure.
+   */
+  batch(operations: BatchOperation[]): Promise<BatchOutcome[]>
   /** Registered project directories; `exists` is false for one that is gone. */
   listProjects(): Promise<Project[]>
+  /** Every project with how many skills and MCP servers its agents use there, in one call. */
+  projectSummaries(): Promise<ProjectSummary[]>
   /** Registers an existing directory; the same directory (through any path) is registered once. */
   addProject(path: string, options?: AddProjectOptions): Promise<Project>
   /** Stops managing a project (`ref`: id or path). No file is deleted. */
@@ -380,4 +414,20 @@ export interface Engine {
   unsetProjectEnv(ref: string, name: string): Promise<void>
   /** The stored values, for starting an agent with them in its environment. */
   getProjectEnvValues(ref: string): Promise<Record<string, string>>
+  /** Connection, last sync, pending conflicts, keys missing here. `fetch` also counts remote commits not merged yet. */
+  getBackupStatus(options?: { fetch?: boolean }): Promise<BackupStatus>
+  /** Connects this device to a Git remote that is empty or holds an Agent Store backup; nothing is synced yet. */
+  connectBackup(options: BackupConnectOptions): Promise<BackupConnectResult>
+  /** Snapshot, then merge both ways per item, push, and apply what came from the remote. */
+  backupNow(): Promise<BackupSyncResult>
+  /** Applies remote changes here without uploading local ones. */
+  pullBackup(): Promise<BackupSyncResult>
+  /** `item`: slug or `<category>/<slug>`. Takes a snapshot first. */
+  resolveBackupConflict(item: string, choice: BackupConflictChoice): Promise<BackupResolveResult>
+  listBackupSnapshots(): Promise<BackupSnapshot[]>
+  /** Snapshots the current state, then makes this machine match the snapshot. */
+  restoreBackupSnapshot(id: string): Promise<BackupRestoreResult>
+  listBackupHistory(options?: { limit?: number }): Promise<BackupHistoryEntry[]>
+  /** Forgets the connection, local snapshots and the stored token on this device; the remote is left as it is. */
+  disconnectBackup(): Promise<void>
 }

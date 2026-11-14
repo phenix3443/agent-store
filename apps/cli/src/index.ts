@@ -11,12 +11,14 @@ import { runSync } from './commands/sync'
 import { runUpdate } from './commands/update'
 import { runRpc } from './commands/rpc'
 import { runRelay } from './commands/relay'
+import { runLocalApi } from './commands/local-api'
 import { realRelayOps } from './relay-ops'
 import { runUsage } from './commands/usage'
 import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
 import { runProjects } from './commands/projects'
-import { runRelayDaemon, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome } from '@as/client-core'
+import { runBackup } from './commands/backup'
+import { runRelayDaemon, startLocalApi, readRegistry, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome } from '@as/client-core'
 import { migrateHomeOnStartup, refreshRelayOnStartup } from './startup'
 import { ensureRelayRunning } from './commands/relay'
 import { VERSION } from './version'
@@ -35,6 +37,8 @@ Commands:
                                    Uninstall an item
   projects <list|add|remove|move|show|set-env|unset-env|env|exec>
                                    Project-level skills and MCP servers (aas projects for help)
+  backup <connect|status|now|pull|conflicts|resolve|snapshots|restore|log|disconnect>
+                                   Back up to your own Git repository and sync devices (aas backup for help)
   enable <slug> --for <tool> [--replace] [--force]   Enable for claude or codex
   disable <slug> --for <tool> [--force]              Disable for claude or codex
   config <slug>                    Configure an item's settings
@@ -61,6 +65,12 @@ async function main(): Promise<void> {
   }
 
   // The daemon refreshes on its own start; `__rpc` writes JSON to stdout, so warnings go to stderr.
+  // `__local-api` only reads the registry, so it skips the startup migrations.
+  if (command === '__local-api') {
+    const { aasHome } = resolvePaths()
+    await runLocalApi(rest, (origins) => startLocalApi({ origins, installed: async () => (await readRegistry(aasHome)).installed }))
+    process.exit(0)
+  }
   if (command !== '__relay-daemon') {
     if (!process.env['AS_HOME']) {
       const paths = resolvePaths()
@@ -89,6 +99,7 @@ async function main(): Promise<void> {
     case 'usage':     await runUsage(engine, rest); break
     case 'migrate':   process.exitCode = await runMigrateCommand(() => runMigrate(resolvePaths())); break
     case 'projects':  process.exitCode = await runProjects(engine, rest); break
+    case 'backup':    process.exitCode = await runBackup(engine, rest); break
     case 'doctor':    process.exitCode = await runDoctorCommand(() => runDoctor(resolvePaths())); break
     case '__relay-daemon': {
       const paths = resolvePaths()

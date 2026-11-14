@@ -140,7 +140,13 @@
       "noteMcp": "Adds the server to Claude Code. Replace the values in angle brackets with your own.",
       "noteProvider": "Runs the Agent Store CLI.",
       "note": "No desktop app yet? The command below works too.",
-      "commandTitle": "Install command"
+      "commandTitle": "Install command",
+      "manage": "Manage",
+      "manageDesktop": "Manage in the desktop app",
+      "manageLabel": "Manage {name} in the desktop app",
+      "installedHere": "Installed",
+      "installedHereTitle": "The desktop app on this computer reports it installed",
+      "installedNote": "Installed on this computer. The button opens it in the desktop app."
     },
     "notice": {
       "label": "Notification",
@@ -597,6 +603,11 @@
       "buy": "Buy lifetime",
       "working": "Opening checkout…",
       "failed": "Couldn't open checkout. Please try again later.",
+      "current": "Current plan",
+      "manage": "Manage subscription",
+      "viewPlan": "View plan and orders",
+      "ownedSubscription": "You're on {plan}. Switching period or buying lifetime isn't available here.",
+      "ownedLifetime": "You own Pro Lifetime. No subscription needed.",
       "merchant": "Payments by Waffo. Prices include tax.",
       "compare": {
         "title": "Compare plans",

@@ -9,18 +9,23 @@ import type {
   UsageSummaryRow, UsageSummaryOptions, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
-  ProjectUninstallOptions, ProjectUninstallResult,
+  ProjectSummary, ProjectUninstallOptions, ProjectUninstallResult, BatchOperation, BatchOutcome,
+  BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
+  BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
 import { ResourceCatalog, toItem, type Catalog } from './catalog'
 import { resourceLongSlug } from '@as/types'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
-import { createAdapters, type KindAdapter } from './adapters'
+import { createAdapters, mcpCliFallbackNote, type KindAdapter } from './adapters'
 import { ProjectService } from './projects/service'
+import { BackupService } from './backup/service'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
+import { readMcpTargets } from './config/mcp-targets'
+import { batchError } from './error-fields'
 import { getDailySummary, getRecentRequests } from './usage/queries'
 import { readProviderHealth, resetProviderHealth } from './usage/provider-health'
 import { exportUsageToFile } from './usage/export'
@@ -56,6 +61,8 @@ export interface EngineOptions {
   startRelay?: () => Promise<void>
   /** Where install and search read from; /api/resources on `storeUrl` by default. */
   catalog?: Catalog
+  /** Skills larger than this stay out of the backup; 100 MB by default. */
+  backupMaxItemBytes?: number
 }
 
 /**
@@ -69,12 +76,18 @@ export class EngineImpl implements Engine {
   private readonly adapters: Record<Category, KindAdapter>
   private readonly catalog: Catalog
   private readonly projects: ProjectService
+  private readonly backup: BackupService
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
     this.client = new StoreClient(storeUrl, { timeoutMs: 8000 })
     this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
     this.projects = new ProjectService(this.paths, this.catalog)
+    this.backup = new BackupService(this.paths, {
+      engine: this,
+      engineFor: catalog => new EngineImpl(this.paths, storeUrl, { ...options, catalog }),
+      maxItemBytes: options.backupMaxItemBytes,
+    })
     this.adapters = createAdapters({
       paths: this.paths,
       startRelay: options.startRelay,
@@ -184,6 +197,8 @@ export class EngineImpl implements Engine {
         throw new Error(`Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${String(e)}`)
       }
       outcome.enabled.push(target)
+      const note = entry.category === 'mcp' ? mcpCliFallbackNote(target, this.paths) : undefined
+      if (note) (outcome.notes ??= []).push(note)
     }
     return outcome
   }
@@ -236,6 +251,21 @@ export class EngineImpl implements Engine {
     const entry = await this._entry(slug)
     await this.adapter(entry.category).disable(entry, target, options)
     await this._setEnabled(slug, target, false)
+  }
+
+  async batch(operations: BatchOperation[]): Promise<BatchOutcome[]> {
+    const outcomes: BatchOutcome[] = []
+    for (const op of operations) {
+      try {
+        if (op.action === 'uninstall') await this.uninstall(op.slug)
+        else if (op.action === 'enable') await this.enable(op.slug, op.target)
+        else await this.disable(op.slug, op.target)
+        outcomes.push({ ...op, ok: true })
+      } catch (e) {
+        outcomes.push({ ...op, ok: false, error: batchError(e) })
+      }
+    }
+    return outcomes
   }
 
   async getConfigSchema(slug: string): Promise<{ schema: JsonSchema; current: Record<string, unknown> }> {
@@ -369,8 +399,15 @@ export class EngineImpl implements Engine {
     try {
       currentConfig = JSON.parse(await readFile(join(dir, 'config.json'), 'utf-8')) as Record<string, unknown>
     } catch { /* skills have no config.json */ }
+    let replacedFor: ToolTarget[] | undefined
+    if (entry.category === 'mcp') {
+      const targets = await readMcpTargets(dir)
+      replacedFor = TARGETS.filter(t => targets[t]?.previous != null)
+    }
     return {
       ...entry,
+      dir,
+      ...(replacedFor ? { replacedFor } : {}),
       name: manifest.name,
       description: manifest.description,
       publisher: manifest.publisher,
@@ -520,6 +557,10 @@ export class EngineImpl implements Engine {
     return this.projects.relocate(ref, newPath)
   }
 
+  projectSummaries(): Promise<ProjectSummary[]> {
+    return this.projects.summaries()
+  }
+
   getProject(ref: string): Promise<ProjectDetail> {
     return this.projects.detail(ref)
   }
@@ -542,5 +583,41 @@ export class EngineImpl implements Engine {
 
   getProjectEnvValues(ref: string): Promise<Record<string, string>> {
     return this.projects.envValues(ref)
+  }
+
+  getBackupStatus(options?: { fetch?: boolean }): Promise<BackupStatus> {
+    return this.backup.status(options)
+  }
+
+  connectBackup(options: BackupConnectOptions): Promise<BackupConnectResult> {
+    return this.backup.connect(options)
+  }
+
+  backupNow(): Promise<BackupSyncResult> {
+    return this.backup.backupNow()
+  }
+
+  pullBackup(): Promise<BackupSyncResult> {
+    return this.backup.pull()
+  }
+
+  resolveBackupConflict(item: string, choice: BackupConflictChoice): Promise<BackupResolveResult> {
+    return this.backup.resolve(item, choice)
+  }
+
+  listBackupSnapshots(): Promise<BackupSnapshot[]> {
+    return this.backup.snapshots()
+  }
+
+  restoreBackupSnapshot(id: string): Promise<BackupRestoreResult> {
+    return this.backup.restore(id)
+  }
+
+  listBackupHistory(options?: { limit?: number }): Promise<BackupHistoryEntry[]> {
+    return this.backup.history(options)
+  }
+
+  disconnectBackup(): Promise<void> {
+    return this.backup.disconnect()
   }
 }

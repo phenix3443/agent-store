@@ -63,6 +63,7 @@ export async function runInstall(
       const next = n.reason === 'needs-config' || n.reason === 'no-key' ? `; then: aas enable ${slug} --for ${n.target}` : ''
       out(`  Not enabled for ${n.target}: ${n.message}${next}`)
     }
+    for (const note of result.notes ?? []) out(`  Note: ${note}`)
     return EXIT_OK
   } catch (err) {
     out(`  Error: ${errorMessage(err)}`)

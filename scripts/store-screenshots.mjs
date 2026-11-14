@@ -58,12 +58,21 @@ const SIGNED_IN = [
   { name: 'dashboard-error', plan: 'pro', path: '/dashboard?tab=subscription&state=error' },
   // Only opens the confirmation; nothing is sent until its second button.
   { name: 'dashboard-cancel-confirm', plan: 'pro', path: '/dashboard?tab=subscription', click: 'button[data-subscription-cancel]', opens: '[role="alertdialog"]', viewport: true },
+  // A subscriber's pricing page links to the dashboard instead of checkout.
+  { name: 'pricing-pro', plan: 'pro', path: '/pricing', wait: 'a[href="/dashboard?tab=subscription"]' },
+  { name: 'pricing-canceling', plan: 'canceling', path: '/pricing', wait: 'a[href="/dashboard?tab=subscription"]' },
   { name: 'account-menu', plan: 'free', path: '/docs', click: 'header button[aria-haspopup="menu"]', opens: '[role="menu"]', minWidth: 1024 },
   // The CI proxy starts the pro user with three favorites, including DETAIL.
   { name: 'dashboard-favorites', plan: 'pro', path: '/dashboard?tab=favorites' },
   { name: 'dashboard-favorites-empty', plan: 'free', path: '/dashboard?tab=favorites' },
   { name: 'detail-favorited', plan: 'pro', path: DETAIL, wait: 'button[data-favorite][aria-pressed="true"]' },
   { name: 'store-signed-in', plan: 'pro', path: '/store?category=skill', wait: 'button[data-favorite]:not([aria-disabled])' },
+]
+// With a desktop client answering on this machine (ci-local-api.mjs): the browser is
+// marked as one that has used the client, so the page asks it.
+const INSTALLED = [
+  { name: 'store-installed', path: '/store?category=skill', wait: '[data-installed-here]' },
+  { name: 'detail-installed', path: DETAIL, wait: '[data-installed-here]' },
 ]
 // Interaction states of the store toolbar, on a filtered page so the clear link shows
 // too. Viewport-only shots; the button rows show from 640px.
@@ -159,6 +168,28 @@ for (const locale of LOCALES) {
     }
     if (errors.length) failures.push(`${locale}/${width}: page errors: ${errors.join(' | ')}`)
     await context.close()
+
+    for (const p of INSTALLED) {
+      const file = `${out}/${p.name}-${width}-${locale}.png`
+      const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: 'dark', deviceScaleFactor: 1 })
+      await ctx.addCookies([{ name: 'locale', value: locale, url: base }])
+      await ctx.addInitScript(() => localStorage.setItem('as.desktopClient', '1'))
+      const pg = await ctx.newPage()
+      try {
+        const res = await pg.goto(base + p.path, { waitUntil: 'networkidle', timeout: 60_000 })
+        if (!res || res.status() >= 400) throw new Error(`HTTP ${res?.status()}`)
+        // A phone gets the copy-command button, never the installed state.
+        if (width >= 768) await pg.locator(p.wait).first().waitFor({ timeout: 30_000 })
+        await pg.evaluate(() => document.fonts.ready)
+        await pg.screenshot({ path: file, fullPage: true })
+        const overflow = await pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+        if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
+        console.log(`ok ${file}`)
+      } catch (e) {
+        failures.push(`${file}: ${e.message}`)
+      }
+      await ctx.close()
+    }
 
     for (const p of SIGNED_IN) {
       if (!SESSIONS[p.plan] || width < (p.minWidth ?? 0)) continue

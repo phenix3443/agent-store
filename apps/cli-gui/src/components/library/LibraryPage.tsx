@@ -14,7 +14,9 @@ import { AgentColumns, AgentSwitch, ListBox, ListRow, PageWithPane, ViewHeader }
 import { blockerText, transportShort, transportText } from './McpPane'
 import { McpPane } from './McpPane'
 import { SkillPane } from './SkillPane'
-import { useUpdater } from './common'
+import { UpdateResults, useUpdater } from './common'
+import { BulkBar, useBulk } from './Bulk'
+import { Checkbox } from '../ui/checkbox'
 import { useTargetToggle } from './useTargetToggle'
 import { useUninstall } from './UninstallDialog'
 import { useProjects } from '../../state/Projects'
@@ -48,6 +50,8 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
   const updatable = rows.filter((r) => r.update)
   const visible = useMemo(() => rows.filter((r) => matches(r, query.trim(), filter)), [rows, query, filter])
   const selected = rows.find((r) => r.slug === selectedSlug) ?? null
+  const bulk = useBulk(visible, setSelectedSlug)
+  const nameOf = (slug: string) => rows.find((r) => r.slug === slug)?.name ?? slug
 
   function browse() {
     setDiscoverKind(kind)
@@ -82,8 +86,17 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
             {t('lib.check')}
           </Button>
           {updatable.length > 0 && (
-            <Button size="sm" variant="kind" data-kind={kind} disabled={updater.busy} onClick={() => void updater.update(updatable.map((r) => r.slug))}>
-              {t('lib.updateAll').replace('{0}', String(updatable.length))}
+            <Button
+              size="sm"
+              variant="kind"
+              data-kind={kind}
+              disabled={updater.busy}
+              aria-busy={!!updater.progress || undefined}
+              onClick={() => void updater.update(updatable.map((r) => r.slug))}
+            >
+              {updater.progress && updater.progress.total > 1
+                ? t('updAll.progress').replace('{0}', String(updater.progress.done + 1)).replace('{1}', String(updater.progress.total))
+                : t('lib.updateAll').replace('{0}', String(updatable.length))}
             </Button>
           )}
           <Button size="sm" onClick={browse}>
@@ -146,7 +159,21 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
             }))}
           />
         </div>
-        <AgentColumns label={t('lib.count').replace('{0}', String(visible.length)).replace('{1}', String(rows.length))} />
+        <AgentColumns
+          label={t('lib.count').replace('{0}', String(visible.length)).replace('{1}', String(rows.length))}
+          lead={
+            visible.length > 0 && (
+              <Checkbox
+                data-kind={kind}
+                aria-label={t('bulk.selectAll')}
+                checked={bulk.allOn}
+                indeterminate={bulk.chosen.length > 0 && !bulk.allOn}
+                onChange={bulk.toggleAll}
+              />
+            )
+          }
+          bar={bulk.chosen.length > 0 ? <BulkBar bulk={bulk} /> : undefined}
+        />
         {visible.length === 0 ? (
           <EmptyState
             kind={kind}
@@ -173,6 +200,14 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
                 <ListRow
                   key={row.slug}
                   kind={kind}
+                  select={
+                    <Checkbox
+                      data-kind={kind}
+                      aria-label={t('bulk.selectRow').replace('{0}', row.name)}
+                      checked={bulk.selected.has(row.slug)}
+                      onChange={() => bulk.toggle(row.slug)}
+                    />
+                  }
                   selected={row.slug === selectedSlug}
                   onOpen={() => setSelectedSlug(row.slug)}
                   title={row.name}
@@ -235,7 +270,8 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
     row: selected,
     toggle,
     onClose: () => setSelectedSlug(null),
-    onUninstall: () => uninstall.ask({ slug: selected.slug, category: selected.category, enabledFor: selected.enabledFor, name: selected.name }),
+    onUninstall: () =>
+      uninstall.ask({ slug: selected.slug, category: selected.category, enabledFor: selected.enabledFor, replacedFor: selected.replacedFor, name: selected.name }),
     onUpdate: () => void updater.update([selected.slug]),
     updating: updater.busy,
   }
@@ -247,12 +283,14 @@ export function LibraryPage({ kind }: { kind: LibKind }) {
           <>
             {header}
             {globalHint}
+            {updater.results && <UpdateResults rows={updater.results} nameOf={nameOf} onClose={updater.dismissResults} />}
             {body}
           </>
         }
         pane={paneProps ? kind === 'skill' ? <SkillPane {...paneProps} /> : <McpPane key={paneProps.row.slug} {...paneProps} /> : null}
       />
       {uninstall.dialog}
+      {bulk.dialog}
     </>
   )
 }

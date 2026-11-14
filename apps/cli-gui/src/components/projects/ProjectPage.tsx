@@ -19,6 +19,8 @@ import { CodeLine, ErrorDetails, ListBox, PageWithPane } from '../library/parts'
 import { BlockHeading, FolderTile, PlainRow } from './parts'
 import { EnvDialog, type EnvRequest } from './EnvDialog'
 import { ProjectUninstallDialog, type ProjectItem } from './ProjectUninstallDialog'
+import { RevealButton } from '../ui/reveal'
+import { loadProjectSnapshot, saveProjectSnapshot, type ProjectSnapshot } from '../../lib/projectSnapshots'
 
 type Load = { state: 'loading' } | { state: 'error'; message: string; notFound: boolean } | { state: 'ready'; detail: ProjectDetail }
 
@@ -26,12 +28,21 @@ function useProjectDetail(id: string) {
   const { version } = useProjects()
   const { installedVersion } = useAppState()
   const [load, setLoad] = useState<Load>({ state: 'loading' })
+  const [snapshot, setSnapshot] = useState<ProjectSnapshot | null>(null)
   const [nonce, setNonce] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     callRpc<ProjectDetail>('getProject', [id]).then(
-      (detail) => !cancelled && setLoad({ state: 'ready', detail }),
+      (detail) => {
+        if (cancelled) return
+        setLoad({ state: 'ready', detail })
+        if (detail.exists) {
+          setSnapshot(null)
+          void saveProjectSnapshot(detail)
+        }
+        else void loadProjectSnapshot(id).then((snap) => !cancelled && setSnapshot(snap))
+      },
       (err) =>
         !cancelled &&
         setLoad({ state: 'error', message: errorText(err), notFound: err instanceof RpcError && err.code === 'ProjectNotFoundError' })
@@ -41,7 +52,7 @@ function useProjectDetail(id: string) {
     }
   }, [id, version, installedVersion, nonce])
 
-  return { load, retry: () => setNonce((n) => n + 1) }
+  return { load, snapshot, retry: () => setNonce((n) => n + 1) }
 }
 
 /** Slugs of the global MCP entries Agent Store installed, for 查看全局的条目. */
@@ -66,12 +77,19 @@ function locationNote(loc: ProjectMcpLocation, t: TFn): string {
   return t(loc.active ? 'pj.loc.active' : 'pj.loc.untrusted')
 }
 
-function Locations({ lines }: { lines: { key: string; agent: string; path: string; note?: string; warn?: boolean; edited?: boolean }[] }) {
+function Locations({
+  project,
+  lines,
+}: {
+  project: Project
+  lines: { key: string; agent: string; path: string; abs: string; note?: string; warn?: boolean; edited?: boolean }[]
+}) {
   const t = useI18n().t
   return (
     <ul className="flex flex-col gap-1 border-t border-line bg-white/[0.015] py-2 pl-[60px] pr-3 text-[11.5px] text-fg-3">
       {lines.map((l) => (
-        <li key={l.key} className="flex flex-wrap items-baseline gap-x-2">
+        <li key={l.key} className="flex flex-wrap items-center gap-x-2">
+          <RevealButton path={l.abs} label={`${l.agent} · ${l.path}`} iconOnly disabled={!project.exists} />
           <b className="font-semibold text-fg-2">{l.agent}</b>
           <code className="break-all font-mono text-[11px]">{l.path}</code>
           {l.note && <span className={l.warn ? 'text-warn' : undefined}>· {l.note}</span>}
@@ -122,7 +140,12 @@ function SkillRow({ project, skill, onUninstall }: { project: Project; skill: Pr
           </Button>
         ) : undefined
       }
-      below={<Locations lines={locs.map((l, i) => ({ key: `${l.agent}${i}`, agent: TARGET_LABEL[l.agent], path: relPath(project, l.path), edited: l.modified }))} />}
+      below={
+        <Locations
+          project={project}
+          lines={locs.map((l, i) => ({ key: `${l.agent}${i}`, agent: TARGET_LABEL[l.agent], path: relPath(project, l.path), abs: l.path, edited: l.modified }))}
+        />
+      }
     />
   )
 }
@@ -224,10 +247,12 @@ function McpRow({
             </div>
           )}
           <Locations
+            project={project}
             lines={locs.map((l, i) => ({
               key: `${l.agent}${l.scope}${i}`,
               agent: TARGET_LABEL[l.agent],
               path: relPath(project, l.file),
+              abs: l.file,
               note: locationNote(l, t),
               warn: !l.active,
               edited: l.modified,
@@ -341,6 +366,52 @@ function Header({ project, detail, actions }: { project: Project; detail?: Proje
   )
 }
 
+/** The skill and MCP blocks; with `d.exists` false (a snapshot of a folder that is gone) every action is off. */
+function ItemBlocks({
+  d,
+  globalSlugs,
+  onUninstall,
+  onKeys,
+}: {
+  d: ProjectDetail
+  globalSlugs: Set<string>
+  onUninstall: (item: ProjectItem) => void
+  onKeys: (names: string[], server?: string) => void
+}) {
+  const t = useT()
+  return (
+    <>
+      <BlockHeading kind="skill" title={t('categories.skill')} count={d.skills.length} where={t('pj.whereSkill')} />
+      {d.skills.length ? (
+        <ListBox>
+          {d.skills.map((s) => (
+            <SkillRow key={s.slug ?? s.name} project={d} skill={s} onUninstall={() => onUninstall(s)} />
+          ))}
+        </ListBox>
+      ) : (
+        <div className="rounded-box border border-dashed border-line-strong px-5 py-5 text-center text-[12.5px] text-fg-3">{t('pj.secNoneSkill')}</div>
+      )}
+      <BlockHeading kind="mcp" title="MCP" count={d.mcps.length} where={t('pj.whereMcp')} />
+      {d.mcps.length ? (
+        <ListBox>
+          {d.mcps.map((m) => (
+            <McpRow
+              key={m.name}
+              project={d}
+              mcp={m}
+              globalSlug={globalSlugs.has(m.name) ? m.name : undefined}
+              onUninstall={() => onUninstall(m)}
+              onKeys={(names) => onKeys(names, m.name)}
+            />
+          ))}
+        </ListBox>
+      ) : (
+        <div className="rounded-box border border-dashed border-line-strong px-5 py-5 text-center text-[12.5px] text-fg-3">{t('pj.secNoneMcp')}</div>
+      )}
+    </>
+  )
+}
+
 /** One registered project: what Claude Code and Codex use there, and the keys stored for it on this machine. */
 export function ProjectPage({ id }: { id: string }) {
   const t = useT()
@@ -349,7 +420,7 @@ export function ProjectPage({ id }: { id: string }) {
   const navigate = useNavigate()
   const openProject = useOpenProject()
   const globalSlugs = useGlobalMcpSlugs()
-  const { load, retry } = useProjectDetail(id)
+  const { load, snapshot, retry } = useProjectDetail(id)
   const [uninstalling, setUninstalling] = useState<ProjectItem | null>(null)
   const [keys, setKeys] = useState<EnvRequest | null>(null)
 
@@ -409,6 +480,7 @@ export function ProjectPage({ id }: { id: string }) {
             <Plus />
             {t('pj.addTo')}
           </Button>
+          <RevealButton path={project.path} disabled={!project.exists} />
           <Button size="sm" onClick={relocate}>
             {t('pj.relocate')}
           </Button>
@@ -450,6 +522,20 @@ export function ProjectPage({ id }: { id: string }) {
         <p>{t('pj.missingD').replace('{0}', load.detail.path)}</p>
       </Banner>
     )
+    if (snapshot) {
+      const last: ProjectDetail = { ...snapshot.detail, ...load.detail, skills: snapshot.detail.skills, mcps: snapshot.detail.mcps, env: snapshot.detail.env }
+      body = (
+        <>
+          {body}
+          <p className="mb-1 mt-3 flex flex-wrap items-center gap-x-2 text-[12px] text-fg-3">
+            <Info size={14} className="flex-none" />
+            <span>{t('pjx.last')}</span>
+            <span className="font-mono text-[11.5px]">{t('pjx.lastAt').replace('{0}', new Date(snapshot.at).toLocaleString())}</span>
+          </p>
+          <ItemBlocks d={last} globalSlugs={globalSlugs} onUninstall={() => undefined} onKeys={() => undefined} />
+        </>
+      )
+    }
   } else {
     const d = load.detail
     const empty = d.skills.length === 0 && d.mcps.length === 0 && d.env.length === 0
@@ -479,33 +565,7 @@ export function ProjectPage({ id }: { id: string }) {
               <Info size={14} className="flex-none" />
               {t('pj.vcs')}
             </p>
-            <BlockHeading kind="skill" title={t('categories.skill')} count={d.skills.length} where={t('pj.whereSkill')} />
-            {d.skills.length ? (
-              <ListBox>
-                {d.skills.map((s) => (
-                  <SkillRow key={s.slug ?? s.name} project={d} skill={s} onUninstall={() => setUninstalling(s)} />
-                ))}
-              </ListBox>
-            ) : (
-              <div className="rounded-box border border-dashed border-line-strong px-5 py-5 text-center text-[12.5px] text-fg-3">{t('pj.secNoneSkill')}</div>
-            )}
-            <BlockHeading kind="mcp" title="MCP" count={d.mcps.length} where={t('pj.whereMcp')} />
-            {d.mcps.length ? (
-              <ListBox>
-                {d.mcps.map((m) => (
-                  <McpRow
-                    key={m.name}
-                    project={d}
-                    mcp={m}
-                    globalSlug={globalSlugs.has(m.name) ? m.name : undefined}
-                    onUninstall={() => setUninstalling(m)}
-                    onKeys={(names) => askKeys(names, m.name)}
-                  />
-                ))}
-              </ListBox>
-            ) : (
-              <div className="rounded-box border border-dashed border-line-strong px-5 py-5 text-center text-[12.5px] text-fg-3">{t('pj.secNoneMcp')}</div>
-            )}
+            <ItemBlocks d={d} globalSlugs={globalSlugs} onUninstall={setUninstalling} onKeys={askKeys} />
             <EnvBlock project={d} detail={d} onKeys={askKeys} />
           </>
         )}

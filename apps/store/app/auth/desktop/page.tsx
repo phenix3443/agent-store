@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { AuthStatus } from '@/components/AuthStatus'
 import { authClient } from '@/lib/auth/client'
 import { getAuthToken } from '@/lib/auth/token'
+import { markDesktopSeen } from '@/lib/local-client'
 
 // Desktop (Tauri) OAuth relay. The provider can only redirect to an https URL, so
 // the desktop app opens the system browser here instead:
@@ -22,6 +23,8 @@ export default function DesktopAuthRelay() {
   const [appUrl, setAppUrl] = useState<string | null>(null)
 
   useEffect(() => {
+    // Only the desktop client opens this page, so this browser sits next to one.
+    markDesktopSeen()
     const params = new URLSearchParams(window.location.search)
     const provider = params.get('provider')
 

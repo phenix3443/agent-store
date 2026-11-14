@@ -11,7 +11,7 @@ import { routeDeepLink } from '../../lib/deepLinkRoute'
 import { focusMainWindow } from '../../lib/focusWindow'
 import { installStepsOf, requiredKeys, typeFacts, type Category, type SelectedDetail } from '../../lib/detailContent'
 import { AGENTS, TARGET_LABEL, joinNames } from '../../lib/agents'
-import { relPath } from '../../lib/projects'
+import { projectHas, relPath } from '../../lib/projects'
 import { useOpenProject } from '../../lib/useNavigate'
 import { useAppState } from '../../state/AppState'
 import { useProjects } from '../../state/Projects'
@@ -29,6 +29,7 @@ import { AgentList, ErrorDetails, Section, Steps } from '../library/parts'
 import { SecretInput, upperSnake, type ConfigSchema } from '../library/McpPane'
 import { AddProjectForm } from '../projects/AddProjectForm'
 import { useSaveEnv } from '../projects/EnvDialog'
+import { TakeoverEffects } from '../library/Takeover'
 
 type NoticeReason = 'invalid' | 'notFound' | 'catalogError' | 'installed' | 'mismatch'
 type StepState = 'wait' | 'run' | 'ok' | 'skip' | 'bad'
@@ -151,7 +152,7 @@ export function InstallDialog() {
   const { locale, t } = useI18n()
   const { installRef, requestInstall, setNavView, setCategoryFilter, setSelectedSlug, setEditingConfigSlug, bumpInstalledVersion, installInto } = useAppState()
   const { appendLine } = useTerminalLog()
-  const { projects, reload: reloadProjects } = useProjects()
+  const { projects, summaries, reload: reloadProjects } = useProjects()
   const openProject = useOpenProject()
   const saveEnv = useSaveEnv()
   const [flow, setFlow] = useState<Flow | null>(null)
@@ -159,7 +160,7 @@ export function InstallDialog() {
   flowRef.current = flow
   // Bumped per request so a slow lookup or install can't overwrite a newer request's dialog.
   const seq = useRef(0)
-  const conflictResume = useRef<(() => void) | null>(null)
+  const conflictResume = useRef<((replace: boolean) => void) | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
   function update(mine: number, patch: Partial<Flow> | ((f: Flow) => Partial<Flow>)) {
@@ -436,13 +437,29 @@ export function InstallDialog() {
         appendLine(`✗ ${errorText(err)}`, 'red')
         if (err instanceof RpcError && err.code === 'McpConflictError') {
           update(mine, { phase: { kind: 'conflict', target } })
-          await new Promise<void>((resolve) => {
+          const replace = await new Promise<boolean>((resolve) => {
             conflictResume.current = resolve
           })
           if (seq.current !== mine) return
-          mark(target, 'skip', t('inst.skipped'))
-          results[target] = { on: false, note: t('inst.skipped') }
           update(mine, { phase: { kind: 'progress' } })
+          if (!replace) {
+            mark(target, 'skip', t('inst.skipped'))
+            results[target] = { on: false, note: t('inst.skipped') }
+            continue
+          }
+          mark(target, 'run')
+          appendLine(`$ aas enable ${slug} --for ${target} --replace`)
+          try {
+            await callRpc('enable', [slug, target, { replace: true }])
+            appendLine(`✓ ${t('takeover.done')} ${slug}`, 'green')
+            mark(target, 'ok', t('takeover.done'))
+            results[target] = { on: true, note: t('takeover.done') }
+          } catch (replaceErr) {
+            appendLine(`✗ ${errorText(replaceErr)}`, 'red')
+            const friendly = describeError(replaceErr, t)
+            mark(target, 'bad', friendly.message)
+            results[target] = { on: false, note: friendly.message }
+          }
         } else {
           const friendly = describeError(err, t)
           mark(target, 'bad', friendly.message)
@@ -475,7 +492,7 @@ export function InstallDialog() {
   }
 
   const backToTargets = (loc?: string) => setFlow((f) => (f ? { ...f, ...(loc ? { loc } : {}), phase: { kind: 'targets' } } : f))
-  const firstProject = projects.find((p) => p.exists)
+  const firstProject = projects.find((p) => p.exists && !projectHas(summaries[p.id], flow?.resource))
 
   const item = flow?.item
 
@@ -509,7 +526,7 @@ export function InstallDialog() {
                 onNext={(next) => setFlow((f) => (f ? { ...f, ...next } : f))}
                 onRun={(f) => void run(f)}
                 onSaveVars={(f) => void saveProjectVars(f)}
-                onSkipConflict={() => conflictResume.current?.()}
+                onResolveConflict={(replace) => conflictResume.current?.(replace)}
                 onView={(slug, category) => {
                   show(slug, category)
                   close()
@@ -595,7 +612,7 @@ function StepList({ steps }: { steps: Step[] }) {
 /** Global, a registered project, or 添加项目…; skills and MCP only. */
 function LocationSection({ flow, setFlow }: { flow: Flow; setFlow: (fn: (f: Flow | null) => Flow | null) => void }) {
   const t = useI18n().t
-  const { projects } = useProjects()
+  const { projects, summaries } = useProjects()
   const project = projects.find((p) => p.id === flow.loc)
   return (
     <Section title={<label htmlFor="install-location">{t('pj.inst.loc')}</label>} className="mt-0">
@@ -610,11 +627,15 @@ function LocationSection({ flow, setFlow }: { flow: Flow; setFlow: (fn: (f: Flow
         <option value="" disabled={!!flow.globalEntry}>
           {t(flow.globalEntry ? 'pj.inst.globalTaken' : 'pj.inst.global')}
         </option>
-        {projects.map((p) => (
-          <option key={p.id} value={p.id} disabled={!p.exists}>
-            {`${t('pj.inst.proj').replace('{0}', p.name)} · ${p.path}${p.exists ? '' : ` · ${t('pj.missingChip')}`}`}
-          </option>
-        ))}
+        {projects.map((p) => {
+          const has = projectHas(summaries[p.id], flow.resource)
+          const why = !p.exists ? t('pj.missingChip') : has ? t('pjx.inProj') : ''
+          return (
+            <option key={p.id} value={p.id} disabled={!p.exists || has}>
+              {`${t('pj.inst.proj').replace('{0}', p.name)} · ${p.path}${why ? ` · ${why}` : ''}`}
+            </option>
+          )
+        })}
         <option value="__add">{t('pj.addMore')}</option>
       </Select>
       {project && (
@@ -810,6 +831,11 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
             <Banner tone="warn" title={t('inst.conflictT').replace('{0}', TARGET_LABEL[phase.target])}>
               <p>{t('inst.conflictD').replace(/\{0\}/g, TARGET_LABEL[phase.target])}</p>
             </Banner>
+            {flow.slug && (
+              <div className="mt-3">
+                <TakeoverEffects target={phase.target} slug={flow.slug} />
+              </div>
+            )}
           </div>
         )}
         {phase.kind === 'failed' && (
@@ -877,7 +903,7 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
             lines={AGENTS.map((agent) => {
               const r = flow.results[agent.id]
               const chosen = !!flow.tg[agent.id]
-              const note = r?.on ? '' : (r?.note ?? preReason(item, agent.id, t) ?? (chosen ? t('st.off') : t('inst.notChosen')))
+              const note = r?.on ? (r.note ?? '') : (r?.note ?? preReason(item, agent.id, t) ?? (chosen ? t('st.off') : t('inst.notChosen')))
               return {
                 agent,
                 note,
@@ -897,7 +923,7 @@ function Footer({
   onNext,
   onRun,
   onSaveVars,
-  onSkipConflict,
+  onResolveConflict,
   onView,
   onToProject,
   onOpenResult,
@@ -907,14 +933,14 @@ function Footer({
   onNext: (patch: Partial<Flow>) => void
   onRun: (f: Flow) => void
   onSaveVars: (f: Flow) => void
-  onSkipConflict: () => void
+  onResolveConflict: (replace: boolean) => void
   onView: (slug: string, category: Category) => void
   /** The item is installed globally; a project can still get it. */
   onToProject?: () => void
   onOpenResult: () => void
 }): ReactNode {
   const t = useI18n().t
-  const { projects } = useProjects()
+  const { projects, summaries } = useProjects()
   if (!flow) return null
   const project = flow.loc ? projects.find((p) => p.id === flow.loc) : undefined
   const { phase, item, resource } = flow
@@ -952,7 +978,7 @@ function Footer({
         <Button
           variant="primary"
           {...(web ? {} : { 'data-autofocus': true })}
-          disabled={!!resource.installError || none || !project?.exists}
+          disabled={!!resource.installError || none || !project?.exists || projectHas(summaries[project.id], resource)}
           title={none ? t('pj.inst.noAgent') : undefined}
           onClick={() => onRun({ ...flow, force: false })}
         >
@@ -1027,9 +1053,14 @@ function Footer({
 
   if (phase.kind === 'conflict') {
     return (
-      <Button data-autofocus onClick={onSkipConflict}>
-        {t('inst.skip').replace('{0}', TARGET_LABEL[phase.target])}
-      </Button>
+      <>
+        <Button data-autofocus onClick={() => onResolveConflict(false)}>
+          {t('inst.skip').replace('{0}', TARGET_LABEL[phase.target])}
+        </Button>
+        <Button variant="kind" data-kind="mcp" onClick={() => onResolveConflict(true)}>
+          {t('takeover.btn')}
+        </Button>
+      </>
     )
   }
 
