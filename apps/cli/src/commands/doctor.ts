@@ -1,13 +1,21 @@
 import type { DoctorFinding } from '@as/client-core'
+import type { AgentDetection } from '@as/types'
 import { EXIT_FAILURE, EXIT_OK, errorMessage } from '../utils/exit-codes'
 
-/** Prints each finding; exits non-zero when a tool does not see what the registry says. */
+const AGENT = { claude: 'Claude Code', codex: 'Codex' } as const
+
+/** Prints what was detected and each finding; exits non-zero when a tool does not see what the registry says. */
 export async function runDoctorCommand(
   doctor: () => Promise<DoctorFinding[]>,
-  out: (s: string) => void = console.log
+  out: (s: string) => void = console.log,
+  detect?: () => Promise<AgentDetection[]>
 ): Promise<number> {
   let findings: DoctorFinding[]
   try {
+    for (const a of detect ? await detect() : []) {
+      const cli = a.binary ? `${a.binary}${a.version ? ` (${a.version})` : ''}` : 'CLI not on PATH, config files are edited directly'
+      out(`  ${AGENT[a.agent].padEnd(11)} ${a.detected ? 'found' : 'not found'}: ${cli}; ${a.configDir}${a.configDirExists ? '' : ' (missing)'}`)
+    }
     findings = await doctor()
   } catch (err) {
     out(`  Doctor failed: ${errorMessage(err)}`)

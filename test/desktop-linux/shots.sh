@@ -2,7 +2,7 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164), the welcome, usage and settings pages (#165) and projects (#166). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166) and the first-run import (#193). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -76,8 +76,24 @@ LIB=$HOME/.agent-store/skills
 (cd /work && bun test/desktop-linux/seed-old-home.ts "$HOME")
 check "seeded the old ~/.agents layout" '[ -f "$HOME/.agents/registry.json" ] && links_to "$HOME/.claude/skills/legacy-skill" "$HOME/.agents/skills/legacy-skill"'
 
-# 1. First launch: the app's first sidecar call moves ~/.agents to ~/.agent-store,
-#    and the welcome opens once. Enter (focus is on 开始使用) closes it for good.
+#    What the user set up without Agent Store (#193): one skill in both agents, a skill
+#    linked from a dotfiles checkout, and an MCP server with a secret in its env.
+USER_SECRET=tok-user-secret-7f3a
+mkdir -p "$HOME/.claude/skills/my-notes/scripts" "$HOME/.codex/skills" "$HOME/dotfiles/dot-linked"
+printf -- '---\nname: my-notes\ndescription: Notes I keep for myself\n---\n# My notes\n' > "$HOME/.claude/skills/my-notes/SKILL.md"
+printf '#!/bin/sh\necho notes\n' > "$HOME/.claude/skills/my-notes/scripts/show.sh"
+chmod 755 "$HOME/.claude/skills/my-notes/scripts/show.sh"
+touch -d 2025-06-01 "$HOME/.claude/skills/my-notes/SKILL.md"
+cp -a "$HOME/.claude/skills/my-notes" "$HOME/.codex/skills/my-notes"
+printf -- '---\nname: dot-linked\ndescription: Kept in my dotfiles\n---\n' > "$HOME/dotfiles/dot-linked/SKILL.md"
+ln -s "$HOME/dotfiles/dot-linked" "$HOME/.claude/skills/dot-linked"
+python3 -c 'import json,sys; json.dump({"mcpServers": {"my-fs": {"type": "stdio", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"], "env": {"MY_FS_TOKEN": sys.argv[2]}}}}, open(sys.argv[1], "w"), indent=2)' "$HOME/.claude.json" "$USER_SECRET"
+CLAUDE_JSON_BEFORE=$(sha256sum < "$HOME/.claude.json")
+
+# 1. First launch: the app's first sidecar call moves ~/.agents to ~/.agent-store, and the
+#    guide opens once (#193): the agents found (no CLI in the container, so both fall back to
+#    file edits), then what the user already has. 跳过 (Tab from 导入所选) changes nothing;
+#    Enter on 开始使用 closes it for good.
 "$APP" >"$OUT/app-first.log" 2>&1 &
 sleep "$SETTLE"
 shot 00-first-launch-welcome
@@ -85,9 +101,16 @@ WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
 eval "$(xdotool getwindowgeometry --shell "$WIN")"
 xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT - 60))
 xdotool key Return
+sleep 15
+shot 00a-onboarding-found
+xdotool key Tab Return
+sleep 2
+shot 00a2-onboarding-skipped
+xdotool key Return
 sleep 2
 shot 00b-first-launch-discover
 stop_app
+check "skipping the import changed none of the user's files" '[ -d "$HOME/.claude/skills/my-notes" ] && [ ! -L "$HOME/.claude/skills/my-notes" ] && [ ! -L "$HOME/.codex/skills/my-notes" ] && [ "$(sha256sum < "$HOME/.claude.json")" = "$CLAUDE_JSON_BEFORE" ] && [ ! -d "$HOME/.agent-store/imports" ]'
 check "the welcome was recorded as seen" '[ -n "$(find "$XDG_DATA_HOME" -path "*agent-store-cli/welcome.json" 2>/dev/null)" ]'
 check "migration moved the registry" '[ -f "$HOME/.agent-store/registry.json" ] && [ ! -e "$HOME/.agents/registry.json" ]'
 check "migrated skill is in the library" '[ -f "$LIB/legacy-skill/SKILL.md" ] && [ ! -e "$HOME/.agents/skills/legacy-skill" ]'
@@ -235,9 +258,9 @@ settings_tab() {
   for _ in $(seq "$1"); do xdotool key Right; sleep 0.3; done
   sleep "${2:-2}"
 }
-settings_tab 1
-# Tab leaves the tab list for the panel, then reaches 开始检查.
-xdotool key Tab Tab Return
+settings_tab 1 4
+# Tab leaves the tab list for the panel, then passes 重新检测 and 查找 to reach 开始检查.
+xdotool key Tab Tab Tab Tab Return
 sleep 10
 shot 17b-settings-agents-doctor
 settings_tab 2 4
@@ -331,6 +354,55 @@ shot 27-project-trusted-key-stored
 stop_app
 cli projects show "$PROJ"
 
+# 12. Importing what the user already has (#193): Settings › Agents › 查找 opens the guide's
+#     second step with every importable item checked; 导入所选 takes them over, then 撤销 in
+#     Settings puts every file back. Compared on disk before and after.
+user_state() {
+  (cd "$HOME" && {
+    find .claude/skills/my-notes .codex/skills/my-notes .agents/skills/users-own -printf '%y %m %p %l\n' | sort
+    find .claude/skills/my-notes .codex/skills/my-notes .agents/skills/users-own -type f -printf '%T@ %p\n' | sort
+    find .claude/skills/my-notes .codex/skills/my-notes .agents/skills/users-own -type f -exec sha256sum {} + | sort
+    sha256sum .claude.json .codex/config.toml
+  }) 2>&1
+}
+BEFORE_IMPORT=$(user_state)
+CLAUDE_JSON_PRE=$(sha256sum < "$HOME/.claude.json")
+"$APP" >"$OUT/app-import.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+6
+sleep 2
+settings_tab 1 4
+shot 28-settings-agents-detected
+xdotool key Tab Tab Tab Return
+sleep 20
+shot 29-import-found
+xdotool key Return
+sleep 20
+shot 30-import-done
+check "the imported skill is in the library, linked back for both agents" 'links_to "$HOME/.claude/skills/my-notes" "$LIB/my-notes" && links_to "$HOME/.codex/skills/my-notes" "$LIB/my-notes" && [ -f "$LIB/my-notes/.agent-store.json" ]'
+check "the skill linked from dotfiles was not imported" 'links_to "$HOME/.claude/skills/dot-linked" "$HOME/dotfiles/dot-linked"'
+check "importing the MCP server left ~/.claude.json byte for byte" '[ "$(sha256sum < "$HOME/.claude.json")" = "$CLAUDE_JSON_PRE" ]'
+check "the import record and the MCP manifest are 0600" '[ "$(stat -c %a "$HOME"/.agent-store/imports/*/import.json)" = 600 ] && [ "$(stat -c %a "$HOME/.agent-store/mcps/my-fs/manifest.json")" = 600 ]'
+xdotool key Return
+sleep 3
+xdotool key ctrl+2
+sleep 15
+shot 31-skills-library-imported
+xdotool key ctrl+6
+sleep 2
+settings_tab 1 6
+shot 32-settings-last-import
+# Panel, 重新检测, 查找, then 撤销 on the latest import.
+xdotool key Tab Tab Tab Tab Return
+sleep 15
+shot 33-import-undone
+stop_app
+check "undo put every file back as it was before the import" '[ "$(user_state)" = "$BEFORE_IMPORT" ]'
+check "undo removed the library copy and the MCP record" '[ ! -e "$LIB/my-notes" ] && [ ! -e "$HOME/.agent-store/mcps/my-fs" ]'
+"$SIDECAR" import scan --offline > "$OUT/import-scan.txt" 2>&1
+check "aas import scan lists the user's MCP server without its secret" 'grep -q "my-fs" "$OUT/import-scan.txt" && grep -q "MY_FS_TOKEN" "$OUT/import-scan.txt" && ! grep -q "$USER_SECRET" "$OUT/import-scan.txt"'
+
 cli search find-skills --kind skill
 cli info "$SKILL_ID"
 cli info "$SKILL_SLUG"
@@ -350,7 +422,8 @@ cli doctor
 
 check "the desktop client started the sidecar with its arguments on stdin" 'grep -qE "^__rpc [A-Za-z]+ -$" "$ARGV_LOG"'
 check "every RPC call kept its arguments off the command line" '! grep "^__rpc" "$ARGV_LOG" | grep -qvE "^__rpc [A-Za-z]+ -$"'
-check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project" "$ARGV_LOG"'
+check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project|$USER_SECRET" "$ARGV_LOG"'
+check "the user's MCP secret is in no app log" '! grep -q "$USER_SECRET" "$OUT"/app-*.log'
 
 log "result: $([ $failed = 0 ] && echo PASS || echo FAIL)"
 [ $failed = 0 ]

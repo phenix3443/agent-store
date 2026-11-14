@@ -188,7 +188,8 @@ export async function disableMcpEntry(
 
 /**
  * Item-level entry point used by the engine: build the tool's entry from the installed
- * manifest and config.json, then enable or disable it under the rules above.
+ * manifest and config.json, then enable or disable it under the rules above. An imported
+ * item (`localEntries`) writes back the user's own entry unchanged, under its own name.
  */
 export async function syncMcpEntry(
   s: McpEntryStore,
@@ -199,15 +200,23 @@ export async function syncMcpEntry(
 ): Promise<void> {
   let config: Record<string, unknown> = {}
   try { config = JSON.parse(await readFile(join(s.itemDir, 'config.json'), 'utf-8')) } catch { /* not configured */ }
+  let manifest: MCPItem | undefined
+  try { manifest = JSON.parse(await readFile(join(s.itemDir, 'manifest.json'), 'utf-8')) as MCPItem } catch { /* read again by build */ }
+  const name = manifest?.entryName ?? slug
   const build = async () => {
-    const manifest = JSON.parse(await readFile(join(s.itemDir, 'manifest.json'), 'utf-8')) as MCPItem
-    return toEntry(buildMcpServerSpec(manifest, s.itemDir, config))
+    const m = manifest ?? JSON.parse(await readFile(join(s.itemDir, 'manifest.json'), 'utf-8')) as MCPItem
+    if (m.localEntries) {
+      const entry = m.localEntries[s.tool]
+      if (entry === undefined) throw new Error(`${slug} was imported without a ${LABEL[s.tool]} entry`)
+      return entry
+    }
+    return toEntry(buildMcpServerSpec(m, s.itemDir, config))
   }
   if (action === 'add') {
-    await enableMcpEntry(s, slug, await build(), opts)
+    await enableMcpEntry(s, name, await build(), opts)
     return
   }
   let expected: unknown
   try { expected = await build() } catch { /* no manifest or unconfigured: rely on the record */ }
-  await disableMcpEntry(s, slug, { force: opts.force, expected })
+  await disableMcpEntry(s, name, { force: opts.force, expected })
 }

@@ -98,6 +98,14 @@ async function editServersFile(ctx: ClaudeMcpContext, edit: (servers: Record<str
   await atomicWriteFile(ctx.claudeJsonPath, JSON.stringify(json, null, 2), 0o600, true)
 }
 
+/** Writes (or, with undefined, removes) one user-scope entry exactly as given, without the CLI. */
+export async function writeClaudeMcpEntryFile(aasHome: string, claudeJsonPath: string, name: string, entry: unknown): Promise<void> {
+  await editServersFile({ aasHome, claudeConfigDir: '', claudeJsonPath, itemDir: '', cli: null }, s => {
+    if (entry === undefined) delete s[name]
+    else s[name] = entry
+  })
+}
+
 async function addEntry(ctx: ClaudeMcpContext, name: string, entry: unknown): Promise<void> {
   if (ctx.cli) await ctx.cli.addJson(ctx, name, entry)
   else await editServersFile(ctx, s => { s[name] = entry })

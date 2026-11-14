@@ -11,6 +11,8 @@ export type { Catalog, CatalogItem } from './catalog'
 export { SkillDeployRefusedError } from './skills/deploy'
 export { SkillConflictError } from './skills/store'
 export { runDoctor } from './doctor'
+export { detectAgents } from './agents'
+export { ImportCandidateError, ImportUndoConflictError, ImportNotFoundError } from './import/apply'
 export { ProjectConflictError, ProjectItemNotInstalledError } from './projects/service'
 export { ProjectNotFoundError, ProjectPathError } from './projects/store'
 export { ProjectMcpUnsupportedError } from './projects/mcp-entries'
@@ -21,7 +23,7 @@ export { BackupExportError } from './backup/export'
 export { BackupApplyError } from './backup/apply'
 export { GitError, GitNotFoundError } from './backup/git'
 export type { MigrateResult, MigrateStep } from './migrate'
-export type { DoctorFinding, DoctorPaths } from './doctor'
+export type { DoctorFinding, DoctorPaths, DoctorOptions } from './doctor'
 export type {
   Engine, Paths, InstallResult, SyncResult, UpdateAvailable, UpdateResult,
   ListOptions, InstalledItem, ItemDetail, ToolTarget, SearchOptions, Item, JsonSchema,

@@ -12,9 +12,13 @@ import type {
   ProjectUninstallOptions, ProjectUninstallResult,
   BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
   BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
+  AgentDetection, ImportApplyResult, ImportRecordSummary, ImportScan, ImportScanOptions, ImportUndoOptions, ImportUndoResult,
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
-import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
+import { resolvePaths, itemDir, assertSafeSlug, legacyAasHome, type Category } from './paths'
+import { detectAgents } from './agents'
+import { scanForImport, type ImportPaths } from './import/scan'
+import { applyImport, listImportRecords, summarize, undoImport } from './import/apply'
 import { ResourceCatalog, toItem, type Catalog } from './catalog'
 import { resourceLongSlug } from '@as/types'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
@@ -61,6 +65,8 @@ export interface EngineOptions {
   catalog?: Catalog
   /** Skills larger than this stay out of the backup; 100 MB by default. */
   backupMaxItemBytes?: number
+  /** The shared skills directory Codex also reads; ~/.agents/skills by default. */
+  agentsSkillsDir?: string
 }
 
 /**
@@ -75,9 +81,11 @@ export class EngineImpl implements Engine {
   private readonly catalog: Catalog
   private readonly projects: ProjectService
   private readonly backup: BackupService
+  private readonly agentsSkillsDir: string
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
+    this.agentsSkillsDir = options.agentsSkillsDir ?? join(legacyAasHome(), 'skills')
     this.client = new StoreClient(storeUrl, { timeoutMs: 8000 })
     this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
     this.projects = new ProjectService(this.paths, this.catalog)
@@ -333,7 +341,7 @@ export class EngineImpl implements Engine {
     const failures: Array<{ slug: string; error: string }> = []
     for (const entry of entries) {
       try {
-        if (entry.parentSlug) continue
+        if (entry.parentSlug || (entry.imported && !entry.resourceId)) continue
         const fromVersion = entry.version
         const latest = await latestFor(this.catalog, entry)
         const latestItem = { ...latest.item, slug: entry.slug }
@@ -589,5 +597,29 @@ export class EngineImpl implements Engine {
 
   disconnectBackup(): Promise<void> {
     return this.backup.disconnect()
+  }
+
+  private get importPaths(): ImportPaths {
+    return { ...this.paths, agentsSkillsDir: this.agentsSkillsDir }
+  }
+
+  detectAgents(): Promise<AgentDetection[]> {
+    return detectAgents(this.paths)
+  }
+
+  async scanImports(options: ImportScanOptions = {}): Promise<ImportScan> {
+    return (await scanForImport(this.importPaths, this.catalog, options)).scan
+  }
+
+  applyImport(ids: string[], options: ImportScanOptions = {}): Promise<ImportApplyResult> {
+    return applyImport(this.importPaths, ids, this.catalog, options)
+  }
+
+  undoImport(importId?: string, options: ImportUndoOptions = {}): Promise<ImportUndoResult> {
+    return undoImport(this.importPaths, importId, options)
+  }
+
+  async listImports(): Promise<ImportRecordSummary[]> {
+    return (await listImportRecords(this.paths.aasHome)).map(summarize)
   }
 }

@@ -16,6 +16,7 @@ import { mcpEntryDiff } from './config/mcp-compare'
 import { readProjects, toProject, type ProjectRecord } from './projects/store'
 import { ProjectService } from './projects/service'
 import { codexTrusted, CODEX_MCP_FILE, CLAUDE_MCP_FILE, mcpFileFor, readCodexProjectServers } from './projects/files'
+import { detectAgents } from './agents'
 
 export interface DoctorPaths {
   aasHome: string
@@ -254,9 +255,29 @@ async function checkOrphans(p: DoctorPaths, slugs: Set<string>, out: DoctorFindi
   }
 }
 
-export async function runDoctor(p: DoctorPaths): Promise<DoctorFinding[]> {
+/** Agents something is enabled for that are not on this machine, or whose CLI the MCP writes would use is missing. */
+async function checkAgents(p: DoctorPaths, installed: InstalledItem[], env: NodeJS.ProcessEnv, out: DoctorFinding[]): Promise<void> {
+  for (const a of await detectAgents(p, env)) {
+    const enabled = installed.filter(e => e.enabledFor[a.agent] === true)
+    if (!enabled.length) continue
+    if (!a.detected) {
+      out.push({ level: 'warn', code: 'agent-not-found', message: `${TOOL[a.agent]} was not found (no ${a.agent} on PATH, no ${a.configDir}), but ${enabled.length} item(s) are enabled for it; they take effect once it is installed` })
+    } else if (!a.binary && enabled.some(e => e.category === 'mcp')) {
+      out.push({ level: 'warn', code: 'agent-cli-missing', message: `${TOOL[a.agent]}'s CLI (${a.agent}) is not on PATH: MCP entries are written by editing ${a.mcpConfigPath} directly, and taking over a same-name entry (--replace) is unavailable` })
+    }
+  }
+}
+
+export interface DoctorOptions {
+  /** Also report agents that are missing (`aas doctor` and the desktop check do). */
+  agents?: boolean
+  env?: NodeJS.ProcessEnv
+}
+
+export async function runDoctor(p: DoctorPaths, options: DoctorOptions = {}): Promise<DoctorFinding[]> {
   const registry = await readRegistry(p.aasHome)
   const out: DoctorFinding[] = []
+  if (options.agents) await checkAgents(p, registry.installed, options.env ?? process.env, out)
   for (const entry of registry.installed) {
     if (entry.category === 'skill') await checkSkill(p, entry, out)
     else if (entry.category === 'mcp') await checkMcp(p, entry, out)

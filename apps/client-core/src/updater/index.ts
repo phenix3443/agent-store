@@ -17,8 +17,8 @@ export async function checkUpdates(
 
   const updates: UpdateAvailable[] = []
   for (const entry of entries) {
-    // Duplicated providers have no catalog entry of their own.
-    if (entry.parentSlug) continue
+    // Duplicated providers and imported local items have no catalog entry of their own.
+    if (entry.parentSlug || (entry.imported && !entry.resourceId)) continue
     let latest: CatalogItem
     try {
       latest = await latestFor(catalog, entry)

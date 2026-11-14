@@ -1,4 +1,5 @@
 import { resolvePaths, runDoctor } from '@as/client-core'
+import type { ImportScanOptions, ImportUndoOptions } from '@as/types'
 import type { Engine, BackupConflictChoice, BackupConnectOptions, AddProjectOptions, ProjectInstallOptions, ProjectUninstallOptions, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
@@ -60,7 +61,12 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   restoreBackupSnapshot: (e, a) => e.restoreBackupSnapshot(a[0] as string),
   listBackupHistory: (e, a) => e.listBackupHistory(a[0] as { limit?: number } | undefined),
   disconnectBackup: (e) => e.disconnectBackup(),
-  doctor: () => runDoctor(resolvePaths()),
+  doctor: () => runDoctor(resolvePaths(), { agents: true }),
+  detectAgents: (e) => e.detectAgents(),
+  importScan: (e, a) => e.scanImports(a[0] as ImportScanOptions | undefined),
+  importApply: (e, a) => e.applyImport(a[0] as string[], a[1] as ImportScanOptions | undefined),
+  importUndo: (e, a) => e.undoImport(a[0] as string | undefined, a[1] as ImportUndoOptions | undefined),
+  listImports: (e) => e.listImports(),
 }
 
 /**

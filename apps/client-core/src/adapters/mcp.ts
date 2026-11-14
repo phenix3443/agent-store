@@ -29,6 +29,8 @@ export class McpAdapter extends ItemDirAdapter {
   async blocker(entry: InstalledItem, target: ToolTarget) {
     const dir = this.dir(entry.slug)
     const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf-8')) as MCPItem
+    // Imported: the user's own entry is written back as is, so there is nothing to configure.
+    if (manifest.localEntries) return undefined
     // Codex has no SSE: no config value can change that, so it is not reported as needing config.
     if (target === 'codex' && manifest.transport === 'sse') {
       return { reason: 'unsupported' as const, message: new CodexMcpUnsupportedError(entry.slug, 'Codex does not support SSE MCP servers', 'sse').message }

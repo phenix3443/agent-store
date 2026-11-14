@@ -32,6 +32,11 @@ export type {
 } from './engine'
 export type { RegistryJson } from './registry'
 export type {
+  AgentDetection, SkillRoot, SkillNotImportable, SkillLocation, CatalogMatch, SkillCandidate, McpEntrySummary,
+  McpCandidate, ImportCandidate, ImportScan, ImportScanOptions, ImportedItem, ImportRecordSummary, ImportApplyResult,
+  ImportUndoOptions, ImportUndoItem, ImportUndoResult, ImportUndoConflict,
+} from './imports'
+export type {
   Project, AddProjectOptions, ProjectSkill, ProjectSkillLocation, ProjectMcp, ProjectMcpLocation, ProjectMcpScope,
   ClaudeMcpApproval, ProjectEnvVar, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectUninstallOptions, ProjectUninstallResult,
