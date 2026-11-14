@@ -44,7 +44,7 @@ test('asks the loopback endpoint without cookies or referrer, and keeps only the
   let seen: { url: string; init?: RequestInit } | undefined
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
     seen = { url, init }
-    return Response.json({ installed: ['github:a/b/c', 'github:not/asked/x', 42] })
+    return new Response(JSON.stringify({ installed: ['github:a/b/c', 'github:not/asked/x', 42] }))
   }) as unknown as typeof fetch
   const found = await askInstalled(['github:a/b/c', 'mcp-registry:io.x/y'])
   expect(seen?.url).toBe(`${LOCAL_API}/v1/installed?ids=${encodeURIComponent('github:a/b/c,mcp-registry:io.x/y')}`)
@@ -59,7 +59,7 @@ test('no client, a refusal or a malformed answer is null, never an empty set', a
   expect(await askInstalled(['github:a/b/c'])).toBeNull()
   globalThis.fetch = (async () => new Response(null, { status: 403 })) as unknown as typeof fetch
   expect(await askInstalled(['github:a/b/c'])).toBeNull()
-  globalThis.fetch = (async () => Response.json({ nope: true })) as unknown as typeof fetch
+  globalThis.fetch = (async () => new Response(JSON.stringify({ nope: true }))) as unknown as typeof fetch
   expect(await askInstalled(['github:a/b/c'])).toBeNull()
 })
 

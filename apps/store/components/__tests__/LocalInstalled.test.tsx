@@ -13,7 +13,7 @@ let answer: () => Promise<Response>
 
 beforeEach(() => {
   calls = []
-  answer = async () => Response.json({ installed: [skill.id] })
+  answer = async () => new Response(JSON.stringify({ installed: [skill.id] }))
   localStorage.clear()
   globalThis.fetch = (async (url: string) => {
     calls.push(url)
@@ -81,7 +81,7 @@ test('when the client is not running, nothing changes', async () => {
 
 test('not installed: the install action stays', async () => {
   localStorage.setItem('as.desktopClient', '1')
-  answer = async () => Response.json({ installed: [] })
+  answer = async () => new Response(JSON.stringify({ installed: [] }))
   mount()
   await waitFor(() => expect(calls).toHaveLength(1))
   expect(screen.getByRole('button', { name: '在桌面客户端中安装 brainstorming' })).toBeTruthy()
