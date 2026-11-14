@@ -14,7 +14,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ i
       className={cn(
         'h-[34px] w-full rounded-[9px] border bg-black/25 px-2.5 text-[13px] text-fg transition-[border-color,box-shadow] duration-150 placeholder:text-fg-3 hover:border-line-strong focus:border-mcp/70 focus:shadow-[0_0_0_3px_rgb(var(--mcp-rgb)/0.16)] focus:outline-none disabled:opacity-45',
         invalid ? 'border-bad/70' : 'border-line',
-        fit ? 'w-auto' : 'w-full',
         mono && 'font-mono text-[12.5px]',
         className
       )}
