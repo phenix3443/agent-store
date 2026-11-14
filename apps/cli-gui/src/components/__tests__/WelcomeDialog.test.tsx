@@ -1,25 +1,27 @@
-import { test, expect, afterEach, mock } from 'bun:test'
+import { test, expect, afterEach, beforeEach, mock, spyOn } from 'bun:test'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import * as persistence from '../../state/LocalPersistence'
+import { WelcomeDialog, useFirstRunWelcome } from '../WelcomeDialog'
+import { AppStateProvider, useAppState } from '../../state/AppState'
 
 let stored: unknown = null
 let readFails = false
 const writes: unknown[] = []
-mock.module('../../state/LocalPersistence', () => ({
-  readLocalState: async (_key: string, fallback: unknown) => {
+
+beforeEach(() => {
+  spyOn(persistence, 'readLocalState').mockImplementation((async (_key: string, fallback: unknown) => {
     if (readFails) throw new Error('no app data dir')
     return stored ?? fallback
-  },
-  writeLocalState: async (_key: string, value: unknown) => {
+  }) as typeof persistence.readLocalState)
+  spyOn(persistence, 'writeLocalState').mockImplementation((async (_key: string, value: unknown) => {
     writes.push(value)
     stored = value
-  },
-}))
-
-const { WelcomeDialog, useFirstRunWelcome } = await import('../WelcomeDialog')
-const { AppStateProvider, useAppState } = await import('../../state/AppState')
+  }) as typeof persistence.writeLocalState)
+})
 
 afterEach(() => {
   cleanup()
+  mock.restore()
   stored = null
   readFails = false
   writes.length = 0
