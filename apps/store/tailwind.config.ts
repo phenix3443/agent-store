@@ -13,7 +13,7 @@ const config: Config = {
       colors: {
         bg: { DEFAULT: 'var(--bg)', 2: 'var(--bg-2)', 3: 'var(--bg-3)' },
         fg: { DEFAULT: 'var(--fg)', 2: 'var(--fg-2)', 3: 'var(--fg-3)' },
-        panel: { DEFAULT: 'var(--panel)', 2: 'var(--panel-2)' },
+        panel: { DEFAULT: 'var(--panel)', 2: 'var(--panel-2)', 3: 'var(--panel-3)' },
         line: { DEFAULT: 'var(--line)', strong: 'var(--line-strong)' },
         edge: 'var(--edge)',
         code: 'var(--code)',

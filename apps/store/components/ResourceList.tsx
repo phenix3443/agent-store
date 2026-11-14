@@ -5,7 +5,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { loadMoreResources } from '@/app/store/actions'
 import type { StoreQuery } from '@/lib/resource'
-import { ItemTable } from './ItemTable'
+import { offerSupplement } from '@/lib/supplement'
+import { ResourceRows } from './ResourceRows'
+import { StoreSupplement, type SupplementView } from './StoreSupplement'
+import { ClearFiltersLink, ListHeading } from './StoreToolbar'
 
 // Scrolling loads pages by itself up to this many rows; past it the button
 // does, so the footer stays reachable.
@@ -15,7 +18,11 @@ interface ResourceListProps {
   query: StoreQuery
   initial: ResourceSummary[]
   initialNextOffset: number | null
-  emptyAction?: React.ReactNode
+  title: string
+  filtered: boolean
+  /** Whether the deployment can look a search up on other skill directories. */
+  supplement: boolean
+  supplementReview?: SupplementView
 }
 
 /**
@@ -23,7 +30,7 @@ interface ResourceListProps {
  * action, so the browser never talks to the API directly. Remounted (by key)
  * whenever the query changes.
  */
-export function ResourceList({ query, initial, initialNextOffset, emptyAction }: ResourceListProps) {
+export function ResourceList({ query, initial, initialNextOffset, title, filtered, supplement, supplementReview }: ResourceListProps) {
   const t = useTranslations('store.list')
   const [resources, setResources] = useState(initial)
   const [nextOffset, setNextOffset] = useState(initialNextOffset)
@@ -62,34 +69,40 @@ export function ResourceList({ query, initial, initialNextOffset, emptyAction }:
     return () => observer.disconnect()
   }, [auto, loadMore])
 
-  if (resources.length === 0) {
-    return (
-      <div className="store-results border-b border-line px-3 py-14">
-        <p className="text-lg font-medium">{t('emptyTitle')}</p>
-        <p className="mt-1.5 max-w-[60ch] text-sm text-ink-2">{t('emptyBody')}</p>
-        {emptyAction && <div className="mt-5">{emptyAction}</div>}
-      </div>
-    )
-  }
+  const showSupplement = supplementReview !== undefined || (supplement && offerSupplement(query.q, query.kind, initial))
+  const count = nextOffset === null ? t('countAll', { count: resources.length }) : t('countShown', { count: resources.length })
 
   return (
     <>
-      <ItemTable resources={resources} showCategory={query.kind === null} />
-      <div ref={sentinel} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-3 py-6">
-        <p className="font-mono text-xs text-ink-2" aria-live="polite">
-          {nextOffset === null ? t('countAll', { count: resources.length }) : t('countShown', { count: resources.length })}
-        </p>
-        {failed && (
-          <p role="alert" className="text-sm text-danger">
-            {t('loadFailed')}
-          </p>
-        )}
-        {nextOffset !== null && (
-          <button type="button" onClick={() => void loadMore()} aria-busy={pending} disabled={pending} className="btn min-h-10 px-5">
-            {pending ? t('loadingMore') : failed ? t('retry') : t('loadMore')}
-          </button>
-        )}
-      </div>
+      <ListHeading title={title} filtered={filtered}>
+        <span className="label" aria-live="polite">
+          {count}
+        </span>
+      </ListHeading>
+      {resources.length === 0 ? (
+        <div className="store-rows px-5 py-14 text-center text-fg-2">
+          <p className="mb-1.5 text-lg font-bold text-fg">{t('emptyTitle')}</p>
+          <p>{t('emptyBody')}</p>
+          {filtered && <ClearFiltersLink className="btn mt-6" />}
+        </div>
+      ) : (
+        <>
+          <ResourceRows resources={resources} showCategory={query.kind === null} label={title} />
+          <div ref={sentinel} className="mt-6 flex flex-col items-center gap-2.5">
+            {failed && (
+              <p role="alert" className="text-sm text-bad">
+                {t('loadFailed')}
+              </p>
+            )}
+            {nextOffset !== null && (
+              <button type="button" onClick={() => void loadMore()} aria-busy={pending} disabled={pending} className="btn">
+                {pending ? t('loadingMore') : failed ? t('retry') : t('loadMore')}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      {showSupplement && <StoreSupplement query={query} review={supplementReview} />}
     </>
   )
 }

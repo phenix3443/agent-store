@@ -2,6 +2,7 @@ import type { ResourceDetail } from '@as/types'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatCount, installCommand, runEntries, type RunEntry } from '@/lib/resource'
 import { InstallPanel } from './InstallPanel'
+import { KindTile } from './KindTile'
 import { VerifiedLabel } from './VerifiedLabel'
 
 interface ItemDetailProps {
@@ -10,6 +11,8 @@ interface ItemDetailProps {
   title: React.ReactNode
   /** README section, streamed by the caller so the first screen does not wait on it. */
   readme?: React.ReactNode
+  /** The drawer stacks everything in one column. */
+  layout?: 'page' | 'drawer'
 }
 
 const RUN_LABEL: Record<RunEntry['kind'], string> = {
@@ -25,9 +28,8 @@ const INSTALL_NOTE: Record<ResourceDetail['kind'], string> = {
   provider: 'noteProvider',
 }
 
-export const TITLE_CLASS = 'break-words text-[32px] leading-[1.1] tracking-[-0.025em] sm:text-[40px]'
-
-const LINK = 'underline decoration-line-strong hover:decoration-ink'
+export const TITLE_CLASS = 'break-words text-[clamp(28px,4vw,44px)] font-extrabold leading-[1.2]'
+export const DRAWER_TITLE_CLASS = 'break-words text-[26px] font-extrabold leading-[1.25]'
 
 interface Spec {
   label: string
@@ -35,16 +37,37 @@ interface Spec {
   href?: string
 }
 
-export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
+/** A card with a heading and, on the right, a note on where its content comes from. */
+export function DetailCard({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+  return (
+    <section className="card">
+      <h2 className="mb-3.5 flex items-center justify-between gap-2.5 text-[17px] font-bold">
+        {title}
+        {note && <span className="label font-normal">{note}</span>}
+      </h2>
+      {children}
+    </section>
+  )
+}
+
+export function ItemDetail({ resource: r, title, readme, layout = 'page' }: ItemDetailProps) {
   const t = useTranslations('store')
   const locale = useLocale()
   const runs = runEntries(r)
   const command = installCommand(r)
   const dateFormat = new Intl.DateTimeFormat(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
+  const drawer = layout === 'drawer'
+
+  // Skills carry a git tree sha as their version; only semver-like versions get a 'v'.
+  const version = r.version ? (/^\d+\.\d+/.test(r.version) ? `v${r.version}` : r.version) : null
+  const updated = r.origin.upstreamUpdatedAt ? dateFormat.format(new Date(r.origin.upstreamUpdatedAt)) : null
+  const stats: { label: string; value: string; mono?: boolean }[] = []
+  if (r.installs != null) stats.push({ label: t('detail.installsLabel'), value: formatCount(r.installs) })
+  if (r.stars != null) stats.push({ label: t('detail.starsLabel'), value: formatCount(r.stars) })
+  if (version) stats.push({ label: t('detail.version'), value: version, mono: true })
+  if (updated) stats.push({ label: t('detail.updated'), value: updated, mono: true })
 
   const specs: Spec[] = []
-  // Skills carry a git tree sha as their version; only semver-like versions get a 'v'.
-  if (r.version) specs.push({ label: t('detail.version'), value: /^\d+\.\d+/.test(r.version) ? `v${r.version}` : r.version })
   if (r.kind === 'mcp') {
     if (r.repository?.url) specs.push({ label: t('detail.repository'), value: r.repository.url.replace(/^https?:\/\//, ''), href: r.repository.url })
     if (r.transports.length > 0) specs.push({ label: t('detail.transport'), value: r.transports.join(', ') })
@@ -60,119 +83,119 @@ export function ItemDetail({ resource: r, title, readme }: ItemDetailProps) {
   if (r.homepageUrl) specs.push({ label: t('detail.homepage'), value: r.homepageUrl.replace(/^https?:\/\//, ''), href: r.homepageUrl })
   const tags = r.tags.filter((tag) => !r.transports.includes(tag))
   if (tags.length > 0) specs.push({ label: t('detail.tags'), value: tags.join(', ') })
-  if (r.origin.upstreamUpdatedAt) {
-    specs.push({ label: t('detail.updated'), value: dateFormat.format(new Date(r.origin.upstreamUpdatedAt)) })
-  }
 
   const deprecated = r.kind === 'mcp' && r.status === 'deprecated'
 
   return (
-    <article className="plate px-5 pb-8 pt-5 sm:px-6 sm:pt-[22px]">
-      <i className="plate-mark -left-2 -top-2" />
-      <i className="plate-mark -right-2 -top-2" />
-      <i className="plate-mark -bottom-2 -left-2" />
-      <i className="plate-mark -bottom-2 -right-2" />
-
-      <header>
-        {title}
-        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-2">
-          {r.author ? (
-            r.author.url ? (
-              <a href={r.author.url} rel="noopener noreferrer" className={`font-medium text-ink ${LINK}`}>
-                {r.author.name}
-              </a>
-            ) : (
-              <span className="font-medium text-ink">{r.author.name}</span>
-            )
-          ) : (
-            <span>{t('list.unknownAuthor')}</span>
-          )}
-          {r.verified && <VerifiedLabel />}
-          {/* Separator and value wrap together, so a line never ends on a lone "·". */}
-          {r.installs != null && (
-            <span className="flex items-center gap-2">
-              <span aria-hidden>·</span>
-              <span>{t('detail.installs', { count: formatCount(r.installs) })}</span>
+    <article data-kind={r.kind}>
+      <header className="flex flex-wrap items-start gap-5">
+        <KindTile kind={r.kind} className={drawer ? '' : 'tile-lg'} size={drawer ? 22 : 32} />
+        <div className="min-w-0 flex-1">
+          {title}
+          <p className="mt-2 flex flex-wrap items-center gap-x-[18px] gap-y-2 text-sm text-fg-2">
+            <span className="kind kind-pill">{t(`category.${r.kind}`)}</span>
+            <span>
+              {t('detail.by')}{' '}
+              {r.author ? (
+                r.author.url ? (
+                  <a href={r.author.url} rel="noopener noreferrer" className="link text-fg">
+                    {r.author.name}
+                  </a>
+                ) : (
+                  <span className="text-fg">{r.author.name}</span>
+                )
+              ) : (
+                t('list.unknownAuthor')
+              )}
             </span>
+            {r.verified && <VerifiedLabel />}
+          </p>
+          {r.description && (
+            <p
+              className={`mt-2.5 max-w-[62ch] text-fg-2 [overflow-wrap:anywhere] ${drawer ? 'overflow-hidden [-webkit-box-orient:vertical] [-webkit-line-clamp:5] [display:-webkit-box]' : ''}`}
+            >
+              {r.description}
+            </p>
           )}
-          {r.stars != null && (
-            <span className="flex items-center gap-2">
-              <span aria-hidden>·</span>
-              <span>{t('detail.stars', { count: formatCount(r.stars) })}</span>
-            </span>
-          )}
-        </p>
-        {r.description && <p className="mt-3 max-w-[62ch] text-[15px] leading-6">{r.description}</p>}
+        </div>
       </header>
 
       {(r.origin.unavailableAt || deprecated) && (
-        <p role="note" className="mt-5 border border-ink bg-paper px-3.5 py-3 text-sm leading-[22px]">
+        <p role="note" className="notice mt-5">
           {r.origin.unavailableAt ? t('detail.unavailable') : t('detail.deprecated')}
-          {r.kind === 'mcp' && r.statusMessage && <span className="mt-1 block text-ink-2">{r.statusMessage}</span>}
+          {r.kind === 'mcp' && r.statusMessage && <span className="mt-1 block">{r.statusMessage}</span>}
         </p>
       )}
 
-      <section className="mt-7 border-t border-ink pt-4">
-        <h2 className="label mb-2">{t('detail.runsTitle')}</h2>
-        {runs.length === 0 ? (
-          <p className="border-y border-line py-2.5 text-sm">{r.kind === 'provider' ? t('detail.localNote') : t('detail.runsNone')}</p>
-        ) : (
-          <ul>
-            {runs.map((run, i) => (
-              <li
-                key={i}
-                className="grid min-h-[42px] grid-cols-[84px_minmax(0,1fr)] items-center gap-x-2 border-t border-line py-2.5 text-sm last:border-b"
-              >
-                <span className="text-[13px] text-ink-2">{t(`detail.${RUN_LABEL[run.kind]}`)}</span>
-                {run.href ? (
-                  <a href={run.href} rel="noopener noreferrer" className={`font-mono text-[13px] leading-5 [overflow-wrap:anywhere] ${LINK}`}>
-                    {run.value}
-                  </a>
-                ) : (
-                  <span className="font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">{run.value}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {r.kind === 'provider' && r.connection && <p className="mt-2 text-[13px] leading-5 text-ink-2">{t('detail.providerNote')}</p>}
-        {r.kind === 'skill' && <SkillFiles files={r.files} />}
-      </section>
-
-      <section className="mt-6">
-        <h2 className="label mb-2">{t('detail.installTitle')}</h2>
-        {/* A client component: it gets only what it reads, not the whole record. */}
-        <InstallPanel
-          resource={{ id: r.id, kind: r.kind, name: r.name, origin: r.origin }}
-          command={command}
-          note={t(`install.${INSTALL_NOTE[r.kind]}`)}
-        />
-      </section>
-
-      <section className="mt-7">
-        <h2 className="label mb-2">{t('detail.specsTitle')}</h2>
-        <dl>
-          {specs.map((spec) => (
-            <div
-              key={spec.label}
-              className="grid min-h-[42px] grid-cols-[84px_minmax(0,1fr)] items-center gap-x-2 border-t border-line py-2.5 text-sm last:border-b"
-            >
-              <dt className="text-[13px] text-ink-2">{spec.label}</dt>
-              <dd className="font-mono text-[13px] leading-5 [overflow-wrap:anywhere]">
-                {spec.href ? (
-                  <a href={spec.href} rel="noopener noreferrer" className={LINK}>
-                    {spec.value}
-                  </a>
-                ) : (
-                  spec.value
-                )}
-              </dd>
+      {stats.length > 0 && (
+        <dl className={`stats ${drawer ? 'mt-6' : 'mt-8'}`}>
+          {stats.map((s) => (
+            <div key={s.label}>
+              <dt>{s.label}</dt>
+              <dd className={s.mono ? 'mono' : undefined}>{s.value}</dd>
             </div>
           ))}
         </dl>
-      </section>
+      )}
 
-      {readme}
+      <div className={`mt-6 grid items-start gap-4 ${drawer ? '' : 'lg:mt-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8'}`}>
+        <aside className={`grid gap-4 ${drawer ? '' : 'lg:sticky lg:top-[92px] lg:order-last'}`}>
+          {/* A client component: it gets only what it reads, not the whole record. */}
+          <InstallPanel
+            resource={{ id: r.id, kind: r.kind, name: r.name, origin: r.origin }}
+            command={command}
+            note={t(`install.${INSTALL_NOTE[r.kind]}`)}
+          />
+          {specs.length > 0 && (
+            <DetailCard title={t('detail.specsTitle')}>
+              <dl>
+                {specs.map((spec) => (
+                  <div key={spec.label} className="flex justify-between gap-4 border-t border-line py-[9px] text-sm first:border-t-0">
+                    <dt className="flex-none text-fg-3">{spec.label}</dt>
+                    <dd className="min-w-0 text-right font-mono text-[13px] [overflow-wrap:anywhere]">
+                      {spec.href ? (
+                        <a href={spec.href} rel="noopener noreferrer" className="link">
+                          {spec.value}
+                        </a>
+                      ) : (
+                        spec.value
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </DetailCard>
+          )}
+        </aside>
+
+        <div className="grid min-w-0 gap-4">
+          <DetailCard title={t('detail.runsTitle')} note={t('detail.upstream')}>
+            {runs.length === 0 ? (
+              <p className="text-sm text-fg-2">{r.kind === 'provider' ? t('detail.localNote') : t('detail.runsNone')}</p>
+            ) : (
+              <dl>
+                {runs.map((run, i) => (
+                  <div key={i} className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-2 border-t border-line py-[11px] first:border-t-0">
+                    <dt className="text-[13px] text-fg-3">{t(`detail.${RUN_LABEL[run.kind]}`)}</dt>
+                    <dd className={`font-mono text-[13.5px] leading-5 [overflow-wrap:anywhere] ${run.kind === 'needs' ? 'text-warn' : ''}`}>
+                      {run.href ? (
+                        <a href={run.href} rel="noopener noreferrer" className="link">
+                          {run.value}
+                        </a>
+                      ) : (
+                        run.value
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {r.kind === 'provider' && r.connection && <p className="mt-2 text-[13px] text-fg-3">{t('detail.providerNote')}</p>}
+          </DetailCard>
+          {r.kind === 'skill' && <SkillFiles files={r.files} />}
+          {readme}
+        </div>
+      </div>
     </article>
   )
 }
@@ -184,17 +207,19 @@ function SkillFiles({ files }: { files: Extract<ResourceDetail, { kind: 'skill' 
   const t = useTranslations('store.detail')
   const shown = files.slice(0, FILES_SHOWN)
   return (
-    <ul className="mt-2 font-mono text-[13px] leading-5">
-      {shown.map((f) => (
-        <li key={f.path} className="flex gap-3 py-0.5">
-          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{f.path}</span>
-          {f.mode === '100755' && <span className="label shrink-0 text-ink">{t('executable')}</span>}
-          {f.type === 'symlink' && <span className="label shrink-0 text-ink">{t('symlink')}</span>}
-        </li>
-      ))}
-      {files.length > FILES_SHOWN && (
-        <li className="py-0.5 text-ink-2">{t('moreFiles', { count: files.length - FILES_SHOWN })}</li>
-      )}
-    </ul>
+    <DetailCard title={t('filesTitle')} note={t('fileCount', { count: files.length })}>
+      <ul className="font-mono text-[13px] leading-8 text-fg-2">
+        {shown.map((f) => (
+          <li key={f.path} className="flex gap-3 border-t border-dashed border-line first:border-t-0">
+            <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{f.path}</span>
+            {f.mode === '100755' && <span className="shrink-0 text-warn">{t('executable')}</span>}
+            {f.type === 'symlink' && <span className="shrink-0 text-warn">{t('symlink')}</span>}
+          </li>
+        ))}
+        {files.length > FILES_SHOWN && (
+          <li className="border-t border-dashed border-line text-fg-3">{t('moreFiles', { count: files.length - FILES_SHOWN })}</li>
+        )}
+      </ul>
+    </DetailCard>
   )
 }

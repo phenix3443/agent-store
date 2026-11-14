@@ -5,7 +5,6 @@ import { Suspense } from 'react'
 import { getTranslations } from 'next-intl/server'
 import { getResource } from '@/lib/catalog'
 import { idFromSegments, KINDS, resourceHref } from '@/lib/resource'
-import { FavoriteButton } from '@/components/FavoriteButton'
 import { ItemDetail, TITLE_CLASS } from '@/components/ItemDetail'
 import { ItemReadme, ItemReadmeFallback } from '@/components/ItemReadme'
 import type { ResourceKind } from '@as/types'
@@ -49,33 +48,29 @@ export default async function ResourcePage({ params }: ResourcePageProps) {
   const t = await getTranslations('store')
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 pb-20 sm:px-6">
-      <div className="flex h-14 items-center justify-between">
-        <nav aria-label={t('detail.breadcrumb')} className="label">
-          <Link href="/store" className="underline decoration-line-strong hover:text-ink hover:decoration-ink">
-            {t('detail.breadcrumb')}
-          </Link>{' '}
-          /{' '}
-          <Link
-            href={`/store?category=${resource.kind}`}
-            className="underline decoration-line-strong hover:text-ink hover:decoration-ink"
-          >
-            {t(`category.${resource.kind}`)}
-          </Link>
-        </nav>
-        <FavoriteButton itemId={resource.id} />
-      </div>
-      <div className="mt-2 border border-line bg-plate">
-        <ItemDetail
-          resource={resource}
-          title={<h1 className={TITLE_CLASS}>{resource.name}</h1>}
-          readme={
-            <Suspense fallback={<ItemReadmeFallback />}>
-              <ItemReadme resource={resource} />
-            </Suspense>
-          }
-        />
-      </div>
+    <div className="mx-auto w-[min(1160px,calc(100%-2*clamp(16px,4vw,32px)))] pb-4 pt-[clamp(40px,6vw,80px)]">
+      <nav aria-label={t('detail.breadcrumbLabel')} className="mb-7 flex min-w-0 gap-2 text-sm text-fg-3">
+        <Link href="/store" className="shrink-0 hover:text-fg">
+          {t('detail.breadcrumb')}
+        </Link>
+        <span aria-hidden>/</span>
+        <Link href={`/store?category=${resource.kind}`} className="shrink-0 hover:text-fg">
+          {t(`categories.${resource.kind}`)}
+        </Link>
+        <span aria-hidden>/</span>
+        <span aria-current="page" className="min-w-0 truncate">
+          {resource.name}
+        </span>
+      </nav>
+      <ItemDetail
+        resource={resource}
+        title={<h1 className={TITLE_CLASS}>{resource.name}</h1>}
+        readme={
+          <Suspense fallback={<ItemReadmeFallback />}>
+            <ItemReadme resource={resource} />
+          </Suspense>
+        }
+      />
     </div>
   )
 }

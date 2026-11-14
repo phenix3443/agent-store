@@ -24,12 +24,18 @@ mock.module('next-intl', () => intlMock)
 
 afterEach(() => { cleanup() })
 
-const { ItemTable } = await import('../ItemTable')
+const { ResourceRows } = await import('../ResourceRows')
 
 const rows = [summary(skillResource), summary(mcpResource), summary(providerResource)]
 
+function renderRows(showCategory = true, resources = rows) {
+  return render(<ResourceRows resources={resources} showCategory={showCategory} label="全部" />)
+}
+
 test('renders name, the lead sentence of the description, author without internal catalog sources', () => {
-  render(<ItemTable resources={rows} showCategory />)
+  renderRows()
+  expect(screen.getByRole('list', { name: '全部' })).toBeInTheDocument()
+  expect(screen.getAllByRole('listitem').length).toBe(3)
   expect(screen.getByText('brainstorming')).toBeInTheDocument()
   expect(screen.getByText('Explore intent before building.')).toBeInTheDocument()
   expect(screen.getByText('obra')).toBeInTheDocument()
@@ -39,69 +45,56 @@ test('renders name, the lead sentence of the description, author without interna
 })
 
 test('shows skills.sh installs where the data has them, and a dash, not a zero, where it does not', () => {
-  const { container } = render(<ItemTable resources={rows} showCategory />)
+  const { container } = renderRows()
   expect(screen.getAllByText('12.4K').length).toBeGreaterThan(0)
   expect(screen.getAllByText('没有安装量数据').length).toBeGreaterThan(0)
   expect(container.textContent).not.toMatch(/(^|\D)0(\D|$)/)
 })
 
-test('shows GitHub stars under the installs where the catalog has them, and nothing where it does not', () => {
-  render(<ItemTable resources={rows} showCategory />)
-  expect(screen.getAllByText('★ 152.3K').length).toBeGreaterThan(0)
-  expect(screen.getAllByText('★ 1.3K').length).toBeGreaterThan(0)
-  expect(screen.getAllByText('GitHub 星标 152.3K').length).toBeGreaterThan(0)
-  expect(screen.getAllByText(/★/).length).toBe(4)
+test('shows GitHub stars where the catalog has them, and a dash where it does not', () => {
+  renderRows()
+  expect(screen.getByText('152.3K')).toBeInTheDocument()
+  expect(screen.getByText('1.3K')).toBeInTheDocument()
+  expect(screen.getAllByText('GitHub 星标 152.3K').length).toBe(1)
 })
 
 test('verified records carry the tick, others none', () => {
-  const { container } = render(<ItemTable resources={rows} showCategory />)
+  const { container } = renderRows()
   expect(container.querySelectorAll('[data-tier="verified"]').length).toBe(1)
 })
 
 test('the package name links to its detail page and marks the open one', () => {
-  render(<ItemTable resources={rows} showCategory />)
+  const { container } = renderRows()
   const link = screen.getByRole('link', { name: 'brainstorming' })
   expect(link.getAttribute('href')).toBe('/store/skill/github:obra/superpowers/brainstorming')
   expect(link.getAttribute('aria-current')).toBeNull()
   expect(screen.getByRole('link', { name: 'Anki MCP' }).getAttribute('aria-current')).toBe('true')
+  expect(container.querySelectorAll('[data-current]').length).toBe(1)
 })
 
 test('the install button is its own control, outside the link', () => {
-  render(<ItemTable resources={rows} showCategory />)
+  renderRows()
   const button = screen.getByRole('button', { name: '在桌面客户端中安装 brainstorming' })
   expect(button.textContent).toBe('安装')
   expect(button.closest('a')).toBeNull()
 })
 
-test('the install column has a visible header', () => {
-  render(<ItemTable resources={rows} showCategory />)
-  expect(screen.getByRole('columnheader', { name: '安装' })).toBeInTheDocument()
+test('each row is coloured by its kind', () => {
+  renderRows()
+  expect(screen.getAllByRole('listitem').map((li) => li.dataset.kind)).toEqual(['skill', 'mcp', 'provider'])
 })
 
-test('there is no review column or verdict', () => {
-  render(<ItemTable resources={rows} showCategory />)
-  expect(screen.queryByRole('columnheader', { name: '审查' })).toBeNull()
+test('there is no review verdict, favorite or installed state', () => {
+  const { container } = renderRows()
   expect(screen.queryByText('待审')).toBeNull()
+  expect(container.textContent).not.toContain('收藏')
+  expect(container.textContent).not.toContain('已安装')
 })
 
-test('the All tab shows the category column: a header and a label on every row', () => {
-  render(<ItemTable resources={rows} showCategory />)
-  expect(screen.getByRole('columnheader', { name: '类别' })).toBeInTheDocument()
-  expect(screen.getAllByRole('columnheader').length).toBe(5)
-  for (const row of screen.getAllByRole('row').slice(1)) expect(row.querySelectorAll('[role="cell"]').length).toBe(5)
-  expect(screen.getByRole('cell', { name: '技能' })).toBeInTheDocument()
-  expect(screen.getByRole('cell', { name: 'MCP' })).toBeInTheDocument()
-  expect(screen.getByRole('cell', { name: '供应商' })).toBeInTheDocument()
-})
-
-test('a single-kind tab drops the category header and labels, and header and rows share one grid', () => {
-  render(<ItemTable resources={[summary(skillResource)]} showCategory={false} />)
-  expect(screen.queryByRole('columnheader', { name: '类别' })).toBeNull()
-  expect(screen.getAllByRole('columnheader').length).toBe(4)
-  expect(screen.queryByRole('cell', { name: '技能' })).toBeNull()
-  const [header, row] = screen.getAllByRole('row')
-  expect(row?.querySelectorAll('[role="cell"]').length).toBe(4)
-  const grid = (el: Element | undefined) => el?.className.match(/md:grid-cols-\[[^\]]+\]/)?.[0]
-  expect(grid(header)).toBe('md:grid-cols-[minmax(0,1fr)_168px_72px_92px]')
-  expect(grid(row)).toBe(grid(header))
+test('the unfiltered list labels each row with its category; a single-kind list does not', () => {
+  const { container } = renderRows()
+  expect([...container.querySelectorAll('.kind')].map((el) => el.textContent)).toEqual(['技能', 'MCP', '供应商'])
+  cleanup()
+  const { container: one } = renderRows(false, [summary(skillResource)])
+  expect(one.querySelectorAll('.kind').length).toBe(0)
 })
