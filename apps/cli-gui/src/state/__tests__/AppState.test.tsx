@@ -7,7 +7,7 @@ afterEach(() => { cleanup() })
 function Probe() {
   const {
     navView, setNavView, categoryFilter, setCategoryFilter,
-    listFilter, setListFilter, selectedSlug, setSelectedSlug,
+    selectedSlug, setSelectedSlug,
     favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
     installedVersion, bumpInstalledVersion,
   } = useAppState()
@@ -15,14 +15,12 @@ function Probe() {
     <div>
       <span data-testid="nav">{navView}</span>
       <span data-testid="category">{categoryFilter}</span>
-      <span data-testid="filter">{listFilter}</span>
       <span data-testid="selected">{selectedSlug ?? 'none'}</span>
       <span data-testid="favorites">{[...favoriteSlugs].join(',')}</span>
       <span data-testid="terminal">{String(terminalExpanded)}</span>
       <span data-testid="installed-version">{installedVersion}</span>
       <button onClick={() => setNavView('overview')}>set-nav</button>
       <button onClick={() => setCategoryFilter('provider')}>set-category</button>
-      <button onClick={() => setListFilter('installed')}>set-filter</button>
       <button onClick={() => setSelectedSlug('filesystem')}>select</button>
       <button onClick={() => toggleFavorite('filesystem')}>toggle-fav</button>
       <button onClick={() => setTerminalExpanded(true)}>expand-terminal</button>
@@ -39,11 +37,10 @@ function renderProbe() {
   )
 }
 
-test('defaults: discover (browse) nav, all category, all filter, no selection, no favorites, terminal collapsed', () => {
+test('defaults: discover (browse) nav, all category, no selection, no favorites, terminal collapsed', () => {
   renderProbe()
   expect(screen.getByTestId('nav').textContent).toBe('browse')
   expect(screen.getByTestId('category').textContent).toBe('all')
-  expect(screen.getByTestId('filter').textContent).toBe('all')
   expect(screen.getByTestId('selected').textContent).toBe('none')
   expect(screen.getByTestId('favorites').textContent).toBe('')
   expect(screen.getByTestId('terminal').textContent).toBe('false')
@@ -54,12 +51,10 @@ test('setters update their respective fields', () => {
   renderProbe()
   fireEvent.click(screen.getByText('set-nav'))
   fireEvent.click(screen.getByText('set-category'))
-  fireEvent.click(screen.getByText('set-filter'))
   fireEvent.click(screen.getByText('select'))
   fireEvent.click(screen.getByText('expand-terminal'))
   expect(screen.getByTestId('nav').textContent).toBe('overview')
   expect(screen.getByTestId('category').textContent).toBe('provider')
-  expect(screen.getByTestId('filter').textContent).toBe('installed')
   expect(screen.getByTestId('selected').textContent).toBe('filesystem')
   expect(screen.getByTestId('terminal').textContent).toBe('true')
 })

@@ -10,15 +10,15 @@ const SIZE_CONFIG: Record<Size, { box: string; icon: string }> = {
   xl: { box: 'h-[84px] w-[84px] rounded-[20px] shadow-[0_6px_22px_rgb(var(--kind-rgb)/0.18)]', icon: 'h-10 w-10' },
 }
 
-/** Category tile: the category color is its only meaning. */
+/** Category tile: the category color is its only meaning. A span, so it can sit inside a button. */
 export function CategoryIcon({ category, size = 'md' }: { category: Category; size?: Size }) {
   const { box, icon } = SIZE_CONFIG[size]
   return (
-    <div
+    <span
       data-kind={category}
       className={`flex ${box} shrink-0 items-center justify-center border border-kind/35 bg-gradient-to-b from-kind/25 to-kind/5 text-kind`}
     >
       <Glyph name={category} className={icon} />
-    </div>
+    </span>
   )
 }

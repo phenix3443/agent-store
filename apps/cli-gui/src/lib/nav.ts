@@ -13,8 +13,8 @@ export const SECTIONS: { id: Section; icon: GlyphName; kind?: 'skill' | 'mcp' | 
   { id: 'settings', icon: 'settings' },
 ]
 
-// The local sections still open the existing resource list filtered by category; #164 and #165
-// replace them with their own pages.
+// `browse` with a category is that category's library page; with 'all' it is Discover.
+// Overview and the install dialog jump to a library the same way.
 const TARGETS: Record<Section, { view: NavView; category?: CategoryFilter }> = {
   discover: { view: 'browse', category: 'all' },
   skills: { view: 'browse', category: 'skill' },

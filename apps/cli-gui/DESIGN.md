@@ -167,6 +167,9 @@ components:
 | 对话框 | `@radix-ui/react-dialog`，外框统一用 `DialogContent` | `src/components/ui/dialog.tsx` |
 | 菜单、语言选择 | `@radix-ui/react-dropdown-menu` | `src/components/ui/menu.tsx` |
 | 悬停提示 | `@radix-ui/react-tooltip` | `src/components/ui/tooltip.tsx` |
+| 开关（每个 agent 一个） | `@radix-ui/react-switch`，打开时轨道用类别色 | `src/components/ui/switch.tsx` |
+| 筛选分段 | 一组 `aria-pressed` 按钮 | `src/components/ui/segmented.tsx` |
+| 下拉选择 | 原生 `<select>`，外框同输入框 | `src/components/ui/input.tsx` 的 `Select` |
 | 命令面板 | `cmdk`，放在 Radix 对话框里（带隐藏标题） | `src/components/shell/CommandPalette.tsx` |
 | 提示条 | `sonner`，底部居中，样式改成本文的浮层 | `src/components/ui/toast.tsx` |
 | 按钮、输入框、徽标、按键、类别标签 | 自写的薄封装，只管样式变体 | `src/components/ui/` |
@@ -195,6 +198,12 @@ components:
 - 不加亮色主题的分支。
 - 不从网络加载字体或图标。
 
+## 页面结构
+
+发现、技能、MCP、供应商四页都是「左边列表、右边详情栏」：详情栏宽 430px，窗口不超过 1040px 时盖在列表上（不透明的 `--bg-3`），Esc 关闭。列表行整行是一个按钮，行尾的开关和按钮浮在它上面。代码在 `src/components/discover/` 和 `src/components/library/`。
+
+所有安装都走同一个对话框 `src/components/install/InstallDialog.tsx`：应用内的「安装」按钮和网页发来的 `agent-store://install` 链接。步骤是：选 agent → 填必填项（只有 MCP 有必填项时）→ 进度 → 完成，另有冲突、失败、已安装和各种无法识别的链接。网页链接打开时焦点在「取消」，回车不会安装。
+
 ## 尚未迁移的页面
 
-发现、技能、MCP、供应商目前仍是改版前的资源列表加详情页，用量是改版前的概览页，它们由 #164、#165 重做。它们用的旧变量名（`--win`、`--accent`、`--text-2`、Tailwind 的 `store-*`）在 `globals.css` 里映射到新值，所以颜色已跟着换；这些页面重做完后删掉旧名字。新代码不要再用旧名字。
+用量是改版前的概览页，设置也未改完，由 #165 重做。它们用的旧变量名（`--accent`、`--text-2` 等，Tailwind 的 `store-*`）在 `globals.css` 里映射到新值；这些页面重做完后删掉旧名字。新代码不要再用旧名字。

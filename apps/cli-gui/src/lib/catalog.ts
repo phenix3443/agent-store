@@ -1,5 +1,4 @@
-import type { CatalogResource, CatalogResourceDetail, InstalledItem, Item, ResourceSort } from '@as/types'
-import type { ListFilter } from '../state/AppState'
+import type { CatalogResource, CatalogResourceDetail, InstalledItem, Item } from '@as/types'
 
 export const STORE_BASE = 'https://agent-store-test.panghuli.tech'
 
@@ -26,13 +25,6 @@ export function installedEntryFor(
     installed.find((e) => e.resourceId === r.id) ??
     installed.find((e) => !e.resourceId && e.slug === r.slug && e.category === r.kind)
   )
-}
-
-/** Server-side sort for a discovery filter; `featured` is the verified rows of the default order. */
-export function sortForFilter(filter: ListFilter): ResourceSort {
-  if (filter === 'popular') return 'installs'
-  if (filter === 'recent') return 'updated'
-  return 'default'
 }
 
 /** The built-in `local` relay is everyone's first setup step, so it is pinned to the top. */
