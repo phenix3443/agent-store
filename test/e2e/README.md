@@ -16,6 +16,14 @@ Codex — not just written to disk.
    - `claude --print …` and `codex exec …` with prompts that force the skill / MCP,
    - asserting the fixed probe tokens appear in the output.
 
+3. Project level (#166): installs the skill and `e2e-probe-keyed-mcp` (a stdio MCP
+   that refuses to start without `E2E_PROBE_KEY` and returns `E2E_KEYED_<key>`)
+   into a fresh git repo with `aas install --project`, stores the key with
+   `aas projects set-env`, checks the committed files hold no key and nothing was
+   written at user level, then runs both agents through `aas projects exec` and
+   expects the skill token and the keyed token. `claude mcp list` through
+   `aas projects exec` is a model-free check that the key reached the server.
+
 Because the tokens are fixed, the assertions are deterministic even though the
 runs make real (cheap, haiku) LLM calls.
 
@@ -47,8 +55,8 @@ make e2e-docker-build
 docker run --rm -v "$(pwd)/test/provider:/secrets:ro" agent-store-e2e
 ```
 
-Exit code is non-zero if any of the four checks (`claude:skill`, `claude:mcp`,
-`codex:skill`, `codex:mcp`) fails.
+Exit code is non-zero if any check fails (`claude:skill`, `claude:mcp`,
+`codex:skill`, `codex:mcp`, and the `project:*` checks).
 
 ## Run in CI (GitHub Actions)
 

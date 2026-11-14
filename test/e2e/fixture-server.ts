@@ -38,6 +38,15 @@ const store = startFixtureStore({
       // The MCP server runs from the repo checkout inside the image.
       script: join(FIXTURES_DIR, 'probe-mcp.mjs'),
     },
+    {
+      kind: 'mcp',
+      slug: 'e2e-probe-keyed-mcp',
+      name: 'E2E Probe Keyed MCP',
+      description: 'Stdio MCP that needs a key from the environment; the project-level checks install it.',
+      script: join(FIXTURES_DIR, 'probe-mcp.mjs'),
+      args: ['--require-key'],
+      env: [{ name: 'E2E_PROBE_KEY', description: 'Key the probe echoes back' }],
+    },
   ],
 })
 

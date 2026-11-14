@@ -66,7 +66,7 @@ const zh: Dict = {
       cached: '方案信息缓存在本机，离线时照常生效。升级在浏览器中完成。',
       notConfigured: '登录暂不可用：未配置商店中转地址（VITE_STORE_URL）。',
     },
-    cli: { intro: '命令行 aas 的子命令。', help: '查看全部用法', search: '搜索目录', install: '从目录安装', uninstall: '卸载', enable: '对某个 agent 启用', disable: '对某个 agent 停用', config: '填写配置项', sync: '把已启用的内容重新写入 agent 配置', relay: '管理本地中转', usage: '查看用量和费用', update: '更新已安装的内容', info: '查看已安装项或目录条目', list: '列出已安装的内容', doctor: '比对记录与 agent 实际读到的内容', migrate: '转换旧版本安装的技能' },
+    cli: { intro: '命令行 aas 的子命令。', help: '查看全部用法', search: '搜索目录', install: '从目录安装', uninstall: '卸载', projects: '项目级的技能和 MCP', enable: '对某个 agent 启用', disable: '对某个 agent 停用', config: '填写配置项', sync: '把已启用的内容重新写入 agent 配置', relay: '管理本地中转', usage: '查看用量和费用', update: '更新已安装的内容', info: '查看已安装项或目录条目', list: '列出已安装的内容', doctor: '比对记录与 agent 实际读到的内容', migrate: '转换旧版本安装的技能' },
     about: { tagline: 'Agent 所需，尽在于此', support: '已支持 Claude Code、Codex，更多 agent 陆续加入。', download: '获取新版本', updates: '资源更新', updatesSub: '检查已安装的技能、MCP 和供应商是否有新版本。客户端本身的新版本从官网下载。', check: '检查更新', checking: '正在检查…', upToDate: '已安装的资源都是最新版本', found: '{n} 项可更新', checkFailed: '检查失败：目录暂时取不到', update: '更新', updateAll: '全部更新', updating: '正在更新…', updateFailed: '更新失败，原版本保留', updated: '已更新', docs: '文档', github: 'GitHub' },
   },
 }
@@ -130,7 +130,7 @@ const en: Dict = {
       cached: 'Your plan is cached on this machine and keeps working offline. Upgrading happens in your browser.',
       notConfigured: 'Sign-in unavailable: store relay URL not configured (VITE_STORE_URL).',
     },
-    cli: { intro: 'The subcommands of the aas CLI.', help: 'Show full usage', search: 'Search the catalog', install: 'Install from the catalog', uninstall: 'Uninstall', enable: 'Enable for an agent', disable: 'Disable for an agent', config: "Set an item's configuration", sync: 'Rewrite enabled items into the agent configs', relay: 'Manage the local relay', usage: 'Show usage and cost', update: 'Update installed items', info: 'Show an installed item or catalog entry', list: 'List installed items', doctor: 'Compare records with what the agents actually see', migrate: 'Convert skills installed by older versions' },
+    cli: { intro: 'The subcommands of the aas CLI.', help: 'Show full usage', search: 'Search the catalog', install: 'Install from the catalog', uninstall: 'Uninstall', projects: 'Project-level skills and MCP servers', enable: 'Enable for an agent', disable: 'Disable for an agent', config: "Set an item's configuration", sync: 'Rewrite enabled items into the agent configs', relay: 'Manage the local relay', usage: 'Show usage and cost', update: 'Update installed items', info: 'Show an installed item or catalog entry', list: 'List installed items', doctor: 'Compare records with what the agents actually see', migrate: 'Convert skills installed by older versions' },
     about: { tagline: 'Everything your agents need, all in one place', support: 'Supports Claude Code and Codex today, with more agents on the way.', download: 'Get the latest version', updates: 'Resource updates', updatesSub: 'Checks installed skills, MCP servers and providers for new versions. New versions of the app itself come from the website.', check: 'Check for updates', checking: 'Checking…', upToDate: 'Everything installed is up to date', found: '{n} update(s) available', checkFailed: "Couldn't check: the catalog can't be reached", update: 'Update', updateAll: 'Update all', updating: 'Updating…', updateFailed: 'Update failed; the previous version is kept', updated: 'Updated', docs: 'Docs', github: 'GitHub' },
   },
 }

@@ -1,5 +1,5 @@
 import { resolvePaths, runDoctor } from '@as/client-core'
-import type { Engine, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
+import type { Engine, AddProjectOptions, ProjectInstallOptions, ProjectUninstallOptions, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
 
@@ -42,6 +42,15 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   getBudget: (e) => e.getBudget(),
   setBudget: (e, a) => e.setBudget(a[0] as BudgetConfig),
   getBudgetStatus: (e) => e.getBudgetStatus(),
+  listProjects: (e) => e.listProjects(),
+  addProject: (e, a) => e.addProject(a[0] as string, a[1] as AddProjectOptions | undefined),
+  removeProject: (e, a) => e.removeProject(a[0] as string),
+  relocateProject: (e, a) => e.relocateProject(a[0] as string, a[1] as string),
+  getProject: (e, a) => e.getProject(a[0] as string),
+  installToProject: (e, a) => e.installToProject(a[0] as string, a[1] as string, a[2] as ProjectInstallOptions | undefined),
+  uninstallFromProject: (e, a) => e.uninstallFromProject(a[0] as string, a[1] as string, a[2] as ProjectUninstallOptions | undefined),
+  setProjectEnv: (e, a) => e.setProjectEnv(a[0] as string, a[1] as string, a[2] as string),
+  unsetProjectEnv: (e, a) => e.unsetProjectEnv(a[0] as string, a[1] as string),
   doctor: () => runDoctor(resolvePaths()),
 }
 

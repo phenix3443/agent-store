@@ -10,7 +10,7 @@
 //   SECRETS_DIR    dir with provider .txt configs (default: $REPO/test/provider)
 //   WORK           scratch dir for isolated agent homes (default: /tmp/as-e2e)
 import { spawn } from 'bun'
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readdir, readFile, stat, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -185,6 +185,8 @@ async function main() {
     const codexBase = { CODEX_API_KEY: providers.codex.apiKey }
     await checkAgent('codex:skill', ['codex', ...codexArgs, SKILL_PROMPT], { ...codexBase, CODEX_HOME: d.codexSkill }, SKILL_TOKEN)
     await checkAgent('codex:mcp', ['codex', ...codexArgs, MCP_PROMPT], { ...codexBase, CODEX_HOME: d.codexMcp }, MCP_TOKEN)
+
+    await projectChecks({ baseInstall, codexToml, claudeBase, claudeCmd, codexArgs, codexBase })
   } finally {
     server.kill()
   }
@@ -192,6 +194,79 @@ async function main() {
   const failed = results.filter((r) => !r.ok)
   console.log(`\n[e2e] ${results.length - failed.length}/${results.length} checks passed`)
   process.exit(failed.length ? 1 : 0)
+}
+
+// Project level (#166): the skill and a keyed MCP go into a git repo's own files,
+// the key into Agent Store's state only, and each agent gets the key through
+// `aas projects exec`. Fresh user-level config dirs, so nothing is found there.
+const PROJECT_KEY = 'K7Q2X9'
+const KEYED_TOKEN = `E2E_KEYED_${PROJECT_KEY}`
+
+async function projectChecks(c: {
+  baseInstall: Record<string, string>
+  codexToml: string
+  claudeBase: Record<string, string>
+  claudeCmd: (prompt: string) => string[]
+  codexArgs: string[]
+  codexBase: Record<string, string>
+}) {
+  const proj = join(WORK, 'project')
+  const claudeHome = join(WORK, 'claude-project')
+  const codexHome = join(WORK, 'codex-project')
+  await mkdir(proj, { recursive: true })
+  await run(['git', 'init', '-q', proj], {})
+  const aas = (args: string[], extra: Record<string, string> = {}) =>
+    run(['bun', CLI, ...args], { ...c.baseInstall, CLAUDE_CONFIG_DIR: claudeHome, CODEX_HOME: codexHome, CODEX_CONFIG_DIR: codexHome, ...extra }, 60_000)
+
+  const add = await aas(['projects', 'add', proj])
+  record('project:add', add.code === 0, add.code === 0 ? '' : oneline(add))
+  for (const slug of ['e2e-probe-skill', 'e2e-probe-keyed-mcp']) {
+    const r = await aas(['install', slug, '--project', proj])
+    record(`project:install:${slug}`, r.code === 0 && /Installed/.test(r.stdout), r.code === 0 ? '' : oneline(r))
+  }
+  const setEnv = spawn(['bun', CLI, 'projects', 'set-env', proj, 'E2E_PROBE_KEY'], {
+    env: { ...process.env, ...c.baseInstall }, stdin: new TextEncoder().encode(PROJECT_KEY + '\n'), stdout: 'pipe', stderr: 'pipe',
+  })
+  record('project:set-env', (await setEnv.exited) === 0)
+
+  const committed = await Promise.all(['.mcp.json', '.codex/config.toml'].map(f => readFile(join(proj, f), 'utf-8').catch(() => '')))
+  record('project:no-key-in-files', committed.every(t => t.length > 0 && !t.includes(PROJECT_KEY)), committed.map(t => t.slice(0, 200)).join(' | '))
+  const userLevel = await Promise.all([join(claudeHome, 'skills'), join(claudeHome, '.claude.json'), join(codexHome, 'skills')].map(p => stat(p).then(() => p, () => '')))
+  record('project:nothing-at-user-level', userLevel.every(p => !p), userLevel.filter(Boolean).join(', '))
+
+  // Approving .mcp.json servers is the user's answer to Claude Code's prompt; a
+  // non-interactive run has no prompt, so the isolated user settings give it.
+  await mkdir(claudeHome, { recursive: true })
+  await writeFile(join(claudeHome, 'settings.json'), JSON.stringify({ enableAllProjectMcpServers: true }))
+  await mkdir(codexHome, { recursive: true })
+  await writeFile(join(codexHome, 'config.toml'), `${c.codexToml}\n[projects."${proj}"]\ntrust_level = "trusted"\n`)
+
+  // Deterministic, no model: the server only starts when the key reached it.
+  const claudeEnv = { ...c.claudeBase, CLAUDE_CONFIG_DIR: claudeHome }
+  const listed = await aas(['projects', 'exec', proj, '--', 'claude', 'mcp', 'list'], claudeEnv)
+  record('project:claude:mcp-connects-with-key', /e2e-probe-keyed-mcp.*Connected/.test(listed.stdout), oneline(listed))
+
+  const exec = (cmd: string[], env: Record<string, string>) => ({ cmd: ['bun', CLI, 'projects', 'exec', proj, '--', ...cmd], env: { ...c.baseInstall, ...env } })
+  const claudeSkill = exec(c.claudeCmd(SKILL_PROMPT), claudeEnv)
+  await checkAgent('project:claude:skill', claudeSkill.cmd, claudeSkill.env, SKILL_TOKEN)
+  const claudeMcp = exec(c.claudeCmd(MCP_PROMPT), claudeEnv)
+  await checkAgent('project:claude:mcp', claudeMcp.cmd, claudeMcp.env, KEYED_TOKEN)
+
+  const codexEnv = { ...c.codexBase, CODEX_HOME: codexHome }
+  const codexSkill = exec(['codex', ...c.codexArgs, SKILL_PROMPT], codexEnv)
+  await checkAgent('project:codex:skill', codexSkill.cmd, codexSkill.env, SKILL_TOKEN)
+  const codexMcp = exec(['codex', ...c.codexArgs, MCP_PROMPT], codexEnv)
+  await checkAgent('project:codex:mcp', codexMcp.cmd, codexMcp.env, KEYED_TOKEN)
+
+  const show = await aas(['projects', 'show', proj])
+  record('project:show', show.code === 0 && show.stdout.includes('e2e-probe-keyed-mcp') && !/missing E2E_PROBE_KEY/.test(show.stdout), oneline(show))
+  for (const slug of ['e2e-probe-skill', 'e2e-probe-keyed-mcp']) {
+    const r = await aas(['uninstall', slug, '--project', proj])
+    record(`project:uninstall:${slug}`, r.code === 0, r.code === 0 ? '' : oneline(r))
+  }
+  const after = await readFile(join(proj, '.mcp.json'), 'utf-8')
+  const skillsLeft = await readdir(join(proj, '.claude', 'skills')).catch(() => [])
+  record('project:uninstall-clean', JSON.parse(after).mcpServers['e2e-probe-keyed-mcp'] === undefined && skillsLeft.length === 0, after.slice(0, 200))
 }
 
 function oneline(r: RunOut): string {

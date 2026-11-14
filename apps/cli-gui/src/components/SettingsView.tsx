@@ -35,8 +35,9 @@ const TABS: SettingsTab[] = ['general', 'agents', 'data', 'account', 'cli', 'abo
 
 const CLI_COMMANDS: [string, string][] = [
   ['search [query] [--kind <skill|mcp|provider>]', 'search'],
-  ['install <id|slug> [--target <agent>] [--force]', 'install'],
-  ['uninstall <slug> [--force]', 'uninstall'],
+  ['install <id|slug> [--target <agent>] [--project <id|dir>] [--force]', 'install'],
+  ['uninstall <slug> [--project <id|dir> [--target <agent>]] [--force]', 'uninstall'],
+  ['projects <list|add|remove|move|show|set-env|unset-env|env|exec>', 'projects'],
   ['enable <slug> --for <agent> [--replace] [--force]', 'enable'],
   ['disable <slug> --for <agent> [--force]', 'disable'],
   ['config <slug>', 'config'],

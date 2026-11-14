@@ -109,6 +109,11 @@ const upperSnake = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').r
 
 const PLACEHOLDER = /\{([A-Za-z0-9_]+)\}/g
 
+/** The environment variable a config value is passed as. */
+export function configEnvName(key: string, prop: { 'x-env'?: string }): string {
+  return prop['x-env'] ?? upperSnake(key)
+}
+
 function bindConfig(manifest: MCPItem, config: Record<string, unknown>) {
   const schema = (manifest.configSchema ?? {}) as { properties?: Record<string, ConfigProperty>; required?: string[] }
   const properties = schema.properties ?? {}
@@ -131,7 +136,7 @@ function bindConfig(manifest: MCPItem, config: Record<string, unknown>) {
   for (const [key, prop] of Object.entries(properties)) {
     const v = value(key)
     if (v === undefined) continue
-    const envName = prop['x-env'] ?? upperSnake(key)
+    const envName = configEnvName(key, prop)
     placeholders[key] = v
     // The user may paste the whole header value; the scheme is added back when it is written.
     if (prop['x-bearer']) bearer = { env: envName, value: v.replace(/^Bearer\s+/i, '') }

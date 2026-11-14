@@ -31,6 +31,11 @@ export type {
   BudgetStatus,
 } from './engine'
 export type { RegistryJson } from './registry'
+export type {
+  Project, AddProjectOptions, ProjectSkill, ProjectSkillLocation, ProjectMcp, ProjectMcpLocation, ProjectMcpScope,
+  ClaudeMcpApproval, ProjectEnvVar, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
+  ProjectUninstallOptions, ProjectUninstallResult,
+} from './projects'
 export type { Plan, SubscriptionStatus, Entitlements } from './entitlement'
 export { PRICING, formatPrice } from './pricing'
 export type { BillingPeriod } from './pricing'
