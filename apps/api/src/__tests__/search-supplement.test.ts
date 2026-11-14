@@ -33,7 +33,7 @@ const ACME_DRIFT = 'github:acme/tools/terraform-drift'
 
 /** A repo at `sha` holding `skills` under skills/; `rawDelayMs` slows every SKILL.md download. */
 function repoRoutes(repo: string, sha: string, skills: string[], rawDelayMs = 0): Route {
-  return async (url) => {
+  return (url) => {
     if (url.hostname === 'api.github.com' && url.pathname === `/repos/${repo}/commits/HEAD`) return new Response(sha)
     if (url.hostname === 'api.github.com' && url.pathname === `/repos/${repo}/git/trees/${sha}`) {
       return json({
@@ -49,9 +49,9 @@ function repoRoutes(repo: string, sha: string, skills: string[], rawDelayMs = 0)
       })
     }
     if (url.hostname === 'raw.githubusercontent.com' && url.pathname.startsWith(`/${repo}/${sha}/`)) {
-      if (rawDelayMs) await Bun.sleep(rawDelayMs)
       const name = url.pathname.split('/').at(-2)
-      return new Response(`---\nname: ${name}\ndescription: ${name} for infrastructure work\n---\n`)
+      const body = () => new Response(`---\nname: ${name}\ndescription: ${name} for infrastructure work\n---\n`)
+      return rawDelayMs ? Bun.sleep(rawDelayMs).then(body) : body()
     }
     return undefined
   }
