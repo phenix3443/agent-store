@@ -644,7 +644,7 @@ test('addLocalConfig, updateLocalConfig, toggleLocalConfig, removeLocalConfig ro
 
 test('getRelayStatus reports not running when no daemon pid file exists', async () => {
   const status = await engine.getRelayStatus()
-  expect(status).toEqual({ running: false })
+  expect(status).toEqual({ running: false, routedAgents: { claude: false, codex: false } })
 })
 
 test('getRelayStatus reports running when the pid file names a live process', async () => {
@@ -654,7 +654,108 @@ test('getRelayStatus reports running when the pid file names a live process', as
 
   const status = await engine.getRelayStatus()
 
-  expect(status).toEqual({ running: true, pid: process.pid })
+  expect(status).toEqual({ running: true, pid: process.pid, routedAgents: { claude: false, codex: false } })
+})
+
+test('getRelayStatus says which agents point at the relay, following the provider takeover', async () => {
+  serve([providerItem])
+  await engine.install('test-provider')
+  await engine.setConfig('test-provider', { apiKey: 'sk-test', baseUrl: 'https://api.one.example/v1' })
+  await engine.enable('test-provider', 'claude')
+  expect((await engine.getRelayStatus()).routedAgents).toEqual({ claude: true, codex: false })
+
+  await engine.disable('test-provider', 'claude')
+  expect((await engine.getRelayStatus()).routedAgents).toEqual({ claude: false, codex: false })
+})
+
+test('startRelay waits for the daemon to report its ports, stopRelay for it to go', async () => {
+  const { writeFile, rm: remove } = await import('fs/promises')
+  const { join } = await import('path')
+  const { writeRelayListenState } = await import('../relay/listen-state')
+  const listeners = [{ id: 'default', name: '默认', port: 18780, listening: true }]
+  const relayEngine = new EngineImpl(
+    { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
+    'http://localhost:3000',
+    {
+      startRelay: async () => {
+        await writeFile(join(aasHome, 'relay.pid'), String(process.pid))
+        setTimeout(() => void writeRelayListenState(aasHome, { pid: process.pid, listeners }), 100)
+      },
+      stopRelay: async () => { await remove(join(aasHome, 'relay.pid'), { force: true }) },
+      catalog: new ItemCatalog(() => served),
+    }
+  )
+  expect(await relayEngine.startRelay()).toEqual({ running: true, pid: process.pid, listeners, routedAgents: { claude: false, codex: false } })
+  expect(await relayEngine.stopRelay()).toEqual({ running: false, routedAgents: { claude: false, codex: false } })
+})
+
+test('startRelay without a way to start the daemon says so', async () => {
+  const bare = new EngineImpl({ aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir }, 'http://localhost:3000', { catalog: new ItemCatalog(() => served) })
+  await expect(bare.startRelay()).rejects.toThrow('aas relay start')
+  await expect(bare.stopRelay()).rejects.toThrow('aas relay stop')
+})
+
+test('testProvider sends the relay request for each agent and records no usage', async () => {
+  serve([providerItem])
+  await engine.install('test-provider')
+  await engine.setConfig('test-provider', { apiKey: 'sk-secret-0123456789', baseUrl: 'https://api.one.example', authType: 'anthropic' })
+  const seen: string[] = []
+  const testing = new EngineImpl(
+    { aasHome, claudeConfigDir: claudeDir, codexConfigDir: codexDir },
+    'http://localhost:3000',
+    {
+      catalog: new ItemCatalog(() => served),
+      fetchImpl: (async (url: string) => {
+        seen.push(String(url))
+        return String(url).endsWith('/v1/messages')
+          ? Response.json({ error: { message: 'messages: Field required' } }, { status: 400 })
+          : Response.json({ error: { message: 'invalid key sk-secret-0123456789' } }, { status: 401 })
+      }) as unknown as typeof fetch,
+    }
+  )
+
+  const results = await testing.testProvider('test-provider')
+
+  expect(seen).toEqual(['https://api.one.example/v1/messages', 'https://api.one.example/responses'])
+  expect(results.map((r) => [r.target, r.outcome, r.statusCode])).toEqual([['claude', 'ok', 400], ['codex', 'key-rejected', 401]])
+  expect(JSON.stringify(results)).not.toContain('sk-secret-0123456789')
+  expect(await engine.getUsageSummary({ days: 30 })).toEqual([])
+  expect(await engine.getRecentRequests()).toEqual([])
+  expect(await engine.getProviderHealth()).toEqual([])
+})
+
+test('testProvider refuses anything but a provider', async () => {
+  serve([mcpItem])
+  await engine.install('test-mcp')
+  await expect(engine.testProvider('test-mcp')).rejects.toThrow('Only providers')
+})
+
+test('setProviderOrder rewrites only the level, in the given order', async () => {
+  const second: ProviderItem = { ...providerItem, slug: 'test-provider-2', name: 'Second Provider' }
+  serve([providerItem, second])
+  await engine.install('test-provider')
+  await engine.install('test-provider-2')
+  await engine.setConfig('test-provider', { apiKey: 'sk-1', baseUrl: 'https://one.example', level: 1 })
+  await engine.setConfig('test-provider-2', { apiKey: 'sk-2', baseUrl: 'https://two.example', level: 3 })
+
+  expect(await engine.setProviderOrder(['test-provider-2', 'test-provider'])).toEqual([
+    { slug: 'test-provider-2', level: 1 },
+    { slug: 'test-provider', level: 2 },
+  ])
+
+  const config = (slug: string) => readFile(join(aasHome, 'providers', slug, 'config.json'), 'utf-8').then((s) => JSON.parse(s))
+  expect(await config('test-provider-2')).toEqual({ apiKey: 'sk-2', baseUrl: 'https://two.example', level: 1 })
+  expect(await config('test-provider')).toEqual({ apiKey: 'sk-1', baseUrl: 'https://one.example', level: 2 })
+})
+
+test('setProviderOrder changes nothing when one slug is not a provider', async () => {
+  serve([providerItem, mcpItem])
+  await engine.install('test-provider')
+  await engine.install('test-mcp')
+  await engine.setConfig('test-provider', { apiKey: 'sk-1', level: 4 })
+  await expect(engine.setProviderOrder(['test-provider', 'test-mcp'])).rejects.toThrow('Only providers')
+  await expect(engine.setProviderOrder(['test-provider', 'test-provider'])).rejects.toThrow('twice')
+  expect(JSON.parse(await readFile(join(aasHome, 'providers', 'test-provider', 'config.json'), 'utf-8')).level).toBe(4)
 })
 
 test('enable mcp with a missing required config value fails before writing', async () => {

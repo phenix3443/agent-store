@@ -1,5 +1,6 @@
 import { test, expect } from 'bun:test'
-import { reconcileRelayInstances, runRelayDaemon, type RunningRelayInstance } from '../daemon'
+import { reconcileRelayInstances, relayListeners, runRelayDaemon, type RunningRelayInstance } from '../daemon'
+import { readRelayListenState } from '../listen-state'
 import type { LocalRelayConfig } from '@as/types'
 
 function config(id: string, port: number, enabled = true, name = id): LocalRelayConfig {
@@ -146,6 +147,83 @@ test('runRelayDaemon starts a real server per enabled config and stops it on abo
 
     controller.abort()
     await daemonPromise
+  } finally {
+    await rm(aasHome, { recursive: true, force: true })
+  }
+})
+
+test('a failed start is kept per config and cleared once the port can be bound', () => {
+  const running = new Map<string, RunningRelayInstance>()
+  const failures = new Map<string, unknown>()
+  let busy = true
+  const start = (cfg: LocalRelayConfig): RunningRelayInstance => {
+    if (busy) throw Object.assign(new Error(`Failed to start server. Is port ${cfg.port} in use?`), { code: 'EADDRINUSE' })
+    return { id: cfg.id, port: cfg.port, stop: () => {} }
+  }
+  const desired = [config('a', 18780), config('off', 18880, false)]
+
+  reconcileRelayInstances(desired, running, start, failures)
+  expect(relayListeners(desired, running, failures)).toEqual([
+    { id: 'a', name: 'a', port: 18780, listening: false, error: 'Failed to start server. Is port 18780 in use?', code: 'EADDRINUSE' },
+  ])
+
+  busy = false
+  reconcileRelayInstances(desired, running, start, failures)
+  expect(relayListeners(desired, running, failures)).toEqual([{ id: 'a', name: 'a', port: 18780, listening: true }])
+  expect(failures.size).toBe(0)
+})
+
+test('runRelayDaemon records a port another process holds, with the reason', async () => {
+  const { mkdtemp, rm, writeFile } = await import('fs/promises')
+  const { join } = await import('path')
+  const aasHome = await mkdtemp('/tmp/as-daemon-test-')
+  const holder = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response('taken') })
+
+  try {
+    await writeFile(
+      join(aasHome, 'relay-configs.json'),
+      JSON.stringify([{ id: 'a', name: 'A', port: holder.port, enabled: true }])
+    )
+    const controller = new AbortController()
+    const daemonPromise = runRelayDaemon(aasHome, {
+      pollIntervalMs: 20,
+      signal: controller.signal,
+      paths: { aasHome, claudeConfigDir: join(aasHome, 'claude'), codexConfigDir: join(aasHome, 'codex') },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    controller.abort()
+    await daemonPromise
+
+    const state = await readRelayListenState(aasHome)
+    expect(state?.pid).toBe(process.pid)
+    expect(state?.listeners).toHaveLength(1)
+    expect(state?.listeners[0]).toMatchObject({ id: 'a', port: holder.port, listening: false, code: 'EADDRINUSE' })
+    expect(state?.listeners[0]?.error).toBeTruthy()
+  } finally {
+    holder.stop(true)
+    await rm(aasHome, { recursive: true, force: true })
+  }
+})
+
+test('runRelayDaemon records the ports it listens on', async () => {
+  const { mkdtemp, rm, writeFile } = await import('fs/promises')
+  const { join } = await import('path')
+  const aasHome = await mkdtemp('/tmp/as-daemon-test-')
+
+  try {
+    await writeFile(join(aasHome, 'relay-configs.json'), JSON.stringify([{ id: 'a', name: 'A', port: 18999, enabled: true }]))
+    const controller = new AbortController()
+    const daemonPromise = runRelayDaemon(aasHome, {
+      pollIntervalMs: 20,
+      signal: controller.signal,
+      paths: { aasHome, claudeConfigDir: join(aasHome, 'claude'), codexConfigDir: join(aasHome, 'codex') },
+      startServer: ({ port }) => ({ port: port ?? 0, stop: () => {} }),
+    })
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    controller.abort()
+    await daemonPromise
+
+    expect((await readRelayListenState(aasHome))?.listeners).toEqual([{ id: 'a', name: 'A', port: 18999, listening: true }])
   } finally {
     await rm(aasHome, { recursive: true, force: true })
   }

@@ -73,9 +73,49 @@ export interface ModelPricing {
   cacheWrite?: number
 }
 
+/** One local relay listen config as the running relay daemon last reported it. */
+export interface RelayListener {
+  id: string
+  name: string
+  port: number
+  listening: boolean
+  /** Why the port could not be bound; the daemon retries every few seconds. */
+  error?: string
+  /** The system error code, e.g. EADDRINUSE. */
+  code?: string
+}
+
 export interface RelayStatus {
   running: boolean
   pid?: number
+  /** Absent when the daemon has not reported yet (just started, or written by an older version). */
+  listeners?: RelayListener[]
+  /** Which agents' configs currently point at the relay; a tool whose config could not be read is left out. */
+  routedAgents?: Partial<Record<ToolTarget, boolean>>
+}
+
+export type ProviderTestOutcome =
+  | 'ok'
+  | 'no-key'
+  | 'key-rejected'
+  | 'not-found'
+  | 'redirected'
+  | 'rate-limited'
+  | 'upstream-error'
+  | 'unexpected-status'
+  | 'timeout'
+  | 'unreachable'
+
+/** One request the relay would send for `target`, made without generating anything. */
+export interface ProviderTestResult {
+  target: ToolTarget
+  url: string
+  outcome: ProviderTestOutcome
+  ok: boolean
+  statusCode?: number
+  latencyMs?: number
+  /** The upstream's or the network's error message, with the provider's keys removed. */
+  message?: string
 }
 
 export interface LocalRelayConfig {
@@ -328,6 +368,17 @@ export interface Engine {
   getRecentRequests(options?: { limit?: number }): Promise<RecentRequestRow[]>
   /** Reports whether the local relay daemon process is currently running. */
   getRelayStatus(): Promise<RelayStatus>
+  /** Starts the relay daemon unless it runs, then waits until it reports its ports or exits. */
+  startRelay(): Promise<RelayStatus>
+  /** Stops the relay daemon. Agent configs that point at it are left as they are. */
+  stopRelay(): Promise<RelayStatus>
+  /**
+   * Sends each compatible agent's relay request to the provider with an empty body, so the
+   * upstream checks the address and key without generating anything. Not recorded as usage.
+   */
+  testProvider(slug: string): Promise<ProviderTestResult[]>
+  /** Rewrites the providers' `level` to 1, 2, 3… in the given order; nothing else changes. */
+  setProviderOrder(slugs: string[]): Promise<Array<{ slug: string; level: number }>>
   /** Returns per-provider circuit-breaker health derived from recent relay request outcomes. */
   getProviderHealth(): Promise<ProviderHealth[]>
   /** Manually clears a provider's cooldown so routing can use it again immediately. */

@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test'
 import type { UsageSummaryRow } from '@as/types'
-import { formatTokens, formatUsd, rowsInPeriod, successRate, usageBreakdown, usageTotals } from '../usage'
+import { formatTokens, formatUsd, rowsInPeriod, successRate, usageBreakdown, usageByDimension, usageTotals } from '../usage'
 
 function row(o: Partial<UsageSummaryRow>): UsageSummaryRow {
   return {
@@ -51,4 +51,27 @@ test('formatters', () => {
   expect(formatUsd(0)).toBe('$0.00')
   expect(formatUsd(0.0042)).toBe('$0.0042')
   expect(formatUsd(12.345)).toBe('$12.35')
+})
+
+test('usageByDimension sums one dimension across the others, with each share of the cost', () => {
+  const rows = [
+    row({ providerSlug: 'openrouter', model: 'sonnet', target: 'claude', requestCount: 4, successCount: 4, inputTokens: 100, outputTokens: 10, costUsd: 0.3 }),
+    row({ providerSlug: 'openrouter', model: 'haiku', target: 'claude', date: '2026-11-12', requestCount: 2, successCount: 1, costUsd: 0.1 }),
+    row({ providerSlug: 'deepseek', model: 'sonnet', target: 'codex', requestCount: 6, successCount: 6, unpricedRequestCount: 1, costUsd: 0.6 }),
+  ]
+
+  expect(usageByDimension(rows, 'provider').map((g) => [g.key, g.requests, g.successes, g.costShare])).toEqual([
+    ['deepseek', 6, 6, 0.6],
+    ['openrouter', 6, 5, 0.4],
+  ])
+  const models = usageByDimension(rows, 'model')
+  expect(models.map((g) => g.key)).toEqual(['sonnet', 'haiku'])
+  expect(models[0]).toMatchObject({ requests: 10, inputTokens: 100, outputTokens: 10, unpriced: 1 })
+  expect(models[0]!.costUsd).toBeCloseTo(0.9)
+  expect(usageByDimension(rows, 'agent').map((g) => [g.key, g.requests])).toEqual([['codex', 6], ['claude', 6]])
+})
+
+test('usageByDimension has no share when nothing was priced', () => {
+  expect(usageByDimension([row({ requestCount: 3, unpricedRequestCount: 3 })], 'provider')[0]!.costShare).toBeNull()
+  expect(usageByDimension([], 'model')).toEqual([])
 })

@@ -10,7 +10,7 @@ export interface ForwardTarget {
   modelMapping?: Record<string, string>
 }
 
-function buildAuthHeaders(apiKey: string, authType: ProviderAuthType | undefined): Record<string, string> {
+export function buildAuthHeaders(apiKey: string, authType: ProviderAuthType | undefined): Record<string, string> {
   if (authType === 'anthropic') {
     return { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
   }

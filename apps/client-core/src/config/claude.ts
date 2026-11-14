@@ -117,6 +117,12 @@ export async function disableRelayForClaude(aasHome: string, claudeConfigDir: st
   await clearRelayState(aasHome, 'claude')
 }
 
+/** Whether Claude Code's settings send its requests to the relay right now. */
+export async function claudeUsesRelay(claudeConfigDir: string): Promise<boolean> {
+  const env = ((await readSettings(claudeConfigDir))['env'] ?? {}) as Record<string, unknown>
+  return env['ANTHROPIC_BASE_URL'] === relayBaseUrl()
+}
+
 /**
  * Rewrites a takeover still in place so it carries the current relay token (older
  * versions wrote a fixed value the relay now refuses). Writes nothing when Claude

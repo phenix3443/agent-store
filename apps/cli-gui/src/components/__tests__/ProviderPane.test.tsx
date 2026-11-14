@@ -162,9 +162,11 @@ test('rapid edits are saved once, after the 500ms debounce, with 自动保存中
   expect(await screen.findByText('已自动保存')).toBeInTheDocument()
 })
 
-test('local: only the listen address, defaulting to 127.0.0.1:18100, and no key', async () => {
+test('local: the fixed address agents are pointed at, and no key', async () => {
   renderLocal()
-  expect(await screen.findByDisplayValue('http://127.0.0.1:18100')).toBeInTheDocument()
+  expect(await screen.findByText('127.0.0.1:18780')).toBeInTheDocument()
+  expect(screen.queryByDisplayValue('http://127.0.0.1:18100')).not.toBeInTheDocument()
+  expect(screen.queryByText('测试连接', { selector: 'button' })).not.toBeInTheDocument()
   expect(screen.queryByText('API 密钥')).not.toBeInTheDocument()
   expect(screen.queryByText('更多设置')).not.toBeInTheDocument()
   expect(screen.queryByText('尚未填写 API 密钥，这份配置已保存但暂时无法使用。')).not.toBeInTheDocument()
@@ -173,7 +175,7 @@ test('local: only the listen address, defaulting to 127.0.0.1:18100, and no key'
 
 test('local: still warns when no agent is routed through it', async () => {
   renderLocal()
-  await screen.findByDisplayValue('http://127.0.0.1:18100')
+  await screen.findByText('127.0.0.1:18780')
   fireEvent.click(claude())
   expect(await screen.findByText('尚未对任何 agent 启用，这份配置已保存但不会生效。')).toBeInTheDocument()
 })
@@ -232,4 +234,37 @@ test('再添加一份配置 duplicates the provider', async () => {
   await screen.findByDisplayValue('sk-real')
   fireEvent.click(screen.getByRole('button', { name: /再添加一份配置/ }))
   await waitFor(() => expect(duplicateProvider).toHaveBeenCalledWith('yls-me'))
+})
+
+test('测试连接 shows each agent with its outcome, latency and the upstream reason', async () => {
+  const testProvider = mock(() => [
+    { target: 'claude', url: 'https://code.ylsagi.com/codex/v1/messages', outcome: 'ok', ok: true, statusCode: 400, latencyMs: 210 },
+    { target: 'codex', url: 'https://code.ylsagi.com/codex/responses', outcome: 'key-rejected', ok: false, statusCode: 401, latencyMs: 95, message: 'Incorrect API key provided: ***' },
+  ])
+  renderPanel({ testProvider })
+  await screen.findByDisplayValue('sk-real')
+
+  fireEvent.click(screen.getByRole('button', { name: '测试连接' }))
+
+  expect(await screen.findByText('可用：地址能连上，密钥没有被拒绝')).toBeInTheDocument()
+  expect(testProvider).toHaveBeenCalledWith('yls-me')
+  expect(screen.getByText('HTTP 400 · 210 ms')).toBeInTheDocument()
+  expect(screen.getByText('密钥被拒绝')).toBeInTheDocument()
+  expect(screen.getByText('Incorrect API key provided: ***')).toBeInTheDocument()
+  expect(screen.getByText('POST https://code.ylsagi.com/codex/responses')).toBeInTheDocument()
+})
+
+test('测试连接 waits for a key', async () => {
+  renderPanel()
+  const key = await screen.findByDisplayValue('sk-real')
+  fireEvent.change(key, { target: { value: '' } })
+  expect(await screen.findByText('先填写 API 密钥')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '测试连接' })).toBeDisabled()
+})
+
+test('a test that cannot run shows why', async () => {
+  renderPanel({ testProvider: async () => { throw new Error('Item not installed: yls-me') } })
+  await screen.findByDisplayValue('sk-real')
+  fireEvent.click(screen.getByRole('button', { name: '测试连接' }))
+  expect(await screen.findByText('Item not installed: yls-me')).toBeInTheDocument()
 })

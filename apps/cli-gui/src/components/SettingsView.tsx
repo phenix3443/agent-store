@@ -43,6 +43,7 @@ const CLI_COMMANDS: [string, string][] = [
   ['config <slug>', 'config'],
   ['sync [--for <agent>]', 'sync'],
   ['relay <start|stop|status>', 'relay'],
+  ['test <slug>', 'test'],
   ['usage [--days N] [--provider <slug>] [--for <agent>]', 'usage'],
   ['update [slug]', 'update'],
   ['info <id|slug>', 'info'],

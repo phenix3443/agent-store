@@ -4,6 +4,7 @@ import type { InstalledItem, RelayStatus, UpdateAvailable } from '@as/types'
 import { useAppState } from '../../state/AppState'
 import { useT } from '../../i18n'
 import { callRpc } from '../../lib/rpc'
+import { relayState } from '../../lib/relay'
 import { currentSection, SECTIONS, type Section } from '../../lib/nav'
 import { useNavigate, useOpenProject } from '../../lib/useNavigate'
 import { useProjects } from '../../state/Projects'
@@ -178,7 +179,8 @@ export function Sidebar() {
     )
   }
 
-  const relayLabel = relay?.running ? t('shell.relayOn') : t('shell.relayOff')
+  const relayNow = relayState(relay)
+  const relayLabel = relayNow === 'stopped' ? t('shell.relayOff') : relayNow === 'failed' ? t('relayCtl.sidebarFailed') : t('shell.relayOn')
 
   return (
     <nav
@@ -206,7 +208,11 @@ export function Sidebar() {
                 aria-hidden
                 className={cn(
                   'mx-[4.5px] h-2 w-2 flex-none rounded-full',
-                  relay.running ? 'bg-provider shadow-[0_0_0_3px_rgb(var(--provider-rgb)/0.18),0_0_10px_rgb(var(--provider-rgb)/0.8)]' : 'bg-fg-3'
+                  relayNow === 'stopped'
+                    ? 'bg-fg-3'
+                    : relayNow === 'failed'
+                      ? 'bg-warn'
+                      : 'bg-provider shadow-[0_0_0_3px_rgb(var(--provider-rgb)/0.18),0_0_10px_rgb(var(--provider-rgb)/0.8)]'
                 )}
               />
               <span className="max-[1040px]:sr-only">{relayLabel}</span>

@@ -194,6 +194,11 @@ export async function disableRelayForCodex(aasHome: string, codexConfigDir: stri
   await clearRelayState(aasHome, 'codex')
 }
 
+/** Whether Codex's config sends its requests to the relay right now. */
+export async function codexUsesRelay(codexConfigDir: string): Promise<boolean> {
+  return (await readConfig(codexConfigDir))['model_provider'] === RELAY_PROVIDER_KEY
+}
+
 /**
  * Rewrites a takeover still in place so it carries the current relay token (older
  * versions sent none). Writes nothing when Codex is not on the relay or already

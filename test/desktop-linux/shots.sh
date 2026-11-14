@@ -2,7 +2,8 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164), the welcome, usage and settings pages (#165) and projects (#166). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166) and the relay
+# controls, connection test, provider order and usage breakdown (#192). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -331,6 +332,98 @@ shot 27-project-trusted-key-stored
 stop_app
 cli projects show "$PROJ"
 
+# 12. The local relay from the app (#192). Another program holds the relay's port, so starting it reports
+#     EADDRINUSE; once the port is free the relay listens on it, and stopping frees it again. The
+#     connection test reaches the provider with a fake key, prints no key and records no usage. A
+#     provider is moved down with the keyboard, and the usage breakdown is shown per dimension.
+port_open() { (exec 3<>/dev/tcp/127.0.0.1/18780) 2>/dev/null; }
+rpc() { printf '%s\n' "${2:-[]}" | "$SIDECAR" __rpc "$1" -; }
+palette() { xdotool key ctrl+k; sleep 3; xdotool type --delay 60 "$1"; sleep 2; xdotool key Return; sleep "${2:-12}"; }
+FAKE_KEY=sk-or-v1-desktopshots0000000000000000000000
+PROV=$(rpc list | python3 -c 'import json,sys; print(next(i["slug"] for i in json.load(sys.stdin)["data"] if i["category"] == "provider" and i["slug"] != "local"))')
+rpc info "[\"$PROV\"]" | python3 -c 'import json,sys; c=json.load(sys.stdin)["data"].get("currentConfig") or {}; c["apiKey"]=sys.argv[2]; print(json.dumps([sys.argv[1], c]))' "$PROV" "$FAKE_KEY" \
+  | "$SIDECAR" __rpc setConfig - >>"$OUT/cli.txt" 2>&1
+requests_logged() { rpc getRecentRequests '[{"limit":1000}]' | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["data"]))'; }
+before=$(requests_logged)
+cli test "$PROV"
+check "aas test reached the provider and printed its answer" 'grep -qE "^  codex +.*\((HTTP [0-9]{3}|[0-9]+ ms)" "$OUT/cli.txt"'
+check "aas test printed no key" '! grep -q "$FAKE_KEY" "$OUT/cli.txt"'
+check "the connection test is not recorded as usage" '[ "$(requests_logged)" = "$before" ]'
+
+check "nothing listens on the relay port yet" '! port_open'
+python3 -m http.server 18780 --bind 127.0.0.1 >/dev/null 2>&1 &
+HOLDER=$!
+sleep 2
+"$APP" >"$OUT/app-relay.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+4
+sleep 15
+shot 28-providers-relay-stopped
+palette 'relay start' 15
+shot 29-relay-port-busy
+rpc getRelayStatus > "$OUT/relay-busy.json"
+check "starting on a busy port reports EADDRINUSE" 'grep -q "\"listening\":false" "$OUT/relay-busy.json" && grep -q EADDRINUSE "$OUT/relay-busy.json"'
+kill "$HOLDER"
+sleep 7
+rpc getRelayStatus > "$OUT/relay-on.json"
+check "once the port is free the relay listens on it" 'port_open && grep -q "\"listening\":true" "$OUT/relay-on.json"'
+xdotool key ctrl+5
+sleep 4
+xdotool key ctrl+4
+sleep 15
+shot 30-relay-running
+
+# The connection test from the provider's pane: Tab from the key field passes its show button.
+palette "$PROV" 15
+xdotool mousemove $((X + 960)) $((Y + 545)) click 1
+sleep 1
+xdotool key Tab Tab Return
+sleep 15
+xdotool mousemove $((X + 980)) $((Y + 500)) click --repeat 4 5
+sleep 1
+shot 31-provider-test
+
+# A second config of the provider, then the first row's handle: Space, Down, Space.
+xdotool key Escape
+rpc duplicateProvider "[\"$PROV\"]" >>"$OUT/cli.txt" 2>&1
+COPY=$(rpc list | python3 -c 'import json,sys; print(next(i["slug"] for i in json.load(sys.stdin)["data"] if i["category"] == "provider" and i["slug"] not in ("local", sys.argv[1])))' "$PROV")
+xdotool key ctrl+5
+sleep 4
+xdotool key ctrl+4
+sleep 15
+shot 32a-provider-order
+xdotool mousemove $((X + 1151)) $((Y + 395)) click 1
+sleep 1
+xdotool key space
+sleep 1
+xdotool key Down
+sleep 1
+xdotool key space
+sleep 12
+shot 32b-provider-reordered
+level_of() { rpc info "[\"$1\"]" | python3 -c 'import json,sys; print((json.load(sys.stdin)["data"].get("currentConfig") or {}).get("level"))'; }
+check "moving the first provider down saved the order as Level 1, 2" '[ "$(level_of "$COPY")" = 1 ] && [ "$(level_of "$PROV")" = 2 ]'
+
+palette 'relay stop' 12
+shot 33-relay-stopped
+rpc getRelayStatus > "$OUT/relay-off.json"
+check "stopping the relay from the app frees the port" '! port_open && grep -q "\"running\":false" "$OUT/relay-off.json"'
+
+# The usage breakdown on the seeded rows: by provider, then the arrow keys through the other views.
+xdotool key ctrl+5
+sleep 10
+shot 34-usage-by-provider
+xdotool mousemove $((X + 285)) $((Y + 488)) click 1
+sleep 1
+xdotool key Right
+sleep 2
+shot 34b-usage-by-model
+xdotool key Right
+sleep 2
+shot 34c-usage-by-agent
+stop_app
+
 cli search find-skills --kind skill
 cli info "$SKILL_ID"
 cli info "$SKILL_SLUG"
@@ -350,7 +443,7 @@ cli doctor
 
 check "the desktop client started the sidecar with its arguments on stdin" 'grep -qE "^__rpc [A-Za-z]+ -$" "$ARGV_LOG"'
 check "every RPC call kept its arguments off the command line" '! grep "^__rpc" "$ARGV_LOG" | grep -qvE "^__rpc [A-Za-z]+ -$"'
-check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project" "$ARGV_LOG"'
+check "no secret value reached a sidecar command line" '! grep -qE "test-token|tok-project|$FAKE_KEY" "$ARGV_LOG"'
 
 log "result: $([ $failed = 0 ] && echo PASS || echo FAIL)"
 [ $failed = 0 ]

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { runRelay, ensureRelayRunning } from '../relay'
+import { runRelay, ensureRelayRunning, stopRelay } from '../relay'
 import type { RelayProcessOps } from '../relay'
 
 function makeOps(overrides?: Partial<RelayProcessOps>): RelayProcessOps & { spawned: string[]; killed: number[] } {
@@ -44,7 +44,8 @@ test('relay start replaces a stale pid file (process no longer running)', async 
 })
 
 test('relay stop kills the running process and removes the pid file', async () => {
-  const ops = makeOps({ readPidFile: async () => 999, isRunning: () => true })
+  const killed = new Set<number>()
+  const ops = makeOps({ readPidFile: async () => 999, isRunning: (pid) => !killed.has(pid), kill: (pid) => { killed.add(pid); ops.killed.push(pid) } })
   const lines: string[] = []
   await runRelay(['stop'], ops, s => lines.push(s))
   expect(ops.killed).toEqual([999])
@@ -88,4 +89,28 @@ test('ensureRelayRunning starts the relay only when it is not already running', 
   const up = makeOps({ readPidFile: async () => 999, isRunning: () => true })
   await ensureRelayRunning(up)
   expect(up.spawned).toHaveLength(0)
+})
+
+test('stopRelay waits until the process has exited', async () => {
+  let alive = 3
+  const ops = makeOps({ isRunning: () => alive-- > 0 })
+  await ops.writePidFile(999)
+  const started = Date.now()
+  expect(await stopRelay(ops, 2000)).toBe(999)
+  expect(alive).toBeLessThanOrEqual(0)
+  expect(Date.now() - started).toBeGreaterThanOrEqual(150)
+  expect(await ops.readPidFile()).toBeNull()
+})
+
+test('stopRelay gives up waiting after the timeout and still clears the pid file', async () => {
+  let stored: number | null = 999
+  const ops = makeOps({ readPidFile: async () => stored, removePidFile: async () => { stored = null }, isRunning: () => true })
+  expect(await stopRelay(ops, 150)).toBe(999)
+  expect(stored).toBeNull()
+})
+
+test('stopRelay does nothing when no relay runs', async () => {
+  const ops = makeOps({ readPidFile: async () => null })
+  expect(await stopRelay(ops)).toBeNull()
+  expect(ops.killed).toEqual([])
 })
