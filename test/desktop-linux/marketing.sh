@@ -83,8 +83,10 @@ provider=$(rpc install '["builtin:openrouter"]' | slug_of)
 check "installed OpenRouter" '[ -n "$provider" ]'
 rpc setConfig "[\"$provider\",{\"apiKey\":\"$PLACEHOLDER_KEY\",\"baseUrl\":\"https://openrouter.ai/api/v1\"}]" >/dev/null
 rpc enable "[\"$provider\",\"codex\"]" >/dev/null
-# The relay itself: on for an agent, that agent's API URL points at it.
+# The relay itself: on for an agent, that agent's API URL points at it. Its key is the
+# marker the client's provider pane saves for it.
 relay=$(rpc install '["builtin:local"]' | slug_of)
+rpc setConfig "[\"$relay\",{\"apiKey\":\"built-in\"}]" >/dev/null
 rpc enable "[\"$relay\",\"codex\"]" >/dev/null
 check "Codex goes through the local relay to OpenRouter" '"$SIDECAR" list 2>/dev/null | grep -E "^($provider|$relay) " | grep -c "✓" | grep -q 2'
 "$SIDECAR" relay start >>"$OUT/seed.log" 2>&1
