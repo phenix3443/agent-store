@@ -108,49 +108,35 @@ Check 'a PowerShell pipeline into aas __rpc search - succeeds' { ($piped | Conve
 
 # 3b. The same as a standard user with developer mode off, the usual home machine: no
 #     symlink privilege, so skill deployments must fall back to copies. The runner user
-#     itself is an elevated admin and would always get links.
+#     itself is an elevated admin and would always get links. Runs in a job so its
+#     environment changes stay out of this process and the app it starts later.
 $devKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock'
 Set-ItemProperty $devKey AllowDevelopmentWithoutDevLicense 0
 $std = 'C:\as-smoke'
-New-Item -ItemType Directory -Force $std | Out-Null
-Copy-Item (Get-Command bun).Source, $Sidecar, "$Root\test\desktop-smoke\sidecar.ts" $std
-icacls $std /grant 'Users:(OI)(CI)M' | Out-Null
-$secret = ConvertTo-SecureString "As1-$([guid]::NewGuid())" -AsPlainText -Force
-New-LocalUser -Name assmoke -Password $secret -AccountNeverExpires -ErrorAction Stop | Out-Null
-$cred = New-Object System.Management.Automation.PSCredential('assmoke', $secret)
-# A process started with -Credential inherits this one's TEMP, which that user cannot write.
-$savedTemp = $env:TEMP, $env:TMP
-New-Item -ItemType Directory -Force "$std\tmp" | Out-Null
-$env:TEMP = "$std\tmp"; $env:TMP = "$std\tmp"
-try {
+$stdLines = Start-Job -ArgumentList $std, $Sidecar, "$Root\test\desktop-smoke\sidecar.ts", $Version -ScriptBlock {
+  param($std, $sidecar, $script, $version)
+  New-Item -ItemType Directory -Force $std, "$std\tmp" | Out-Null
+  Copy-Item (Get-Command bun).Source, $sidecar, $script $std
+  icacls $std /grant 'Users:(OI)(CI)M' | Out-Null
+  $secret = ConvertTo-SecureString "As1-$([guid]::NewGuid())" -AsPlainText -Force
+  New-LocalUser -Name assmoke -Password $secret -AccountNeverExpires -ErrorAction Stop | Out-Null
+  $cred = New-Object System.Management.Automation.PSCredential('assmoke', $secret)
+  # A process started with -Credential inherits this one's TEMP, which that user cannot write.
+  $env:TEMP = "$std\tmp"; $env:TMP = "$std\tmp"
   Start-Process cmd.exe -Credential $cred -LoadUserProfile -WorkingDirectory $std -ArgumentList '/c', "whoami /groups /priv > $std\whoami.txt" -Wait -WindowStyle Hidden
   $sp = Start-Process "$std\bun.exe" -Credential $cred -LoadUserProfile -WorkingDirectory $std -Wait -PassThru -WindowStyle Hidden `
-    -ArgumentList @("$std\sidecar.ts", "$std\aas.exe", "$std\out", $Version) -RedirectStandardOutput "$std\stdout.txt" -RedirectStandardError "$std\stderr.txt"
-  Log "standard user privileges: $((Select-String -Path "$std\whoami.txt" -Pattern 'SeCreateSymbolicLinkPrivilege|High Mandatory|Medium Mandatory' | ForEach-Object { $_.Line.Trim() -replace '\s+', ' ' }) -join '; ')"
-  Get-Content "$std\out\result.txt" -ErrorAction SilentlyContinue | ForEach-Object { Log "[standard user] $_" }
-  Copy-Item "$std\out\sidecar.txt" "$Out\sidecar-standard-user.txt" -ErrorAction SilentlyContinue
-  Get-Content "$std\stderr.txt" -ErrorAction SilentlyContinue | Add-Content "$Out\sidecar-standard-user.txt"
-  Check 'the sidecar checks pass as a standard user without developer mode' { $sp.ExitCode -eq 0 }
-} catch {
-  Log "FAIL: could not run as a standard user: $_"
-  $script:failed = $true
-}
-$env:TEMP, $env:TMP = $savedTemp
+    -ArgumentList @("$std\sidecar.ts", "$std\aas.exe", "$std\out", $version) -RedirectStandardOutput "$std\stdout.txt" -RedirectStandardError "$std\stderr.txt"
+  "exit $($sp.ExitCode)"
+} | Receive-Job -Wait -AutoRemoveJob -ErrorVariable stdErr
+if ($stdErr) { Log "FAIL: could not run as a standard user: $stdErr"; $script:failed = $true }
 if ($null -ne $DevMode) { Set-ItemProperty $devKey AllowDevelopmentWithoutDevLicense $DevMode }
+Log "standard user privileges: $((Select-String -Path "$std\whoami.txt" -Pattern 'SeCreateSymbolicLinkPrivilege|High Mandatory|Medium Mandatory' -ErrorAction SilentlyContinue | ForEach-Object { $_.Line.Trim() -replace '\s+', ' ' }) -join '; ')"
+Get-Content "$std\out\result.txt" -ErrorAction SilentlyContinue | ForEach-Object { Log "[standard user] $_" }
+Copy-Item "$std\out\sidecar.txt" "$Out\sidecar-standard-user.txt" -ErrorAction SilentlyContinue
+Get-Content "$std\stderr.txt" -ErrorAction SilentlyContinue | Add-Content "$Out\sidecar-standard-user.txt"
+Check 'the sidecar checks pass as a standard user without developer mode' { "$stdLines" -match 'exit 0' }
 
-# 3c. With Claude Code installed from npm, the engine writes MCP entries through `claude mcp`.
-#     npm puts an extensionless sh script, claude.cmd and claude.ps1 on PATH.
-npm install -g @anthropic-ai/claude-code --silent 2>&1 | Out-Null
-Log "claude on PATH: $((Get-Command claude -All -ErrorAction SilentlyContinue | ForEach-Object Source) -join ', ')"
-$cc = Join-Path $env:RUNNER_TEMP 'as-smoke-npm-claude'
-$saved = @{}
-foreach ($k in 'AS_HOME', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'AS_CODEX_BIN') { $saved[$k] = [Environment]::GetEnvironmentVariable($k) }
-$env:AS_HOME = "$cc\agent-store"; $env:CLAUDE_CONFIG_DIR = "$cc\claude"; $env:CODEX_HOME = "$cc\codex"; $env:AS_CODEX_BIN = ''
-New-Item -ItemType Directory -Force $env:AS_HOME, $env:CLAUDE_CONFIG_DIR, $env:CODEX_HOME | Out-Null
-$viaCli = '["mcp-registry:io.github.upstash/context7",{"target":"claude"}]' | & $Sidecar __rpc installAndEnable - 2>&1 | Out-String
-foreach ($k in $saved.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k]) }
-Log "installAndEnable with npm Claude Code: $($viaCli.Trim())"
-Check 'an MCP install succeeds with Claude Code installed from npm' { ($viaCli | ConvertFrom-Json).ok -eq $true -and (Get-Content "$cc\claude\.claude.json" -Raw) -match 'context7' }
+Get-ChildItem env: | Sort-Object Name | Format-Table -AutoSize | Out-String -Width 400 | Set-Content "$Out\env-before-window.txt"
 
 # 4. First launch.
 $started = Start-Process $script:AppExe -PassThru
@@ -188,6 +174,21 @@ Confirm
 Shot '04-warm-installed'
 Check 'a warm link installs context7 for Claude Code' { (Get-Content "$env:USERPROFILE\.claude.json" -Raw -ErrorAction SilentlyContinue) -match '@upstash/context7-mcp' }
 StopApp
+
+# 7. With Claude Code installed from npm, the engine writes MCP entries through `claude mcp`.
+#    npm puts an extensionless sh script, claude.cmd and claude.ps1 on PATH. Last, so the
+#    window steps above ran on a machine without it; in a job, so the homes stay local to it.
+npm install -g @anthropic-ai/claude-code --silent 2>&1 | Out-Null
+Log "claude on PATH: $((Get-Command claude -All -ErrorAction SilentlyContinue | ForEach-Object Source) -join ', ')"
+$cc = Join-Path $env:RUNNER_TEMP 'as-smoke-npm-claude'
+$viaCli = Start-Job -ArgumentList $cc, $Sidecar -ScriptBlock {
+  param($cc, $sidecar)
+  $env:AS_HOME = "$cc\agent-store"; $env:CLAUDE_CONFIG_DIR = "$cc\claude"; $env:CODEX_HOME = "$cc\codex"; $env:AS_CODEX_BIN = ''
+  New-Item -ItemType Directory -Force $env:AS_HOME, $env:CLAUDE_CONFIG_DIR, $env:CODEX_HOME | Out-Null
+  '["mcp-registry:io.github.upstash/context7",{"target":"claude"}]' | & $sidecar __rpc installAndEnable - 2>&1 | Out-String
+} | Receive-Job -Wait -AutoRemoveJob
+Log "installAndEnable with npm Claude Code: $("$viaCli".Trim())"
+Check 'an MCP install succeeds with Claude Code installed from npm' { ("$viaCli" | ConvertFrom-Json).ok -eq $true -and (Get-Content "$cc\claude\.claude.json" -Raw) -match 'context7' }
 
 $crashes = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $Start; Id = 1000, 1001, 1002 } -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'app\.exe|aas\.exe|Agent Store' })
 $crashes | Format-List TimeCreated, Id, ProviderName, Message | Out-String -Width 300 | Add-Content "$Out\crash-events.txt"
