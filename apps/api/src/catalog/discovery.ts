@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite'
 import type { KyInstance } from 'ky'
+import { githubRepoOf } from './stars'
 
 // discovery.db: what the skill directories list, with dated popularity snapshots and
 // the queue of GitHub repos to scan. It is a separate file from catalog.db because
@@ -174,9 +175,21 @@ export interface RepoQueueReport {
   oldestAttemptAt: string | null
 }
 
+/** What the API's search lookups found since it started keeping them (GET /api/discovery/export). */
+export interface SearchFindsReport {
+  status: 'ok' | 'failed'
+  listings: number
+  newListings: number
+  repos: number
+  newRepos: number
+  skipped: number
+  error?: string
+}
+
 export interface DiscoveryReport {
   runId: number
   sources: DiscoverySourceReport[]
+  searchFinds?: SearchFindsReport
   listings: number
   /** Distinct skill_key values: a skill listed on two sites counts once. */
   skills: number
@@ -305,6 +318,57 @@ export async function runDiscovery(
     ctx.log(`${source.name}: ${report.status}, ${report.seen} seen, +${report.added} new, ${report.newOnBoards} new on boards`)
   }
   return reports
+}
+
+const FIND_SOURCES = new Set(['clawhub', 'skillhub', 'skillsmp'])
+const FIND_KEY = /^(github|clawhub|skillhub):\S/
+
+/**
+ * Takes in the listings and GitHub repos the API's search lookups stored. A listing
+ * joins under its own site, so a later board read of the same entry updates that row;
+ * rows already here are left as they are. New repos enter the scan queue as never tried.
+ * The body comes from our own API, but it is checked like any other input.
+ */
+export function applySearchFinds(db: Database, body: unknown, stamp: string): SearchFindsReport {
+  const report: SearchFindsReport = { status: 'ok', listings: 0, newListings: 0, repos: 0, newRepos: 0, skipped: 0 }
+  const rec = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {})
+  const text = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null)
+  const root = rec(body)
+  if (!Array.isArray(root['listings']) || !Array.isArray(root['repos'])) throw new Error('unexpected response shape')
+  const repoOf = (v: unknown) => {
+    const name = text(v)
+    return name && /^[^/]+\/[^/]+$/.test(name) ? githubRepoOf(`https://github.com/${name}`) : null
+  }
+  const addListing = db.query(`INSERT INTO listings (source, listing_id, skill_key, name, url, github_repo, first_seen_at, last_seen_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (source, listing_id) DO NOTHING`)
+  const addRepo = db.query(`INSERT INTO repos (full_name, first_seen_at, discovered_by) VALUES (?, ?, 'search')
+    ON CONFLICT (full_name) DO NOTHING`)
+  db.transaction(() => {
+    for (const item of root['listings'] as unknown[]) {
+      const l = rec(item)
+      const source = text(l['source'])
+      const listingId = text(l['listingId'])
+      const skillKey = text(l['skillKey'])
+      const name = text(l['name'])
+      const url = text(l['url'])
+      if (!source || !FIND_SOURCES.has(source) || !listingId || !skillKey || !FIND_KEY.test(skillKey) || !name || !url?.startsWith('https://')) {
+        report.skipped++
+        continue
+      }
+      report.listings++
+      report.newListings += addListing.run(source, listingId, skillKey, name, url, repoOf(l['githubRepo']), stamp, stamp).changes
+    }
+    for (const item of root['repos'] as unknown[]) {
+      const fullName = repoOf(rec(item)['fullName'])
+      if (!fullName) {
+        report.skipped++
+        continue
+      }
+      report.repos++
+      report.newRepos += addRepo.run(fullName, stamp).changes
+    }
+  })()
+  return report
 }
 
 /** Repos the catalog already holds skills from join the queue as known repos. */

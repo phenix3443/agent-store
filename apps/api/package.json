@@ -23,7 +23,8 @@
     "hono": "^4.6.0",
     "jose": "^6.2.3",
     "ky": "^2.2.0",
-    "p-map": "^7.1.1"
+    "p-map": "^7.1.1",
+    "rate-limiter-flexible": "^11.4.1"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -5,7 +5,8 @@ name: catalog-sync
 # providers into catalog.db, and publishes catalog.db.gz (which the API downloads,
 # CATALOG_URL), discovery.db.gz and report.json as assets of the `catalog` release.
 # Both previous files are the starting point. Only main publishes; other refs and
-# dry runs keep the results as a workflow artifact.
+# dry runs keep the results as a workflow artifact. Skills the API's search lookups
+# found are read from FINDS_URL into discovery.db, so their repos get scanned too.
 on:
   schedule:
     - cron: '23 */6 * * *'
@@ -37,6 +38,7 @@ concurrency:
 
 env:
   RELEASE_TAG: catalog
+  FINDS_URL: https://agent-store-test.panghuli.tech/api/discovery/export
 
 jobs:
   sync:
@@ -96,7 +98,7 @@ jobs:
           set +e
           # shellcheck disable=SC2086
           bun run sync:catalog --db ../../work/catalog.db --discovery ../../work/discovery.db --min-ratio "$MIN_RATIO" \
-            --report-md ../../work/report.md --report-json ../../work/report.json $FULL
+            --report-md ../../work/report.md --report-json ../../work/report.json --finds-url "$FINDS_URL" $FULL
           status=$?
           set -e
           if [ -f ../../work/report.md ]; then cat ../../work/report.md >> "$GITHUB_STEP_SUMMARY"; fi

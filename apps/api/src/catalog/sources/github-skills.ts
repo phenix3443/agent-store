@@ -21,7 +21,7 @@ const CONTAINERS = [
   '.zcode/skills/', '.zencoder/skills/', '.neovate/skills/', '.pochi/skills/', '.adal/skills/',
 ]
 const MAX_DEPTH = 3
-const DOWNLOAD_FAILED = 'SKILL.md could not be downloaded'
+export const DOWNLOAD_FAILED = 'SKILL.md could not be downloaded'
 const MAX_SKILLS_PER_REPO = 500
 
 export interface TreeEntry {
@@ -76,6 +76,13 @@ function isRateLimit(e: unknown): boolean {
   return e['status'] === 429 || (e['status'] === 403 && (headers['x-ratelimit-remaining'] === '0' || /rate limit/i.test(String(e['message']))))
 }
 
+export class RepoTooLargeError extends Error {
+  constructor(fullName: string, skills: number, max: number) {
+    super(`${fullName}: ${skills} skills, over the limit of ${max}`)
+    this.name = 'RepoTooLargeError'
+  }
+}
+
 export interface RepoScan {
   /** Lowercase `owner/repo`; the reconcile scope. */
   scope: string
@@ -90,6 +97,8 @@ export async function scanRepo(
   fullName: string,
   /** `owner/repo/skill` (lowercase) → installs. */
   installs: Map<string, number>,
+  /** maxSkills: throw RepoTooLargeError before any SKILL.md is downloaded. */
+  limits: { maxSkills?: number } = {},
 ): Promise<RepoScan> {
   const [owner, repo] = fullName.split('/') as [string, string]
   const scope = fullName.toLowerCase()
@@ -106,6 +115,7 @@ export async function scanRepo(
   treeShaOf.set('', tree.sha)
 
   let dirs = findSkillDirs(entries)
+  if (limits.maxSkills !== undefined && dirs.length > limits.maxSkills) throw new RepoTooLargeError(fullName, dirs.length, limits.maxSkills)
   if (dirs.length > MAX_SKILLS_PER_REPO) {
     skipped['repo has too many skills'] = dirs.length - MAX_SKILLS_PER_REPO
     dirs = dirs.slice(0, MAX_SKILLS_PER_REPO)

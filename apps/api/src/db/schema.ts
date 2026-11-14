@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, customType, index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { check, customType, index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 // Drizzle schema for app.db, the SQLite file the API and the store's Better Auth
 // share. Migrations are generated into ./drizzle (`pnpm db:generate`) and applied
@@ -46,6 +46,66 @@ export const processedWebhooks = sqliteTable('processed_webhooks', {
   eventType: text('event_type').notNull(),
   processedAt: timestamp('processed_at').notNull().default(isoNow),
 })
+
+// ── Search supplement ────────────────────────────────────────────────────────
+// What a search lookup on other skill directories found (src/catalog/found-store.ts).
+// These live here and not in catalog.db because the API's catalog.db is a download
+// that the next published build replaces. Times are ISO 8601 text.
+
+/** One listing on one directory; the catalog sync reads these through GET /api/discovery/export. */
+export const foundListings = sqliteTable('found_listings', {
+  source: text('source').notNull(),
+  listingId: text('listing_id').notNull(),
+  skillKey: text('skill_key').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  author: text('author'),
+  url: text('url').notNull(),
+  githubRepo: text('github_repo'),
+  firstSeenAt: text('first_seen_at').notNull(),
+  lastSeenAt: text('last_seen_at').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.source, t.listingId] }),
+  index('found_listings_skill_key_idx').on(t.skillKey),
+])
+
+/** GitHub repos named by a find: scanned by the API once, then by the catalog sync. */
+export const foundRepos = sqliteTable('found_repos', {
+  fullName: text('full_name').primaryKey(),
+  source: text('source').notNull(),
+  firstSeenAt: text('first_seen_at').notNull(),
+  lastAttemptAt: text('last_attempt_at'),
+  lastStatus: text('last_status'),
+})
+
+/** Skills read from a found repo, served until the published catalog holds the same id. */
+export const foundResources = sqliteTable('found_resources', {
+  id: text('id').primaryKey(),
+  skillKey: text('skill_key').notNull(),
+  githubRepo: text('github_repo').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  summary: text('summary').notNull(),
+  detail: text('detail').notNull(),
+  validatedAt: text('validated_at').notNull(),
+}, (t) => [
+  index('found_resources_skill_key_idx').on(t.skillKey),
+  index('found_resources_github_repo_idx').on(t.githubRepo),
+])
+
+/** Finished lookups, so a repeated query is answered without asking the sites again. */
+export const searchLookups = sqliteTable('search_lookups', {
+  // SHA-256 of the normalized query. The query text is not stored.
+  key: text('key').primaryKey(),
+  status: text('status').notNull(),
+  partial: integer('partial', { mode: 'boolean' }).notNull(),
+  skillKeys: text('skill_keys').notNull(),
+  checkedAt: text('checked_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+}, (t) => [
+  check('search_lookups_status_check', sql`${t.status} IN ('found', 'none')`),
+  index('search_lookups_expires_at_idx').on(t.expiresAt),
+])
 
 // ── Better Auth ──────────────────────────────────────────────────────────────
 // Tables owned by the store's self-hosted Better Auth (apps/store/lib/auth/server.ts).

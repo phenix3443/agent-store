@@ -1,16 +1,24 @@
 import { Hono } from 'hono'
-import type { ResourceKind, ResourceListResponse } from '@as/types'
+import type { ResourceKind, ResourceListResponse, SearchSupplementResponse } from '@as/types'
 import { CatalogUnavailableError, type CatalogReader, type ResourceSort } from './reader'
+import type { SearchSupplement } from './supplement'
 
 const KINDS = new Set<ResourceKind>(['skill', 'mcp', 'provider'])
 const SORTS = new Set<ResourceSort>(['default', 'installs', 'stars', 'updated', 'name'])
 
+/** Longest a supplement request is held for a running lookup. */
+const MAX_WAIT_SECONDS = 10
+
 /**
- * GET /api/resources?kind=&q=&sort=&limit=&offset=  list and search
+ * GET /api/resources?kind=&q=&sort=&limit=&offset=  list and search; reads only catalog.db
  * GET /api/resources/<id>                            detail; ids contain '/' and ':', sent raw or encoded
- * Both read only catalog.db.
+ * GET /api/search/supplement?q=&kind=&wait=          what other skill directories list for a query
+ *                                                    the catalog answers poorly (see supplement.ts)
+ * GET /api/discovery/export                          stored finds, for the catalog sync
+ * `supplement` returns null when the lookups are switched off (the default) or app.db is
+ * missing; the supplement endpoint then answers `disabled`.
  */
-export function resourceRoutes(reader: CatalogReader): Hono {
+export function resourceRoutes(reader: CatalogReader, supplement: () => SearchSupplement | null = () => null): Hono {
   const app = new Hono()
 
   app.onError((e, c) => {
@@ -46,9 +54,36 @@ export function resourceRoutes(reader: CatalogReader): Hono {
     } catch {
       return c.json({ error: 'Malformed id' }, 400)
     }
-    const resource = reader.get(id)
+    // A skill scanned after a lookup is served from app.db until a catalog build holds it.
+    const resource = reader.get(id) ?? supplement()?.resource(id) ?? null
     if (!resource) return c.json({ error: 'Not found' }, 404)
     return c.json({ resource })
+  })
+
+  app.get('/api/search/supplement', async (c) => {
+    const kind = c.req.query('kind')
+    if (kind && !KINDS.has(kind as ResourceKind)) return c.json({ error: 'kind must be skill, mcp or provider' }, 400)
+    const raw = c.req.query('wait') ?? '0'
+    if (!/^\d+$/.test(raw)) return c.json({ error: 'wait must be a non-negative integer (seconds)' }, 400)
+    const q = c.req.query('q') ?? ''
+    c.header('cache-control', 'no-store')
+    const s = supplement()
+    if (!s) {
+      const off: SearchSupplementResponse = { status: 'disabled', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null }
+      return c.json(off)
+    }
+    let body = s.lookup(q, (kind as ResourceKind) || null)
+    const wait = Math.min(Number(raw), MAX_WAIT_SECONDS)
+    if (body.status === 'searching' && wait > 0) {
+      await s.settled(q, wait * 1000)
+      body = s.lookup(q, (kind as ResourceKind) || null)
+    }
+    return c.json(body)
+  })
+
+  app.get('/api/discovery/export', (c) => {
+    const s = supplement()
+    return c.json(s ? s.exportFinds() : { generatedAt: new Date().toISOString(), listings: [], repos: [] })
   })
 
   return app
