@@ -75,7 +75,7 @@ const rowState = (current: boolean) =>
 function ProjectsGroup({ narrow }: { narrow: boolean }) {
   const t = useT()
   const { navView, projectId } = useAppState()
-  const { projects, openDialog } = useProjects()
+  const { projects, summaries, openDialog } = useProjects()
   const openProject = useOpenProject()
   const onProjects = navView === 'projects' || navView === 'project'
   const anyMissing = projects.some((p) => !p.exists)
@@ -114,6 +114,8 @@ function ProjectsGroup({ narrow }: { narrow: boolean }) {
       <div className="-mx-1 flex min-h-0 shrink flex-col gap-0.5 overflow-y-auto px-1">
         {projects.map((p) => {
           const current = navView === 'project' && projectId === p.id
+          const sum = summaries[p.id]
+          const n = sum && sum.skills !== null && sum.mcps !== null ? sum.skills + sum.mcps : null
           return (
             <button
               key={p.id}
@@ -125,6 +127,12 @@ function ProjectsGroup({ narrow }: { narrow: boolean }) {
             >
               <Glyph name="folder" className="h-[17px] w-[17px] flex-none" />
               <span className="min-w-0 truncate">{p.name}</span>
+              {p.exists && n !== null && (
+                <span className="ml-auto font-mono text-[11px] font-medium text-fg-3">
+                  <span aria-hidden>{n}</span>
+                  <span className="sr-only">{t('pjx.count').replace('{0}', String(n))}</span>
+                </span>
+              )}
               {!p.exists && (
                 <span className="ml-auto flex-none text-warn" title={t('pj.missingChip')}>
                   <AlertTriangle size={13} aria-hidden />

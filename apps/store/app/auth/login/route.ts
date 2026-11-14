@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/server'
+import { safeNext } from '@/lib/safe-next'
 
 // Start a Better Auth social login. Kept as a GET route so the login
 // modal's plain <a href="/auth/login?provider=…"> links keep working.
@@ -8,11 +9,14 @@ import { auth } from '@/lib/auth/server'
 // the pod fails, because request.url there carries the container's plain-HTTP
 // address, not the public https origin.
 export async function GET(request: Request) {
-  const provider = new URL(request.url).searchParams.get('provider') === 'google' ? 'google' : 'github'
+  const params = new URL(request.url).searchParams
+  const provider = params.get('provider') === 'google' ? 'google' : 'github'
+  const next = safeNext(params.get('next'))
+  const callbackURL = next ? `/auth/callback?next=${encodeURIComponent(next)}` : '/auth/callback'
 
   const res = await auth()
     .api.signInSocial({
-      body: { provider, callbackURL: '/auth/callback' },
+      body: { provider, callbackURL },
       headers: request.headers,
       asResponse: true,
     })

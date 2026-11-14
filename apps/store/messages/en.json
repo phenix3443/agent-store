@@ -16,7 +16,8 @@
       "dashboard": "Dashboard",
       "logout": "Log out",
       "language": "Language",
-      "skip": "Skip to content"
+      "skip": "Skip to content",
+      "favorites": "Favorites"
     },
     "categories": {
       "all": "All",
@@ -178,6 +179,18 @@
       "none": "No other skill directory lists “{q}” either.",
       "unavailable": "Other skill directories cannot be searched right now.",
       "retry": "Retry"
+    },
+    "favorite": {
+      "add": "Save {name}",
+      "remove": "Remove {name} from favorites",
+      "loginBody": "Log in to save favorites.",
+      "toastLabel": "Favorites",
+      "toast": {
+        "saved": "Saved to favorites",
+        "removed": "Removed from favorites",
+        "failed": "Couldn't save. Try again in a moment.",
+        "full": "You have 500 favorites. Remove some first."
+      }
     }
   },
   "site": {
@@ -584,6 +597,11 @@
       "buy": "Buy lifetime",
       "working": "Opening checkout…",
       "failed": "Couldn't open checkout. Please try again later.",
+      "current": "Current plan",
+      "manage": "Manage subscription",
+      "viewPlan": "View plan and orders",
+      "ownedSubscription": "You're on {plan}. Switching period or buying lifetime isn't available here.",
+      "ownedLifetime": "You own Pro Lifetime. No subscription needed.",
       "merchant": "Payments by Waffo. Prices include tax.",
       "compare": {
         "title": "Compare plans",
@@ -668,10 +686,11 @@
       "tabs": "Dashboard sections",
       "tab": {
         "account": "Account",
-        "subscription": "Subscription"
+        "subscription": "Subscription",
+        "favorites": "Favorites"
       },
       "gateTitle": "Log in first",
-      "gateBody": "Your account and subscription live here.",
+      "gateBody": "Your account, subscription and favorites live here.",
       "home": "Back to home",
       "name": "Name",
       "email": "Email",
@@ -680,7 +699,7 @@
       "planUnknown": "Unavailable",
       "view": "View",
       "logoutTitle": "Log out",
-      "logoutBody": "Your subscription stays on the account.",
+      "logoutBody": "Your favorites and subscription stay on the account.",
       "logout": "Log out",
       "planError": "We can't read your subscription right now. Refresh in a moment.",
       "status": {
@@ -734,11 +753,21 @@
       "billing": "Billing",
       "merchant": "Payments by",
       "freeBody": "Installing and managing work on Free. Pro adds budget alerts, usage analytics, smart routing and multi-key rotation.",
-      "upgrade": "Upgrade to Pro"
+      "upgrade": "Upgrade to Pro",
+      "favCount": "{count} saved",
+      "favEmptyTitle": "No favorites yet",
+      "favEmptyBody": "Tap the heart on any package in the store.",
+      "favEmptyAction": "Browse the store",
+      "favView": "View",
+      "favViewLabel": "View {name}",
+      "favRemove": "Remove",
+      "favRemoveLabel": "Remove {name} from favorites",
+      "favGone": "No longer in the catalog",
+      "favError": "Couldn't load your favorites. Refresh in a moment."
     },
     "login": {
       "title": "Log in to Agent Store",
-      "body": "Log in to subscribe to Pro.",
+      "body": "Log in to save favorites and subscribe to Pro.",
       "github": "Continue with GitHub",
       "google": "Continue with Google",
       "consent": "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",

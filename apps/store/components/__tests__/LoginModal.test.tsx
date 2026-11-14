@@ -26,8 +26,16 @@ test('shows Google when it is configured', () => {
 test('says what logging in is for, and nothing the account does not do', () => {
   render(<LoginModal open onOpenChange={() => {}} />)
   const dialog = screen.getByRole('dialog')
-  expect(dialog.textContent).toContain('登录后可以订阅 Pro。')
-  for (const word of ['收藏', '同步', 'demo']) expect(dialog.textContent).not.toContain(word)
+  expect(dialog.textContent).toContain('登录后可以收藏，也可以订阅 Pro。')
+  for (const word of ['同步', 'demo']) expect(dialog.textContent).not.toContain(word)
+})
+
+test('carries the page to return to and a reason of its own', () => {
+  render(<LoginModal open onOpenChange={() => {}} providers={['github', 'google']} next="/store/skill/github:a/b/c" body="登录后就能收藏。" />)
+  expect(screen.getByRole('dialog').textContent).toContain('登录后就能收藏。')
+  expect(screen.getByRole('link', { name: '用 Google 登录' }).getAttribute('href')).toBe(
+    '/auth/login?provider=google&next=%2Fstore%2Fskill%2Fgithub%3Aa%2Fb%2Fc'
+  )
 })
 
 test('a sign-in that did not finish is announced in place of the default line', () => {

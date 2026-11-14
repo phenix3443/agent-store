@@ -6,7 +6,7 @@
 import { cp, mkdir, mkdtemp, rename, rm } from 'fs/promises'
 import { join, relative } from 'path'
 import type {
-  AddProjectOptions, MCPItem, Paths, Project, ProjectDetail, ProjectEnvVar, ProjectInstallOptions,
+  AddProjectOptions, MCPItem, Paths, Project, ProjectDetail, ProjectEnvVar, ProjectInstallOptions, ProjectSummary,
   ProjectInstallResult, ProjectMcp, ProjectMcpLocation, ProjectSkill, ProjectUninstallOptions,
   ProjectUninstallResult, SkillItem, ToolTarget,
 } from '@as/types'
@@ -66,6 +66,23 @@ export class ProjectService {
 
   async list(): Promise<Project[]> {
     return Promise.all((await readProjects(this.home)).projects.map(toProject))
+  }
+
+  async summaries(): Promise<ProjectSummary[]> {
+    return Promise.all((await readProjects(this.home)).projects.map(async (record) => {
+      const project = await toProject(record)
+      const installed = record.items.map(i => ({ kind: i.kind, slug: i.slug, name: i.name, ...(i.resourceId ? { resourceId: i.resourceId } : {}) }))
+      let skills: number | null = null
+      let mcps: number | null = null
+      if (project.exists) {
+        try {
+          const detail = await this.detail(record.id)
+          skills = detail.skills.length
+          mcps = detail.mcps.length
+        } catch { /* one unreadable project leaves the others' counts */ }
+      }
+      return { ...project, skills, mcps, installed }
+    }))
   }
 
   add(path: string, options: AddProjectOptions = {}): Promise<Project> {

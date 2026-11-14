@@ -29,13 +29,22 @@ export type {
   LocalRelayConfig,
   BudgetConfig,
   BudgetStatus,
+  BatchOperation,
+  BatchOutcome,
+  BatchError,
 } from './engine'
 export type { RegistryJson } from './registry'
 export type {
   Project, AddProjectOptions, ProjectSkill, ProjectSkillLocation, ProjectMcp, ProjectMcpLocation, ProjectMcpScope,
   ClaudeMcpApproval, ProjectEnvVar, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
-  ProjectUninstallOptions, ProjectUninstallResult,
+  ProjectUninstallOptions, ProjectUninstallResult, ProjectSummary,
 } from './projects'
+export type {
+  BackupItemCategory, BackupItemRef, BackupConnectOptions, BackupConflictReason, BackupConflict, BackupConflictChoice,
+  BackupMissingSecret, BackupFailure, BackupLocalOnly, BackupExcludedFile, BackupStatus, BackupConnectResult,
+  BackupChangeAction, BackupAppliedChange, BackupSyncResult, BackupResolveResult, BackupSnapshot, BackupRestoreResult,
+  BackupHistoryEntry,
+} from './backup'
 export type { Plan, SubscriptionStatus, SubscriptionPeriod, MySubscription, Entitlements } from './entitlement'
 export { PRICING, formatPrice } from './pricing'
 export type { BillingPeriod } from './pricing'
@@ -63,6 +72,8 @@ export type {
   ProviderConnection,
   ProviderResourceDetail,
   ResourceDetail,
+  FavoriteEntry,
+  FavoritesResponse,
 } from './resources'
 export { resourceSlug, resourceLongSlug } from './catalog'
 export type { CatalogResource, CatalogResourceDetail, CatalogSearchResult } from './catalog'

@@ -26,6 +26,7 @@
   --warn: #ffb86b;
   --bad: #ff7a90;
   --warn-rgb: 255 184 107;
+  --bad-rgb: 255 122 144;
   --skill-rgb: 183 156 255;
   --mcp-rgb: 98 184 255;
   --provider-rgb: 95 214 164;
@@ -155,6 +156,55 @@
     cursor: not-allowed;
     opacity: 0.5;
     transform: none;
+  }
+
+  .fav-btn {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r);
+    background: var(--panel);
+    color: var(--fg-2);
+    cursor: pointer;
+    transition:
+      color 200ms,
+      border-color 200ms,
+      background-color 200ms,
+      transform 180ms var(--ease);
+  }
+
+  .fav-btn:hover {
+    border-color: rgb(var(--bad-rgb) / 0.5);
+    color: var(--bad);
+  }
+
+  .fav-btn:active {
+    transform: translateY(1px);
+  }
+
+  .fav-btn[aria-pressed='true'] {
+    border-color: rgb(var(--bad-rgb) / 0.55);
+    background: rgb(var(--bad-rgb) / 0.1);
+    color: var(--bad);
+  }
+
+  .fav-btn[aria-pressed='true'] svg {
+    fill: currentColor;
+    animation: favpop 350ms var(--ease);
+  }
+
+  .fav-btn[aria-disabled='true'] {
+    cursor: progress;
+    opacity: 0.5;
+  }
+
+  .fav-btn-lg {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
   }
 
   .btn-primary {
@@ -1963,6 +2013,19 @@
     }
   }
 
+  /* Three tabs fit a phone only without their icons. */
+  @media (max-width: 480px) {
+    .dash-tabs a {
+      flex: 1;
+      justify-content: center;
+      padding: 8px 10px;
+    }
+
+    .dash-tabs a svg {
+      display: none;
+    }
+  }
+
   .dash-h {
     display: flex;
     flex-wrap: wrap;
@@ -1995,6 +2058,36 @@
     min-width: 0;
     overflow-wrap: anywhere;
     text-align: right;
+  }
+
+  .fav-list li {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px 14px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .fav-list li:first-child {
+    border-top: 0;
+    padding-top: 4px;
+  }
+
+  @media (max-width: 480px) {
+    .fav-list li {
+      grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    .fav-list .kind-tile {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--r);
+    }
+
+    .fav-list li > :last-child {
+      grid-column: 2;
+    }
   }
 
   .plan-card {
@@ -2231,6 +2324,9 @@
   .store-row-act {
     position: relative;
     z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     grid-column: 3;
     grid-row: 1;
   }
@@ -2425,6 +2521,12 @@
 
   to {
     transform: rotate(-8deg) scaleY(0.84);
+  }
+}
+
+@keyframes favpop {
+  50% {
+    transform: scale(1.25);
   }
 }
 

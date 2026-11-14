@@ -91,7 +91,7 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 
 ### 搜索补充（本地结果不够时去别的技能站补搜）
 
-**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态。打开时在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp`：商店页在发送前列出 `sources` 里的站点，访客点「发送并查找」后才发请求（`apps/store/components/StoreSupplement.tsx`）。
+**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境已打开（phenix3443/home-lab#454）。打开时在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp`：商店页在发送前列出 `sources` 里的站点，访客点「发送并查找」后才发请求（`apps/store/components/StoreSupplement.tsx`）。
 
 `GET /api/resources` 的行为不变。补搜是单独的接口 `GET /api/search/supplement`，由前端在搜索词稳定后、且只在第一页调用一次；本地结果照常立即返回，不等补搜。代码在 `apps/api/src/catalog/supplement.ts`（规则与调度）、`found-store.ts`（持久化）和 `sources/` 下各站点的搜索函数。
 
@@ -150,7 +150,14 @@ skills.sh 不在其中：它的 `robots.txt` 禁止 `/api/` 和 `/search`。
 
 **哪些结果能安装**
 
-只有来自 GitHub 仓库的结果会变成可安装的资源：API 用和定时同步相同的 `scanRepo` 读这个仓库（每次查询最多 2 个仓库，10 秒内没读完的不等；技能数超过 40 的仓库留给定时同步；没有 `GITHUB_TOKEN` 时每小时最多读 20 个仓库，有则 200 个；同一仓库 6 小时内不重复读），读到的技能和定时同步产出的 id、结构完全一致。只托管在 ClawHub、SkillHub 上的技能目前装不了，只作为 `listings` 外链返回，也不进 `catalog.db`。
+只有来自 GitHub 仓库的结果会变成可安装的资源：API 用和定时同步相同的 `scanRepo` 读这个仓库，读到的技能和定时同步产出的 id、结构完全一致。只托管在 ClawHub、SkillHub 上的技能目前装不了，只作为 `listings` 外链返回，也不进 `catalog.db`。
+
+- 每次查询最多读 2 个仓库，按相关度挑（`reposByRelevance`）：一个仓库的得分取它名下各条结果的最高分，每个搜索词出现在名称里记 2 分、只出现在描述里记 1 分；同分的按结果的先后。
+- 技能目录超过 40 个的仓库，只读被结果点名的那几个技能（按目录名匹配技能名），其余留给定时同步；点名的技能不在技能目录里时记为 `too large`，结果只作为外链返回。整仓库读到的技能替换这个仓库原先存的；只读点名技能时只替换这几个。
+- 10 秒内没读完的不等：这次查询先按外链返回，仓库读完后技能照常存下，同一搜索词再查一次（或页面再次请求）就作为可安装资源返回。
+- 同一仓库 6 小时内不重复读。没有 `GITHUB_TOKEN` 时每小时最多读 20 个仓库，有则 200 个。GitHub 返回限额错误时，按它给的 `retry-after` 或 `x-ratelimit-reset` 停止读仓库（没有这两个头时停 15 分钟，最多 1 小时），这期间的仓库不记为已读，停止结束后的查询会再读。额度和停止时间记在进程内存里。
+
+每次查询结束写一条 `search supplement` 日志：各站点的结果（`sources`）、条目数（`finds`），以及这次读的每个仓库（`repos`：仓库名、`status`、读到的技能数 `skills`、出错时的 `error`）。`status` 取值：`scanned` 整仓库读完；`named skills` 只读了点名的技能；`no skills` 没有可用的技能；`partial` 有 `SKILL.md` 没下载成功；`too large` 技能太多且点名的技能不在其中；`error` 其他错误（`error` 带错误信息，不含令牌）；`rate limited` GitHub 限额中，没读；`over budget` 超出每小时仓库数，没读；`running` 10 秒内没读完。还在读的仓库读完后另写一条 `search supplement: repo scans ended`，带同样的 `repos`。日志里没有搜索词，只有它的 SHA-256 前 12 位（`key`）。
 
 **持久化，以及和定时发布的衔接**
 
@@ -165,15 +172,15 @@ API 本地的 `catalog.db` 是下载来的只读副本，每次发布都会被�
 
 - 同一个搜索词在查询进行中再次到来，不会再发请求，共用那一次；查完后在上表的时间内直接用记录的结论，「没查到」同样记录。「全部站点失败」只在内存里记 30 秒。
 - 以后的搜索（包括别的搜索词）先看 `found_listings` 和 `found_resources` 里名称或描述包含全部搜索词的条目，够用就不再问站点。
-- `GET /api/discovery/export` 导出 `found_listings` 和 `found_repos`（各最多 5000 条，最近的在前）。这个接口不鉴权：内容只有各站点本来就公开的条目和 GitHub 仓库名。`catalog-sync` 工作流每次运行先读这个地址（`FINDS_URL`，命令行参数 `--finds-url`）：条目按各自的站点写进 `discovery.db` 的 `listings`（已有的不动），仓库以「从没试过」进入扫描队列（`discovered_by = 'search'`），之后和榜单发现的仓库一样被扫描、发布进 `catalog.db`。重复读入不会产生重复行。读不到这个地址只记在报告里（`report.json` 的 `discovery.searchFinds` 和 job summary），不影响这次同步，下次再读。
+- `GET /api/discovery/export` 导出 `found_listings` 和 `found_repos`（各最多 5000 条，最近的在前）；`repos` 每条带 API 最近一次读它的时间和结果（`lastAttemptAt`、`lastStatus`，取值同上面的日志，没读过时为 `null`）。这个接口不鉴权：内容只有各站点本来就公开的条目和 GitHub 仓库名。`catalog-sync` 工作流每次运行先读这个地址（`FINDS_URL`，命令行参数 `--finds-url`）：条目按各自的站点写进 `discovery.db` 的 `listings`（已有的不动），仓库以「从没试过」进入扫描队列（`discovered_by = 'search'`），之后和榜单发现的仓库一样被扫描、发布进 `catalog.db`。重复读入不会产生重复行。读不到这个地址只记在报告里（`report.json` 的 `discovery.searchFinds` 和 job summary），不影响这次同步，下次再读。
 
 | 变量 | 用途 |
 |---|---|
-| `SEARCH_FALLBACK_SOURCES` | 补搜问哪些站点，逗号分隔。不设、为空或 `none` 时补搜关闭（测试环境现状）；打开时设 `clawhub,skillhub,skillsmp` |
+| `SEARCH_FALLBACK_SOURCES` | 补搜问哪些站点，逗号分隔。不设、为空或 `none` 时补搜关闭；打开时设 `clawhub,skillhub,skillsmp` |
 | `SEARCH_FALLBACK_MIN_RESULTS` | 本地结果少于多少条算「太少」，默认 3 |
 | `SEARCH_FALLBACK_TIMEOUT_MS` | 单个站点的超时，默认 4000 |
 | `SKILLSMP_API_KEY` | 可选，SkillsMP 的 API key |
-| `GITHUB_TOKEN` | 可选，API 读补搜到的仓库用。测试环境的 API Pod 目前没有配；不配时每小时最多读 20 个仓库，打开补搜时应一并配上 |
+| `GITHUB_TOKEN` | 可选，API 读补搜到的仓库用，只需读公开仓库的权限（fine-grained 令牌选 Public repositories、不勾任何权限即可）。测试环境的 API Pod 目前没有配；不配时每小时最多读 20 个仓库，而且和同一出口地址的其他匿名请求共用 GitHub 每小时 60 次的限额，打开补搜时应一并配上 |
 
 ## 登录
 

@@ -13,6 +13,10 @@ interface LoginModalProps {
   providers?: LoginProvider[]
   /** Shown in place of the default line, e.g. after a sign-in that did not finish. */
   error?: string
+  /** Shown in place of the default line: why this action needs an account. */
+  body?: string
+  /** The page to return to after signing in (see lib/safe-next.ts); the dashboard when absent. */
+  next?: string
 }
 
 function GithubMark() {
@@ -35,8 +39,9 @@ function GoogleMark() {
   )
 }
 
-export function LoginModal({ open, onOpenChange, providers = ['github'], error }: LoginModalProps) {
+export function LoginModal({ open, onOpenChange, providers = ['github'], error, body, next }: LoginModalProps) {
   const t = useTranslations('site.login')
+  const href = (provider: string) => `/auth/login?provider=${provider}${next ? `&next=${encodeURIComponent(next)}` : ''}`
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -57,17 +62,17 @@ export function LoginModal({ open, onOpenChange, providers = ['github'], error }
             <BigLogo />
             <Dialog.Title className="text-[21px] font-extrabold leading-[1.35]">{t('title')}</Dialog.Title>
             <Dialog.Description className={error ? 'text-[15px] text-warn' : 'text-[15px] text-fg-2'} role={error ? 'alert' : undefined}>
-              {error ?? t('body')}
+              {error ?? body ?? t('body')}
             </Dialog.Description>
             <div className="mb-1 mt-2.5 grid w-full gap-2.5">
               {providers.includes('github') && (
-                <a href="/auth/login?provider=github" className="btn btn-primary w-full">
+                <a href={href('github')} className="btn btn-primary w-full">
                   <GithubMark />
                   {t('github')}
                 </a>
               )}
               {providers.includes('google') && (
-                <a href="/auth/login?provider=google" className="btn min-h-11 w-full">
+                <a href={href('google')} className="btn min-h-11 w-full">
                   <GoogleMark />
                   {t('google')}
                 </a>

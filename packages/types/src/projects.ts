@@ -104,6 +104,14 @@ export interface ProjectDetail extends Project {
   env: ProjectEnvVar[]
 }
 
+export interface ProjectSummary extends Project {
+  /** Skills and MCP servers the agents use there, installed by Agent Store or not; null when the directory is gone or unreadable. */
+  skills: number | null
+  mcps: number | null
+  /** What Agent Store installed there, from its own records (also known when the directory is gone). */
+  installed: Array<{ kind: 'skill' | 'mcp'; slug: string; resourceId?: string; name: string }>
+}
+
 export interface ProjectInstallOptions {
   /** Defaults to every agent the item supports. */
   targets?: ToolTarget[]

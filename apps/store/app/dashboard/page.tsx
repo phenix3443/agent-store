@@ -2,14 +2,18 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { getLocale, getTranslations } from 'next-intl/server'
-import { Check, CreditCard, User } from 'lucide-react'
+import { Check, CreditCard, Heart, User } from 'lucide-react'
 import { StoreClient } from '@as/sdk'
-import type { MySubscription, Plan } from '@as/types'
+import type { FavoriteEntry, MySubscription, Plan } from '@as/types'
+import { apiToken, formatDate, loadSubscription, statusLine } from '@/lib/subscription'
 import { auth } from '@/lib/auth/server'
 import { enabledLoginProviders } from '@/lib/auth/providers'
 import { LoginGate } from '@/components/LoginGate'
 import { BillingPortalButton, SubscriptionActions } from '@/components/SubscriptionActions'
 import { SubscriptionSkeleton } from '@/components/SubscriptionSkeleton'
+import { KindTile } from '@/components/KindTile'
+import { RemoveFavoriteButton } from '@/components/Favorites'
+import { resourceHref } from '@/lib/resource'
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:3001'
 
@@ -18,22 +22,13 @@ const PROVIDER_LABEL: Record<string, string> = { github: 'GitHub', google: 'Goog
 const TABS = [
   { id: 'account', icon: User },
   { id: 'subscription', icon: CreditCard },
+  { id: 'favorites', icon: Heart },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('site.dashboard')
   return { title: t('metaTitle'), robots: { index: false } }
-}
-
-// Authenticated with a Better Auth JWT minted in-process: fetching our own
-// public URL would leave the pod and need the tailnet.
-async function apiToken(h: Headers): Promise<string | null> {
-  try {
-    return (await auth().api.getToken({ headers: h })).token
-  } catch {
-    return null
-  }
 }
 
 async function loadPlan(token: string | null): Promise<Plan | null> {
@@ -46,23 +41,73 @@ async function loadPlan(token: string | null): Promise<Plan | null> {
   }
 }
 
-/** `undefined` when the subscription could not be read. */
-async function loadSubscription(token: string | null): Promise<MySubscription | null | undefined> {
-  if (!token) return undefined
+async function loadFavorites(token: string | null): Promise<FavoriteEntry[] | null> {
+  if (!token) return null
   try {
-    const result = await new StoreClient(API_URL).getMySubscription(token)
-    return result.data ? result.data.subscription : undefined
+    const result = await new StoreClient(API_URL).listFavorites(token)
+    return result.data?.favorites ?? null
   } catch {
-    return undefined
+    return null
   }
 }
 
-/** Waffo sends the period end as a date or a timestamp; shown as the UTC calendar date. */
-function formatDate(value: string | null, locale: string): string | null {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-CN', { dateStyle: 'long', timeZone: 'UTC' }).format(date)
+type T = (key: string, values?: Record<string, string | number>) => string
+
+function FavoritesCard({ favorites, t, ts }: { favorites: FavoriteEntry[] | null; t: T; ts: T }) {
+  if (!favorites) {
+    return (
+      <section className="card" role="status">
+        <h2 className="dash-h">{t('tab.favorites')}</h2>
+        <p className="text-[15px] text-fg-2">{t('favError')}</p>
+      </section>
+    )
+  }
+  return (
+    <section className="card">
+      <h2 className="dash-h">
+        {t('tab.favorites')}
+        <span className="label font-normal">{t('favCount', { count: favorites.length })}</span>
+      </h2>
+      {favorites.length === 0 ? (
+        <div className="grid justify-items-center gap-2 px-4 py-10 text-center">
+          <p className="text-[17px] font-bold">{t('favEmptyTitle')}</p>
+          <p className="text-[15px] text-fg-2">{t('favEmptyBody')}</p>
+          <Link href="/store" className="btn btn-primary btn-sm mt-3">
+            {t('favEmptyAction')}
+          </Link>
+        </div>
+      ) : (
+        <ul className="fav-list">
+          {favorites.map(({ id, resource: r }) => (
+            <li key={id} data-kind={r?.kind}>
+              {r ? <KindTile kind={r.kind} /> : <span aria-hidden className="kind-tile opacity-40" />}
+              <div className="min-w-0">
+                <p className="truncate font-bold">{r?.name ?? id}</p>
+                <p className="flex min-w-0 items-center gap-2 text-[12.5px] text-fg-3">
+                  {r ? (
+                    <>
+                      <span className="kind">{ts(`category.${r.kind}`)}</span>
+                      <span className="truncate">{r.author?.name ?? ts('list.unknownAuthor')}</span>
+                    </>
+                  ) : (
+                    <span>{t('favGone')}</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                {r && (
+                  <Link href={resourceHref(r)} className="btn" aria-label={t('favViewLabel', { name: r.name })}>
+                    {t('favView')}
+                  </Link>
+                )}
+                <RemoveFavoriteButton id={id} name={r?.name ?? id} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
 }
 
 async function loadSignInMethods(h: Headers): Promise<string[]> {
@@ -110,12 +155,14 @@ export default async function DashboardPage({
   }
 
   const { tab: rawTab, state } = await searchParams
-  const tab: Tab = rawTab === 'subscription' ? 'subscription' : 'account'
+  const tab: Tab = TABS.find((x) => x.id === rawTab)?.id ?? 'account'
   const token = await apiToken(h)
-  const [plan, methods, subscription] = await Promise.all([
+  const [plan, methods, subscription, favorites, ts] = await Promise.all([
     loadPlan(token),
     loadSignInMethods(h),
     tab === 'subscription' ? loadSubscription(token) : null,
+    tab === 'favorites' ? loadFavorites(token) : null,
+    getTranslations('store'),
   ])
   const tp = await getTranslations('site.pricing')
   const locale = await getLocale()
@@ -142,7 +189,9 @@ export default async function DashboardPage({
           </nav>
 
           <div className="grid min-w-0 content-start gap-4">
-            {tab === 'account' ? (
+            {tab === 'favorites' ? (
+              <FavoritesCard favorites={favorites} t={t} ts={ts} />
+            ) : tab === 'account' ? (
               <>
                 <section className="card">
                   <h2 className="dash-h">{t('tab.account')}</h2>
@@ -206,15 +255,6 @@ export default async function DashboardPage({
 }
 
 type Translate = { (key: string, values?: Record<string, string>): string; raw(key: string): unknown }
-
-function statusLine(sub: MySubscription, endDate: string | null, t: Translate): string {
-  const dated = (key: string) => (endDate ? t(`line.${key}`, { date: endDate }) : t(`line.${key}Undated`))
-  if (sub.status === 'canceling') return dated('canceling')
-  if (sub.status === 'canceled') return dated('canceled')
-  if (sub.status === 'past_due') return t('line.pastDue')
-  if (sub.period === 'lifetime') return t('line.lifetime')
-  return dated('renews')
-}
 
 function SubscriptionPanel({
   subscription: sub,
