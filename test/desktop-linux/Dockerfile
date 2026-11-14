@@ -39,7 +39,7 @@ RUN cd apps/cli-gui && pnpm bundle:appimage \
 # A disposable home: the client writes skills and MCP config under it.
 # The deb is installed at run time by run.sh; appimage.sh runs the AppImage.
 RUN useradd -m -u 1001 tester && chmod -R a+rX /work \
-  && echo 'tester ALL=(root) NOPASSWD: /usr/bin/dpkg' > /etc/sudoers.d/tester
+  && echo 'tester ALL=(root) NOPASSWD: /usr/bin/dpkg, /work/test/desktop-linux/wrap-sidecar.sh' > /etc/sudoers.d/tester
 USER tester
 ENV HOME=/home/tester
 ENTRYPOINT ["bash", "/work/test/desktop-linux/run.sh"]

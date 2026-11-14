@@ -68,12 +68,30 @@ function errorFields(err: unknown): Record<string, string> {
   return fields
 }
 
+export async function readFirstLine(input: AsyncIterable<Uint8Array | string> = process.stdin): Promise<string> {
+  const decoder = new TextDecoder()
+  let text = ''
+  for await (const chunk of input) {
+    text += typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true })
+    const end = text.indexOf('\n')
+    if (end >= 0) return text.slice(0, end).replace(/\r$/, '')
+  }
+  return (text + decoder.decode()).replace(/\r$/, '')
+}
+
+/**
+ * `aas __rpc <method> -` reads the JSON argument array from the first line of stdin; the desktop client
+ * always calls it this way, so secret values never reach argv. The client cannot close the sidecar's
+ * stdin, so the line must end in a newline rather than EOF. `aas __rpc <method> '<json>'` still works for
+ * scripts, only for calls without secrets.
+ */
 export async function runRpc(
   engine: Engine,
   args: string[],
-  out: (s: string) => void = console.log
+  out: (s: string) => void = console.log,
+  readStdin: () => Promise<string> = () => readFirstLine()
 ): Promise<number> {
-  const [method, jsonArgs] = args
+  const [method, argvArgs] = args
   const handler = method ? RPC_METHODS[method] : undefined
 
   if (!handler) {
@@ -83,6 +101,7 @@ export async function runRpc(
 
   let parsedArgs: unknown[]
   try {
+    const jsonArgs = argvArgs === '-' ? await readStdin() : argvArgs
     parsedArgs = jsonArgs ? (JSON.parse(jsonArgs) as unknown[]) : []
   } catch {
     out(JSON.stringify({ ok: false, error: 'Invalid JSON arguments' }))
