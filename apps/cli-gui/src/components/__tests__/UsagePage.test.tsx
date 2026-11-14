@@ -271,12 +271,16 @@ test('a start that could not bind is followed in the activity log once the relay
   const { useTerminalLog } = await import('../../state/TerminalLog')
   const { useAppState: useState2 } = await import('../../state/AppState')
   let listening = false
+  let started = false
   const busy = { running: true, pid: 42, listeners: [{ id: 'default', name: '默认', port: 18780, listening: false, code: 'EADDRINUSE', error: 'in use' }], routedAgents: {} }
   mockRpc({
     running: false,
     relay: {
-      startRelay: () => busy,
-      getRelayStatus: () => (listening ? { running: true, pid: 42, listeners: LISTENING, routedAgents: {} } : { running: false, routedAgents: {} }),
+      startRelay: () => {
+        started = true
+        return busy
+      },
+      getRelayStatus: () => (listening ? { running: true, pid: 42, listeners: LISTENING, routedAgents: {} } : started ? busy : { running: false, routedAgents: {} }),
     },
   })
   function Log() {

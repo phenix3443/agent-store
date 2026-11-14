@@ -6,7 +6,9 @@ import { buildMcpServerSpec, McpConfigMissingError } from '../config/mcp'
 import { readMcpTargets } from '../config/mcp-targets'
 import { syncMcpToClaude } from '../config/claude'
 import { syncMcpToCodex } from '../config/codex'
-import { CodexMcpUnsupportedError, toCodexEntry } from '../config/codex-mcp'
+import { CodexMcpUnsupportedError, findCodexCli, toCodexEntry } from '../config/codex-mcp'
+import { findClaudeCli } from '../config/claude-mcp'
+import { cliFallbackNote } from '../config/cli-runner'
 import { ItemDirAdapter, TARGETS } from './item-dir'
 import type { AdapterContext } from './types'
 
@@ -66,4 +68,11 @@ export class McpAdapter extends ItemDirAdapter {
     if (target === 'claude') await syncMcpToClaude(slug, aasHome, claudeConfigDir, claudeJsonPath, action, options)
     else await syncMcpToCodex(slug, aasHome, codexConfigDir, action, options)
   }
+}
+
+/** Set when an MCP enable for `target` edited the tool's config file because its CLI is a shim that can't be run safely. */
+export function mcpCliFallbackNote(target: ToolTarget, paths: { claudeJsonPath: string; codexConfigDir: string }): string | undefined {
+  return target === 'claude'
+    ? cliFallbackNote('Claude Code', paths.claudeJsonPath, findClaudeCli())
+    : cliFallbackNote('Codex', join(paths.codexConfigDir, 'config.toml'), findCodexCli())
 }

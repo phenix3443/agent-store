@@ -352,6 +352,8 @@ export interface InstallOutcome extends InstallResult {
   enabled: ToolTarget[]
   /** Installed but left disabled for these tools, with what to do next. */
   notEnabled: Array<{ target: ToolTarget; reason: EnableBlocker; message: string }>
+  /** How a tool's config was written when it wasn't the usual way (its config file edited because its CLI can't be run safely). */
+  notes?: string[]
 }
 
 export interface Engine {

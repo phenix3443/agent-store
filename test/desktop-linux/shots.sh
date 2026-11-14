@@ -2,8 +2,9 @@
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
 # catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
-# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166) and the relay
-# controls, connection test, provider order and usage breakdown (#192). Each step is driven by an
+# install dialog and libraries (#164), the welcome, usage and settings pages (#165), projects (#166), the
+# loopback endpoint the web store asks (#181) and the relay controls, connection test, provider order and
+# usage breakdown (#192). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -535,6 +536,43 @@ cli doctor
   echo "\$ cat ~/.codex/config.toml"
   cat "$HOME/.codex/config.toml"
 } >>"$OUT/cli.txt" 2>&1
+
+# 14. The loopback endpoint the web store asks (#181): started by the app, answering only the
+#     store's origins and the loopback host, and gone with the app. find-skills is installed
+#     by step 2; the other id is not.
+LOCAL_API=127.0.0.1:18781
+STORE_ORIGIN=https://agent-store-test.panghuli.tech
+MISSING_ID=github:nobody/nothing/none
+# Prints the status line, the CORS header (or "-") and the body, one per line.
+ask_local() {
+  local origin=$1 host=$2 hdrs body
+  hdrs=$(mktemp); body=$(mktemp)
+  local args=(-s -o "$body" -D "$hdrs" --max-time 5 -H "Host: $host")
+  [ -n "$origin" ] && args+=(-H "Origin: $origin")
+  curl "${args[@]}" "http://$LOCAL_API/v1/installed?ids=$(enc "$SKILL_ID,$MISSING_ID")" >/dev/null 2>&1
+  head -1 "$hdrs" | awk '{print $2}'
+  grep -i '^access-control-allow-origin:' "$hdrs" | cut -d' ' -f2- | tr -d '\r' | grep . || echo -
+  cat "$body"; echo
+  rm -f "$hdrs" "$body"
+}
+listening() { python3 -c 'import socket,sys; s=socket.socket(); s.settimeout(2); sys.exit(0 if s.connect_ex(("127.0.0.1", 18781)) == 0 else 1)'; }
+"$APP" >"$OUT/app-local-api.log" 2>&1 &
+sleep "$SETTLE"
+check "the running app listens on $LOCAL_API" 'listening'
+check "the app started the sidecar as __local-api with the store origin" 'grep -qx "__local-api $STORE_ORIGIN" "$ARGV_LOG"'
+OK_ANSWER=$(ask_local "$STORE_ORIGIN" "$LOCAL_API")
+echo "$OK_ANSWER" | sed 's/^/  store origin: /' | tee -a "$OUT/result.txt"
+check "the store origin gets 200, its own origin back, and only the installed id" '[ "$(echo "$OK_ANSWER" | sed -n 1p)" = 200 ] && [ "$(echo "$OK_ANSWER" | sed -n 2p)" = "$STORE_ORIGIN" ] && [ "$(echo "$OK_ANSWER" | sed -n 3p)" = "{\"installed\":[\"$SKILL_ID\"]}" ]'
+for case in "https://evil.example|$LOCAL_API|another origin" "|$LOCAL_API|no origin" "$STORE_ORIGIN|evil.example:18781|another host"; do
+  IFS='|' read -r o h what <<<"$case"
+  ANSWER=$(ask_local "$o" "$h")
+  echo "$ANSWER" | sed "s/^/  $what: /" | tee -a "$OUT/result.txt"
+  check "$what gets 403 without a CORS header" '[ "$(echo "$ANSWER" | sed -n 1p)" = 403 ] && [ "$(echo "$ANSWER" | sed -n 2p)" = - ]'
+done
+stop_app
+sleep 3
+check "after the app quits the port is closed" '! listening'
+check "no aas __local-api process is left" '! pgrep -f -- "__local-api" >/dev/null'
 
 check "the desktop client started the sidecar with its arguments on stdin" 'grep -qE "^__rpc [A-Za-z]+ -$" "$ARGV_LOG"'
 check "every RPC call kept its arguments off the command line" '! grep "^__rpc" "$ARGV_LOG" | grep -qvE "^__rpc [A-Za-z]+ -$"'

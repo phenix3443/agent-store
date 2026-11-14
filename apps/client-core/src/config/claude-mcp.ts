@@ -12,7 +12,7 @@
 import { mkdir, mkdtemp, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
-import { describeFailure, findBinary, runCli } from './cli-runner'
+import { describeFailure, findCli, runCli } from './cli-runner'
 import { toClaudeEntry, type McpServerConfig } from './mcp'
 import { mcpEntryDiff } from './mcp-compare'
 import { disableMcpEntry, enableMcpEntry, syncMcpEntry, type McpEntryStore } from './mcp-ownership'
@@ -51,10 +51,17 @@ function cliEnv(at: ClaudeLocation): NodeJS.ProcessEnv {
   return env
 }
 
-/** The installed `claude` CLI, or null. `AS_CLAUDE_BIN` overrides the lookup ('' = none). */
-export function resolveClaudeCli(env: NodeJS.ProcessEnv = process.env): ClaudeMcpCli | null {
-  const bin = findBinary('claude', 'AS_CLAUDE_BIN', env)
-  if (!bin) return null
+export const findClaudeCli = (env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform) =>
+  findCli('claude', 'AS_CLAUDE_BIN', env, platform)
+
+/**
+ * The installed `claude` CLI, or null: not installed, or (Windows) only a shim
+ * that can't be run without cmd.exe. `AS_CLAUDE_BIN` overrides the lookup ('' = none).
+ */
+export function resolveClaudeCli(env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): ClaudeMcpCli | null {
+  const found = findClaudeCli(env, platform)
+  if (found.kind !== 'found') return null
+  const bin = found.cli
   return {
     async version() {
       const r = await runCli(bin, ['--version'], cliEnv({ claudeConfigDir: '', claudeJsonPath: '' }))
