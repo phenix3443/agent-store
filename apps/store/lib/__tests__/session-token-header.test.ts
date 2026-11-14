@@ -10,7 +10,10 @@ test('drops set-auth-token and its expose entry, keeps cookies and the body', as
   const res = withoutSessionTokenHeader(new Response('{"ok":true}', { status: 200, headers }))
   expect(res.headers.has('set-auth-token')).toBe(false)
   expect(res.headers.get('access-control-expose-headers')).toBe('set-auth-jwt')
-  expect(res.headers.getSetCookie()).toEqual(['a=1; Path=/', 'b=2; Path=/'])
+  // happy-dom's Headers joins Set-Cookie values; Node's keeps them apart. Either way both survive.
+  const cookies = res.headers.get('set-cookie') ?? ''
+  expect(cookies).toContain('a=1; Path=/')
+  expect(cookies).toContain('b=2; Path=/')
   expect(await res.text()).toBe('{"ok":true}')
 })
 
