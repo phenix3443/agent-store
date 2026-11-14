@@ -7,6 +7,8 @@ import { Analytics } from '@vercel/analytics/next'
 import { Header } from '@/components/Header'
 import { SiteFooter } from '@/components/SiteFooter'
 import { InstallNoticeProvider } from '@/components/InstallNotice'
+import { FavoritesProvider } from '@/components/Favorites'
+import { favoriteIds, saveFavorite } from '@/app/favorites/actions'
 import { SkipLink } from '@/components/SkipLink'
 import { getCurrentUser } from '@/lib/auth'
 import { enabledLoginProviders } from '@/lib/auth/providers'
@@ -72,20 +74,22 @@ export default async function RootLayout({
       <body className="min-h-screen bg-bg font-sans text-fg antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <InstallNoticeProvider>
-            <SkipLink />
-            <div className="relative isolate flex min-h-screen flex-col">
-              <div aria-hidden className="aurora -z-10 !bottom-auto h-[760px]">
-                <i />
-                <i />
-                <i />
+            <FavoritesProvider signedIn={user != null} actions={{ list: favoriteIds, save: saveFavorite }}>
+              <SkipLink />
+              <div className="relative isolate flex min-h-screen flex-col">
+                <div aria-hidden className="aurora -z-10 !bottom-auto h-[760px]">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <Header user={user} loginProviders={enabledLoginProviders()} />
+                <main id="main" tabIndex={-1} className="flex-1 outline-none">
+                  {children}
+                </main>
+                <SiteFooter />
               </div>
-              <Header user={user} loginProviders={enabledLoginProviders()} />
-              <main id="main" tabIndex={-1} className="flex-1 outline-none">
-                {children}
-              </main>
-              <SiteFooter />
-            </div>
-            {drawer}
+              {drawer}
+            </FavoritesProvider>
           </InstallNoticeProvider>
         </NextIntlClientProvider>
         <SpeedInsights />

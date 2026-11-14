@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { formatCount, installCommand, leadSentence, resourceHref } from '@/lib/resource'
+import { FavoriteButton } from './Favorites'
 import { InstallButton } from './InstallButton'
 import { KindTile } from './KindTile'
 import { VerifiedMark } from './VerifiedLabel'
@@ -79,6 +80,7 @@ function Row({ resource, showCategory, via }: { resource: ResourceSummary; showC
       </span>
       <div className="store-row-act">
         <InstallButton resource={resource} command={installCommand(resource)} />
+        <FavoriteButton id={resource.id} name={resource.name} />
       </div>
     </li>
   )
@@ -130,6 +132,7 @@ export function ResourceRowsSkeleton({ rows = 6 }: { rows?: number }) {
           </span>
           <span className="store-row-act">
             <span className="sk h-9 w-[68px] rounded-control" />
+            <span className="sk h-9 w-9 rounded-control" />
           </span>
         </div>
       ))}

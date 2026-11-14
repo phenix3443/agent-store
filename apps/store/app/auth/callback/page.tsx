@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { authClient } from '@/lib/auth/client'
 import { AuthStatus } from '@/components/AuthStatus'
+import { safeNext } from '@/lib/safe-next'
 
 // OAuth landing page. Better Auth has already set the session cookie on its
 // /api/auth/callback/* hop before redirecting here. We then do a FULL
@@ -16,7 +17,7 @@ export default function AuthCallback() {
       .getSession()
       .catch(() => undefined)
       .finally(() => {
-        window.location.href = '/dashboard'
+        window.location.href = safeNext(new URLSearchParams(window.location.search).get('next')) ?? '/dashboard'
       })
   }, [])
 

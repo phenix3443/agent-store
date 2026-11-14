@@ -9,6 +9,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Search, X } from 'lucide-react'
 import type { CurrentUser } from '@/lib/auth'
 import type { LoginProvider } from '@/lib/auth/providers'
+import { onLoginRequest, type LoginRequest } from '@/lib/login-request'
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@/i18n/config'
 import { LoginModal } from './LoginModal'
 import { SearchInput } from './SearchInput'
@@ -79,6 +80,9 @@ function AccountMenu({ user }: { user: CurrentUser }) {
           </div>
           <DropdownMenu.Item asChild className="menu-item">
             <Link href="/dashboard">{t('dashboard')}</Link>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item asChild className="menu-item">
+            <Link href="/dashboard?tab=favorites">{t('favorites')}</Link>
           </DropdownMenu.Item>
           <DropdownMenu.Separator className="menu-separator" />
           <DropdownMenu.Item asChild className="menu-item text-bad">
@@ -154,6 +158,9 @@ function MobileMenu({
                     {user.username || user.email}
                   </small>
                 </Link>
+                <Link href="/dashboard?tab=favorites" onClick={close} className={row}>
+                  {t('favorites')}
+                </Link>
                 <a href="/auth/logout" className={`${row} text-bad`}>
                   {t('logout')}
                 </a>
@@ -202,12 +209,21 @@ export function Header({ user, loginProviders }: HeaderProps) {
   const t = useTranslations('store.nav')
   const [loginOpen, setLoginOpen] = useState(false)
   const [loginFailed, setLoginFailed] = useState(false)
+  const [loginRequest, setLoginRequest] = useState<LoginRequest>({})
   const [menuOpen, setMenuOpen] = useState(false)
   const tl = useTranslations('site.login')
   const openFailedLogin = useCallback(() => {
     setLoginFailed(true)
     setLoginOpen(true)
   }, [])
+  useEffect(
+    () =>
+      onLoginRequest((request) => {
+        setLoginRequest(request)
+        setLoginOpen(true)
+      }),
+    []
+  )
 
   return (
     <>
@@ -281,10 +297,14 @@ export function Header({ user, loginProviders }: HeaderProps) {
         open={loginOpen}
         onOpenChange={(open) => {
           setLoginOpen(open)
-          if (!open) setLoginFailed(false)
+          if (open) return
+          setLoginFailed(false)
+          setLoginRequest({})
         }}
         providers={loginProviders}
         error={loginFailed ? tl('failed') : undefined}
+        body={loginRequest.body}
+        next={loginRequest.next}
       />
     </>
   )
