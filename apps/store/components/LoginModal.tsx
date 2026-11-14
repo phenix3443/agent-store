@@ -41,7 +41,15 @@ export function LoginModal({ open, onOpenChange, providers = ['github'], error }
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="dlg-scrim" />
-        <Dialog.Content className="dlg">
+        <Dialog.Content
+          className="dlg"
+          onOpenAutoFocus={(e) => {
+            const first = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('a.btn')
+            if (!first) return
+            e.preventDefault()
+            first.focus()
+          }}
+        >
           <Dialog.Close aria-label={t('close')} className="dlg-x">
             <X size={18} aria-hidden />
           </Dialog.Close>

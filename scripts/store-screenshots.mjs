@@ -24,7 +24,8 @@ const PAGES = [
   { name: 'docs-install', path: '/docs/install' },
   { name: 'privacy', path: '/privacy' },
   { name: 'terms', path: '/terms' },
-  { name: 'notfound', path: '/no-such-page', status: 404 },
+  // Never reaches networkidle on the runner (page.goto timed out at 60s), so it waits for its heading instead.
+  { name: 'notfound', path: '/no-such-page', status: 404, waitUntil: 'load', wait: 'h1' },
   // Signed out, the dashboard opens the log-in dialog over its gate. Viewport-only shots.
   { name: 'login', path: '/dashboard', wait: '[role="dialog"]', viewport: true },
   { name: 'login-failed', path: '/?error=auth_failed', wait: '[role="alert"]', viewport: true },
@@ -73,7 +74,7 @@ for (const locale of LOCALES) {
     for (const p of PAGES) {
       const file = `${out}/${p.name}-${width}-${locale}.png`
       try {
-        const res = await page.goto(base + p.path, { waitUntil: 'networkidle', timeout: 60_000 })
+        const res = await page.goto(base + p.path, { waitUntil: p.waitUntil ?? 'networkidle', timeout: 60_000 })
         if (!res || (p.status ? res.status() !== p.status : res.status() >= 400)) throw new Error(`HTTP ${res?.status()}`)
         if (p.wait) await page.locator(p.wait).first().waitFor({ timeout: 30_000 })
         if (p.click) {
