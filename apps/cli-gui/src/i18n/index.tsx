@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { messages, type Locale, LOCALES } from './messages'
 
 export type { Locale }
@@ -74,6 +74,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     (key: string) => resolve(messages[locale], key) ?? resolve(messages.zh, key) ?? key,
     [locale]
   )
+
+  useEffect(() => {
+    document.documentElement.lang = locale === 'zh' ? 'zh-CN' : 'en'
+  }, [locale])
 
   return <I18nContext.Provider value={{ locale, setLocale, t }}>{children}</I18nContext.Provider>
 }

@@ -9,7 +9,7 @@ docker run --rm --shm-size 1g -v "$PWD/test/desktop-linux/out:/out" as-desktop-l
 
 `out/` gets a screenshot per step and `result.txt`. The run fails if the confirmed install did not land in the skill library `~/.agent-store/skills`.
 
-`shots.sh` runs in the same image (the `desktop-shots` workflow): the move from `~/.agents`, a skill with a link per tool, search, MCP from npm, a bearer remote and an SSE remote, a provider and the installed list, each screenshotted and checked on disk.
+`shots.sh` runs in the same image (the `desktop-shots` workflow): the move from `~/.agents`, a skill with a link per tool, search, MCP from npm, a bearer remote and an SSE remote, a provider and the installed list, each screenshotted and checked on disk. It ends with the window shell (`14`–`19`): the sidebar, the command palette (Ctrl+K), the usage and settings pages, the shortcut list and a 960px-wide window with the icon-only sidebar.
 
 ```sh
 docker run --rm --shm-size 1g -v "$PWD/test/desktop-linux/out:/out" --entrypoint bash as-desktop-linux /work/test/desktop-linux/shots.sh

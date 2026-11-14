@@ -1,65 +1,24 @@
-import type { ReactNode } from 'react'
-import { ArrowLeftRight, Sparkles, Boxes } from 'lucide-react'
+import { Glyph } from './ui/icons'
 
 type Category = 'provider' | 'skill' | 'mcp'
-type Size = 'sm' | 'md' | 'xl'
+type Size = 'sm' | 'md' | 'lg' | 'xl'
 
-const CATEGORY_CONFIG: Record<Category, { icon: typeof ArrowLeftRight; bgClass: string; textClass: string }> = {
-  provider: { icon: ArrowLeftRight, bgClass: 'bg-store-provider-soft', textClass: 'text-store-provider' },
-  skill: { icon: Sparkles, bgClass: 'bg-store-green-soft', textClass: 'text-store-green' },
-  mcp: { icon: Boxes, bgClass: 'bg-store-amber-soft', textClass: 'text-store-amber' },
+const SIZE_CONFIG: Record<Size, { box: string; icon: string }> = {
+  sm: { box: 'h-7 w-7 rounded-lg', icon: 'h-3.5 w-3.5' },
+  md: { box: 'h-9 w-9 rounded-ctl', icon: 'h-[18px] w-[18px]' },
+  lg: { box: 'h-12 w-12 rounded-[13px] shadow-[0_6px_22px_rgb(var(--kind-rgb)/0.18)]', icon: 'h-6 w-6' },
+  xl: { box: 'h-[84px] w-[84px] rounded-[20px] shadow-[0_6px_22px_rgb(var(--kind-rgb)/0.18)]', icon: 'h-10 w-10' },
 }
 
-const SIZE_CONFIG: Record<Size, { boxClass: string; iconSize: number }> = {
-  sm: { boxClass: 'h-7 w-7 rounded-lg', iconSize: 14 },
-  md: { boxClass: 'h-9 w-9 rounded-lg', iconSize: 16 },
-  xl: { boxClass: 'h-[84px] w-[84px] rounded-[20px]', iconSize: 40 },
-}
-
-// Real glyph paths ported from the mockup's `icon()` method (same paths used by IconRail),
-// used for the 84x84 detail-header icon where a literal shape match matters more than for
-// the small list-row badges (which reuse the lucide substitutes shipped in an earlier task).
-function ProviderGlyph({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 8.5h13l-3.2-3.2" />
-      <path d="M20 15.5H7l3.2 3.2" />
-    </svg>
-  )
-}
-
-function SkillGlyph({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2.6c.55 4.9 2.9 7.25 7.8 7.8-4.9.55-7.25 2.9-7.8 7.8-.55-4.9-2.9-7.25-7.8-7.8 4.9-.55 7.25-2.9 7.8-7.8Z" />
-    </svg>
-  )
-}
-
-function McpGlyph({ size }: { size: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4.5" width="18" height="6.4" rx="2" />
-      <rect x="3" y="13.1" width="18" height="6.4" rx="2" />
-      <path d="M6.6 7.7h.02" />
-      <path d="M6.6 16.3h.02" />
-    </svg>
-  )
-}
-
-const GLYPHS: Record<Category, (size: number) => ReactNode> = {
-  provider: (size) => <ProviderGlyph size={size} />,
-  skill: (size) => <SkillGlyph size={size} />,
-  mcp: (size) => <McpGlyph size={size} />,
-}
-
+/** Category tile: the category color is its only meaning. */
 export function CategoryIcon({ category, size = 'md' }: { category: Category; size?: Size }) {
-  const { icon: Icon, bgClass, textClass } = CATEGORY_CONFIG[category]
-  const { boxClass, iconSize } = SIZE_CONFIG[size]
-
+  const { box, icon } = SIZE_CONFIG[size]
   return (
-    <div className={`flex ${boxClass} shrink-0 items-center justify-center ${bgClass} ${textClass}`}>
-      {size === 'xl' ? GLYPHS[category](iconSize) : <Icon size={iconSize} />}
+    <div
+      data-kind={category}
+      className={`flex ${box} shrink-0 items-center justify-center border border-kind/35 bg-gradient-to-b from-kind/25 to-kind/5 text-kind`}
+    >
+      <Glyph name={category} className={icon} />
     </div>
   )
 }

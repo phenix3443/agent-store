@@ -2,68 +2,168 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Values and their limits are documented in apps/cli-gui/DESIGN.md; change both together. */
 :root {
-  --wall: radial-gradient(130% 120% at 26% -12%, #2c2647 0%, #16161c 52%, #0b0b0f 100%);
-  --win: #17171b;
-  --sidebar: #1e1e24;
-  --content: #141417;
-  --chrome: #1e1e24;
-  --panel: #23232a;
-  --panel-2: #2b2b32;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.15);
-  --text: #edeef1;
-  --text-2: #9a9aa6;
-  --text-3: #64646e;
-  --accent: #7c82ff;
-  --accent-soft: rgba(124, 130, 255, 0.16);
-  --green: #3ad29f;
-  --green-soft: rgba(58, 210, 159, 0.16);
-  --amber: #f0b34a;
-  --amber-soft: rgba(240, 179, 74, 0.16);
-  --red: #f3675f;
-  --red-soft: rgba(243, 103, 95, 0.14);
-  --provider: #58a6f0;
-  --provider-soft: rgba(88, 166, 240, 0.16);
-  --purple: #a874e0;
-  --purple-soft: rgba(168, 116, 224, 0.12);
-  --term-bg: #0c0c10;
-  --code-bg: rgba(255, 255, 255, 0.055);
+  --bg: #0b0a12;
+  --bg-2: #100e1a;
+  --bg-3: #151322;
+  --edge: #221f33;
+  --panel: rgba(255, 255, 255, 0.04);
+  --panel-2: rgba(255, 255, 255, 0.065);
+  --code: rgba(0, 0, 0, 0.35);
+  --popover: rgba(22, 20, 36, 0.98);
+  --overlay: rgba(20, 18, 32, 0.98);
+  --scrim: rgba(5, 4, 10, 0.6);
+
+  --fg: #f3f2f8;
+  --fg2: #a5a2b8;
+  --fg3: #8683a0;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+
+  --skill-rgb: 183 156 255;
+  --mcp-rgb: 98 184 255;
+  --provider-rgb: 95 214 164;
+  --warn-rgb: 255 184 107;
+  --bad-rgb: 255 122 144;
+  --skill: rgb(var(--skill-rgb));
+  --mcp: rgb(var(--mcp-rgb));
+  --provider: rgb(var(--provider-rgb));
+  --warn: rgb(var(--warn-rgb));
+  --bad: rgb(var(--bad-rgb));
+  --kind-rgb: var(--mcp-rgb);
+  --brand: linear-gradient(120deg, var(--skill), var(--mcp) 55%, var(--provider));
+
+  --r: 10px;
+  --r-lg: 18px;
+  --font: 'Plus Jakarta Sans', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Legacy names still used by the pages #164 and #165 rebuild; remove them with those pages. */
+  --win: var(--bg-2);
+  --sidebar: #0d0b16;
+  --content: var(--bg-2);
+  --chrome: #13111f;
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --text: var(--fg);
+  --text-2: var(--fg2);
+  --text-3: var(--fg3);
+  --accent: var(--mcp);
+  --accent-soft: rgb(var(--mcp-rgb) / 0.14);
+  --green: var(--provider);
+  --green-soft: rgb(var(--provider-rgb) / 0.12);
+  --amber: var(--warn);
+  --amber-soft: rgb(var(--warn-rgb) / 0.12);
+  --red: var(--bad);
+  --red-soft: rgb(var(--bad-rgb) / 0.1);
+  --provider-soft: rgb(var(--provider-rgb) / 0.12);
+  --purple: var(--skill);
+  --purple-soft: rgb(var(--skill-rgb) / 0.12);
+  --term-bg: var(--code);
+  --code-bg: var(--panel-2);
 }
 
-[data-theme='light'] {
-  --wall: radial-gradient(130% 120% at 26% -12%, #e7e4f7 0%, #eeeef2 52%, #e3e3ea 100%);
-  --win: #ffffff;
-  --sidebar: #f4f4f7;
-  --content: #fbfbfc;
-  --chrome: #ececf0;
-  --panel: #ffffff;
-  --panel-2: #f5f5f8;
-  --border: rgba(0, 0, 0, 0.09);
-  --border-strong: rgba(0, 0, 0, 0.16);
-  --text: #191920;
-  --text-2: #5d5d68;
-  --text-3: #9797a2;
-  --accent: #5b54e8;
-  --accent-soft: rgba(91, 84, 232, 0.1);
-  --green: #16a06a;
-  --green-soft: rgba(22, 160, 106, 0.12);
-  --amber: #cf8a16;
-  --amber-soft: rgba(207, 138, 22, 0.14);
-  --red: #e0483f;
-  --red-soft: rgba(224, 72, 63, 0.1);
-  --provider: #2f6fb8;
-  --provider-soft: rgba(47, 111, 184, 0.12);
-  --purple: #8654c9;
-  --purple-soft: rgba(134, 84, 201, 0.1);
-  --term-bg: #17171d;
-  --code-bg: rgba(0, 0, 0, 0.045);
+[data-kind='skill'] {
+  --kind-rgb: var(--skill-rgb);
+}
+[data-kind='mcp'] {
+  --kind-rgb: var(--mcp-rgb);
+}
+[data-kind='provider'] {
+  --kind-rgb: var(--provider-rgb);
+}
+
+html {
+  color-scheme: dark;
+  height: 100%;
 }
 
 html,
 body {
   margin: 0;
-  /* Transparent so the rounded, decoration-less window shows the real desktop
-     through its corners — the mockup's --wall was only its simulated desktop. */
+  height: 100%;
+  overflow: hidden;
+  /* Transparent so the rounded, decoration-less window shows the desktop through its corners. */
   background: transparent;
+  color: var(--fg);
+  font: 400 13.5px/1.55 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--mono);
+}
+
+:focus-visible {
+  outline: 2px solid var(--mcp);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgb(var(--mcp-rgb) / 0.35);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@keyframes as-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes as-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes as-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer components {
+  .as-skeleton {
+    display: block;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.11) 50%, rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: as-shimmer 1.3s linear infinite;
+  }
+  .as-pop {
+    animation: as-pop 0.22s var(--ease);
+  }
+  .as-spin {
+    animation: as-spin 0.7s linear infinite;
+  }
+  .as-glow {
+    filter: drop-shadow(0 0 6px rgb(var(--kind-rgb) / 0.7));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

@@ -1,9 +1,9 @@
-import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useState } from 'react'
 import type { LocalRelayConfig, RecentRequestRow } from '@as/types'
 import { X } from 'lucide-react'
 import { callRpc } from '../lib/rpc'
 import { useT } from '../i18n'
+import { Dialog, DialogBody, DialogClose, DialogContent, DialogTitle } from './ui/dialog'
 
 interface ProxyLogModalProps {
   open: boolean
@@ -30,18 +30,17 @@ export function ProxyLogModal({ open, onOpenChange }: ProxyLogModalProps) {
   const addr = `127.0.0.1${localConfigs[0] ? `:${localConfigs[0].port}` : ''}`
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-[60] max-h-[85vh] w-[620px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-store-border bg-store-content p-6">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent width="wide" aria-describedby={undefined}>
+        <DialogBody>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <Dialog.Title className="text-lg font-semibold text-store-text">{t('proxyLog.title')}</Dialog.Title>
+              <DialogTitle>{t('proxyLog.title')}</DialogTitle>
               <p className="mt-0.5 font-mono text-xs text-store-text-3">{addr} · {t('proxyLog.sub')}</p>
             </div>
-            <Dialog.Close aria-label={t('window.close')} className="text-store-text-2 hover:text-store-text">
+            <DialogClose aria-label={t('window.close')} className="text-store-text-2 hover:text-store-text">
               <X size={18} />
-            </Dialog.Close>
+            </DialogClose>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -64,8 +63,8 @@ export function ProxyLogModal({ open, onOpenChange }: ProxyLogModalProps) {
               </div>
             ))}
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }

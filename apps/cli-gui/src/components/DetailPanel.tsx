@@ -133,7 +133,7 @@ export function DetailPanel() {
                   onClick={install}
                   disabled={!!notInstallable}
                   title={notInstallable}
-                  className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-canvas hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {notInstallable ? t('catalog.notInstallable') : t('common.install')}
                 </button>
