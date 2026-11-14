@@ -346,11 +346,11 @@ APPDATA=$(dirname "$(find "$XDG_DATA_HOME" -path '*agent-store-cli/welcome.json'
 python3 - "$MOCK" "$SKILL_ID" "$APPDATA/favorites.json" <<'PY'
 import json, sys, urllib.parse, urllib.request
 base, rid, out = sys.argv[1:]
-path = '/'.join(urllib.parse.quote(p, safe='') for p in rid.split('/'))
-r = json.load(urllib.request.urlopen(f'{base}/api/resources/{path}'))['resource']
+r = json.load(urllib.request.urlopen(f'{base}/__summary?id={urllib.parse.quote(rid, safe="")}'))['resource']
 keep = ['id', 'kind', 'name', 'description', 'author', 'version', 'homepageUrl', 'installs', 'stars', 'verified', 'tags', 'transports', 'origin']
 json.dump({'version': 1, 'local': [{'id': rid, 'resource': {k: r.get(k) for k in keep}}], 'pending': [], 'account': None}, open(out, 'w'))
 PY
+check "seeded a favorite saved while signed out" '[ -s "$APPDATA/favorites.json" ] && grep -q "$SKILL_ID" "$APPDATA/favorites.json"'
 mock() { python3 -c 'import json,sys; s=json.load(open(sys.argv[1])); print(eval(sys.argv[2]))' "$MOCK_STATE" "$1"; }
 palette() { xdotool key ctrl+k; sleep 2; xdotool type --delay 50 "$1"; sleep 2; xdotool key Return; }
 start_app() { AS_STORE_URL=$MOCK "$APP" >>"$OUT/app-auth.log" 2>&1 & sleep "$SETTLE"; point_at_window; }
@@ -397,7 +397,9 @@ shot 33-restart-still-signed-in
 stop_app
 check "a restart signs in from Secret Service" '[ "$(mock "s[\"exchanges\"].get(\"$SESSION\", 0)")" -gt "$before" ]'
 curl -fs -X POST "$MOCK/__revoke" >/dev/null
-start_app
+AS_STORE_URL=$MOCK "$APP" >>"$OUT/app-auth.log" 2>&1 &
+# The notice toast stays 12 s.
+sleep 8
 shot 34-session-revoked
 stop_app
 check "a revoked session signs out and leaves Secret Service" '[ -z "$(keyring_secret)" ]'

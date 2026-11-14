@@ -32,7 +32,7 @@ export function SignInDialog() {
   }, [pending, signedIn, email, t])
 
   useEffect(() => {
-    if (notice === 'expired') toast.error(t('auth.expiredT'), { description: t('auth.expiredD') })
+    if (notice === 'expired') toast.error(t('auth.expiredT'), { description: t('auth.expiredD'), duration: 12_000 })
     else if (notice === 'notSaved') toast(t('auth.notSavedT'), { description: t('auth.notSavedD'), duration: 12_000 })
     // A language switch must not repeat the toast.
     // eslint-disable-next-line react-hooks/exhaustive-deps

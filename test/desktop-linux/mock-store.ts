@@ -4,7 +4,9 @@
 // The deployed store may not have the device endpoints yet when a PR runs.
 //
 //   MOCK_PORT=18790 MOCK_STATE=/out/mock-store.json bun test/desktop-linux/mock-store.ts
-// POST /__revoke drops every session (a sign-out somewhere else); GET /__state shows the state.
+// POST /__revoke drops every session (a sign-out somewhere else); GET /__state shows the state;
+// GET /__summary?id= is a catalog entry as the favorites list carries it. The live store answers
+// this server's fetch, not every client: a request forwarded from Python's urllib got a 403.
 import { writeFileSync } from 'node:fs'
 
 const UPSTREAM = process.env['MOCK_UPSTREAM'] ?? 'https://agent-store-test.panghuli.tech'
@@ -60,6 +62,10 @@ Bun.serve({
     const p = url.pathname
 
     if (p === '/__state') return json(state)
+    if (p === '/__summary') {
+      const resource = await summary(url.searchParams.get('id') ?? '')
+      return resource ? json({ resource }) : json({ error: 'Not found' }, 404)
+    }
     if (p === '/__revoke' && req.method === 'POST') {
       state.sessions = []
       state.jwts = []
