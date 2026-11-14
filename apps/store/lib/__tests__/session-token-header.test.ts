@@ -1,5 +1,10 @@
-import { expect, test } from 'bun:test'
+import { afterAll, beforeAll, expect, test } from 'bun:test'
+import { GlobalRegistrator } from '@happy-dom/global-registrator'
 import { withoutSessionTokenHeader } from '../auth/session-token-header'
+
+// happy-dom's Response drops Set-Cookie like a browser does; the route runs on the server's Fetch API.
+beforeAll(() => GlobalRegistrator.unregister())
+afterAll(() => GlobalRegistrator.register({ url: 'http://localhost/' }))
 
 test('drops set-auth-token and its expose entry, keeps cookies and the body', async () => {
   const headers = new Headers()
@@ -10,10 +15,7 @@ test('drops set-auth-token and its expose entry, keeps cookies and the body', as
   const res = withoutSessionTokenHeader(new Response('{"ok":true}', { status: 200, headers }))
   expect(res.headers.has('set-auth-token')).toBe(false)
   expect(res.headers.get('access-control-expose-headers')).toBe('set-auth-jwt')
-  // happy-dom's Headers joins Set-Cookie values; Node's keeps them apart. Either way both survive.
-  const cookies = res.headers.get('set-cookie') ?? ''
-  expect(cookies).toContain('a=1; Path=/')
-  expect(cookies).toContain('b=2; Path=/')
+  expect(res.headers.getSetCookie()).toEqual(['a=1; Path=/', 'b=2; Path=/'])
   expect(await res.text()).toBe('{"ok":true}')
 })
 
