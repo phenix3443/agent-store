@@ -58,6 +58,9 @@ const SIGNED_IN = [
   { name: 'dashboard-error', plan: 'pro', path: '/dashboard?tab=subscription&state=error' },
   // Only opens the confirmation; nothing is sent until its second button.
   { name: 'dashboard-cancel-confirm', plan: 'pro', path: '/dashboard?tab=subscription', click: 'button[data-subscription-cancel]', opens: '[role="alertdialog"]', viewport: true },
+  // A subscriber's pricing page links to the dashboard instead of checkout.
+  { name: 'pricing-pro', plan: 'pro', path: '/pricing', wait: 'a[href="/dashboard?tab=subscription"]' },
+  { name: 'pricing-canceling', plan: 'canceling', path: '/pricing', wait: 'a[href="/dashboard?tab=subscription"]' },
   { name: 'account-menu', plan: 'free', path: '/docs', click: 'header button[aria-haspopup="menu"]', opens: '[role="menu"]', minWidth: 1024 },
   // The CI proxy starts the pro user with three favorites, including DETAIL.
   { name: 'dashboard-favorites', plan: 'pro', path: '/dashboard?tab=favorites' },

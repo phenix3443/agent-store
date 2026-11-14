@@ -34,7 +34,7 @@ Web 端的浏览动线是：落地页讲清价值 → 商店浏览与搜索 → 
 - 技术栈：Next.js 15（App Router）、React 18、Tailwind CSS 3、Radix Dialog、lucide-react、next-intl。
 - 界面语言：中文、英文（`messages/`）。之前选过日文、韩文、西班牙文的访客改为显示英文。
 - 只有深色主题（#159 起），没有主题切换。
-- 定价分 Free 与 Pro，价格和权益以 `@as/types` 的 `PRICING` 和定价页为准。
+- 定价分 Free 与 Pro，价格和权益以 `@as/types` 的 `PRICING` 和定价页为准。已订阅或买断的用户在定价页看到当前方案和去个人面板的按钮，不能在定价页换周期或改买断（#188）。
 - 术语：技能（skill）、MCP、供应商（provider）、本地代理（local relay）、发布者（publisher，指包在上游的作者）、已验证（verified）。
 - 2026-11-11 决定：Web 端视觉整体重做。`docs/ui/Agent Store.dc.html` 对 Web 端只作为旧外观的参考，不再约束新视觉；产品事实、内容、功能和页面动线保留。桌面客户端是否跟随这套视觉体系尚未决定（见 GitHub Issue #58），在决定之前仍以 `docs/ui/Agent Store.dc.html` 为准。Web 端的视觉体系写在 `DESIGN.md`。
 - 2026-11-11 决定：Web 端的「安装」先尝试唤起桌面客户端；唤不起时复制安装命令并提示下载客户端。Web 端不显示「已装」这类它无法确认的状态。

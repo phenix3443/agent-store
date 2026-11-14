@@ -603,6 +603,11 @@
       "buy": "买断",
       "working": "正在打开支付页…",
       "failed": "没能打开支付页，请稍后再试。",
+      "current": "当前方案",
+      "manage": "管理订阅",
+      "viewPlan": "查看方案与订单",
+      "ownedSubscription": "你已订阅 {plan}，这里不能改成其他周期或买断。",
+      "ownedLifetime": "你已终身买断 Pro，不需要再订阅。",
       "merchant": "由 Waffo 代收，价格含税。",
       "compare": {
         "title": "逐项对比",

@@ -28,7 +28,7 @@ export interface ProjectsIo {
   exec: (cmd: string[], cwd: string, env: NodeJS.ProcessEnv) => Promise<number>
 }
 
-function readSecret(question: string): Promise<string> {
+export function readSecret(question: string): Promise<string> {
   return new Promise(resolve => {
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: process.stdin.isTTY === true })
     if (process.stdin.isTTY) {

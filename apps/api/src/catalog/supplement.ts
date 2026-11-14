@@ -6,7 +6,7 @@ import { upstreamClient } from './http'
 import type { FoundExport, FoundListing, FoundStore } from './found-store'
 import type { CatalogReader } from './reader'
 import { checkFind, type ExternalFind, type SearchSource } from './search-sources'
-import { DOWNLOAD_FAILED, RepoTooLargeError, scanRepo } from './sources/github-skills'
+import { DOWNLOAD_FAILED, isRateLimit, rateLimitResetAt, RepoTooLargeError, scanRepo } from './sources/github-skills'
 
 // Search supplement: when the catalog answers a skill query poorly, the query is looked
 // up on other skill directories. Finds are stored in app.db (found-store.ts), GitHub
@@ -38,9 +38,9 @@ export interface SupplementConfig {
   unavailableTtlMs: number
   /** Lookups running at once, over all queries. */
   maxLookups: number
-  /** GitHub repos scanned per lookup; the rest wait for the catalog sync. */
+  /** GitHub repos scanned per lookup, most relevant first (`reposByRelevance`); the rest wait for the catalog sync. */
   scanRepos: number
-  /** Repos with more skills than this are left to the catalog sync. */
+  /** Of a repo with more skills than this, only the skills the finds name are read; the rest wait for the catalog sync. */
   scanMaxSkills: number
   scanTimeoutMs: number
   scansPerHour: number
@@ -129,6 +129,51 @@ export function mergeFinds(q: string, lists: ExternalFind[][]): ExternalFind[] {
   return ranked.flatMap(({ f }) => (seen.has(f.skillKey) ? [] : (seen.add(f.skillKey), [f])))
 }
 
+/** Two points for each query term in a find's name, one for each found only in its description. */
+function termScore(q: string, f: ExternalFind): number {
+  const name = f.name.toLowerCase()
+  const description = f.description?.toLowerCase() ?? ''
+  return q.split(' ').reduce((n, t) => n + (name.includes(t) ? 2 : description.includes(t) ? 1 : 0), 0)
+}
+
+export interface RepoToScan {
+  repo: string
+  /** Lowercase skill names the finds name in it. */
+  skills: string[]
+}
+
+/**
+ * The GitHub repos finds name, best first: by the highest term score among a repo's
+ * finds, then by where its first find stands.
+ */
+export function reposByRelevance(q: string, finds: ExternalFind[]): RepoToScan[] {
+  const byRepo = new Map<string, { at: number; score: number; skills: Set<string> }>()
+  finds.forEach((f, at) => {
+    if (!f.githubRepo) return
+    const entry = byRepo.get(f.githubRepo) ?? { at, score: 0, skills: new Set<string>() }
+    entry.score = Math.max(entry.score, termScore(q, f))
+    const prefix = `github:${f.githubRepo}/`
+    if (f.skillKey.startsWith(prefix)) entry.skills.add(f.skillKey.slice(prefix.length).toLowerCase())
+    byRepo.set(f.githubRepo, entry)
+  })
+  return [...byRepo]
+    .sort(([, a], [, b]) => b.score - a.score || a.at - b.at)
+    .map(([repo, e]) => ({ repo, skills: [...e.skills] }))
+}
+
+/** How one repo scan of a lookup ended; logged with the lookup. */
+export interface RepoScanOutcome {
+  repo: string
+  /** scanned, named skills, no skills, partial, too large, error, rate limited, over budget, or running. */
+  status: string
+  skills?: number
+  error?: string
+}
+
+/** An error's message for the log, without anything shaped like a GitHub token. */
+const errorText = (e: unknown) =>
+  (e instanceof Error ? e.message : String(e)).replace(/\b(gh[pousr]_|github_pat_)[A-Za-z0-9_]+/g, '[token]').slice(0, 300)
+
 function wait(ms: number): { done: Promise<void>; cancel: () => void } {
   let timer: ReturnType<typeof setTimeout>
   const done = new Promise<void>((resolve) => {
@@ -163,6 +208,8 @@ export class SearchSupplement {
   private readonly cooldown = new Map<string, number>()
   private readonly budgets: Map<string, RateLimiterMemory[]>
   private readonly scans: RateLimiterMemory
+  /** Until when GitHub asked not to be called (rate limit). */
+  private githubCooldown = 0
 
   constructor(private readonly o: SupplementOptions) {
     this.c = { ...SUPPLEMENT_DEFAULTS, ...o.config }
@@ -323,13 +370,13 @@ export class SearchSupplement {
     const stamp = now.toISOString()
     this.o.store.saveFinds(lists.flat(), stamp)
     const finds = mergeFinds(q, lists).filter((f) => !this.inCatalog(f.skillKey)).slice(0, this.c.maxResults)
-    await this.scan(finds)
+    const repos = await this.scan(key, q, finds)
     const partial = lists.length < asked.length
     const status = finds.length ? 'found' : 'none'
     const ttl = partial ? this.c.partialTtlMs : status === 'found' ? this.c.foundTtlMs : this.c.noneTtlMs
     this.o.store.saveLookup(key, { status, partial, skillKeys: finds.map((f) => f.skillKey) }, stamp, new Date(now.getTime() + ttl).toISOString())
     this.o.store.prune(now)
-    this.log({ level: 'info', message: 'search supplement', key: key.slice(0, 12), sources: outcome, finds: finds.length })
+    this.log({ level: 'info', message: 'search supplement', key: key.slice(0, 12), sources: outcome, finds: finds.length, repos })
   }
 
   /** One site's hits, checked. Any failure is this site's alone. */
@@ -358,38 +405,61 @@ export class SearchSupplement {
   }
 
   /**
-   * Reads the GitHub repos the finds name, a few per lookup, so their skills can be
-   * served and installed before the next catalog build. Only files are read; nothing
-   * from a repo is run.
+   * Reads the GitHub repos the finds name, the most relevant few per lookup, so their
+   * skills can be served and installed before the next catalog build. Only files are
+   * read; nothing from a repo is run. Returns how each scan ended; one still running
+   * when the wait ends is `running`, and its outcome is logged when it ends.
    */
-  private async scan(finds: ExternalFind[]): Promise<void> {
+  private async scan(key: string, q: string, finds: ExternalFind[]): Promise<RepoScanOutcome[]> {
     const github = this.o.github
-    if (!github) return
-    const repos = [...new Set(finds.flatMap((f) => f.githubRepo ?? []))]
+    if (!github) return []
+    const wanted = reposByRelevance(q, finds)
     const before = new Date(this.now().getTime() - this.c.rescanAfterMs).toISOString()
-    const due = this.o.store.reposDue(repos, before).slice(0, this.c.scanRepos)
-    if (due.length === 0) return
-    const work = Promise.all(due.map(async (repo) => {
-      try {
-        await this.scans.consume('github')
-      } catch {
-        return
-      }
-      let status: string
-      try {
-        const scan = await scanRepo(github, this.fetchImpl, repo, new Map(), { maxSkills: this.c.scanMaxSkills })
-        this.o.store.saveResources(repo, scan.records, this.now().toISOString())
-        status = scan.skipped[DOWNLOAD_FAILED] ? 'partial' : scan.records.length ? 'scanned' : 'no skills'
-      } catch (e) {
-        status = e instanceof RepoTooLargeError ? 'too large' : 'error'
-      }
-      this.o.store.markRepo(repo, status, this.now().toISOString())
+    const due = new Set(this.o.store.reposDue(wanted.map((w) => w.repo), before))
+    const picked = wanted.filter((w) => due.has(w.repo)).slice(0, this.c.scanRepos)
+    if (picked.length === 0) return []
+    const outcomes: RepoScanOutcome[] = picked.map((w) => ({ repo: w.repo, status: 'running' }))
+    const work = Promise.all(picked.map(async (w, i) => {
+      outcomes[i] = await this.scanOne(github, w)
     })).catch((e) => {
-      this.log({ level: 'error', message: 'search supplement: repo scan failed', error: e instanceof Error ? e.message : String(e) })
+      this.log({ level: 'error', message: 'search supplement: repo scan failed', key: key.slice(0, 12), error: errorText(e) })
     })
     // A slow scan still stores its skills when it ends; the lookup just stops waiting for it.
     const timer = wait(this.c.scanTimeoutMs)
-    await Promise.race([work, timer.done])
+    const ended = await Promise.race([work.then(() => true), timer.done.then(() => false)])
     timer.cancel()
+    if (!ended) {
+      void work.then(() => this.log({ level: 'info', message: 'search supplement: repo scans ended', key: key.slice(0, 12), repos: outcomes }))
+    }
+    return outcomes.map((o) => ({ ...o }))
+  }
+
+  private async scanOne(github: Octokit, w: RepoToScan): Promise<RepoScanOutcome> {
+    const repo = w.repo
+    // Not marked as tried: the repo is due again once GitHub or the budget allows.
+    if (this.githubCooldown > this.now().getTime()) return { repo, status: 'rate limited' }
+    try {
+      await this.scans.consume('github')
+    } catch {
+      return { repo, status: 'over budget' }
+    }
+    const mark = (outcome: RepoScanOutcome): RepoScanOutcome => {
+      this.o.store.markRepo(repo, outcome.status, this.now().toISOString())
+      return outcome
+    }
+    try {
+      const scan = await scanRepo(github, this.fetchImpl, repo, new Map(), { maxSkills: this.c.scanMaxSkills, named: new Set(w.skills) })
+      this.o.store.saveResources(repo, scan.records, this.now().toISOString(), { replace: !scan.subset })
+      const status = scan.skipped[DOWNLOAD_FAILED] ? 'partial' : scan.records.length === 0 ? 'no skills' : scan.subset ? 'named skills' : 'scanned'
+      return mark({ repo, status, skills: scan.records.length })
+    } catch (e) {
+      if (e instanceof RepoTooLargeError) return mark({ repo, status: 'too large', error: errorText(e) })
+      if (isRateLimit(e)) {
+        const now = this.now().getTime()
+        this.githubCooldown = Math.min(rateLimitResetAt(e, now) ?? now + 15 * 60_000, now + 3_600_000)
+        return { repo, status: 'rate limited', error: errorText(e) }
+      }
+      return mark({ repo, status: 'error', error: errorText(e) })
+    }
   }
 }

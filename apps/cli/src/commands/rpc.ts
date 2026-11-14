@@ -1,5 +1,5 @@
 import { resolvePaths, runDoctor } from '@as/client-core'
-import type { Engine, AddProjectOptions, ProjectInstallOptions, ProjectUninstallOptions, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
+import type { Engine, BackupConflictChoice, BackupConnectOptions, AddProjectOptions, ProjectInstallOptions, ProjectUninstallOptions, BudgetConfig, EnableOptions, DisableOptions, InstallOptions, ListOptions, ResourceKind, SearchOptions, ToolTarget, UsageSummaryOptions } from '@as/types'
 
 type RpcHandler = (engine: Engine, args: unknown[]) => Promise<unknown>
 
@@ -51,6 +51,15 @@ const RPC_METHODS: Record<string, RpcHandler> = {
   uninstallFromProject: (e, a) => e.uninstallFromProject(a[0] as string, a[1] as string, a[2] as ProjectUninstallOptions | undefined),
   setProjectEnv: (e, a) => e.setProjectEnv(a[0] as string, a[1] as string, a[2] as string),
   unsetProjectEnv: (e, a) => e.unsetProjectEnv(a[0] as string, a[1] as string),
+  getBackupStatus: (e, a) => e.getBackupStatus(a[0] as { fetch?: boolean } | undefined),
+  connectBackup: (e, a) => e.connectBackup(a[0] as BackupConnectOptions),
+  backupNow: (e) => e.backupNow(),
+  pullBackup: (e) => e.pullBackup(),
+  resolveBackupConflict: (e, a) => e.resolveBackupConflict(a[0] as string, a[1] as BackupConflictChoice),
+  listBackupSnapshots: (e) => e.listBackupSnapshots(),
+  restoreBackupSnapshot: (e, a) => e.restoreBackupSnapshot(a[0] as string),
+  listBackupHistory: (e, a) => e.listBackupHistory(a[0] as { limit?: number } | undefined),
+  disconnectBackup: (e) => e.disconnectBackup(),
   doctor: () => runDoctor(resolvePaths()),
 }
 
