@@ -136,6 +136,11 @@ test('the palette finds a project by name and has 添加项目', async () => {
 })
 
 test('each project in the sidebar shows how many skills and MCP servers its agents use there', async () => {
+  // A wide window: at happy-dom's default 1024px the sidebar is the icon-only one, without project rows.
+  spyOn(window, 'matchMedia').mockImplementation(((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia)
   mockAllRpcs()
   render(<App />)
   const row = await nav().findByRole('button', { name: /demo/ })

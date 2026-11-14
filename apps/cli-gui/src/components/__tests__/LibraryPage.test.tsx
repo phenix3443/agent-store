@@ -223,7 +223,8 @@ test('全部更新 reports each item, and one failing does not stop the rest', a
     },
   })
   renderLib('skill')
-  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: '全部更新（2）' })) })
+  const target1 = await screen.findByRole('button', { name: '全部更新（2）' })
+  await act(async () => { fireEvent.click(target1) })
   const results = await screen.findByRole('list', { name: '更新结果' })
   expect(screen.getByText('已更新 1 项，1 项失败')).toBeInTheDocument()
   expect(results).toHaveTextContent('find-skills')
@@ -280,7 +281,8 @@ test('a same-name MCP entry offers 替换现有条目, which explains itself and
     },
   })
   renderLib('mcp')
-  await act(async () => { fireEvent.click(await screen.findByRole('switch', { name: 'Claude Code · admux' })) })
+  const target2 = await screen.findByRole('switch', { name: 'Claude Code · admux' })
+  await act(async () => { fireEvent.click(target2) })
   const pane = await screen.findByRole('complementary', { name: 'admux' })
   expect(await within(pane).findByText(/可以替换它/)).toBeInTheDocument()
   fireEvent.click(within(pane).getByRole('button', { name: '替换现有条目' }))
@@ -304,7 +306,8 @@ test('a refused takeover stays in the dialog with the reason', async () => {
     },
   })
   renderLib('mcp')
-  await act(async () => { fireEvent.click(await screen.findByRole('switch', { name: 'Claude Code · admux' })) })
+  const target3 = await screen.findByRole('switch', { name: 'Claude Code · admux' })
+  await act(async () => { fireEvent.click(target3) })
   const pane = await screen.findByRole('complementary', { name: 'admux' })
   fireEvent.click(await within(pane).findByRole('button', { name: '替换现有条目' }))
   const dialog = await screen.findByRole('dialog', { name: '替换 Claude Code 里的同名条目？' })

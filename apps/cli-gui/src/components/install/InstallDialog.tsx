@@ -903,7 +903,7 @@ function Body({ flow, setFlow, onSubmitVars }: { flow: Flow; setFlow: (fn: (f: F
             lines={AGENTS.map((agent) => {
               const r = flow.results[agent.id]
               const chosen = !!flow.tg[agent.id]
-              const note = r?.on ? '' : (r?.note ?? preReason(item, agent.id, t) ?? (chosen ? t('st.off') : t('inst.notChosen')))
+              const note = r?.on ? (r.note ?? '') : (r?.note ?? preReason(item, agent.id, t) ?? (chosen ? t('st.off') : t('inst.notChosen')))
               return {
                 agent,
                 note,
