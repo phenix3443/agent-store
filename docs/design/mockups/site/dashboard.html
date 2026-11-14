@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="dashboard">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap" id="dash"></div>
+</section>
+<dialog class="dlg" id="subDlg" data-i18n-attr="aria-label:db.manage"></dialog>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, esc = AS.esc, PL = AS_PLANS, S = AS.S, K = AS.K, root = $('#dash'), asked = false, dlg = $('#subDlg');
+  var TABS = [['account', 'user'], ['subscription', 'card'], ['favorites', 'heart'], ['sync', 'sync']];
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  function status(plan) {
+    var p = PL.periods[plan.period], v = { d: PL.nextDate(plan), price: p.text, per: t('pr.per.' + plan.period) };
+    return plan.period === 'lifetime' ? t('db.s.life') : t(plan.cancel ? 'db.s.cancel' : plan.trial ? 'db.s.trial' : 'db.s.renew', v);
+  }
+  function panel(tab, s) {
+    var plan = s.plan, pro = plan.tier === 'pro';
+    function kv(rows) { return '<dl class="kv">' + rows.map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') + '</dl>'; }
+    if (tab === 'account') return '<section class="card"><h2>' + t('db.t.account') + '</h2>' + kv([[t('db.name'), s.user.name], [t('db.email'), s.user.email], [t('db.signin'), t('db.signin.v')], [t('db.plan'), (pro ? 'Pro' : 'Free') + '　<a class="clear" href="#tab=subscription">' + t('db.view') + '</a>']]) + '</section>' +
+      '<section class="card"><h2>' + t('db.out.h') + '</h2><p class="muted" style="font-size:15px;margin-bottom:14px">' + t('db.out.p') + '</p><button class="btn btn-ghost btn-sm" type="button" data-signout>' + t('nav.signout') + '</button></section>';
+    if (tab === 'subscription') {
+      if (!pro) return '<section class="card"><h2>' + t('db.plan') + '</h2><p class="plan-card big" style="background:none">Free</p><p class="muted" style="margin:6px 0 16px">' + t('db.free.p') + '</p><a class="btn btn-pri" href="pricing.html">' + t('db.upgrade') + '</a></section>';
+      var life = plan.period === 'lifetime';
+      return '<section class="card plan-card"><h2>' + t('db.plan') + (plan.cancel ? '<span class="chip" style="color:var(--warn);border-color:rgba(255,184,107,.5)">' + t('db.c.cancel') + '</span>' : '<span class="chip">' + t(plan.trial && !life ? 'db.c.trial' : 'db.c.active') + '</span>') + '</h2>' +
+        '<p class="big">Pro · ' + t('pr.' + plan.period) + '</p><p class="muted" style="margin:6px 0 18px" id="subStatus">' + status(plan) + '</p>' +
+        (life ? '' : plan.cancel ? '<button class="btn btn-pri btn-sm" type="button" id="resume">' + t('db.resume') + '</button>' : '<button class="btn btn-ghost btn-sm" type="button" id="manage">' + t('db.manage') + '</button>') + '</section>' +
+        '<section class="card"><h2>' + t('db.perks') + '</h2><ul class="featlist">' + PL.list(PL.pro, AS.ic('check')) + '</ul></section>' +
+        '<section class="card"><h2>' + t('db.billing') + '</h2>' + kv([[t('db.started'), PL.date(plan.since)], [t('db.by'), 'Waffo']]) + '<p class="fine" style="margin-top:8px">' + t('db.noinv') + '</p></section>';
+    }
+    if (tab === 'favorites') {
+      var favs = s.favorites.map(AS.byId).filter(Boolean);
+      return '<section class="card"><h2>' + t('db.t.favorites') + '<span class="cap">' + t('db.fav.n', { n: favs.length }) + '</span></h2>' + (favs.length ? favs.map(function (d) {
+        return '<div class="list-item" data-kind="' + d.kind + '">' + AS.tile(d.kind) + '<div><b>' + esc(d.name) + '</b><small><span class="kind">' + K(d.kind) + '</span>　' + AS.author(d) + '</small></div><div class="acts"><a class="btn btn-ghost btn-sm" href="' + AS.href(d.id) + '" data-quick="' + esc(d.id) + '">' + t('db.fav.view') + '</a><button class="btn btn-ghost btn-sm" type="button" data-unfav="' + esc(d.id) + '">' + t('db.fav.remove') + '</button></div></div>';
+      }).join('') : '<div class="empty"><b>' + t('db.fav.empty.h') + '</b>' + t('db.fav.empty.p') + '<br><br><a class="btn btn-pri btn-sm" href="store.html">' + t('go.store') + '</a></div>') + '</section>';
+    }
+    return '<section class="card"><h2>' + t('db.t.sync') + '<span class="soon">' + t('soon') + '</span></h2><p class="muted" style="font-size:15px">' + t('db.sync.p') + '</p></section>';
+  }
+  function render() {
+    var s = S.get(), h = AS.hash(), tab = h.get('tab') || 'account';
+    if (!TABS.some(function (x) { return x[0] === tab; })) tab = 'account';
+    if (!s.signedIn) {
+      root.innerHTML = '<div class="gate"><span class="logo big"><i></i><i></i><i></i></span><h1 class="h2">' + t('db.gate.h') + '</h1><p class="muted">' + t('db.gate.p') + '</p><button class="btn btn-pri" type="button" data-open="login">' + t('nav.login') + '</button><a class="link" href="index.html">' + t('go.home') + '</a></div>';
+      if (!asked) { asked = true; AS.openAuth(); } return;
+    }
+    root.innerHTML = '<h1 class="h1" style="margin-bottom:36px">' + t('db.h') + '<span class="dim">' + s.user.name + ' · ' + (S.isPro() ? 'Pro' : 'Free') + '</span></h1>' +
+      '<div class="dash"><nav class="dash-tabs" aria-label="' + t('db.tabs') + '">' + TABS.map(function (x) { return '<a href="#tab=' + x[0] + '" aria-current="' + (x[0] === tab) + '">' + AS.ic(x[1]) + t('db.t.' + x[0]) + (x[0] === 'favorites' ? '<small>' + s.favorites.length + '</small>' : x[0] === 'sync' ? '<span class="soon" style="margin-left:auto">' + t('soon') + '</span>' : '') + '</a>'; }).join('') + '</nav><div>' + panel(tab, s) + '</div></div>';
+    if (h.get('paid') === '1') { h.delete('paid'); history.replaceState(null, '', '#' + h.toString()); AS.toast(t(s.plan.trial ? 'db.t.trial' : 'db.t.paid')); }
+  }
+  function manage() {
+    var plan = S.get().plan;
+    dlg.innerHTML = '<div class="dlg-body">' + AS.closeBtn() + '<h2>' + t('db.manage') + '</h2><p class="muted">Pro · ' + t('pr.' + plan.period) + (AS_LANG === 'en' ? '. ' : '。') + status(plan) + '</p>' +
+      '<div class="dlg-actions" style="justify-content:stretch;display:grid"><a class="btn btn-ghost" href="pricing.html">' + t('db.other') + '</a><button class="btn btn-ghost" type="button" id="toCancel" style="color:var(--bad)">' + t('db.cancel') + '</button></div></div>';
+    dlg.showModal();
+    $('#toCancel').addEventListener('click', function () {
+      dlg.innerHTML = '<div class="dlg-body">' + AS.closeBtn() + '<h2>' + t('db.confirm.h') + '</h2><p class="muted">' + t('db.confirm.p', { d: PL.nextDate(plan) }) + '</p>' +
+        '<div class="dlg-actions"><button class="btn btn-pri" type="button" data-close>' + t('db.keep') + '</button><button class="btn btn-ghost" type="button" id="doCancel" style="color:var(--bad)">' + t('db.docancel') + '</button></div></div>';
+      $('[data-close].btn', dlg).focus();
+      $('#doCancel').addEventListener('click', function () { var p = S.get().plan; p.cancel = true; dlg.close(); S.set({ plan: p }); AS.toast(t('db.t.cancelled')); });
+    });
+  }
+  root.addEventListener('click', function (e) {
+    var el = e.target.closest('#manage,#resume,[data-unfav]'); if (!el) return;
+    if (el.id === 'manage') return manage();
+    if (el.id === 'resume') { var p = S.get().plan; p.cancel = false; S.set({ plan: p }); return AS.toast(t('db.t.resumed')); }
+    S.toggle('favorites', el.dataset.unfav, false); AS.toast(t('db.fav.removed'));
+  });
+  document.addEventListener('as:state', render);
+  window.addEventListener('hashchange', function () { render(); window.scrollTo(0, 0); });
+  render();
+})();
+</script>
+</body>
+</html>

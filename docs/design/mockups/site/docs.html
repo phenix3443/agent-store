@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="docs">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <h1 class="h1"><span data-i18n="docs.ha"></span><span class="dim" data-i18n="docs.hb"></span></h1>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="doc-cards" id="cards" data-spot-group></div>
+  </div>
+</section>
+
+<section class="section tight">
+  <div class="wrap split" style="align-items:start">
+    <div data-reveal><h2 class="h2" data-i18n="docs.k.h"></h2></div>
+    <ul class="facts" id="kinds" data-reveal></ul>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+AS.$('#cards').innerHTML = [['install', 'skill', 'download'], ['browse', 'mcp', 'search'], ['relay', 'provider', 'provider'], ['cli', 'mcp', 'term'], ['plans', 'skill', 'card']].map(function (c) {
+  return '<a class="doc-card spot" data-kind="' + c[1] + '" href="docs-article.html#a=' + c[0] + '"><span class="tile">' + AS.ic(c[2]) + '</span><h2>' + t('docs.c.' + c[0] + '.h') + '</h2><p>' + t('docs.c.' + c[0] + '.p') + '</p><span class="link">' + t('docs.read') + '</span></a>';
+}).join('');
+AS.$('#kinds').innerHTML = ['skill', 'mcp', 'provider'].map(function (k) {
+  return '<li data-kind="' + k + '"><span>' + t('docs.k.' + k) + ' <a class="link" href="store.html#kind=' + k + '" style="font-size:14px">' + t('docs.k.see', { kind: (AS_LANG === 'en' ? '' : '') + t('kinds.' + k) }) + '</a></span></li>';
+}).join('');
+</script>
+</body>
+</html>

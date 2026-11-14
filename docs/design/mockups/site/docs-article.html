@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="docs">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero" style="padding-top:clamp(40px,6vw,72px)">
+  <div class="wrap">
+    <nav class="crumb"><a href="docs.html" data-i18n="nav.docs"></a><span>/</span><span id="crumb"></span></nav>
+    <div class="art-layout">
+      <nav class="art-nav" id="artNav" data-i18n-attr="aria-label:art.nav"></nav>
+      <article class="doc-art" id="art"></article>
+      <nav class="art-toc" id="artToc" data-i18n-attr="aria-label:art.toc"></nav>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, $$ = AS.$$, L = AS_LANG === 'en' ? 1 : 0;
+  function code(x) { return AS.codeHTML(x).replace('wrapline', ''); }
+  function ul(a) { return '<ul>' + a.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>'; }
+  function p(zh, en) { return '<p>' + (L ? en : zh) + '</p>'; }
+  function list(zh, en) { return ul(L ? en : zh); }
+  var SUP = p('已支持 Claude Code、Codex，更多 agent 陆续加入。', 'Works with Claude Code and Codex today. More agents on the way.');
+  /* 命令以 aas --help 的输出为准；每篇 [id, [中文标题, English], [导语], [[小节标题], 正文]…] */
+  var ARTS = [
+    { id: 'install', title: ['安装客户端', 'Install the app'], lede: ['下载，放行一次，开始用。', 'Download, allow it once, start using it.'], secs: [
+      [['下载', 'Download'], p('在<a class="clear" href="download.html">下载页</a>选你的系统：macOS 是通用版 .dmg；Windows 有 .exe 和 .msi；Linux 有 .deb、.rpm 和 .AppImage。', 'Pick your system on the <a class="clear" href="download.html">download page</a>: a universal .dmg for macOS, .exe and .msi for Windows, .deb, .rpm and .AppImage for Linux.') + p('命令行工具 <code>aas</code> 随客户端一起安装。', 'The <code>aas</code> CLI ships with the app.')],
+      [['首次打开', 'First launch'], p('安装包还没有代码签名，系统会拦一次。', "The installers aren't code-signed yet, so your OS blocks the first launch once.") + list(['macOS 提示「已损坏，无法打开」：把 App 拖进「应用程序」，运行下面的命令，再打开', 'Windows 提示「未知发布者」：点「更多信息」，再点「仍要运行」', 'Linux 不会拦截'], ['macOS says "damaged and can\'t be opened": drag the app to Applications, run the command below, then open it', 'Windows says "Unknown publisher": click More info, then Run anyway', 'Linux shows no prompt']) + code('xattr -cr "/Applications/Agent Store.app"')],
+      [['在 Linux 上安装', 'Install on Linux'], code(L ? 'sudo apt install ./file.deb     # Debian / Ubuntu\nsudo dnf install ./file.rpm     # Fedora\nchmod +x file.AppImage          # other distros' : 'sudo apt install ./文件名.deb     # Debian / Ubuntu\nsudo dnf install ./文件名.rpm     # Fedora\nchmod +x 文件名.AppImage          # 其他发行版')],
+      [['登录', 'Log in'], p('不登录也能浏览和安装。登录后可以收藏，也可以订阅 Pro。', 'You can browse and install without an account. Log in to save favorites and subscribe to Pro.') + p('多设备同步即将推出。', 'Multi-device sync is coming soon.')]
+    ] },
+    { id: 'browse', title: ['浏览与安装', 'Browse and install'], lede: ['在商店里找到它，点一下装好。', 'Find it in the store. Install in a click.'], secs: [
+      [['找', 'Find'], p('<a class="clear" href="store.html">商店</a>每行一个包。按类别筛选，换排序，或者直接搜索。按 <code>/</code> 聚焦搜索框；任何页面按 <code>⌘K</code> 或 <code>Ctrl K</code> 打开全局搜索。', 'The <a class="clear" href="store.html">store</a> lists one package per row. Filter by category, change the sort, or search. Press <code>/</code> to focus the search box, or <code>⌘K</code> / <code>Ctrl K</code> anywhere for global search.')],
+      [['装', 'Install'], p('点「安装」，客户端打开，选好装到哪个 agent，确认。', 'Click Install. The app opens, you pick the agents, and confirm.') + SUP + p('还没装客户端时，网页给出安装命令，复制到终端运行：', 'Without the app, the page gives you a command to paste into a terminal:') + code((L ? 'npx skills add vercel-labs/skills --skill find-skills              # skill\nclaude mcp add context7 -- npx -y @upstash/context7-mcp@4.7.0    # MCP\naas install openrouter                                            # provider' : 'npx skills add vercel-labs/skills --skill find-skills              # 技能\nclaude mcp add context7 -- npx -y @upstash/context7-mcp@4.7.0    # MCP\naas install openrouter                                            # 供应商'))],
+      [['配置写在哪', 'Where config goes'], list(['技能：Claude Code 是 <code>~/.claude/skills/&lt;名称&gt;</code>，Codex 是 <code>~/.codex/skills/&lt;名称&gt;</code>', 'MCP：Claude Code 写入 <code>~/.claude.json</code> 的 mcpServers，Codex 写入 <code>~/.codex/config.toml</code> 的 mcp_servers', '供应商：登记为一份接入配置，启用后经本地代理生效'], ['Skills: <code>~/.claude/skills/&lt;name&gt;</code> for Claude Code, <code>~/.codex/skills/&lt;name&gt;</code> for Codex', 'MCP: mcpServers in <code>~/.claude.json</code> for Claude Code, mcp_servers in <code>~/.codex/config.toml</code> for Codex', 'Providers: saved as a connection profile and used through the local relay once enabled'])],
+      [['开关与更新', 'Toggle and update'], p('装好后，在客户端里按 agent 单独启用、停用。更新在客户端里点，或者运行 <code>aas update</code>。', 'Once installed, enable or disable it per agent in the app. Update from the app, or run <code>aas update</code>.')]
+    ] },
+    { id: 'relay', title: ['本地代理', 'Local relay'], lede: ['换供应商，不用碰环境变量。', 'Switch providers without touching env vars.'], secs: [
+      [['它做什么', 'What it does'], p('启用后，agent 的 API 地址指向本机，默认 <code>http://127.0.0.1:18780</code>。请求先到本地代理，再转给你启用的供应商。', 'Once enabled, your agents point at your own machine, <code>http://127.0.0.1:18780</code> by default. Requests reach the local relay first, then go to the provider you enabled.')],
+      [['顺序与自动切换', 'Order and failover'], p('每个供应商有一个 Level，数字越小越先用。排在前面的一家出错时，请求自动改发下一家。', 'Each provider has a Level. Lower numbers go first. When the one in front errors, the request moves to the next.')],
+      [['用量', 'Usage'], p('客户端的用量页按供应商汇总。命令行用 <code>aas usage</code> 看同样的数据。', 'The Usage page in the app sums it up per provider. <code>aas usage</code> shows the same data in a terminal.')],
+      [['命令', 'Commands'], code(L ? 'aas relay start     # start the relay\naas relay status    # check status\naas relay stop      # stop it' : 'aas relay start     # 启动\naas relay status    # 查看状态\naas relay stop      # 停止')]
+    ] },
+    { id: 'cli', title: ['命令行 aas', 'The aas CLI'], lede: ['不开客户端，也能搜索、安装、启用。', 'Search, install and enable without opening the app.'], secs: [
+      [['搜索与安装', 'Search and install'], code(L ? 'aas search browser --kind mcp     # search the catalog\naas install <id|slug>             # install from the catalog\naas info <id|slug>                # show details\naas list                          # list what is installed\naas update [slug]                 # update installed items\naas uninstall <slug>              # uninstall' : 'aas search browser --kind mcp     # 搜索目录，可按类别过滤\naas install <id|slug>             # 从目录安装\naas info <id|slug>                # 查看详情\naas list                          # 查看已安装\naas update [slug]                 # 更新已安装的条目\naas uninstall <slug>              # 卸载')],
+      [['按 agent 启用', 'Enable per agent'], p('<code>--for</code> 的取值是 <code>claude</code> 或 <code>codex</code>。', '<code>--for</code> takes <code>claude</code> or <code>codex</code>.') + code(L ? 'aas enable <slug> --for claude    # enable for Claude Code\naas disable <slug> --for codex    # disable for Codex\naas sync                          # write enabled items to tool configs\naas config <slug>                 # configure an item' : 'aas enable <slug> --for claude    # 对 Claude Code 启用\naas disable <slug> --for codex    # 对 Codex 停用\naas sync                          # 把已启用的条目写入工具配置\naas config <slug>                 # 配置条目的参数')],
+      [['本地代理与用量', 'Relay and usage'], code(L ? 'aas relay start|stop|status       # manage the local relay\naas usage --days 7                # usage for the last 7 days\naas usage --provider <slug> --for codex' : 'aas relay start|stop|status       # 管理本地代理\naas usage --days 7                # 近 7 天的用量\naas usage --provider <slug> --for codex')],
+      [['排查', 'Troubleshoot'], code(L ? 'aas doctor      # compare records with what Claude Code and Codex see\naas migrate     # convert skills installed by older versions' : 'aas doctor      # 核对安装记录和两个工具实际读到的内容\naas migrate     # 转换旧版本装的技能')]
+    ] },
+    { id: 'plans', title: ['订阅', 'Plans'], lede: ['安装和管理，免费。', 'Installing and managing is free.'], secs: [
+      [['Free', 'Free'], ul(AS_PLANS.free.map(function (f) { return f[L]; }))],
+      [['Pro', 'Pro'], ul(AS_PLANS.pro.map(function (f) { return f[L]; }))],
+      [['价格', 'Prices'], list(['按月：$9.99 / 月', '按年：$99 / 年', '终身买断：$199，一次付清'], ['Monthly: $9.99 / month', 'Yearly: $99 / year', 'Lifetime: $199, paid once']) + p('按月和按年有 14 天免费试用。由 Waffo 代收，价格含税。<a class="clear" href="pricing.html">看定价</a>', 'Monthly and yearly include a 14-day free trial. Payments by Waffo, tax included. <a class="clear" href="pricing.html">See pricing</a>')],
+      [['取消', 'Cancel'], p('在<a class="clear" href="dashboard.html#tab=subscription">个人面板的订阅页</a>点「管理订阅」。取消后 Pro 保留到当前周期结束。', 'Open <a class="clear" href="dashboard.html#tab=subscription">Subscription in your dashboard</a> and choose Manage subscription. Pro stays until the current period ends.')]
+    ] }
+  ];
+  var spy;
+  function render() {
+    var h = AS.hash(), id = h.get('a') || 'install', i = ARTS.map(function (a) { return a.id; }).indexOf(id);
+    if (i < 0) i = 0;
+    var a = ARTS[i], prev = ARTS[i - 1], next = ARTS[i + 1];
+    document.title = a.title[L] + ' · ' + t('title.docs');
+    $('#crumb').textContent = a.title[L];
+    $('#artNav').innerHTML = ARTS.map(function (x) { return '<a href="#a=' + x.id + '"' + (x === a ? ' aria-current="page"' : '') + '>' + x.title[L] + '</a>'; }).join('');
+    $('#art').innerHTML = '<h1>' + a.title[L] + '</h1><p class="lede">' + a.lede[L] + '</p>' + a.secs.map(function (s, n) { return '<h2 id="s' + n + '" tabindex="-1">' + s[0][L] + '</h2>' + s[1]; }).join('') +
+      '<div class="prevnext">' + (prev ? '<a href="#a=' + prev.id + '"><small>' + t('art.prev') + '</small><b>' + prev.title[L] + '</b></a>' : '') + (next ? '<a class="next" href="#a=' + next.id + '"><small>' + t('art.next') + '</small><b>' + next.title[L] + '</b></a>' : '') + '</div>';
+    $('#artToc').innerHTML = '<b>' + t('art.toc') + '</b>' + a.secs.map(function (s, n) { return '<a href="#a=' + a.id + '&s=' + n + '" data-s="' + n + '">' + s[0][L] + '</a>'; }).join('');
+    if (spy) spy.disconnect();
+    if ('IntersectionObserver' in window) {
+      spy = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { if (e.isIntersecting) $$('#artToc a').forEach(function (l) { l.classList.toggle('on', 's' + l.dataset.s === e.target.id); }); });
+      }, { rootMargin: '-90px 0px -65% 0px' });
+      $$('#art h2').forEach(function (x) { spy.observe(x); });
+    }
+    var s = h.get('s'), el = s != null && $('#s' + s);
+    if (el) el.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0);
+  }
+  $('#artToc').addEventListener('click', function (e) {
+    var l = e.target.closest('a[data-s]'); if (!l) return; e.preventDefault();
+    history.replaceState(null, '', l.getAttribute('href'));
+    var el = $('#s' + l.dataset.s); el.scrollIntoView({ behavior: AS.reduce ? 'auto' : 'smooth', block: 'start' }); el.focus({ preventScroll: true });
+  });
+  window.addEventListener('hashchange', render);
+  render();
+})();
+</script>
+</body>
+</html>

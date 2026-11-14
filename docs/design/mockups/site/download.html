@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store</title>
+<script>(function(){var l,d=document.documentElement;try{l=JSON.parse(sessionStorage.getItem("as-proto-state")||"{}").lang}catch(e){}var q=/[?&]lang=(zh|en)/.exec(location.search);if(q)l=q[1];if(!l)l=/^zh/i.test(navigator.language||"")?"zh":"en";d.lang=l==="en"?"en":"zh-CN";d.classList.add("i18n-pending")})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="proto.css">
+</head>
+<body data-page="download">
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
+<header class="nav" id="nav"></header>
+<main id="main">
+
+<section class="page-hero center">
+  <div class="aurora low fade" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="wrap">
+    <span class="chip eyebrow mono">v0.2.2</span>
+    <h1 class="h1"><span data-i18n="dl.ha"></span><span class="dim" id="osLine"></span></h1>
+    <p class="lede" data-i18n="dl.lede"></p>
+    <div id="fromBox" hidden style="max-width:640px;margin:28px auto 0;text-align:left"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="os-grid" id="osGrid" data-spot-group></div>
+    <p class="cap center" style="margin-top:18px"><span data-i18n="dl.unsigned"></span> <a href="#first-run" data-i18n="dl.unsigned.link"></a></p>
+  </div>
+</section>
+
+<section class="section tight" id="first-run">
+  <div class="wrap">
+    <h2 class="h2" data-reveal style="margin-bottom:28px"><span data-i18n="dl.fr.ha"></span><span class="dim" data-i18n="dl.fr.hb"></span></h2>
+    <div class="fr-grid" data-reveal>
+      <div id="fr-mac" data-kind="skill"><span class="kind">macOS</span><h3 style="margin-top:10px" data-i18n="dl.fr.mac.h"></h3><p data-i18n="dl.fr.mac.p"></p>
+        <div class="code has-copy wrapline"><pre>xattr -cr "/Applications/Agent Store.app"</pre><button class="copy" type="button" data-copy='xattr -cr "/Applications/Agent Store.app"' data-i18n="copy"></button></div></div>
+      <div id="fr-win" data-kind="mcp"><span class="kind">Windows</span><h3 style="margin-top:10px" data-i18n="dl.fr.win.h"></h3><p data-i18n="dl.fr.win.p"></p></div>
+      <div id="fr-linux" data-kind="provider"><span class="kind">Linux</span><h3 style="margin-top:10px" data-i18n="dl.fr.linux.h"></h3><p data-i18n="dl.fr.linux.p1"></p><p style="margin-top:8px" data-i18n="dl.fr.linux.p2"></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section tight" style="padding-top:0">
+  <div class="wrap split" style="align-items:start">
+    <div id="releases" data-reveal class="stack">
+      <h2 class="h2"><span data-i18n="dl.rel.ha"></span><span class="dim" data-i18n="dl.rel.hb"></span></h2>
+      <p class="lede" data-i18n="dl.rel.p"></p>
+      <p><a class="link" href="https://github.com/phenix3443/agent-store/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="dl.rel.link"></a></p>
+    </div>
+    <div class="card" data-reveal>
+      <h2 data-i18n="dl.next.h"></h2>
+      <p class="muted" style="font-size:15px" data-i18n="dl.next.p"></p>
+      <p style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap"><a class="btn btn-pri btn-sm" href="store.html" data-i18n="go.store"></a><a class="btn btn-ghost btn-sm" href="docs.html" data-i18n="dl.next.docs"></a><a class="btn btn-ghost btn-sm" href="client.html" data-i18n="dl.next.client"></a></p>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="footer" id="footer"></footer>
+<script src="data.js"></script>
+<script src="state.js"></script>
+<script src="plans.js"></script>
+<script src="i18n.js"></script>
+<script src="proto.js"></script>
+
+<script>
+(function () {
+  var $ = AS.$, esc = AS.esc, ua = navigator.userAgent;
+  var os = /Mac/.test(ua) && !/iPhone|iPad/.test(ua) ? 'mac' : /Win/.test(ua) ? 'win' : /Linux|X11/.test(ua) && !/Android/.test(ua) ? 'linux' : '';
+  var OS = [
+    ['mac', 'macOS', 'skill', [['.dmg', 'dmg']]],
+    ['win', 'Windows', 'mcp', [['.exe', 'exe'], ['.msi', 'msi']]],
+    ['linux', 'Linux', 'provider', [['.deb', 'deb'], ['.rpm', 'rpm'], ['.AppImage', 'appimage']]]
+  ];
+  if (os) { var o = OS.filter(function (x) { return x[0] === os; })[0]; $('#osLine').textContent = t('dl.hb.os', { os: o[1] }); OS.sort(function (a, b) { return (b[0] === os) - (a[0] === os); }); }
+  else $('#osLine').textContent = t('dl.hb.any');
+  $('#osGrid').innerHTML = OS.map(function (o) {
+    var rec = o[0] === os;
+    return '<article class="os-card spot' + (rec ? ' rec' : '') + '" data-kind="' + o[2] + '"><span class="tile"><span class="mono" style="font-size:12px;font-weight:600">' + o[0] + '</span></span><h2>' + o[1] + (rec ? '<span class="chip">' + t('dl.rec') + '</span>' : '') + '</h2><p>' + t('dl.' + o[0] + '.d') + '</p><div class="files">' +
+      o[3].map(function (f) { return '<button class="file" type="button" data-os="' + o[0] + '" data-name="' + o[1] + '" data-ext="' + f[0] + '"><span>' + t('dl.f.' + f[1]) + ' <code>' + f[0] + '</code></span>' + AS.ic('download') + '</button>'; }).join('') + '</div></article>';
+  }).join('');
+  $('#osGrid').addEventListener('click', function (e) {
+    var b = e.target.closest('.file'); if (!b) return;
+    var el = $('#fr-' + b.dataset.os); el.scrollIntoView({ behavior: AS.reduce ? 'auto' : 'smooth', block: 'center' });
+    el.style.boxShadow = 'inset 0 0 0 1px rgba(var(--kind-rgb),.8)'; setTimeout(function () { el.style.boxShadow = ''; }, 2400);
+    AS.toast(t('dl.toast', { ext: b.dataset.ext, os: b.dataset.name }));
+  });
+  var from = AS.hash().get('from'), d = from && AS.byId(from);
+  if (d) {
+    var box = $('#fromBox'); box.hidden = false;
+    box.innerHTML = '<div class="card install-card" data-kind="' + d.kind + '" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center">' + AS.tile(d.kind) + '<div><b>' + t('dl.from.b', { name: esc(d.name) }) + '</b><p class="muted" style="font-size:14px">' + t('dl.from.p') + '</p></div>' +
+      '<div style="grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn btn-pri btn-sm" type="button" id="back">' + t('dl.from.btn', { name: esc(d.name) }) + '</button><span class="fine">' + t('dl.from.fine') + '</span></div></div>';
+    $('#back').addEventListener('click', function () { AS.S.set({ clientInstalled: true }); location.href = AS.href(d.id); });
+  }
+})();
+</script>
+</body>
+</html>
