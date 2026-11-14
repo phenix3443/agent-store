@@ -20,7 +20,7 @@ function Probe() {
       <span data-testid="favorites">{[...favoriteSlugs].join(',')}</span>
       <span data-testid="terminal">{String(terminalExpanded)}</span>
       <span data-testid="installed-version">{installedVersion}</span>
-      <button onClick={() => setNavView('browse')}>set-nav</button>
+      <button onClick={() => setNavView('overview')}>set-nav</button>
       <button onClick={() => setCategoryFilter('provider')}>set-category</button>
       <button onClick={() => setListFilter('installed')}>set-filter</button>
       <button onClick={() => setSelectedSlug('filesystem')}>select</button>
@@ -39,9 +39,9 @@ function renderProbe() {
   )
 }
 
-test('defaults: overview nav, all category, all filter, no selection, no favorites, terminal collapsed', () => {
+test('defaults: discover (browse) nav, all category, all filter, no selection, no favorites, terminal collapsed', () => {
   renderProbe()
-  expect(screen.getByTestId('nav').textContent).toBe('overview')
+  expect(screen.getByTestId('nav').textContent).toBe('browse')
   expect(screen.getByTestId('category').textContent).toBe('all')
   expect(screen.getByTestId('filter').textContent).toBe('all')
   expect(screen.getByTestId('selected').textContent).toBe('none')
@@ -57,7 +57,7 @@ test('setters update their respective fields', () => {
   fireEvent.click(screen.getByText('set-filter'))
   fireEvent.click(screen.getByText('select'))
   fireEvent.click(screen.getByText('expand-terminal'))
-  expect(screen.getByTestId('nav').textContent).toBe('browse')
+  expect(screen.getByTestId('nav').textContent).toBe('overview')
   expect(screen.getByTestId('category').textContent).toBe('provider')
   expect(screen.getByTestId('filter').textContent).toBe('installed')
   expect(screen.getByTestId('selected').textContent).toBe('filesystem')

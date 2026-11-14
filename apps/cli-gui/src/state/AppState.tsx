@@ -1,15 +1,14 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 
 export type AgentApp = 'claude' | 'codex'
-export type Theme = 'dark' | 'light'
-export type NavView = 'browse' | 'overview'
+export type NavView = 'browse' | 'overview' | 'settings'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
 export type ListFilter =
   | 'all' | 'featured' | 'popular' | 'recent' | 'recommended' | 'installed' | 'enabled' | 'disabled' | 'updates'
+export type SettingsTab = 'account' | 'general' | 'about'
+export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | null
 
 interface AppStateValue {
-  theme: Theme
-  toggleTheme: () => void
   agentApp: AgentApp
   setAgentApp: (a: AgentApp) => void
   navView: NavView
@@ -28,14 +27,25 @@ interface AppStateValue {
   setTerminalExpanded: (v: boolean) => void
   installedVersion: number
   bumpInstalledVersion: () => void
+  settingsTab: SettingsTab
+  setSettingsTab: (tab: SettingsTab) => void
+  /** null until the first catalog search answers. */
+  catalogOffline: boolean | null
+  setCatalogOffline: (v: boolean) => void
+  /** A search handed to the resource list from outside it (the command palette); the list consumes it. */
+  searchSeed: string | null
+  setSearchSeed: (q: string | null) => void
+  paletteOpen: boolean
+  setPaletteOpen: (v: boolean | ((prev: boolean) => boolean)) => void
+  shellDialog: ShellDialog
+  setShellDialog: (d: ShellDialog) => void
 }
 
 const AppStateContext = createContext<AppStateValue | null>(null)
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('dark')
   const [agentApp, setAgentApp] = useState<AgentApp>('claude')
-  const [navView, setNavView] = useState<NavView>('overview')
+  const [navView, setNavView] = useState<NavView>('browse')
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [listFilter, setListFilter] = useState<ListFilter>('all')
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null)
@@ -43,14 +53,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [favoriteSlugs, setFavoriteSlugs] = useState<Set<string>>(new Set())
   const [terminalExpanded, setTerminalExpanded] = useState(false)
   const [installedVersion, setInstalledVersion] = useState(0)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
+  const [catalogOffline, setCatalogOffline] = useState<boolean | null>(null)
+  const [searchSeed, setSearchSeed] = useState<string | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [shellDialog, setShellDialog] = useState<ShellDialog>(null)
 
-  function bumpInstalledVersion() {
+  const bumpInstalledVersion = useCallback(() => {
     setInstalledVersion((prev) => prev + 1)
-  }
-
-  function toggleTheme() {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
-  }
+  }, [])
 
   function toggleFavorite(slug: string) {
     setFavoriteSlugs((prev) => {
@@ -64,13 +75,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   return (
     <AppStateContext.Provider
       value={{
-        theme, toggleTheme,
         agentApp, setAgentApp,
         navView, setNavView, categoryFilter, setCategoryFilter,
         listFilter, setListFilter, selectedSlug, setSelectedSlug,
         editingConfigSlug, setEditingConfigSlug,
         favoriteSlugs, toggleFavorite, terminalExpanded, setTerminalExpanded,
         installedVersion, bumpInstalledVersion,
+        settingsTab, setSettingsTab,
+        catalogOffline, setCatalogOffline,
+        searchSeed, setSearchSeed,
+        paletteOpen, setPaletteOpen,
+        shellDialog, setShellDialog,
       }}
     >
       {children}

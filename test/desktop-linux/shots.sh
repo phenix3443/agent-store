@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
-# catalog switch (#125) and the skill library (#111). Each step is driven by an
+# catalog switch (#125), the skill library (#111) and the window shell (#163). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -63,7 +63,7 @@ check "seeded the old ~/.agents layout" '[ -f "$HOME/.agents/registry.json" ] &&
 # 1. First launch: the app's first sidecar call moves ~/.agents to ~/.agent-store.
 "$APP" >"$OUT/app-first.log" 2>&1 &
 sleep "$SETTLE"
-shot 00-first-launch-overview
+shot 00-first-launch-discover
 stop_app
 check "migration moved the registry" '[ -f "$HOME/.agent-store/registry.json" ] && [ ! -e "$HOME/.agents/registry.json" ]'
 check "migrated skill is in the library" '[ -f "$LIB/legacy-skill/SKILL.md" ] && [ ! -e "$HOME/.agents/skills/legacy-skill" ]'
@@ -81,10 +81,11 @@ check "Claude deployment links to the library" 'links_to "$HOME/.claude/skills/f
 check "Codex deployment links to the library" 'links_to "$HOME/.codex/skills/find-skills" "$LIB/$SKILL_SLUG"'
 check "nothing went into the shared ~/.agents/skills" '[ ! -e "$HOME/.agents/skills/find-skills" ] && [ ! -e "$HOME/.agents/skills/$SKILL_SLUG" ]'
 
-# 3. Search in the store list (the window has no decorations and sits at 0,0).
+# 3. Search in the store list (the window has no decorations and sits at 0,0):
+#    past the 204px sidebar, below the 44px title bar.
 WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
 eval "$(xdotool getwindowgeometry --shell "$WIN")"
-xdotool mousemove $((X + 58 + 150)) $((Y + 44 + 34)) click 1
+xdotool mousemove $((X + 204 + 150)) $((Y + 44 + 34)) click 1
 sleep 1
 xdotool type --delay 60 'playwright'
 # Each RPC is a fresh sidecar process; the search waits for one plus the API.
@@ -137,6 +138,40 @@ install_link "$NPM_MCP_ID"
 xdotool key Tab Return
 sleep 6
 shot 13-installed-list
+stop_app
+
+# 10. The window shell, driven by its shortcuts: sidebar counts, the command
+#     palette, the usage and settings pages, the shortcut list and the narrow
+#     window with the icon-only sidebar.
+"$APP" >"$OUT/app-shell.log" 2>&1 &
+sleep "$SETTLE"
+WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
+eval "$(xdotool getwindowgeometry --shell "$WIN")"
+# No window manager in the container: keys go to the window under the pointer.
+xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2))
+xdotool windowfocus "$WIN" 2>/dev/null || true
+shot 14-shell-discover
+xdotool key ctrl+k
+sleep 2
+xdotool type --delay 60 'find'
+sleep 3
+shot 15-command-palette
+xdotool key Escape
+sleep 1
+xdotool key ctrl+5
+sleep 6
+shot 16-usage
+xdotool key ctrl+6
+sleep 2
+shot 17-settings
+xdotool key question
+sleep 1
+shot 18-shortcuts
+xdotool key Escape
+xdotool key ctrl+1
+xdotool windowsize "$WIN" 960 680
+sleep 4
+shot 19-narrow-window
 stop_app
 
 cli search find-skills --kind skill

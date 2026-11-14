@@ -44,7 +44,7 @@ export function ProGate({ feature, children, title, description, onUpgrade }: Pr
         <button
           type="button"
           onClick={onUpgrade}
-          className="mt-1 rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          className="mt-1 rounded-md bg-store-accent px-3 py-1.5 text-xs font-medium text-canvas hover:opacity-90"
         >
           {t('extra.upgradeCta')}
         </button>

@@ -1,4 +1,3 @@
-import * as Dialog from '@radix-ui/react-dialog'
 import { useEffect, useRef, useState } from 'react'
 import type { CatalogResourceDetail, InstalledItem, InstallOutcome, Item } from '@as/types'
 import { callRpc, RpcError } from '../lib/rpc'
@@ -12,6 +11,8 @@ import { useAppState } from '../state/AppState'
 import { useTerminalLog } from '../state/TerminalLog'
 import { useT } from '../i18n'
 import { CategoryIcon } from './CategoryIcon'
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogTitle } from './ui/dialog'
+import { Button } from './ui/button'
 
 type NoticeReason = 'invalid' | 'notFound' | 'catalogError' | 'installed' | 'mismatch' | 'failed'
 
@@ -172,77 +173,64 @@ export function InstallLinkDialog() {
   const installing = phase?.kind === 'confirm' && phase.installing
 
   return (
-    <Dialog.Root open={phase !== null} onOpenChange={(open) => !open && close()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content
-          aria-describedby={undefined}
-          className="fixed left-1/2 top-1/2 z-[70] flex max-h-[85vh] w-[480px] max-w-[calc(100vw-32px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-store-border-strong bg-store-win shadow-2xl"
-        >
-          <div className="flex-1 overflow-y-auto p-6">
-            {phase?.kind === 'loading' && (
-              <>
-                <Dialog.Title className="text-base font-semibold text-store-text">{t('installLink.confirmTitle')}</Dialog.Title>
-                <p role="status" className="mt-3 text-sm text-store-text-2">
-                  {t('installLink.loading')} <span className="font-mono text-store-text">{phase.ref}</span>…
+    <Dialog open={phase !== null} onOpenChange={(open) => !open && close()}>
+      <DialogContent aria-describedby={undefined} layer="top">
+        <DialogBody>
+          {phase?.kind === 'loading' && (
+            <>
+              <DialogTitle>{t('installLink.confirmTitle')}</DialogTitle>
+              <p role="status" className="mt-3 text-sm text-store-text-2">
+                {t('installLink.loading')} <span className="font-mono text-store-text">{phase.ref}</span>…
+              </p>
+            </>
+          )}
+
+          {phase?.kind === 'notice' && (
+            <>
+              <DialogTitle>
+                {t(`installLink.${phase.reason}Title`)}
+              </DialogTitle>
+              <p className="mt-3 text-sm leading-relaxed text-store-text-2">{t(`installLink.${phase.reason}Body`)}</p>
+              {phase.slug && (
+                <p className="mt-3 break-all rounded-lg border border-store-border bg-store-term-bg px-3 py-2 font-mono text-xs text-store-text-2">
+                  {phase.slug}
                 </p>
-              </>
-            )}
+              )}
+              {phase.detail && <p className="mt-2 break-words text-xs text-store-red">{phase.detail}</p>}
+            </>
+          )}
 
-            {phase?.kind === 'notice' && (
-              <>
-                <Dialog.Title className="text-base font-semibold text-store-text">
-                  {t(`installLink.${phase.reason}Title`)}
-                </Dialog.Title>
-                <p className="mt-3 text-sm leading-relaxed text-store-text-2">{t(`installLink.${phase.reason}Body`)}</p>
-                {phase.slug && (
-                  <p className="mt-3 break-all rounded-lg border border-store-border bg-store-term-bg px-3 py-2 font-mono text-xs text-store-text-2">
-                    {phase.slug}
-                  </p>
-                )}
-                {phase.detail && <p className="mt-2 break-words text-xs text-store-red">{phase.detail}</p>}
-              </>
-            )}
+          {phase?.kind === 'confirm' && <ConfirmBody item={phase.item} resource={phase.resource} />}
+        </DialogBody>
 
-            {phase?.kind === 'confirm' && <ConfirmBody item={phase.item} resource={phase.resource} />}
-          </div>
-
-          <div className="flex justify-end gap-2 border-t border-store-border px-6 py-4">
-            {/* First in the DOM so it takes initial focus: Enter must not install. */}
-            <button
-              type="button"
-              onClick={close}
-              aria-disabled={installing}
-              className="rounded-lg border border-store-border-strong px-4 py-1.5 text-xs font-semibold text-store-text-2 hover:text-store-text aria-disabled:opacity-50"
+        <DialogFooter>
+          {/* First in the DOM so it takes initial focus: Enter must not install. */}
+          <Button onClick={close} aria-disabled={installing} className="aria-disabled:opacity-50">
+            {phase?.kind === 'notice' ? t('installLink.close') : t('common.cancel')}
+          </Button>
+          {phase?.kind === 'notice' && phase.reason === 'installed' && phase.slug && phase.category && (
+            <Button
+              variant="primary"
+              onClick={() => {
+                showInList(phase.slug!, phase.category!)
+                close()
+              }}
             >
-              {phase?.kind === 'notice' ? t('installLink.close') : t('common.cancel')}
-            </button>
-            {phase?.kind === 'notice' && phase.reason === 'installed' && phase.slug && phase.category && (
-              <button
-                type="button"
-                onClick={() => {
-                  showInList(phase.slug!, phase.category!)
-                  close()
-                }}
-                className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-              >
-                {t('installLink.view')}
-              </button>
-            )}
-            {phase?.kind === 'confirm' && (
-              <button
-                type="button"
-                onClick={() => void confirmInstall(phase)}
-                disabled={installing || !!phase.resource.installError}
-                className="rounded-lg bg-store-accent px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {installing ? t('installLink.installing') : t('installLink.confirm')}
-              </button>
-            )}
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+              {t('installLink.view')}
+            </Button>
+          )}
+          {phase?.kind === 'confirm' && (
+            <Button
+              variant="primary"
+              onClick={() => void confirmInstall(phase)}
+              disabled={installing || !!phase.resource.installError}
+            >
+              {installing ? t('installLink.installing') : t('installLink.confirm')}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -255,7 +243,7 @@ function ConfirmBody({ item, resource }: { item: Item; resource: CatalogResource
 
   return (
     <>
-      <Dialog.Title className="text-base font-semibold text-store-text">{t('installLink.confirmTitle')}</Dialog.Title>
+      <DialogTitle>{t('installLink.confirmTitle')}</DialogTitle>
 
       <div className="mt-4 flex items-center gap-3">
         <CategoryIcon category={item.category} size="md" />
