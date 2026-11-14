@@ -190,6 +190,16 @@ $viaCli = Start-Job -ArgumentList $cc, $Sidecar -ScriptBlock {
 Log "installAndEnable with npm Claude Code: $("$viaCli".Trim())"
 Check 'an MCP install succeeds with Claude Code installed from npm' { ("$viaCli" | ConvertFrom-Json).ok -eq $true -and (Get-Content "$cc\claude\.claude.json" -Raw) -match 'context7' }
 
+# 8. The window again with npm's Claude Code on PATH: a skill install does not involve the
+#    claude CLI, so it must still work.
+$other = ('["find-skills",{"kind":"skill"}]' | & $Sidecar __rpc search - | ConvertFrom-Json).data.resources | Where-Object { $_.slug -ne $SkillSlug } | Select-Object -First 1
+Log "second skill: $($other.id) ($($other.slug))"
+OpenLink "agent-store://install?id=$(Enc $other.id)"
+Confirm
+Shot '05-npm-claude-skill-installed'
+Check "with npm's Claude Code on PATH, a link still installs a skill" { $other -and (Test-Path "$env:USERPROFILE\.agent-store\skills\$($other.slug)\.agent-store.json") }
+StopApp
+
 $crashes = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $Start; Id = 1000, 1001, 1002 } -ErrorAction SilentlyContinue | Where-Object { $_.Message -match 'app\.exe|aas\.exe|Agent Store' })
 $crashes | Format-List TimeCreated, Id, ProviderName, Message | Out-String -Width 300 | Add-Content "$Out\crash-events.txt"
 Check 'no crash or hang was logged for app.exe or aas.exe' { $crashes.Count -eq 0 }
