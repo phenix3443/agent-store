@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { runRpc } from '../rpc'
+import { runRpc, readFirstLine } from '../rpc'
 import type { Engine } from '@as/types'
 
 function makeEngine(overrides?: Partial<Engine>): Engine {
@@ -175,4 +175,56 @@ test('doctor reads the paths from the environment and reports no findings for an
       else process.env[k] = v
     }
   }
+})
+
+test('runRpc reads the JSON arguments from stdin when the argument is -', async () => {
+  let got: unknown[] = []
+  const setProjectEnv = async (...a: unknown[]) => { got = a }
+  const lines: string[] = []
+  const code = await runRpc(
+    makeEngine({ setProjectEnv } as unknown as Partial<Engine>),
+    ['setProjectEnv', '-'],
+    s => lines.push(s),
+    async () => '["p1","API_KEY","sk-secret"]'
+  )
+  expect(code).toBe(0)
+  expect(got).toEqual(['p1', 'API_KEY', 'sk-secret'])
+  expect(JSON.parse(lines[0]).ok).toBe(true)
+})
+
+test('runRpc does not read stdin when the arguments are on the command line', async () => {
+  let read = false
+  const code = await runRpc(makeEngine(), ['install', '["openai-provider"]'], () => {}, async () => { read = true; return '[]' })
+  expect(code).toBe(0)
+  expect(read).toBe(false)
+})
+
+test('runRpc returns ok:false for invalid JSON on stdin', async () => {
+  const lines: string[] = []
+  const code = await runRpc(makeEngine(), ['install', '-'], s => lines.push(s), async () => 'not-json')
+  expect(code).toBe(1)
+  expect(JSON.parse(lines[0]).error).toBe('Invalid JSON arguments')
+})
+
+test('readFirstLine returns the first line without waiting for the end of input', async () => {
+  async function* open() {
+    yield new TextEncoder().encode('["a",')
+    yield '"b"]\n'
+    await new Promise(() => {})
+  }
+  expect(await readFirstLine(open())).toBe('["a","b"]')
+})
+
+test('readFirstLine joins a multi-byte character split across chunks', async () => {
+  const bytes = new TextEncoder().encode('["密钥"]\r\n')
+  async function* chunks() {
+    yield bytes.slice(0, 4)
+    yield bytes.slice(4)
+  }
+  expect(await readFirstLine(chunks())).toBe('["密钥"]')
+})
+
+test('readFirstLine accepts input that ends without a newline', async () => {
+  async function* chunks() { yield '["x"]' }
+  expect(await readFirstLine(chunks())).toBe('["x"]')
 })
