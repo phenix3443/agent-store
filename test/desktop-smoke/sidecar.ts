@@ -65,14 +65,21 @@ function run(argv: string[], input?: string, timeoutMs = 120_000): Promise<Run> 
   })
 }
 
-interface Envelope<T> { ok: boolean; data?: T; error?: string }
+interface Envelope<T> { ok: boolean; data?: T; error?: string; code?: string }
+
+// The live test catalog sometimes answers 503 while it redeploys; that is not the client's fault.
+function catalogDown(e: Envelope<unknown> | undefined): boolean {
+  return e?.code === 'CatalogUnavailableError' || (e?.ok === true && (e.data as { offline?: boolean } | null)?.offline === true)
+}
 
 async function rpc<T>(method: string, args: unknown[], eol = '\n'): Promise<{ run: Run; envelope?: Envelope<T> }> {
-  const r = await run(['__rpc', method, '-'], `${JSON.stringify(args)}${eol}`)
-  try {
-    return { run: r, envelope: JSON.parse(r.stdout) as Envelope<T> }
-  } catch {
-    return { run: r }
+  for (let attempt = 1; ; attempt++) {
+    const r = await run(['__rpc', method, '-'], `${JSON.stringify(args)}${eol}`)
+    let envelope: Envelope<T> | undefined
+    try { envelope = JSON.parse(r.stdout) as Envelope<T> } catch { /* reported by the caller */ }
+    if (!catalogDown(envelope) || attempt === 3) return { run: r, envelope }
+    log(`catalog unavailable for ${method}, retrying in 20s (attempt ${attempt})`)
+    await Bun.sleep(20_000)
   }
 }
 
