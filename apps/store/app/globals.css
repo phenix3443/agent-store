@@ -2008,6 +2008,19 @@
     }
   }
 
+  /* Three tabs fit a phone only without their icons. */
+  @media (max-width: 480px) {
+    .dash-tabs a {
+      flex: 1;
+      justify-content: center;
+      padding: 8px 10px;
+    }
+
+    .dash-tabs a svg {
+      display: none;
+    }
+  }
+
   .dash-h {
     display: flex;
     flex-wrap: wrap;
