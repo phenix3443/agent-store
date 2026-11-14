@@ -16,10 +16,9 @@ interface HeaderProps {
   user: CurrentUser | null
 }
 
-// The desktop app gets its own page in #160; until then its nav entry opens the download page.
 const NAV = [
   { href: '/store', key: 'store' },
-  { href: '/download', key: 'client' },
+  { href: '/client', key: 'client' },
   { href: '/docs', key: 'docs' },
   { href: '/pricing', key: 'pricing' },
 ] as const

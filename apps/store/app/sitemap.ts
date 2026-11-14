@@ -9,7 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const page = await listResources({ kind: null, q: '', sort: 'default' }, 0, 100).catch(() => null)
   const resources = page?.ok ? page.resources : []
 
-  const staticRoutes: MetadataRoute.Sitemap = ['', '/store', '/docs', '/pricing'].map((path) => ({
+  const staticRoutes: MetadataRoute.Sitemap = ['', '/store', '/client', '/docs', '/pricing', '/download'].map((path) => ({
     url: `${SITE_URL}${path}`,
     changeFrequency: 'weekly',
     priority: path === '' ? 1 : 0.7,
