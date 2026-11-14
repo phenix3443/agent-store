@@ -6,26 +6,10 @@ import * as Tabs from '@radix-ui/react-tabs'
 import { ArrowUpRight, Route, Server, Sparkles } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import type { ResourceKind, ResourceSummary } from '@as/types'
-import { installCommand, resourceHref } from '@/lib/resource'
-
-export const SHELF_KINDS: ResourceKind[] = ['skill', 'mcp', 'provider']
+import { resourceHref } from '@/lib/resource'
+import { cardArt, SHELF_KINDS } from './shelf'
 
 const ICONS = { skill: Sparkles, mcp: Server, provider: Route } as const
-
-/** Lines drawn on the lower half of a card, taken from the record itself. */
-export function cardArt(r: ResourceSummary): { big: string; lines: string[] } {
-  const command = installCommand(r)
-  if (r.kind === 'skill') {
-    return { big: 'SKILL.md', lines: [r.origin.upstreamId, ...(command ? [command] : [])] }
-  }
-  if (r.kind === 'mcp') {
-    return {
-      big: r.transports[0] ?? 'mcp',
-      lines: [r.origin.upstreamId, ...r.transports.slice(1), ...(r.version ? [`v${r.version.replace(/^v/, '')}`] : [])],
-    }
-  }
-  return { big: r.origin.upstreamId, lines: [...(command ? [command] : []), ...r.tags.slice(0, 3)] }
-}
 
 export function CatalogShelf({ samples }: { samples: Record<ResourceKind, ResourceSummary[]> }) {
   const t = useTranslations('site.home.catalog')

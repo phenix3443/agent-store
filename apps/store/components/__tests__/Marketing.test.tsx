@@ -21,7 +21,8 @@ afterEach(() => {
 
 const { DownloadButton, SupportedAgents } = await import('../marketing/Marketing')
 const { ProductDemo, DEMO_VIEWS } = await import('../marketing/ProductDemo')
-const { CatalogShelf, cardArt } = await import('../marketing/CatalogShelf')
+const { CatalogShelf } = await import('../marketing/CatalogShelf')
+const { cardArt } = await import('../marketing/shelf')
 const { Faq, FAQ_KEYS } = await import('../marketing/Faq')
 const { SkillLinks } = await import('../marketing/SkillLinks')
 const { RelayDemo } = await import('../marketing/RelayDemo')

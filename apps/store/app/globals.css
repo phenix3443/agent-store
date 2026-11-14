@@ -706,7 +706,8 @@
   .frame::before {
     content: '';
     position: absolute;
-    inset: -70px -40px;
+    /* Sideways the glow stays within the page gutter, or it widens the page on phones. */
+    inset: -70px calc(-1 * clamp(16px, 4vw, 32px));
     z-index: -1;
     border-radius: 50%;
     background:
