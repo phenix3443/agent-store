@@ -18,7 +18,7 @@ import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
 import { ResourceCatalog, toItem, type Catalog } from './catalog'
 import { resourceLongSlug } from '@as/types'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
-import { createAdapters, type KindAdapter } from './adapters'
+import { createAdapters, mcpCliFallbackNote, type KindAdapter } from './adapters'
 import { ProjectService } from './projects/service'
 import { BackupService } from './backup/service'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
@@ -195,6 +195,8 @@ export class EngineImpl implements Engine {
         throw new Error(`Installed ${slug} ${result.version}, but enabling it for ${target} failed: ${String(e)}`)
       }
       outcome.enabled.push(target)
+      const note = entry.category === 'mcp' ? mcpCliFallbackNote(target, this.paths) : undefined
+      if (note) (outcome.notes ??= []).push(note)
     }
     return outcome
   }
