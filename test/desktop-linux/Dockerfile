@@ -12,8 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
   && apt-get install -y --no-install-recommends nodejs \
     libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
     build-essential curl file ca-certificates \
-    xvfb xdotool imagemagick dbus-x11 xdg-utils desktop-file-utils libglib2.0-bin fonts-noto-cjk sudo unzip rpm2cpio cpio rpm \
+    xvfb xdotool imagemagick dbus-x11 xdg-utils desktop-file-utils libglib2.0-bin fonts-noto-cjk sudo unzip rpm2cpio cpio rpm locales \
   && rm -rf /var/lib/apt/lists/*
+# WebKitGTK takes navigator.language from the process locale, which falls back to C (English)
+# unless it is installed; marketing.sh starts the client in each.
+RUN locale-gen en_US.UTF-8 zh_CN.UTF-8
 
 RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash
 RUN npm install -g pnpm@11.5.0

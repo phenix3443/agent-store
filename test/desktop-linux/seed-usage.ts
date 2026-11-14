@@ -1,12 +1,14 @@
 // Writes relay usage for the screenshots: daily rollups over the last 12 days for
 // two providers, both agents and three models, plus recent request-log rows
-// (one fallback, one error). Fixture data for CI only.
-// Usage: bun test/desktop-linux/seed-usage.ts <AS_HOME>
+// (one fallback, one error). With a provider slug, every row goes through that one
+// provider and Codex uses gpt-5 (marketing.sh installs only OpenRouter). Fixture data for CI only.
+// Usage: bun test/desktop-linux/seed-usage.ts <AS_HOME> [provider]
 import { mkdirSync } from 'fs'
 import { openUsageDb } from '../../apps/client-core/src/usage/db'
 
 const home = process.argv[2]
-if (!home) throw new Error('usage: seed-usage.ts <AS_HOME>')
+const only = process.argv[3]
+if (!home) throw new Error('usage: seed-usage.ts <AS_HOME> [provider]')
 mkdirSync(home, { recursive: true })
 const db = openUsageDb(home)
 
@@ -16,6 +18,11 @@ const series: [string, 'claude' | 'codex', string, number, number, number, numbe
   ['openrouter', 'claude', 'claude-haiku-4-5', 18, 3100, 420, 0.004],
   ['deepseek', 'codex', 'deepseek-chat', 25, 4300, 760, 0.002],
 ]
+if (only) {
+  series.forEach((row) => (row[0] = only))
+  series[2][2] = 'gpt-5'
+  series[2][6] = 0.009
+}
 const day = 86_400_000
 for (let d = 11; d >= 0; d--) {
   const date = new Date(Date.now() - d * day).toISOString().slice(0, 10)
@@ -39,6 +46,13 @@ const logs: [string, 'claude' | 'codex', string, number, number, boolean][] = [
   ['openrouter', 'claude', 'claude-sonnet-4-5', 429, 310, false],
   ['openrouter', 'claude', 'claude-haiku-4-5', 200, 720, false],
 ]
+if (only) {
+  logs.forEach((row) => {
+    row[0] = only
+    row[5] = false
+    if (row[1] === 'codex') row[2] = 'gpt-5'
+  })
+}
 logs.forEach(([provider, target, model, status, latency, fallback], i) => {
   db.run(
     `INSERT INTO request_logs
