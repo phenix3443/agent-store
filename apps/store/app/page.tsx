@@ -77,7 +77,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               {tm('platforms')}
             </span>
             <span className="flex flex-wrap justify-center gap-y-0.5">
-              <Link href="/docs#cli">{t('cli')}</Link>
+              <Link href="/docs/cli">{t('cli')}</Link>
               <i aria-hidden className="mx-2 not-italic text-line-strong">
                 |
               </i>
