@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Store 桌面客户端 · 原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css?v=14">
+</head>
+<body>
+<div class="stage">
+  <div class="app" id="app">
+    <header class="tb" id="tb"></header>
+    <div class="body">
+      <nav class="side" id="side"></nav>
+      <main class="main" id="main"></main>
+      <aside class="pane" id="pane" hidden></aside>
+      <section class="ob" id="ob" hidden></section>
+    </div>
+    <footer class="sb" id="sb"></footer>
+  </div>
+</div>
+
+<dialog id="dlg"></dialog>
+<dialog id="pal"></dialog>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<div class="pc" id="pc"></div>
+
+<script src="data.js?v=14"></script>
+<script src="state.js?v=14"></script>
+<script src="i18n.js?v=14"></script>
+<script src="app.js?v=14"></script>
+</body>
+</html>
