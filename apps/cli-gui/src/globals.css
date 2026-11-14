@@ -40,11 +40,9 @@
   --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 
-  /* Legacy names still used by the pages #164 and #165 rebuild; remove them with those pages. */
-  --win: var(--bg-2);
+  /* Legacy names still used by the pages #164 rebuilds; remove them with those pages. */
   --sidebar: #0d0b16;
   --content: var(--bg-2);
-  --chrome: #13111f;
   --border: var(--line);
   --border-strong: var(--line-strong);
   --text: var(--fg);
@@ -58,11 +56,7 @@
   --amber-soft: rgb(var(--warn-rgb) / 0.12);
   --red: var(--bad);
   --red-soft: rgb(var(--bad-rgb) / 0.1);
-  --provider-soft: rgb(var(--provider-rgb) / 0.12);
-  --purple: var(--skill);
-  --purple-soft: rgb(var(--skill-rgb) / 0.12);
   --term-bg: var(--code);
-  --code-bg: var(--panel-2);
 }
 
 [data-kind='skill'] {

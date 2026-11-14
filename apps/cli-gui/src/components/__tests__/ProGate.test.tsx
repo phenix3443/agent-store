@@ -1,5 +1,5 @@
 import { test, expect, afterEach, spyOn, mock } from 'bun:test'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import * as rpcModule from '../../lib/rpc'
 import { EntitlementProvider } from '../../state/Entitlement'
 import { ProGate } from '../ProGate'
@@ -46,4 +46,20 @@ test('renders the children when the plan unlocks the feature', async () => {
 
   expect(await screen.findByText('SECRET_CONTENT')).toBeInTheDocument()
   expect(screen.queryByText('预算与超支告警')).not.toBeInTheDocument()
+})
+
+test('shows an upgrade button only when onUpgrade is given', async () => {
+  mockPlan({ plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false })
+  const onUpgrade = mock(() => {})
+
+  render(
+    <EntitlementProvider>
+      <ProGate feature="smartRouting" title="智能路由" onUpgrade={onUpgrade}>
+        <div>SECRET_CONTENT</div>
+      </ProGate>
+    </EntitlementProvider>
+  )
+
+  fireEvent.click(await screen.findByRole('button', { name: '升级到 Pro' }))
+  expect(onUpgrade).toHaveBeenCalledTimes(1)
 })

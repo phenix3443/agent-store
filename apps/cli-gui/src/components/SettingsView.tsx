@@ -1,18 +1,61 @@
-import { useState, type ReactNode } from 'react'
-import { ChevronDown, Github } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Copy, ExternalLink, Github, Keyboard, RefreshCw, Stethoscope } from 'lucide-react'
+import type { InstalledItem, UpdateAvailable } from '@as/types'
 import { useAppState, type AgentApp, type SettingsTab } from '../state/AppState'
 import { useAuth } from '../state/Auth'
-import { useEntitlement } from '../state/Entitlement'
-import { useI18n, LOCALES, LOCALE_NAMES, type Locale } from '../i18n'
-import { callRpc } from '../lib/rpc'
+import { useEntitlement, type ProFeature } from '../state/Entitlement'
+import { useTerminalLog } from '../state/TerminalLog'
+import { useI18n, LOCALES, LOCALE_NAMES } from '../i18n'
+import { callRpc, errorText } from '../lib/rpc'
 import { openExternal } from '../lib/openExternal'
+import { getStoreBaseUrl } from '../lib/storeAuth'
 import { useAccountActions } from '../lib/useAccountActions'
+import { AGENTS } from '../lib/agents'
+import { AgentMark } from './AgentMark'
+import { CategoryIcon } from './CategoryIcon'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { Banner } from './ui/states'
+import { Row, RowGroup } from './ui/card'
+import { Segmented } from './ui/segmented'
+import { Banner, Spinner } from './ui/states'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Logo } from './ui/icons'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/menu'
+import { toast } from './ui/toast'
 import { version as appVersion } from '../../src-tauri/tauri.conf.json'
+
+/** What the `doctor` RPC returns (apps/client-core/src/doctor.ts). */
+interface DoctorFinding {
+  level: 'error' | 'warn'
+  code: string
+  slug?: string
+  message: string
+}
+
+const TABS: SettingsTab[] = ['general', 'agents', 'data', 'account', 'cli', 'about']
+
+const CLI_COMMANDS: [string, string][] = [
+  ['search [query] [--kind <skill|mcp|provider>]', 'search'],
+  ['install <id|slug> [--target <agent>] [--project <id|dir>] [--force]', 'install'],
+  ['uninstall <slug> [--project <id|dir> [--target <agent>]] [--force]', 'uninstall'],
+  ['projects <list|add|remove|move|show|set-env|unset-env|env|exec>', 'projects'],
+  ['enable <slug> --for <agent> [--replace] [--force]', 'enable'],
+  ['disable <slug> --for <agent> [--force]', 'disable'],
+  ['config <slug>', 'config'],
+  ['sync [--for <agent>]', 'sync'],
+  ['relay <start|stop|status>', 'relay'],
+  ['usage [--days N] [--provider <slug>] [--for <agent>]', 'usage'],
+  ['update [slug]', 'update'],
+  ['info <id|slug>', 'info'],
+  ['list [--for <agent>]', 'list'],
+  ['doctor', 'doctor'],
+  ['migrate', 'migrate'],
+]
+
+const PRO_FEATURES: [ProFeature, string][] = [
+  ['advancedUsageAnalytics', 'budget'],
+  ['smartRouting', 'smartRouting'],
+  ['keyRotation', 'keyRotation'],
+]
 
 // Google's brand mark (lucide has no Google icon).
 function GoogleIcon() {
@@ -26,50 +69,448 @@ function GoogleIcon() {
   )
 }
 
-const APP_META: Record<AgentApp, { label: string; path: string }> = {
-  claude: { label: 'Claude Code', path: '~/.claude' },
-  codex: { label: 'Codex', path: '~/.codex' },
+function Heading({ children }: { children: ReactNode }) {
+  return <p className="mb-2 ml-0.5 text-xs font-semibold text-fg-3">{children}</p>
 }
 
-function Row({ title, sub, children }: { title: ReactNode; sub?: ReactNode; children?: ReactNode }) {
+function Mono({ children }: { children: ReactNode }) {
+  return <code className="font-mono text-[11.5px] text-fg-2">{children}</code>
+}
+
+function fill(template: string, values: ReactNode[]): ReactNode[] {
+  return template.split(/(\{\d\})/).map((part, i) => {
+    const m = /^\{(\d)\}$/.exec(part)
+    return m ? <Mono key={i}>{values[Number(m[1])]}</Mono> : part
+  })
+}
+
+function GeneralTab() {
+  const { locale, setLocale, t } = useI18n()
+  const { agentApp, setAgentApp, setShellDialog } = useAppState()
   return (
-    <div className="flex min-h-[54px] items-center gap-3 border-b border-line px-3.5 py-[11px] last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <b className="flex flex-wrap items-center gap-2 text-[13px] font-semibold">{title}</b>
-        {sub && <small className="block text-xs text-fg-3">{sub}</small>}
-      </div>
-      {children}
-    </div>
+    <>
+      <RowGroup>
+        <Row title={t('settings.general.language')} sub={t('settings.general.languageSub')}>
+          <Segmented
+            label={t('settings.general.language')}
+            value={locale}
+            onChange={setLocale}
+            options={LOCALES.map((code) => ({ value: code, label: LOCALE_NAMES[code] }))}
+          />
+        </Row>
+        <Row title={t('settings.general.theme')} sub={t('settings.general.themeOnlyDark')}>
+          <Badge>{t('settings.general.dark')}</Badge>
+        </Row>
+        <Row title={t('settings.general.targetApp')} sub={t('settings.general.targetAppSub')}>
+          <Segmented<AgentApp>
+            label={t('settings.general.targetApp')}
+            value={agentApp}
+            onChange={setAgentApp}
+            options={AGENTS.map((a) => ({ value: a.id, label: a.name }))}
+          />
+        </Row>
+        <Row title={t('settings.general.shortcuts')} sub={t('settings.general.shortcutsSub')}>
+          <Button size="sm" onClick={() => setShellDialog('shortcuts')}>
+            <Keyboard />
+            {t('settings.general.view')}
+          </Button>
+        </Row>
+      </RowGroup>
+      <RowGroup>
+        <Row title={t('settings.general.welcome')} sub={t('settings.general.welcomeSub')}>
+          <Button size="sm" onClick={() => setShellDialog('welcome')}>
+            {t('settings.general.welcomeBtn')}
+          </Button>
+        </Row>
+      </RowGroup>
+    </>
   )
 }
 
-function Group({ children }: { children: ReactNode }) {
-  return <div className="mb-4 flex flex-col overflow-hidden rounded-box border border-line">{children}</div>
+function DoctorResult({ findings }: { findings: DoctorFinding[] }) {
+  const { t } = useI18n()
+  if (findings.length === 0) return <Banner tone="info" title={t('settings.agents.doctorOk')} />
+  const errors = findings.filter((f) => f.level === 'error').length
+  return (
+    <Banner
+      tone={errors ? 'error' : 'warn'}
+      title={t('settings.agents.doctorFound').replace('{e}', String(errors)).replace('{w}', String(findings.length - errors))}
+    >
+      <ul className="mt-1.5 flex flex-col gap-1.5">
+        {findings.map((f, i) => (
+          <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+            <Badge tone={f.level === 'error' ? 'bad' : 'warn'}>{f.level === 'error' ? t('settings.agents.error') : t('settings.agents.warn')}</Badge>
+            <Mono>
+              {f.code}
+              {f.slug ? ` [${f.slug}]` : ''}
+            </Mono>
+            <span className="min-w-0 break-words text-fg-2">{f.message}</span>
+          </li>
+        ))}
+      </ul>
+    </Banner>
+  )
+}
+
+function AgentsTab() {
+  const { t } = useI18n()
+  const [state, setState] = useState<{ status: 'idle' | 'running' | 'done' | 'failed'; findings: DoctorFinding[]; error?: string }>({
+    status: 'idle',
+    findings: [],
+  })
+
+  async function runDoctor() {
+    setState({ status: 'running', findings: [] })
+    try {
+      setState({ status: 'done', findings: await callRpc<DoctorFinding[]>('doctor') })
+    } catch (err) {
+      setState({ status: 'failed', findings: [], error: errorText(err) })
+    }
+  }
+
+  return (
+    <>
+      <Heading>{t('settings.agents.heading')}</Heading>
+      <RowGroup>
+        {AGENTS.map((a) => (
+          <Row
+            key={a.id}
+            title={
+              <>
+                <AgentMark mark={a.mark} />
+                {a.name}
+              </>
+            }
+            sub={fill(t('settings.agents.paths'), [a.skills, a.mcp, a.env])}
+          />
+        ))}
+        <Row
+          muted
+          title={
+            <>
+              <AgentMark mark="+" soon />
+              {t('settings.agents.more')}
+            </>
+          }
+          sub={t('settings.agents.moreSub')}
+        />
+      </RowGroup>
+      <RowGroup>
+        <Row title={t('settings.agents.doctor')} sub={t('settings.agents.doctorSub')}>
+          <Button size="sm" onClick={() => void runDoctor()} disabled={state.status === 'running'}>
+            {state.status === 'running' ? <Spinner className="h-3.5 w-3.5" /> : <Stethoscope />}
+            {state.status === 'running' ? t('settings.agents.doctorRunning') : t('settings.agents.doctorRun')}
+          </Button>
+        </Row>
+      </RowGroup>
+      {state.status === 'done' && <DoctorResult findings={state.findings} />}
+      {state.status === 'failed' && (
+        <Banner tone="error" title={t('settings.agents.doctorFailed')}>
+          {state.error}
+        </Banner>
+      )}
+    </>
+  )
+}
+
+function CopyButton({ text }: { text: string }) {
+  const { t } = useI18n()
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast(t('ui.copied'))
+    } catch {
+      toast.error(t('ui.copyFail'))
+    }
+  }
+  return (
+    <Button size="sm" icon aria-label={`${t('settings.data.copy')} ${text}`} title={t('settings.data.copy')} onClick={() => void copy()}>
+      <Copy />
+    </Button>
+  )
+}
+
+function DataTab() {
+  const { t } = useI18n()
+  const { installedVersion } = useAppState()
+  const [skills, setSkills] = useState<number | null>(null)
+
+  useEffect(() => {
+    callRpc<InstalledItem[]>('list').then((items) => setSkills(items.filter((i) => i.category === 'skill').length), () => setSkills(null))
+  }, [installedVersion])
+
+  const rows: [string, ReactNode, string][] = [
+    [t('settings.data.home'), t('settings.data.homeSub'), '~/.agent-store/'],
+    [t('settings.data.skills'), skills == null ? null : t('settings.data.skillsSub').replace('{n}', String(skills)), '~/.agent-store/skills/'],
+    [t('settings.data.backups'), t('settings.data.backupsSub'), '~/.agent-store/backups/'],
+    [t('settings.data.exports'), null, '~/.agent-store/exports/'],
+  ]
+  return (
+    <RowGroup>
+      {rows.map(([title, sub, path]) => (
+        <Row
+          key={path}
+          title={title}
+          sub={
+            <>
+              <Mono>{path}</Mono>
+              {sub && <> · {sub}</>}
+            </>
+          }
+        >
+          <CopyButton text={path} />
+        </Row>
+      ))}
+    </RowGroup>
+  )
+}
+
+function AccountTab() {
+  const { t } = useI18n()
+  const { email, signedIn, configured } = useAuth()
+  const { entitlements, has } = useEntitlement()
+  const account = useAccountActions()
+  const isPro = entitlements.plan !== 'free'
+
+  async function upgrade() {
+    if (!(await account.upgrade())) toast.error(t('settings.account.upgradeFailed'))
+  }
+
+  return (
+    <>
+      <RowGroup>
+        {signedIn ? (
+          <Row
+            title={
+              <>
+                <span className="grid h-[26px] w-[26px] flex-none place-items-center rounded-full bg-[image:var(--brand)] text-xs font-bold text-canvas">
+                  {(email ?? 'A').charAt(0).toUpperCase()}
+                </span>
+                {email ?? t('settings.account.signedIn')}
+              </>
+            }
+            sub={t('settings.account.signedInSub')}
+          >
+            <Button size="sm" onClick={() => void account.signOut()} disabled={!configured || account.busy}>
+              {t('settings.account.logout')}
+            </Button>
+          </Row>
+        ) : (
+          <Row title={t('settings.account.notSignedIn')} sub={t('settings.account.notSignedInSub')}>
+            <Button size="sm" onClick={() => void account.signIn('github')} disabled={!configured || account.busy}>
+              <Github />
+              {t('settings.account.signInGithub')}
+            </Button>
+            <Button size="sm" onClick={() => void account.signIn('google')} disabled={!configured || account.busy}>
+              <GoogleIcon />
+              {t('settings.account.signInGoogle')}
+            </Button>
+          </Row>
+        )}
+        <Row
+          title={
+            <>
+              {t('settings.account.plan')}
+              <Badge tone={isPro ? 'pro' : 'neutral'}>{isPro ? 'Pro' : 'Free'}</Badge>
+            </>
+          }
+          sub={isPro ? t('settings.account.planPro') : t('settings.account.planFree')}
+        >
+          {!isPro && (
+            <Button size="sm" variant="primary" onClick={() => void upgrade()} disabled={account.busy}>
+              {t('settings.account.upgrade')}
+              <ExternalLink />
+            </Button>
+          )}
+        </Row>
+      </RowGroup>
+      {!configured && (
+        <div className="mb-4">
+          <Banner tone="error">{t('settings.account.notConfigured')}</Banner>
+        </div>
+      )}
+      <Heading>{t('settings.account.what')}</Heading>
+      <RowGroup>
+        {PRO_FEATURES.map(([feature, key]) => (
+          <Row
+            key={feature}
+            title={
+              <>
+                {t(`pro.${key}.title`)}
+                <Badge tone="pro">Pro</Badge>
+              </>
+            }
+            sub={t(`pro.${key}.desc`)}
+          >
+            <Badge tone={has(feature) ? 'ok' : 'neutral'}>{has(feature) ? t('settings.account.active') : t('settings.account.locked')}</Badge>
+          </Row>
+        ))}
+      </RowGroup>
+      <p className="text-xs text-fg-3">{t('settings.account.cached')}</p>
+    </>
+  )
+}
+
+function CliTab() {
+  const { t } = useI18n()
+  return (
+    <>
+      <p className="mb-3 max-w-[70ch] text-fg-2">{t('settings.cli.intro')}</p>
+      <div className="mb-3 flex items-center gap-2 rounded-[9px] border border-line bg-code px-3 py-2 font-mono text-xs">
+        <span className="text-fg-3">$</span>
+        <span className="flex-1">aas --help</span>
+        <span className="font-sans text-fg-3">{t('settings.cli.help')}</span>
+      </div>
+      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-box border border-line bg-panel p-4 text-[12.5px]">
+        {CLI_COMMANDS.map(([usage, key]) => (
+          <div key={key} className="contents">
+            <code className="whitespace-nowrap font-mono text-xs text-fg">aas {usage}</code>
+            <span className="text-fg-3">{t(`settings.cli.${key}`)}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function UpdatesRow() {
+  const { t } = useI18n()
+  const { bumpInstalledVersion } = useAppState()
+  const { appendLine } = useTerminalLog()
+  const [state, setState] = useState<'idle' | 'checking' | 'done' | 'failed'>('idle')
+  const [updates, setUpdates] = useState<UpdateAvailable[]>([])
+  const [installed, setInstalled] = useState<InstalledItem[]>([])
+  const [busy, setBusy] = useState<string | null>(null)
+
+  async function check() {
+    setState('checking')
+    try {
+      const [found, items] = await Promise.all([callRpc<UpdateAvailable[]>('checkUpdates'), callRpc<InstalledItem[]>('list').catch(() => [])])
+      setUpdates(found)
+      setInstalled(items)
+      setState('done')
+    } catch {
+      setState('failed')
+    }
+  }
+
+  async function update(slug: string | null) {
+    setBusy(slug ?? '*')
+    appendLine(`$ aas update${slug ? ` ${slug}` : ''}`)
+    try {
+      await callRpc('update', slug ? [slug] : [])
+      appendLine(`✓ ${t('settings.about.updated')}${slug ? ` ${slug}` : ''}`, 'green')
+      toast(t('settings.about.updated'))
+    } catch (err) {
+      appendLine(`✗ ${errorText(err)}`, 'red')
+      toast.error(t('settings.about.updateFailed'))
+    } finally {
+      setBusy(null)
+      bumpInstalledVersion()
+      await check()
+    }
+  }
+
+  const status =
+    state === 'checking'
+      ? t('settings.about.checking')
+      : state === 'failed'
+        ? t('settings.about.checkFailed')
+        : state === 'done'
+          ? updates.length
+            ? t('settings.about.found').replace('{n}', String(updates.length))
+            : t('settings.about.upToDate')
+          : t('settings.about.updatesSub')
+
+  return (
+    <>
+      <Row title={t('settings.about.updates')} sub={<span role="status">{status}</span>}>
+        {state === 'done' && updates.length > 1 && (
+          <Button size="sm" onClick={() => void update(null)} disabled={busy !== null}>
+            {t('settings.about.updateAll')}
+          </Button>
+        )}
+        <Button size="sm" onClick={() => void check()} disabled={state === 'checking' || busy !== null}>
+          {state === 'checking' ? <Spinner className="h-3.5 w-3.5" /> : <RefreshCw />}
+          {t('settings.about.check')}
+        </Button>
+      </Row>
+      {state === 'done' &&
+        updates.map((u) => (
+          <Row
+            key={u.slug}
+            title={
+              <>
+                <CategoryIcon category={installed.find((i) => i.slug === u.slug)?.category ?? 'mcp'} size="sm" />
+                {u.slug}
+              </>
+            }
+            sub={
+              <span className="font-mono">
+                {u.currentVersion} → {u.latestVersion}
+              </span>
+            }
+          >
+            <Button size="sm" variant="primary" onClick={() => void update(u.slug)} disabled={busy !== null}>
+              {busy === u.slug || busy === '*' ? t('settings.about.updating') : t('settings.about.update')}
+            </Button>
+          </Row>
+        ))}
+    </>
+  )
+}
+
+function AboutTab() {
+  const { t } = useI18n()
+  const base = getStoreBaseUrl()
+  return (
+    <RowGroup>
+      <Row
+        title={
+          <>
+            <Logo />
+            Agent Store
+            <span className="font-mono text-xs font-medium text-fg-3">v{appVersion}</span>
+          </>
+        }
+        sub={
+          <>
+            {t('settings.about.tagline')}
+            <br />
+            {t('settings.about.support')}
+          </>
+        }
+      >
+        <Button size="sm" onClick={() => void openExternal(`${base}/download`)}>
+          {t('settings.about.download')}
+          <ExternalLink />
+        </Button>
+      </Row>
+      <UpdatesRow />
+      <Row title={t('settings.about.docs')}>
+        <Button size="sm" onClick={() => void openExternal(`${base}/docs`)}>
+          {t('settings.about.docs')}
+          <ExternalLink />
+        </Button>
+        <Button size="sm" onClick={() => void openExternal('https://github.com/awesome-agent-store')}>
+          {t('settings.about.github')}
+          <ExternalLink />
+        </Button>
+      </Row>
+    </RowGroup>
+  )
 }
 
 export function SettingsView() {
-  const { agentApp, settingsTab, setSettingsTab } = useAppState()
-  const { email, signedIn, configured } = useAuth()
-  const { entitlements } = useEntitlement()
-  const { locale, setLocale, t } = useI18n()
-  const account = useAccountActions()
-  const [updateMsg, setUpdateMsg] = useState<string | null>(null)
-  const isPro = entitlements.plan !== 'free'
-
-  const TABS: { key: SettingsTab; label: string }[] = [
-    { key: 'general', label: t('settings.tabs.general') },
-    { key: 'account', label: t('settings.tabs.account') },
-    { key: 'about', label: t('settings.tabs.about') },
-  ]
-
-  async function checkForUpdates() {
-    setUpdateMsg(t('settings.about.checking'))
-    try {
-      const updates = await callRpc<unknown[]>('checkUpdates')
-      setUpdateMsg(updates.length > 0 ? `${updates.length} ${t('settings.about.updatesSuffix')}` : t('settings.about.upToDate'))
-    } catch {
-      setUpdateMsg(t('settings.about.checkFailed'))
-    }
+  const { settingsTab, setSettingsTab } = useAppState()
+  const { t } = useI18n()
+  const content: Record<SettingsTab, () => JSX.Element> = {
+    general: GeneralTab,
+    agents: AgentsTab,
+    data: DataTab,
+    account: AccountTab,
+    cli: CliTab,
+    about: AboutTab,
   }
 
   return (
@@ -77,121 +518,23 @@ export function SettingsView() {
       <div className="mb-3.5 flex flex-wrap items-end gap-3">
         <h1 className="text-[19px] font-extrabold leading-[1.3]">{t('settings.title')}</h1>
       </div>
-      <div role="tablist" aria-label={t('settings.title')} className="mb-4 inline-flex gap-0.5 rounded-ctl border border-line bg-panel p-[3px]">
-        {TABS.map((tb) => (
-          <button
-            key={tb.key}
-            type="button"
-            role="tab"
-            aria-selected={settingsTab === tb.key}
-            onClick={() => setSettingsTab(tb.key)}
-            className={`h-[26px] whitespace-nowrap rounded-[7px] px-2.5 text-[12.5px] font-semibold transition-colors ${
-              settingsTab === tb.key ? 'bg-white/[0.12] text-fg shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]' : 'text-fg-2 hover:text-fg'
-            }`}
-          >
-            {tb.label}
-          </button>
-        ))}
-      </div>
-
-      <div role="tabpanel" className="max-w-[720px]">
-        {settingsTab === 'account' && (
-          <>
-            <Group>
-              <Row
-                title={email ?? t('settings.account.notSignedIn')}
-                sub={signedIn ? t('settings.account.signedIn') : t('settings.account.disconnected')}
-              >
-                {signedIn && (
-                  <Button onClick={() => void account.signOut()} disabled={!configured || account.busy}>
-                    {t('settings.account.logout')}
-                  </Button>
-                )}
-              </Row>
-              {!signedIn && (
-                <div className="flex flex-col gap-2 p-3.5">
-                  <Button className="h-10 w-full" onClick={() => void account.signIn('github')} disabled={!configured || account.busy}>
-                    <Github />
-                    {t('settings.account.signInGithub')}
-                  </Button>
-                  <Button className="h-10 w-full" onClick={() => void account.signIn('google')} disabled={!configured || account.busy}>
-                    <GoogleIcon />
-                    {t('settings.account.signInGoogle')}
-                  </Button>
-                </div>
-              )}
-            </Group>
-            <Group>
-              <Row title={t('settings.account.plan')} sub={isPro ? t('settings.account.planPro') : t('settings.account.planFree')}>
-                {isPro ? (
-                  <Badge tone="pro">PRO</Badge>
-                ) : (
-                  <Button variant="primary" onClick={() => void account.upgrade()} disabled={account.busy}>
-                    {t('settings.account.upgrade')}
-                  </Button>
-                )}
-              </Row>
-            </Group>
-            {!configured && <Banner tone="error">{t('settings.account.notConfigured')}</Banner>}
-            <p className="text-xs text-fg-3">{t('settings.account.hint')}</p>
-          </>
-        )}
-
-        {settingsTab === 'general' && (
-          <Group>
-            <Row title={t('settings.general.theme')} sub={t('settings.general.themeOnlyDark')}>
-              <Badge>{t('settings.general.dark')}</Badge>
-            </Row>
-            <Row title={t('settings.general.targetApp')} sub={`${APP_META[agentApp].label} · ${APP_META[agentApp].path}`} />
-            <Row title={t('settings.general.language')} sub={t('settings.general.languageSub')}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="min-w-[118px] justify-between">
-                    {LOCALE_NAMES[locale]}
-                    <ChevronDown />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[180px]">
-                  <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
-                    {LOCALES.map((code) => (
-                      <DropdownMenuRadioItem key={code} value={code}>
-                        {LOCALE_NAMES[code]}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </Row>
-          </Group>
-        )}
-
-        {settingsTab === 'about' && (
-          <Group>
-            <Row
-              title={
-                <>
-                  <Logo />
-                  Agent Store
-                </>
-              }
-              sub={<span className="font-mono">v{appVersion} · {t('settings.about.subtitle')}</span>}
-            />
-            <Row title={t('settings.about.checkUpdates')} sub={updateMsg ?? undefined}>
-              <Button onClick={() => void checkForUpdates()}>{t('settings.about.checkUpdates')}</Button>
-            </Row>
-            <Row title={t('settings.about.docs')}>
-              <Button variant="ghost" onClick={() => void openExternal('https://agent-store-test.panghuli.tech/docs')}>
-                {t('settings.about.docs')}
-              </Button>
-            </Row>
-            <Row title={t('settings.about.github')}>
-              <Button variant="ghost" onClick={() => void openExternal('https://github.com/awesome-agent-store')}>
-                {t('settings.about.github')}
-              </Button>
-            </Row>
-          </Group>
-        )}
-      </div>
+      <Tabs value={settingsTab} onValueChange={(v) => setSettingsTab(v as SettingsTab)}>
+        <TabsList aria-label={t('settings.title')} className="mb-4">
+          {TABS.map((tab) => (
+            <TabsTrigger key={tab} value={tab}>
+              {t(`settings.tabs.${tab}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {TABS.map((tab) => {
+          const Body = content[tab]
+          return (
+            <TabsContent key={tab} value={tab} className="max-w-[760px] focus-visible:outline-none">
+              <Body />
+            </TabsContent>
+          )
+        })}
+      </Tabs>
     </div>
   )
 }
