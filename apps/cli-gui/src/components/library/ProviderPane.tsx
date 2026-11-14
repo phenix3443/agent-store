@@ -17,6 +17,8 @@ import { Tooltip } from '../ui/tooltip'
 import { AgentList, AgentSwitch, DetailPane, ErrorDetails, FailureBanner, PaneHead, Section } from './parts'
 import { DangerSection } from './common'
 import { SavedMark, SecretInput } from './McpPane'
+import { ProviderTest } from './ProviderTest'
+import { AGENT_RELAY_ADDRESS } from '../../lib/relay'
 import type { TargetToggle } from './useTargetToggle'
 
 export interface EditValues {
@@ -40,6 +42,7 @@ export interface EditValues {
 const UPSTREAM_PROTOCOLS = ['自动检测', 'openai_chat', 'claude_messages', 'codex_responses']
 const ICONS = ['默认', 'anthropic', 'openai', 'google', 'adobe']
 const LEVELS = Array.from({ length: 10 }, (_, i) => String(i + 1))
+const levelOptions = (current: string) => (LEVELS.includes(current) ? LEVELS : [...LEVELS, current])
 const LOCAL_DEFAULT_BASE_URL = 'http://127.0.0.1:18100'
 
 export function toEditValues(current: Record<string, unknown> | undefined, fallbackName: string, isLocal = false): EditValues {
@@ -278,9 +281,9 @@ export function ProviderPane({
       </Section>
 
       {isLocal ? (
-        <Section title={t('prov.listen')}>
-          <Input id="provider-baseUrl" mono aria-label={t('prov.listen')} value={values.baseUrl} placeholder={LOCAL_DEFAULT_BASE_URL} onChange={(e) => persist({ ...values, baseUrl: e.target.value })} />
-          <p className="mt-1 text-[11.5px] text-fg-3">{t('cfg.helpLocalBaseUrl')}</p>
+        <Section title={t('relayCtl.agentAddr')}>
+          <div className="break-all rounded-[9px] border border-line bg-code px-[11px] py-2 font-mono text-xs text-fg-2">{AGENT_RELAY_ADDRESS}</div>
+          <p className="mt-1 text-[11.5px] text-fg-3">{t('relayCtl.agentAddrD')}</p>
         </Section>
       ) : (
         <>
@@ -293,6 +296,10 @@ export function ProviderPane({
                 <SecretInput id="provider-apiKey" secret value={values.apiKey} placeholder="sk-…" onChange={(v) => persist({ ...values, apiKey: v })} />
               </div>
             </Field>
+          </Section>
+
+          <Section title={t('provTest.title')}>
+            <ProviderTest slug={slug} disabledReason={noKey ? t('provTest.needKey') : saving ? t('provTest.waitSave') : undefined} />
           </Section>
 
           <Section title={<>{t('prov.keys')}<Badge tone="pro">Pro</Badge></>}>
@@ -357,7 +364,7 @@ export function ProviderPane({
               </Field>
               <Field id="provider-level" label={t('cfg.priorityGroup')} help={t('cfg.helpLevel')}>
                 <Select id="provider-level" value={values.level} onChange={(e) => persist({ ...values, level: e.target.value })}>
-                  {LEVELS.map((l) => (
+                  {levelOptions(values.level).map((l) => (
                     <option key={l} value={l}>
                       Level {l}
                     </option>

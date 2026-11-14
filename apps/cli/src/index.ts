@@ -14,6 +14,7 @@ import { runRelay } from './commands/relay'
 import { runLocalApi } from './commands/local-api'
 import { realRelayOps } from './relay-ops'
 import { runUsage } from './commands/usage'
+import { runTest } from './commands/test'
 import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
 import { runProjects } from './commands/projects'
@@ -42,6 +43,8 @@ Commands:
   config <slug>                    Configure an item's settings
   sync [--for <tool>]              Sync enabled items to tool configs
   relay <start|stop|status>        Manage the local provider relay
+  test <slug>                      Check a provider's address and key with an empty request
+                                   (nothing is generated or recorded in usage)
   usage [--days N] [--provider <slug>] [--for <claude|codex>]   Show usage and cost summary
   update [slug]                    Update installed items
   migrate                          Convert skills installed by older versions (backs up first)
@@ -90,6 +93,7 @@ async function main(): Promise<void> {
     case 'update':    process.exitCode = await runUpdate(engine, rest); break
     case 'relay':     await runRelay(rest, realRelayOps()); break
     case 'usage':     await runUsage(engine, rest); break
+    case 'test':      process.exitCode = await runTest(engine, rest); break
     case 'migrate':   process.exitCode = await runMigrateCommand(() => runMigrate(resolvePaths())); break
     case 'projects':  process.exitCode = await runProjects(engine, rest); break
     case 'backup':    process.exitCode = await runBackup(engine, rest); break

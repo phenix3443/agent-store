@@ -11,6 +11,7 @@ const { UsagePage } = await import('../usage/UsagePage')
 const { AppStateProvider, useAppState } = await import('../../state/AppState')
 const { EntitlementProvider } = await import('../../state/Entitlement')
 const { AuthProvider } = await import('../../state/Auth')
+const { TerminalLogProvider } = await import('../../state/TerminalLog')
 
 afterEach(async () => { cleanup(); await settleRpc(); mock.restore() })
 
@@ -29,15 +30,30 @@ function row(o: Partial<UsageSummaryRow>): UsageSummaryRow {
 const FREE: Entitlements = { plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }
 const PRO: Entitlements = { plan: 'pro', advancedUsageAnalytics: true, smartRouting: true, keyRotation: true }
 
-function mockRpc({ rows = [], plan = FREE, running = true, fail = false }: { rows?: UsageSummaryRow[]; plan?: Entitlements; running?: boolean; fail?: boolean }) {
+const LISTENING = [{ id: 'default', name: '默认', port: 18780, listening: true }]
+
+function mockRpc({
+  rows = [],
+  plan = FREE,
+  running = true,
+  fail = false,
+  relay,
+}: {
+  rows?: UsageSummaryRow[]
+  plan?: Entitlements
+  running?: boolean
+  fail?: boolean
+  relay?: Partial<Record<string, (args: unknown[]) => unknown>>
+}) {
   const calls: [string, unknown[]][] = []
   spyOn(rpcModule, 'callRpc').mockImplementation((async (method: string, args: unknown[] = []) => {
     calls.push([method, args])
+    if (relay?.[method]) return relay[method]!(args)
     if (method === 'getUsageSummary') {
       if (fail) throw new Error('db locked')
       return rows
     }
-    if (method === 'getRelayStatus') return { running }
+    if (method === 'getRelayStatus') return running ? { running, pid: 42, listeners: LISTENING, routedAgents: {} } : { running, routedAgents: {} }
     if (method === 'listLocalConfigs') return [{ id: 'default', name: 'default', port: 18100, enabled: true, enabledFor: {} }]
     if (method === 'getEntitlements') return plan
     if (method === 'getBudgetStatus') return { monthlyLimitUsd: null, spentUsd: 0, monthStart: '2026-11-01', fraction: null, projectedUsd: 0, projectedOverBudget: false, alertLevel: 'none' }
@@ -56,12 +72,14 @@ function Probe() {
 function renderPage() {
   return render(
     <AppStateProvider>
-      <EntitlementProvider>
-        <AuthProvider>
-          <UsagePage />
-          <Probe />
-        </AuthProvider>
-      </EntitlementProvider>
+      <TerminalLogProvider>
+        <EntitlementProvider>
+          <AuthProvider>
+            <UsagePage />
+            <Probe />
+          </AuthProvider>
+        </EntitlementProvider>
+      </TerminalLogProvider>
     </AppStateProvider>
   )
 }
@@ -101,13 +119,32 @@ test('breaks usage down by provider, model and agent', async () => {
   })
   renderPage()
 
-  const table = await screen.findByRole('table')
-  const bodyRows = within(table).getAllByRole('row').slice(1)
-  expect(bodyRows.map((r) => r.textContent)).toEqual([
+  const bodyRows = async () => within(await screen.findByRole('table')).getAllByRole('row').slice(1).map((r) => r.textContent)
+  expect(await bodyRows()).toEqual(['openrouter1100.0%00$0.9064.3%', 'skyapi580.0%00$0.5035.7%'])
+  expect(screen.getByRole('tab', { name: '按供应商' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByText('1 次请求没有价格数据，未计入费用。')).toBeInTheDocument()
+
+  fireEvent.mouseDown(screen.getByRole('tab', { name: '按模型' }))
+  expect(await bodyRows()).toEqual(['gpt-5-codex1100.0%00$0.9064.3%', 'claude-sonnet-4-5580.0%00$0.5035.7%'])
+
+  fireEvent.mouseDown(screen.getByRole('tab', { name: '按 agent' }))
+  expect(await bodyRows()).toEqual(['Codex1100.0%00$0.9064.3%', 'Claude Code580.0%00$0.5035.7%'])
+
+  fireEvent.mouseDown(screen.getByRole('tab', { name: '全部明细' }))
+  expect(await bodyRows()).toEqual([
     'openroutergpt-5-codexCodex1100.0%00$0.90',
     'skyapiclaude-sonnet-4-5Claude Code580.0%00$0.50',
   ])
-  expect(screen.getByText('1 次请求没有价格数据，未计入费用。')).toBeInTheDocument()
+})
+
+test('the breakdown shows its loading and empty states', async () => {
+  let resolve!: (rows: UsageSummaryRow[]) => void
+  mockRpc({ relay: { getUsageSummary: () => new Promise((r) => { resolve = r }) } })
+  renderPage()
+  expect(await screen.findByRole('status', { name: '加载中' })).toBeInTheDocument()
+  resolve([])
+  expect(await screen.findByText('这段时间没有经过本地中转的请求。')).toBeInTheDocument()
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument()
 })
 
 test('shows the empty state when there is no usage, with a way to set up a provider', async () => {
@@ -124,6 +161,8 @@ test('a failed read shows an error with retry', async () => {
   renderPage()
 
   expect(await screen.findByRole('alert')).toHaveTextContent('用量数据读取失败')
+  expect(screen.getAllByText('用量数据读取失败。')).toHaveLength(2)
+  expect(screen.queryByText('暂无用量数据')).not.toBeInTheDocument()
 })
 
 test('the relay card shows status and address, and opens the request log and relay settings', async () => {
@@ -131,8 +170,7 @@ test('the relay card shows status and address, and opens the request log and rel
   renderPage()
 
   expect(await screen.findByText('已停止')).toBeInTheDocument()
-  expect(screen.getByText('127.0.0.1:18100')).toBeInTheDocument()
-  expect(screen.getByText('本地中转已停止。已指向中转的 agent 暂时发不出请求。')).toBeInTheDocument()
+  expect(screen.getByText('本地中转已停止。现在没有 agent 指向中转。对 agent 启用供应商时会自动启动它。')).toBeInTheDocument()
   expect(screen.getByText('今日 · 成功率').nextElementSibling?.textContent).toBe('80.0%')
 
   fireEvent.click(screen.getAllByRole('button', { name: '请求日志' })[0])
@@ -159,4 +197,118 @@ test('Free shows the budget and smart routing gates; Pro shows the budget, expor
   expect(screen.getByRole('button', { name: '导出 CSV' })).toBeInTheDocument()
   expect(await screen.findByText('供应商健康')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '升级到 Pro' })).not.toBeInTheDocument()
+})
+
+test('the relay card starts the relay and shows where it listens', async () => {
+  let running = false
+  const calls = mockRpc({
+    relay: {
+      getRelayStatus: () => (running ? { running, pid: 42, listeners: LISTENING, routedAgents: {} } : { running, routedAgents: {} }),
+      startRelay: () => {
+        running = true
+        return { running, pid: 42, listeners: LISTENING, routedAgents: {} }
+      },
+    },
+  })
+  renderPage()
+
+  fireEvent.click(await screen.findByRole('button', { name: '启动' }))
+  expect(await screen.findByText('127.0.0.1:18780')).toBeInTheDocument()
+  expect(screen.getByText('运行中')).toBeInTheDocument()
+  expect(calls.some(([m]) => m === 'startRelay')).toBe(true)
+  expect(screen.getByRole('button', { name: '停止' })).toBeInTheDocument()
+})
+
+test('a port another program holds is shown with the reason', async () => {
+  mockRpc({
+    relay: {
+      getRelayStatus: () => ({
+        running: true,
+        pid: 42,
+        listeners: [{ id: 'default', name: '默认', port: 18780, listening: false, code: 'EADDRINUSE', error: 'Failed to start server. Is port 18780 in use?' }],
+        routedAgents: { claude: true },
+      }),
+    },
+  })
+  renderPage()
+
+  expect(await screen.findByText('端口 18780 被其他程序占用')).toBeInTheDocument()
+  expect(screen.getAllByText('未在监听').length).toBeGreaterThan(0)
+  expect(screen.getByText('EADDRINUSE: Failed to start server. Is port 18780 in use?')).toBeInTheDocument()
+})
+
+test('stopping while an agent points at the relay asks first and says what happens', async () => {
+  let running = true
+  const calls = mockRpc({
+    relay: {
+      getRelayStatus: () => ({ running, ...(running ? { pid: 42, listeners: LISTENING } : {}), routedAgents: { claude: true, codex: false } }),
+      stopRelay: () => {
+        running = false
+        return { running, routedAgents: { claude: true, codex: false } }
+      },
+    },
+  })
+  renderPage()
+
+  fireEvent.click(await screen.findByRole('button', { name: '停止' }))
+  const dialog = await screen.findByRole('dialog', { name: '停止本地中转？' })
+  expect(dialog).toHaveTextContent('Claude Code 的配置指向 127.0.0.1:18780')
+  expect(calls.some(([m]) => m === 'stopRelay')).toBe(false)
+
+  fireEvent.click(within(dialog).getByRole('button', { name: '停止' }))
+  expect(await screen.findByText('本地中转已停止。Claude Code 的配置仍指向 127.0.0.1:18780，暂时发不出请求。')).toBeInTheDocument()
+  expect(calls.some(([m]) => m === 'stopRelay')).toBe(true)
+})
+
+test('a relay that exits right after starting says so', async () => {
+  mockRpc({ running: false, relay: { startRelay: () => ({ running: false, routedAgents: {} }) } })
+  renderPage()
+  fireEvent.click(await screen.findByRole('button', { name: '启动' }))
+  expect(await screen.findByText('中转进程启动后立即退出了，没有留下原因。')).toBeInTheDocument()
+})
+
+test('a start that could not bind is followed in the activity log once the relay listens', async () => {
+  const { useTerminalLog } = await import('../../state/TerminalLog')
+  const { useAppState: useState2 } = await import('../../state/AppState')
+  let listening = false
+  let started = false
+  const busy = { running: true, pid: 42, listeners: [{ id: 'default', name: '默认', port: 18780, listening: false, code: 'EADDRINUSE', error: 'in use' }], routedAgents: {} }
+  mockRpc({
+    running: false,
+    relay: {
+      startRelay: () => {
+        started = true
+        return busy
+      },
+      getRelayStatus: () => (listening ? { running: true, pid: 42, listeners: LISTENING, routedAgents: {} } : started ? busy : { running: false, routedAgents: {} }),
+    },
+  })
+  function Log() {
+    const { lines } = useTerminalLog()
+    const { bumpInstalledVersion } = useState2()
+    return (
+      <>
+        <pre data-testid="log">{lines.map((l) => l.text).join('\n')}</pre>
+        <button type="button" onClick={bumpInstalledVersion}>refresh</button>
+      </>
+    )
+  }
+  render(
+    <AppStateProvider>
+      <TerminalLogProvider>
+        <EntitlementProvider>
+          <AuthProvider>
+            <UsagePage />
+            <Log />
+          </AuthProvider>
+        </EntitlementProvider>
+      </TerminalLogProvider>
+    </AppStateProvider>
+  )
+
+  fireEvent.click(await screen.findByRole('button', { name: '启动' }))
+  await waitFor(() => expect(screen.getByTestId('log').textContent).toContain('✗ 18780: in use'))
+  listening = true
+  fireEvent.click(screen.getByRole('button', { name: 'refresh' }))
+  await waitFor(() => expect(screen.getByTestId('log').textContent).toContain('✓ 本地中转已启动，监听 127.0.0.1:18780'))
 })

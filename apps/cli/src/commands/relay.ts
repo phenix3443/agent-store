@@ -22,6 +22,17 @@ export async function ensureRelayRunning(ops: RelayProcessOps): Promise<{ pid: n
   return { pid, started: true }
 }
 
+/** Sends SIGTERM and waits up to `timeoutMs` for the process to exit, so the port is free on return. */
+export async function stopRelay(ops: RelayProcessOps, timeoutMs = 3000): Promise<number | null> {
+  const pid = await isAlreadyRunning(ops)
+  if (!pid) return null
+  ops.kill(pid)
+  const deadline = Date.now() + timeoutMs
+  while (ops.isRunning(pid) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100))
+  await ops.removePidFile()
+  return pid
+}
+
 export async function runRelay(
   args: string[],
   ops: RelayProcessOps,
@@ -36,14 +47,8 @@ export async function runRelay(
   }
 
   if (subcommand === 'stop') {
-    const running = await isAlreadyRunning(ops)
-    if (!running) {
-      out('  relay not running')
-      return
-    }
-    ops.kill(running)
-    await ops.removePidFile()
-    out(`  relay stopped (pid ${running})`)
+    const stopped = await stopRelay(ops)
+    out(stopped ? `  relay stopped (pid ${stopped})` : '  relay not running')
     return
   }
 

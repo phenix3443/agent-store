@@ -7,7 +7,7 @@ import type {
   EnableOptions, DisableOptions, UninstallOptions, InstallOptions,
   InstallOutcome, TargetStatus, EnableBlocker,
   UsageSummaryRow, UsageSummaryOptions, LocalRelayConfig,
-  RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
+  RecentRequestRow, RelayStatus, ProviderHealth, ProviderTestResult, Entitlements, BudgetConfig, BudgetStatus,
   AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectSummary, ProjectUninstallOptions, ProjectUninstallResult, BatchOperation, BatchOutcome,
   BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
@@ -22,7 +22,10 @@ import { createAdapters, mcpCliFallbackNote, type KindAdapter } from './adapters
 import { ProjectService } from './projects/service'
 import { BackupService } from './backup/service'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
-import { duplicateProviderConnection } from './config/provider'
+import { duplicateProviderConnection, readProviderConnection } from './config/provider'
+import { claudeUsesRelay } from './config/claude'
+import { codexUsesRelay } from './config/codex'
+import { testProviderConnection } from './relay/provider-test'
 import { atomicWriteSecretFile } from './config/safe-file'
 import { readMcpTargets } from './config/mcp-targets'
 import { batchError } from './error-fields'
@@ -31,7 +34,7 @@ import { readProviderHealth, resetProviderHealth } from './usage/provider-health
 import { exportUsageToFile } from './usage/export'
 import { resolveEntitlements, entitlementsForPlan, writeEntitlementCache } from './entitlement/index'
 import { readBudget, writeBudget, getBudgetStatus } from './usage/budget'
-import { getRelayDaemonStatus } from './relay/daemon-status'
+import { getRelayDaemonStatus, waitForRelayStatus } from './relay/daemon-status'
 import {
   listLocalConfigs as _listLocalConfigs, addLocalConfig as _addLocalConfig,
   removeLocalConfig as _removeLocalConfig, updateLocalConfig as _updateLocalConfig,
@@ -59,6 +62,10 @@ const TARGETS: ToolTarget[] = ['claude', 'codex']
 export interface EngineOptions {
   /** Starts the local relay daemon; without it, enabling a provider needs a relay that is already running. */
   startRelay?: () => Promise<void>
+  /** Stops the local relay daemon and returns once it has exited. */
+  stopRelay?: () => Promise<void>
+  /** Used by testProvider; the global fetch by default. */
+  fetchImpl?: typeof fetch
   /** Where install and search read from; /api/resources on `storeUrl` by default. */
   catalog?: Catalog
   /** Skills larger than this stay out of the backup; 100 MB by default. */
@@ -76,10 +83,12 @@ export class EngineImpl implements Engine {
   private readonly adapters: Record<Category, KindAdapter>
   private readonly catalog: Catalog
   private readonly projects: ProjectService
+  private readonly options: EngineOptions
   private readonly backup: BackupService
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
+    this.options = options
     this.client = new StoreClient(storeUrl, { timeoutMs: 8000 })
     this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
     this.projects = new ProjectService(this.paths, this.catalog)
@@ -469,7 +478,79 @@ export class EngineImpl implements Engine {
   }
 
   async getRelayStatus(): Promise<RelayStatus> {
-    return getRelayDaemonStatus(this.paths.aasHome)
+    const status = await getRelayDaemonStatus(this.paths.aasHome)
+    const routedAgents: Partial<Record<ToolTarget, boolean>> = {}
+    const checks: Array<[ToolTarget, () => Promise<boolean>]> = [
+      ['claude', () => claudeUsesRelay(this.paths.claudeConfigDir)],
+      ['codex', () => codexUsesRelay(this.paths.codexConfigDir)],
+    ]
+    for (const [target, check] of checks) {
+      try {
+        routedAgents[target] = await check()
+      } catch {
+        // a config that does not parse says nothing either way
+      }
+    }
+    return { ...status, routedAgents }
+  }
+
+  async startRelay(): Promise<RelayStatus> {
+    if (!this.options.startRelay) throw new Error('this client cannot start the relay; run: aas relay start')
+    await this.options.startRelay()
+    await waitForRelayStatus(this.paths.aasHome, (s) => !s.running || s.listeners !== undefined)
+    return this.getRelayStatus()
+  }
+
+  async stopRelay(): Promise<RelayStatus> {
+    if (!this.options.stopRelay) throw new Error('this client cannot stop the relay; run: aas relay stop')
+    await this.options.stopRelay()
+    return this.getRelayStatus()
+  }
+
+  async testProvider(slug: string): Promise<ProviderTestResult[]> {
+    const entry = await this._entry(slug)
+    if (entry.category !== 'provider') throw new Error(`Only providers can be tested: ${slug}`)
+    const connection = await readProviderConnection(itemDir(this.paths.aasHome, 'provider', slug))
+    const results: ProviderTestResult[] = []
+    const byUrl = new Map<string, ProviderTestResult>()
+    for (const target of TARGETS.filter((t) => entry.compatibleWith.includes(t))) {
+      const result = await testProviderConnection(connection, target, { fetchImpl: this.options.fetchImpl })
+      const same = byUrl.get(result.url)
+      results.push(same ? { ...same, target } : result)
+      byUrl.set(result.url, result)
+    }
+    return results
+  }
+
+  async setProviderOrder(slugs: string[]): Promise<Array<{ slug: string; level: number }>> {
+    if (new Set(slugs).size !== slugs.length) throw new Error('setProviderOrder: a provider is listed twice')
+    const registry = await readRegistry(this.paths.aasHome)
+    for (const slug of slugs) {
+      const entry = findEntry(registry, slug)
+      if (!entry) throw new Error(`Item not installed: ${slug}`)
+      if (entry.category !== 'provider') throw new Error(`Only providers have a priority: ${slug}`)
+    }
+    const written: Array<{ path: string; previous: string | undefined }> = []
+    try {
+      for (const [i, slug] of slugs.entries()) {
+        const path = join(itemDir(this.paths.aasHome, 'provider', slug), 'config.json')
+        let previous: string | undefined
+        try { previous = await readFile(path, 'utf-8') } catch { /* not configured yet */ }
+        const parsed = previous === undefined ? {} : JSON.parse(previous) as unknown
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(`${path} is not a JSON object`)
+        const level = i + 1
+        if ((parsed as Record<string, unknown>)['level'] === level) continue
+        await atomicWriteSecretFile(path, JSON.stringify({ ...parsed, level }, null, 2))
+        written.push({ path, previous })
+      }
+    } catch (e) {
+      for (const { path, previous } of written.reverse()) {
+        if (previous === undefined) await rm(path, { force: true })
+        else await atomicWriteSecretFile(path, previous)
+      }
+      throw e
+    }
+    return slugs.map((slug, i) => ({ slug, level: i + 1 }))
   }
 
   async getProviderHealth(): Promise<ProviderHealth[]> {

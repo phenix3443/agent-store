@@ -7,6 +7,7 @@ export type Locale = (typeof LOCALES)[number]
 
 import { libraryEn, libraryZh } from './library'
 import { projectsEn, projectsZh } from './projects'
+import { relayEn, relayZh } from './relay'
 import { manageEn, manageZh } from './manage'
 
 type Dict = Record<string, unknown>
@@ -14,6 +15,7 @@ type Dict = Record<string, unknown>
 const zh: Dict = {
   ...libraryZh,
   ...projectsZh,
+  ...relayZh,
   ...manageZh,
   catalog: {"source": {"mcp-registry": "MCP Registry", "github": "GitHub", "builtin": "内置"}, "loadMore": "加载更多", "offline": "目录暂时取不到，显示的是上次缓存的结果", "empty": "没有找到匹配的资源", "notInstallable": "暂不能安装", "skillClients": "适用客户端", "forceEnable": "强制启用", "codexUnsupported": "Codex 不支持这个 MCP", "skillFetch": "下载技能目录到", "skillLink": "链接到已启用客户端的 skills 目录", "mcpRun": "启动", "mcpNeeds": "需要填写", "mcpConnect": "连接", "providerPreset": "写入接入配置", "factSource": "来源：", "sourceLabel": "来源", "sourceRepo": "源码仓库", "homepage": "主页"},
   readme: {"overview": "概述", "install": "安装", "steps": "安装步骤", "useCases": "适用场景", "useCaseProvider": "安装后作为可切换的 API 端点预设，一键切换即可对全部会话生效。", "useCaseSkill": "安装后 agent 会在相关任务中自动加载该技能，无需额外配置。", "useCaseMcp": "安装后自动注册为 MCP 服务器，agent 可直接调用其暴露的工具。", "writeConfig": "写入配置", "skillDownloadTo": "下载 skill 内容到", "skillRegister": "注册到已启用的工具目录", "mcpBuild": "拉取并构建服务器二进制", "writeMcp": "写入", "remoteEndpoint": "远程端点", "writeEndpointPreset": "写入端点预设", "syncToCli": "同步到 Claude 与 Codex 配置", "factModels": "支持的模型：", "factTransport": "传输方式：", "factStartCommand": "启动命令：", "factServiceUrl": "服务地址：", "factDownloadUrl": "下载地址：", "footType": "类型：", "footMaintainer": "维护者：", "footVersion": "当前版本："},
@@ -67,7 +69,7 @@ const zh: Dict = {
       cached: '方案信息缓存在本机，离线时照常生效。升级在浏览器中完成。',
       notConfigured: '登录暂不可用：未配置商店中转地址（VITE_STORE_URL）。',
     },
-    cli: { intro: '命令行 aas 的子命令。', help: '查看全部用法', search: '搜索目录', install: '从目录安装', uninstall: '卸载', projects: '项目级的技能和 MCP', enable: '对某个 agent 启用', disable: '对某个 agent 停用', config: '填写配置项', sync: '把已启用的内容重新写入 agent 配置', relay: '管理本地中转', usage: '查看用量和费用', update: '更新已安装的内容', info: '查看已安装项或目录条目', list: '列出已安装的内容', doctor: '比对记录与 agent 实际读到的内容', migrate: '转换旧版本安装的技能' },
+    cli: { intro: '命令行 aas 的子命令。', help: '查看全部用法', search: '搜索目录', install: '从目录安装', uninstall: '卸载', projects: '项目级的技能和 MCP', enable: '对某个 agent 启用', disable: '对某个 agent 停用', config: '填写配置项', sync: '把已启用的内容重新写入 agent 配置', relay: '管理本地中转', test: '测试供应商的地址和密钥（不计入用量）', usage: '查看用量和费用', update: '更新已安装的内容', info: '查看已安装项或目录条目', list: '列出已安装的内容', doctor: '比对记录与 agent 实际读到的内容', migrate: '转换旧版本安装的技能' },
     about: { tagline: 'Agent 所需，尽在于此', support: '已支持 Claude Code、Codex，更多 agent 陆续加入。', download: '获取新版本', updates: '资源更新', updatesSub: '检查已安装的技能、MCP 和供应商是否有新版本。客户端本身的新版本从官网下载。', check: '检查更新', checking: '正在检查…', upToDate: '已安装的资源都是最新版本', found: '{n} 项可更新', checkFailed: '检查失败：目录暂时取不到', update: '更新', updateAll: '全部更新', updating: '正在更新…', updateFailed: '更新失败，原版本保留', updated: '已更新', docs: '文档', github: 'GitHub' },
   },
 }
@@ -75,6 +77,7 @@ const zh: Dict = {
 const en: Dict = {
   ...libraryEn,
   ...projectsEn,
+  ...relayEn,
   ...manageEn,
   catalog: {"source": {"mcp-registry": "MCP Registry", "github": "GitHub", "builtin": "Built-in"}, "loadMore": "Load more", "offline": "The catalog couldn't be reached; showing the last cached results", "empty": "No matching resources", "notInstallable": "Can't be installed yet", "skillClients": "Clients", "forceEnable": "Force enable", "codexUnsupported": "Codex doesn't support this MCP", "skillFetch": "download the skill folder to", "skillLink": "link into each enabled client's skills folder", "mcpRun": "run", "mcpNeeds": "needs", "mcpConnect": "connect to", "providerPreset": "write the access preset", "factSource": "Source: ", "sourceLabel": "Source", "sourceRepo": "Source repo", "homepage": "Homepage"},
   readme: {"overview": "Overview", "install": "Install", "steps": "Install steps", "useCases": "Use cases", "useCaseProvider": "Installs as a switchable API endpoint preset — one click applies it to all sessions.", "useCaseSkill": "Once installed, the agent auto-loads this skill for relevant tasks, with no extra config.", "useCaseMcp": "Installs and registers as an MCP server; the agent can call its exposed tools directly.", "writeConfig": "write config", "skillDownloadTo": "download skill content to", "skillRegister": "register to the enabled tools directory", "mcpBuild": "fetch and build the server binary", "writeMcp": "write", "remoteEndpoint": "remote endpoint", "writeEndpointPreset": "write endpoint preset", "syncToCli": "sync to Claude & Codex config", "factModels": "Supported models: ", "factTransport": "Transport: ", "factStartCommand": "Start command: ", "factServiceUrl": "Service URL: ", "factDownloadUrl": "Download URL: ", "footType": "Type: ", "footMaintainer": "Maintainer: ", "footVersion": "Current version: "},
@@ -128,7 +131,7 @@ const en: Dict = {
       cached: 'Your plan is cached on this machine and keeps working offline. Upgrading happens in your browser.',
       notConfigured: 'Sign-in unavailable: store relay URL not configured (VITE_STORE_URL).',
     },
-    cli: { intro: 'The subcommands of the aas CLI.', help: 'Show full usage', search: 'Search the catalog', install: 'Install from the catalog', uninstall: 'Uninstall', projects: 'Project-level skills and MCP servers', enable: 'Enable for an agent', disable: 'Disable for an agent', config: "Set an item's configuration", sync: 'Rewrite enabled items into the agent configs', relay: 'Manage the local relay', usage: 'Show usage and cost', update: 'Update installed items', info: 'Show an installed item or catalog entry', list: 'List installed items', doctor: 'Compare records with what the agents actually see', migrate: 'Convert skills installed by older versions' },
+    cli: { intro: 'The subcommands of the aas CLI.', help: 'Show full usage', search: 'Search the catalog', install: 'Install from the catalog', uninstall: 'Uninstall', projects: 'Project-level skills and MCP servers', enable: 'Enable for an agent', disable: 'Disable for an agent', config: "Set an item's configuration", sync: 'Rewrite enabled items into the agent configs', relay: 'Manage the local relay', test: "Check a provider's address and key (not counted in usage)", usage: 'Show usage and cost', update: 'Update installed items', info: 'Show an installed item or catalog entry', list: 'List installed items', doctor: 'Compare records with what the agents actually see', migrate: 'Convert skills installed by older versions' },
     about: { tagline: 'Everything your agents need, all in one place', support: 'Supports Claude Code and Codex today, with more agents on the way.', download: 'Get the latest version', updates: 'Resource updates', updatesSub: 'Checks installed skills, MCP servers and providers for new versions. New versions of the app itself come from the website.', check: 'Check for updates', checking: 'Checking…', upToDate: 'Everything installed is up to date', found: '{n} update(s) available', checkFailed: "Couldn't check: the catalog can't be reached", update: 'Update', updateAll: 'Update all', updating: 'Updating…', updateFailed: 'Update failed; the previous version is kept', updated: 'Updated', docs: 'Docs', github: 'GitHub' },
   },
 }

@@ -36,10 +36,15 @@ export interface RelayServerOptions {
   fetchImpl?: typeof fetch
 }
 
-const ROUTES: Record<string, ToolTarget> = {
-  '/v1/messages': 'claude',
-  '/responses': 'codex',
+/** The path each agent calls on the relay; the relay sends it on to the provider unless the provider sets endpointPath. */
+export const RELAY_ROUTE_PATHS: Record<ToolTarget, string> = {
+  claude: '/v1/messages',
+  codex: '/responses',
 }
+
+const ROUTES: Record<string, ToolTarget> = Object.fromEntries(
+  Object.entries(RELAY_ROUTE_PATHS).map(([target, path]) => [path, target as ToolTarget])
+)
 
 export function startRelayServer(options: RelayServerOptions): { stop: () => void; port: number } {
   const { aasHome, port = RELAY_PORT, fetchImpl } = options

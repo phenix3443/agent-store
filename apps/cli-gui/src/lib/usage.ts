@@ -93,3 +93,44 @@ export function rowsInPeriod(rows: UsageSummaryRow[], period: UsagePeriod, now: 
   const cutoff = new Date(now.getTime() - (period - 1) * 86_400_000).toISOString().slice(0, 10)
   return rows.filter((r) => r.date >= cutoff)
 }
+
+export type UsageDimension = 'provider' | 'model' | 'agent'
+
+export interface UsageGroupRow {
+  key: string
+  requests: number
+  successes: number
+  unpriced: number
+  inputTokens: number
+  outputTokens: number
+  costUsd: number
+  /** This group's part of the period's cost, 0–1; null when the period cost nothing. */
+  costShare: number | null
+}
+
+const DIMENSION_KEY: Record<UsageDimension, (r: UsageSummaryRow) => string> = {
+  provider: (r) => r.providerSlug,
+  model: (r) => r.model,
+  agent: (r) => r.target,
+}
+
+/** One row per provider, model or agent across the period, most expensive first. */
+export function usageByDimension(rows: UsageSummaryRow[], dimension: UsageDimension): UsageGroupRow[] {
+  const keyOf = DIMENSION_KEY[dimension]
+  const byKey = new Map<string, UsageGroupRow>()
+  for (const r of rows) {
+    const key = keyOf(r)
+    const acc = byKey.get(key) ?? { key, requests: 0, successes: 0, unpriced: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, costShare: null }
+    acc.requests += r.requestCount
+    acc.successes += r.successCount
+    acc.unpriced += r.unpricedRequestCount
+    acc.inputTokens += r.inputTokens
+    acc.outputTokens += r.outputTokens
+    acc.costUsd += r.costUsd
+    byKey.set(key, acc)
+  }
+  const total = rows.reduce((s, r) => s + r.costUsd, 0)
+  return [...byKey.values()]
+    .map((g) => ({ ...g, costShare: total > 0 ? g.costUsd / total : null }))
+    .sort((a, b) => b.costUsd - a.costUsd || b.requests - a.requests || a.key.localeCompare(b.key))
+}
