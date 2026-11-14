@@ -17,6 +17,7 @@ import { runTest } from './commands/test'
 import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
 import { runProjects } from './commands/projects'
+import { runBackup } from './commands/backup'
 import { runRelayDaemon, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome } from '@as/client-core'
 import { migrateHomeOnStartup, refreshRelayOnStartup } from './startup'
 import { ensureRelayRunning } from './commands/relay'
@@ -34,6 +35,8 @@ Commands:
                                    Uninstall an item
   projects <list|add|remove|move|show|set-env|unset-env|env|exec>
                                    Project-level skills and MCP servers (aas projects for help)
+  backup <connect|status|now|pull|conflicts|resolve|snapshots|restore|log|disconnect>
+                                   Back up to your own Git repository and sync devices (aas backup for help)
   enable <slug> --for <tool> [--replace] [--force]   Enable for claude or codex
   disable <slug> --for <tool> [--force]              Disable for claude or codex
   config <slug>                    Configure an item's settings
@@ -86,6 +89,7 @@ async function main(): Promise<void> {
     case 'test':      process.exitCode = await runTest(engine, rest); break
     case 'migrate':   process.exitCode = await runMigrateCommand(() => runMigrate(resolvePaths())); break
     case 'projects':  process.exitCode = await runProjects(engine, rest); break
+    case 'backup':    process.exitCode = await runBackup(engine, rest); break
     case 'doctor':    process.exitCode = await runDoctorCommand(() => runDoctor(resolvePaths())); break
     case '__relay-daemon': {
       const paths = resolvePaths()

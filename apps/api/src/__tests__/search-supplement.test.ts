@@ -7,16 +7,16 @@ import type { Database as Sqlite } from 'bun:sqlite'
 import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { openCatalogForWrite } from '../catalog/db'
 import { applySearchFinds, openDiscoveryForWrite, pickRepos } from '../catalog/discovery'
-import { FoundStore } from '../catalog/found-store'
+import { FoundStore, type FoundExport } from '../catalog/found-store'
 import { CatalogReader } from '../catalog/reader'
 import { resourceRoutes } from '../catalog/routes'
 import { buildSearchSupplement } from '../catalog/runtime'
-import type { SearchSource } from '../catalog/search-sources'
+import type { ExternalFind, SearchSource } from '../catalog/search-sources'
 import { clawhubSearch } from '../catalog/sources/clawhub'
 import { githubSkillsSource } from '../catalog/sources/github-skills'
 import { skillhubSearch } from '../catalog/sources/skillhub'
 import { skillsmpSearch } from '../catalog/sources/skillsmp'
-import { fallbackTrigger, lookupEligible, mergeFinds, normalizeQuery, SearchSupplement, SUPPLEMENT_DEFAULTS, type SupplementConfig } from '../catalog/supplement'
+import { fallbackTrigger, lookupEligible, mergeFinds, normalizeQuery, reposByRelevance, type RepoScanOutcome, SearchSupplement, SUPPLEMENT_DEFAULTS, type SupplementConfig } from '../catalog/supplement'
 import { syncCatalog } from '../catalog/sync'
 import { openAppDb } from '../db/client'
 import * as schema from '../db/schema'
@@ -31,28 +31,34 @@ const ACME_SKILLS = ['terraform-plan', 'terraform-drift']
 const ACME_PLAN = 'github:acme/tools/terraform-plan'
 const ACME_DRIFT = 'github:acme/tools/terraform-drift'
 
-/** acme/tools: a repo outside the catalog holding two skills. */
-const acmeRoutes: Route = (url) => {
-  if (url.hostname === 'api.github.com' && url.pathname === '/repos/acme/tools/commits/HEAD') return new Response(ACME_SHA)
-  if (url.hostname === 'api.github.com' && url.pathname === `/repos/acme/tools/git/trees/${ACME_SHA}`) {
-    return json({
-      sha: 't0',
-      truncated: false,
-      tree: [
-        { path: 'skills', mode: '040000', type: 'tree', sha: 't1' },
-        ...ACME_SKILLS.flatMap((name, i) => [
-          { path: `skills/${name}`, mode: '040000', type: 'tree', sha: `t-${name}` },
-          { path: `skills/${name}/SKILL.md`, mode: '100644', type: 'blob', sha: `b${i}`, size: 60 },
-        ]),
-      ],
-    })
+/** A repo at `sha` holding `skills` under skills/; `rawDelayMs` slows every SKILL.md download. */
+function repoRoutes(repo: string, sha: string, skills: string[], rawDelayMs = 0): Route {
+  return (url) => {
+    if (url.hostname === 'api.github.com' && url.pathname === `/repos/${repo}/commits/HEAD`) return new Response(sha)
+    if (url.hostname === 'api.github.com' && url.pathname === `/repos/${repo}/git/trees/${sha}`) {
+      return json({
+        sha: 't0',
+        truncated: false,
+        tree: [
+          { path: 'skills', mode: '040000', type: 'tree', sha: 't1' },
+          ...skills.flatMap((name, i) => [
+            { path: `skills/${name}`, mode: '040000', type: 'tree', sha: `t-${name}` },
+            { path: `skills/${name}/SKILL.md`, mode: '100644', type: 'blob', sha: `b${i}`, size: 60 },
+          ]),
+        ],
+      })
+    }
+    if (url.hostname === 'raw.githubusercontent.com' && url.pathname.startsWith(`/${repo}/${sha}/`)) {
+      const name = url.pathname.split('/').at(-2)
+      const body = () => new Response(`---\nname: ${name}\ndescription: ${name} for infrastructure work\n---\n`)
+      return rawDelayMs ? Bun.sleep(rawDelayMs).then(body) : body()
+    }
+    return undefined
   }
-  if (url.hostname === 'raw.githubusercontent.com' && url.pathname.startsWith(`/acme/tools/${ACME_SHA}/`)) {
-    const name = url.pathname.split('/').at(-2)
-    return new Response(`---\nname: ${name}\ndescription: ${name} for infrastructure work\n---\n`)
-  }
-  return undefined
 }
+
+/** acme/tools: a repo outside the catalog holding two skills. */
+const acmeRoutes = repoRoutes('acme/tools', ACME_SHA, ACME_SKILLS)
 
 const clawhubHit = (owner: string, slug: string, displayName = slug) => ({
   ownerHandle: owner, slug, displayName, summary: `${displayName} on ClawHub`, publisher: { displayName: owner }, links: { source: null },
@@ -127,6 +133,7 @@ interface Setup {
   config?: Partial<SupplementConfig>
   /** false: no GitHub client, so found repos are not scanned by the API. */
   scan?: boolean
+  log?: (entry: Record<string, unknown>) => void
 }
 
 function supplement(f: typeof fetch, setup: Setup = {}): SearchSupplement {
@@ -138,7 +145,7 @@ function supplement(f: typeof fetch, setup: Setup = {}): SearchSupplement {
     ...(setup.scan === false ? {} : { github: octokitWith(f) }),
     config: { sourceTimeoutMs: 200, ...setup.config },
     now: () => clock,
-    log: () => {},
+    log: setup.log ?? (() => {}),
   })
 }
 
@@ -512,13 +519,36 @@ describe('what a lookup found', () => {
     expect(list).toEqual({ resources: [], nextOffset: null })
   })
 
-  test('a repo with more skills than the limit is left to the catalog sync and shown as a listing', async () => {
+  // #187: every repo SkillsMP named for 'obsidian daily notes skill' held 44 to 170 skills,
+  // so each scan ended as too large and no find became installable.
+  test('of a repo with more skills than the limit, the skills the finds name are read and served', async () => {
     const f = routes()
-    const done = await settle(supplement(f, { sources: both, config: { scanMaxSkills: 1 } }), 'terraform')
+    const s = supplement(f, { sources: both, config: { scanMaxSkills: 1 } })
+    const done = await settle(s, 'terraform')
+    expect(done.resources.map((r) => r.id)).toEqual([ACME_PLAN])
+    expect(done.listings.map((l) => l.key)).toEqual(['clawhub:ivan/terraform'])
+    expect(done.foundOn).toEqual({ [ACME_PLAN]: ['skillsmp'] })
+    expect(calls(f, 'raw.githubusercontent.com')).toEqual([`https://raw.githubusercontent.com/acme/tools/${ACME_SHA}/skills/terraform-plan/SKILL.md`])
+    expect(s.resource(ACME_PLAN)).toMatchObject({ repo: { fullName: 'acme/tools', dir: 'skills/terraform-plan' } })
+
+    // A later lookup naming the other skill reads that one and keeps the first.
+    advance(7 * HOUR)
+    const drift = fakeFetch(acmeRoutes, searchRoutes({ clawhub: clawhubOk(), skillsmp: skillsmpOk(skillsmpHit('acme/tools', 'terraform-drift')) }))
+    const later = await settle(supplement(drift, { sources: both, config: { scanMaxSkills: 1 } }), 'terraform drift')
+    expect(later.resources.map((r) => r.id)).toEqual([ACME_DRIFT])
+    expect(s.lookup('terraform', null).resources.map((r) => r.id)).toEqual([ACME_PLAN, ACME_DRIFT])
+  })
+
+  test('a repo over the limit whose named skill is no skill directory is too large and stays a listing', async () => {
+    const f = fakeFetch(acmeRoutes, searchRoutes({ clawhub: clawhubOk(), skillsmp: skillsmpOk(skillsmpHit('acme/tools', 'terraform-gone')) }))
+    const logs: Record<string, unknown>[] = []
+    const done = await settle(supplement(f, { sources: both, config: { scanMaxSkills: 1 }, log: (e) => logs.push(e) }), 'terraform')
     expect(done.resources).toEqual([])
-    expect(done.listings.map((l) => l.key)).toEqual(['clawhub:ivan/terraform', ACME_PLAN])
-    expect(done.foundOn).toEqual({})
+    expect(done.listings.map((l) => l.key)).toEqual(['github:acme/tools/terraform-gone'])
     expect(calls(f, 'raw.githubusercontent.com')).toEqual([])
+    expect(logs.find((e) => e['message'] === 'search supplement')?.['repos']).toEqual([
+      { repo: 'acme/tools', status: 'too large', error: 'acme/tools: 2 skills, over the limit of 1' },
+    ])
   })
 
   test('survives a restart: a new process answers from app.db without asking any site', async () => {
@@ -570,6 +600,133 @@ describe('what a lookup found', () => {
     expect(later).toMatchObject({ status: 'found', reason: 'no_results' })
     expect(later.listings.map((l) => l.name)).toEqual(['Terraform', 'terraform-docs', 'terraform-lint'])
     expect(f.calls).toHaveLength(2)
+  })
+})
+
+// ── Repo scans ───────────────────────────────────────────────────────────────
+
+describe('repo scans', () => {
+  const BIG_SHA = 'b'.repeat(40)
+  const OTHER_SHA = 'c'.repeat(40)
+  const both = [SOURCES.clawhub, SOURCES.skillsmp]
+  const find = (repo: string, name: string, description: string | null = null): ExternalFind => ({
+    source: 'skillsmp', listingId: `${repo}/${name}`, skillKey: `github:${repo}/${name.toLowerCase()}`, name, description, author: null, url: 'https://skillsmp.com/x', githubRepo: repo,
+  })
+
+  test('repos are taken by how well their finds match the query, not by where they first appear', () => {
+    const order = reposByRelevance('obsidian daily notes', [
+      find('big/monorepo', 'html-ppt-obsidian-gradient', 'A slide deck theme'),
+      find('other/agent', 'obsidian', 'Read and write daily notes in an Obsidian vault'),
+      find('big/monorepo', 'obsidian-vault-maintainer'),
+      find('plain/kit', 'Daily-Notes'),
+      find('acme/tools', 'notes', null),
+      { ...find('nowhere/x', 'obsidian'), githubRepo: null },
+    ])
+    expect(order).toEqual([
+      { repo: 'other/agent', skills: ['obsidian'] },
+      { repo: 'plain/kit', skills: ['daily-notes'] },
+      { repo: 'big/monorepo', skills: ['html-ppt-obsidian-gradient', 'obsidian-vault-maintainer'] },
+      { repo: 'acme/tools', skills: ['notes'] },
+    ])
+  })
+
+  test('the lookup scans its most relevant repos, and each scan is logged and exported with its status and time', async () => {
+    const f = fakeFetch(
+      acmeRoutes,
+      repoRoutes('big/monorepo', BIG_SHA, ['misc-a', 'misc-b']),
+      repoRoutes('other/kit', OTHER_SHA, ['helper']),
+      searchRoutes({
+        clawhub: clawhubOk(),
+        // SkillsMP lists the unrelated repos first.
+        skillsmp: skillsmpOk(skillsmpHit('big/monorepo', 'misc-a'), skillsmpHit('other/kit', 'helper'), skillsmpHit('acme/tools', 'terraform-plan')),
+      }),
+    )
+    const logs: Record<string, unknown>[] = []
+    const s = supplement(f, { sources: both, config: { scanRepos: 1 }, log: (e) => logs.push(e) })
+    // No name holds both terms, so the merged finds keep SkillsMP's order; only acme/tools carries a term.
+    const done = await settle(s, 'terraform infrastructure')
+    expect(done.resources.map((r) => r.id)).toEqual([ACME_PLAN, ACME_DRIFT])
+    const githubCalls = calls(f, 'api.github.com').map((c) => new URL(c).pathname)
+    expect(githubCalls.every((p) => p.startsWith('/repos/acme/tools/'))).toBe(true)
+    expect(logs.find((e) => e['message'] === 'search supplement')).toMatchObject({
+      finds: 3,
+      repos: [{ repo: 'acme/tools', status: 'scanned', skills: 2 }],
+    })
+
+    const app = resourceRoutes(reader, () => s)
+    const exported = (await (await app.fetch(new Request('http://local/api/discovery/export'))).json()) as FoundExport
+    const repos = Object.fromEntries(exported.repos.map((r) => [r.fullName, r]))
+    expect(repos['acme/tools']).toMatchObject({ lastStatus: 'scanned', lastAttemptAt: clock.toISOString() })
+    expect(repos['big/monorepo']).toMatchObject({ lastStatus: null, lastAttemptAt: null })
+  })
+
+  test('a failing scan is logged with its error and no credentials; the repo waits before it is tried again', async () => {
+    const broken: Route = (url) => (url.hostname === 'api.github.com' ? json({ message: 'Server Error' }, 502) : undefined)
+    const answers = searchRoutes({ clawhub: clawhubOk(), skillsmp: skillsmpOk(skillsmpHit('acme/tools', 'terraform-plan')) })
+    const logs: Record<string, unknown>[] = []
+    const f = fakeFetch(broken, answers)
+    const s = supplement(f, { sources: both, log: (e) => logs.push(e) })
+    const done = await settle(s, 'terraform')
+    expect(done.resources).toEqual([])
+    const [scan] = logs.find((e) => e['message'] === 'search supplement')?.['repos'] as RepoScanOutcome[]
+    expect(scan).toMatchObject({ repo: 'acme/tools', status: 'error' })
+    expect(scan!.error).toContain('Server Error')
+    expect(JSON.stringify(logs)).not.toMatch(/authorization|token/i)
+
+    const before = calls(f, 'api.github.com').length
+    await settle(s, 'terraform plan')
+    expect(calls(f, 'api.github.com')).toHaveLength(before)
+  })
+
+  test('rate limited by GitHub: no repo is marked as tried, GitHub is left alone until its reset, then the repo is read', async () => {
+    let limited = true
+    const reset = Math.floor(clock.getTime() / 1000) + 600
+    const github: Route = (url) => {
+      if (url.hostname !== 'api.github.com' || !limited) return undefined
+      return new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
+        status: 403, headers: { 'content-type': 'application/json', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(reset) },
+      })
+    }
+    const f = fakeFetch(github, acmeRoutes, searchRoutes({ clawhub: clawhubOk(), skillsmp: skillsmpOk(skillsmpHit('acme/tools', 'terraform-plan')) }))
+    const logs: Record<string, unknown>[] = []
+    const s = supplement(f, { sources: both, log: (e) => logs.push(e) })
+
+    expect((await settle(s, 'terraform')).resources).toEqual([])
+    expect(logs.at(-1)).toMatchObject({ message: 'search supplement', repos: [{ repo: 'acme/tools', status: 'rate limited' }] })
+    expect(openRaw().query("SELECT last_status FROM found_repos WHERE full_name = 'acme/tools'").get()).toEqual({ last_status: null })
+
+    const before = calls(f, 'api.github.com').length
+    advance(5 * MINUTE)
+    await settle(s, 'terraform plan')
+    expect(calls(f, 'api.github.com')).toHaveLength(before)
+    expect(logs.at(-1)).toMatchObject({ repos: [{ repo: 'acme/tools', status: 'rate limited' }] })
+
+    limited = false
+    advance(6 * MINUTE)
+    expect((await settle(s, 'terraform modules')).resources.map((r) => r.id)).toEqual([ACME_PLAN])
+    expect(logs.at(-1)).toMatchObject({ repos: [{ repo: 'acme/tools', status: 'scanned', skills: 2 }] })
+  })
+
+  test('a scan that ends after the lookup stopped waiting: asking again shows its skills', async () => {
+    const f = fakeFetch(
+      repoRoutes('acme/tools', ACME_SHA, ACME_SKILLS, 300),
+      searchRoutes({ clawhub: clawhubOk(), skillsmp: skillsmpOk(skillsmpHit('acme/tools', 'terraform-plan')) }),
+    )
+    const logs: Record<string, unknown>[] = []
+    const s = supplement(f, { sources: both, config: { scanTimeoutMs: 50 }, log: (e) => logs.push(e) })
+    const first = await settle(s, 'terraform')
+    expect(first).toMatchObject({ status: 'found', resources: [] })
+    expect(first.listings.map((l) => l.key)).toEqual([ACME_PLAN])
+    expect(logs.find((e) => e['message'] === 'search supplement')).toMatchObject({ repos: [{ repo: 'acme/tools', status: 'running' }] })
+
+    for (let i = 0; i < 40 && !logs.some((e) => e['message'] === 'search supplement: repo scans ended'); i++) await Bun.sleep(25)
+    expect(logs.find((e) => e['message'] === 'search supplement: repo scans ended')).toMatchObject({
+      repos: [{ repo: 'acme/tools', status: 'scanned', skills: 2 }],
+    })
+    const again = s.lookup('terraform', null)
+    expect(again.status).toBe('found')
+    expect(again.resources.map((r) => r.id)).toEqual([ACME_PLAN, ACME_DRIFT])
+    expect(again.listings).toEqual([])
   })
 })
 

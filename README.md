@@ -54,6 +54,21 @@ aas projects exec ~/code/web -- claude             # 带上本机保存的值启
 
 技能复制到 `.claude/skills/` 和 `.agents/skills/`；MCP 写进 `.mcp.json`（Claude Code）和 `.codex/config.toml`（Codex，项目被 Codex 信任后才生效）。这些文件里只写环境变量名，密钥的值存在 `~/.agent-store/project-env.json`，由 `aas projects exec` 或 `eval "$(aas projects env <项目>)"` 交给 agent。`aas uninstall <slug> --project <项目>` 只删 Agent Store 装的内容。细节见 [`docs/project-scope.md`](docs/project-scope.md)。
 
+### 备份与多设备同步
+
+把本机装的技能、MCP、供应商和各 agent 的开关备份到自己的 Git 仓库，在别的设备上恢复和同步。密钥不上传：
+
+```sh
+aas backup connect git@github.com:me/agent-store-backup.git   # 空仓库，或已有的 Agent Store 备份
+aas backup now                                     # 上传本机改动，并应用其他设备的改动
+aas backup pull                                    # 新设备：只把备份装到本机
+aas backup conflicts                               # 两边都改过的条目
+aas backup resolve <条目> local|remote|both
+aas backup snapshots && aas backup restore <快照>
+```
+
+按条目合并，冲突的条目保留本机版本并等待选择；需要密钥的条目在新设备上标为缺少密钥。细节见 [`docs/backup-sync.md`](docs/backup-sync.md)。
+
 ## 本地开发
 
 需要 Node 22、pnpm 11、Bun；改桌面客户端还要 Rust 和 [Tauri 的系统依赖](https://v2.tauri.app/start/prerequisites/)。
