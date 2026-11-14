@@ -21,7 +21,7 @@ export interface ItemFile {
   /** mcp, provider: config.json without secret keys. */
   config?: Record<string, unknown>
   /** Skills over the size limit: no files, the device that has them keeps them. */
-  localOnly?: 'too-large'
+  localOnly?: 'too-large' | 'imported-mcp'
 }
 
 /** state.json */

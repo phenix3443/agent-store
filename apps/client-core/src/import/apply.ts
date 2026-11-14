@@ -9,7 +9,7 @@
 // import.json is written before anything moves and after every step, so a failed apply
 // is rolled back from it and an interrupted one is finished by `aas import undo`.
 import { randomBytes } from 'crypto'
-import { cp, lstat, mkdir, readdir, readFile, rename, rm } from 'fs/promises'
+import { cp, lstat, mkdir, readdir, readFile, rename, rm, writeFile } from 'fs/promises'
 import { basename, join } from 'path'
 import lockfile from 'proper-lockfile'
 import type {
@@ -220,7 +220,7 @@ async function backupConfig(dir: string, path: string, out: ImportRecord['config
 }
 
 /** Takes over the scanned candidates `ids`. Rolls everything back and rethrows if any step fails. */
-export async function applyImport(p: ImportPaths, ids: string[], catalog?: Catalog, options: { offline?: boolean } = {}): Promise<ImportApplyResult> {
+export async function applyImport(p: ImportPaths, ids: string[], catalog?: Catalog, options: { matchCatalog?: boolean } = {}): Promise<ImportApplyResult> {
   if (!ids.length) throw new ImportCandidateError('Nothing selected to import', 'unknown')
   return withImportLock(p.aasHome, async () => {
     const scan = await scanForImport(p, catalog, options)
@@ -298,7 +298,8 @@ async function applySkill(p: ImportPaths, record: ImportRecord, item: SkillImpor
       runtimeNames: { claude: first.dirName, codex: first.name ?? first.dirName },
       manifest: localSkillItem(item.slug, first, version, item.resourceId, now) as Item,
     }
-    await atomicWriteSecretFile(join(stage, MARKER), JSON.stringify(marker, null, 2))
+    // Not 0600: the backup leaves owner-only files out, and a skill without its marker cannot be restored.
+    await writeFile(join(stage, MARKER), JSON.stringify(marker, null, 2))
     await rename(stage, dest)
   } finally {
     await rm(stage, { recursive: true, force: true })

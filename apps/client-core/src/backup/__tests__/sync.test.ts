@@ -358,3 +358,28 @@ test('disconnect forgets this device only; reconnecting finds the backup again',
   await expect(a.engine.backupNow()).rejects.toThrow('not connected')
   expect((await a.engine.connectBackup({ remote })).remoteItems).toBe(4)
 }, 60_000)
+
+test('imported items: a skill reaches the other device as a local item; an MCP entry stays on its device with its values', async () => {
+  serveFetch()
+  const remote = await bareRemote()
+  const a = await device('laptop')
+  await mkdir(join(a.claudeDir, 'skills', 'notes'), { recursive: true })
+  await writeFile(join(a.claudeDir, 'skills', 'notes', 'SKILL.md'), '---\nname: notes\ndescription: Mine\n---\nMy own notes\n')
+  await writeFile(join(a.claudeDir, '.claude.json'), JSON.stringify({ mcpServers: { mine: { type: 'stdio', command: 'my-server', env: { TOKEN: `${MARKER}-imported` } } } }))
+  await a.engine.applyImport(['skill:notes', 'mcp:mine'])
+  await a.engine.connectBackup({ remote, device: 'laptop' })
+  const up = await a.engine.backupNow()
+  expect(up.localOnly).toEqual([{ key: 'mcp/mine', category: 'mcp', slug: 'mine', reason: 'imported-mcp' }])
+  expect(await allObjects(remote)).not.toContain(`${MARKER}-imported`)
+  expect(await remoteFile(remote, 'items/skill/notes/content/files/.agent-store.json')).toContain('"slug": "notes"')
+
+  const b = await device('desktop')
+  await b.engine.connectBackup({ remote, device: 'desktop' })
+  const pulled = await b.engine.backupNow()
+  expect(pulled.notRestorable.map(n => n.key)).toEqual(['mcp/mine'])
+  expect(await readFile(join(b.claudeDir, 'skills', 'notes', 'SKILL.md'), 'utf-8')).toContain('My own notes')
+  // The catalog has another skill called notes; a restored local item must not be "updated" to it.
+  expect(await b.engine.checkUpdates()).toEqual([])
+  expect((await b.engine.backupNow()).uploaded).toEqual([])
+  expect(await remoteFile(remote, 'items/mcp/mine/content/item.json')).toContain('imported-mcp')
+}, 60_000)

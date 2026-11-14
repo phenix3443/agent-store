@@ -124,3 +124,11 @@ export async function setEnabledFlag(aasHome: string, slug: string, target: Tool
     updatedAt: new Date().toISOString(),
   }))
 }
+
+/**
+ * An item with no catalog entry of its own: imported here, or restored from a backup of
+ * one imported elsewhere (the backup keeps version `local` but not `imported`).
+ */
+export function isLocalEntry(entry: InstalledItem): boolean {
+  return !entry.resourceId && (entry.imported !== undefined || entry.version === 'local')
+}

@@ -96,15 +96,15 @@ export interface ImportScan {
   agents: AgentDetection[]
   skills: SkillCandidate[]
   mcps: McpCandidate[]
-  /** False when matching was turned off or the catalog could not be reached. */
+  /** False unless matchCatalog was set and the catalog answered. */
   catalogChecked: boolean
   /** Config files that could not be read; their entries are not listed. The message never quotes the file. */
   problems: Array<{ path: string; message: string }>
 }
 
 export interface ImportScanOptions {
-  /** Do not send names to the catalog. */
-  offline?: boolean
+  /** Look each candidate's name up in the catalog. Off by default: it sends the names of the user's skills and MCP servers to Agent Store's catalog service. */
+  matchCatalog?: boolean
 }
 
 export interface ImportedItem {

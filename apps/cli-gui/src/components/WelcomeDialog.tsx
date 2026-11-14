@@ -174,6 +174,7 @@ function SkillRow({ s, checked, onToggle }: { s: SkillCandidate; checked: boolea
           <Mono>{l.path}</Mono>
         </span>
       ))}
+      {s.importable && s.locations.some((l) => l.root === 'agents') && <span className="block">{t('onboard.import.shared')}</span>}
       {reason && <span className="block text-warn">{reason}</span>}
     </Candidate>
   )
@@ -208,8 +209,12 @@ function McpRow({ m, checked, onToggle }: { m: McpCandidate; checked: boolean; o
   )
 }
 
-export function importableIds(scan: ImportScan): string[] {
-  return [...scan.skills.filter((s) => s.importable).map((s) => s.id), ...scan.mcps.filter((m) => m.importable).map((m) => m.id)]
+/** Checked at first: everything importable except skills in ~/.agents/skills, which other tools read too. */
+export function defaultSelection(scan: ImportScan): string[] {
+  return [
+    ...scan.skills.filter((s) => s.importable && !s.locations.some((l) => l.root === 'agents')).map((s) => s.id),
+    ...scan.mcps.filter((m) => m.importable).map((m) => m.id),
+  ]
 }
 
 /** The first-run guide: detected agents, then what the user already has, then the result. Nothing is written until 导入所选. */
@@ -227,6 +232,7 @@ export function WelcomeDialog() {
   const [applied, setApplied] = useState<ImportApplyResult | null>(null)
   const [undone, setUndone] = useState(false)
   const [error, setError] = useState<{ title: string; detail: string } | null>(null)
+  const [matchCatalog, setMatchCatalog] = useState(false)
 
   function detect() {
     setAgents({ status: 'loading' })
@@ -236,12 +242,12 @@ export function WelcomeDialog() {
     )
   }
 
-  function rescan() {
+  function rescan(match = matchCatalog) {
     setScan({ status: 'loading' })
-    callRpc<ImportScan>('importScan', [{}]).then(
+    callRpc<ImportScan>('importScan', [{ matchCatalog: match }]).then(
       (data) => {
         setScan({ status: 'done', data })
-        setSelected(new Set(importableIds(data)))
+        setSelected(new Set(defaultSelection(data)))
       },
       (err) => setScan({ status: 'failed', error: errorText(err) })
     )
@@ -253,8 +259,9 @@ export function WelcomeDialog() {
     setApplied(null)
     setUndone(false)
     setError(null)
+    setMatchCatalog(false)
     detect()
-    rescan()
+    rescan(false)
   }, [open])
 
   useEffect(() => {
@@ -286,7 +293,7 @@ export function WelcomeDialog() {
     setBusy('apply')
     setError(null)
     try {
-      const result = await callRpc<ImportApplyResult>('importApply', [[...selected], {}])
+      const result = await callRpc<ImportApplyResult>('importApply', [[...selected], { matchCatalog }])
       setApplied(result)
       bumpInstalledVersion()
       setStep('done')
@@ -342,6 +349,23 @@ export function WelcomeDialog() {
       <>
         <DialogTitle className="text-[22px] leading-tight">{t('onboard.import.title')}</DialogTitle>
         <DialogDescription className="mb-4 mt-2 max-w-[60ch] text-[13px]">{t('onboard.import.lede')}</DialogDescription>
+        <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-box border border-line px-3.5 py-[10px] hover:bg-panel">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 flex-none accent-skill"
+            checked={matchCatalog}
+            disabled={scan.status === 'loading' || busy !== null}
+            onChange={() => {
+              const next = !matchCatalog
+              setMatchCatalog(next)
+              rescan(next)
+            }}
+          />
+          <span className="min-w-0 flex-1">
+            <b className="block text-[13px] font-semibold">{t('onboard.import.match')}</b>
+            <small className="mt-0.5 block text-xs text-fg-3">{t('onboard.import.matchSub')}</small>
+          </span>
+        </label>
         {scan.status === 'loading' && (
           <p className="flex items-center gap-2 text-[13px] text-fg-2">
             <Spinner className="h-3.5 w-3.5" />
@@ -349,7 +373,7 @@ export function WelcomeDialog() {
           </p>
         )}
         {scan.status === 'failed' && (
-          <Banner tone="error" title={t('onboard.import.failed')} actions={<Button size="sm" onClick={rescan}>{t('onboard.import.retry')}</Button>}>
+          <Banner tone="error" title={t('onboard.import.failed')} actions={<Button size="sm" onClick={() => rescan()}>{t('onboard.import.retry')}</Button>}>
             {scan.error}
           </Banner>
         )}

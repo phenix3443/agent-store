@@ -54,7 +54,11 @@ function printFailed(failed: BackupFailure[], out: (s: string) => void): void {
 }
 
 function printLocal(localOnly: BackupLocalOnly[], excluded: BackupExcludedFile[], out: (s: string) => void): void {
-  for (const l of localOnly) out(`  Kept on this machine only: ${l.key} is over the size limit${l.bytes ? ` (${Math.round(l.bytes / 1024 / 1024)} MB)` : ''}`)
+  for (const l of localOnly) {
+    out(l.reason === 'imported-mcp'
+      ? `  Kept on this machine only: ${l.key} was imported from your own config and holds its values as written`
+      : `  Kept on this machine only: ${l.key} is over the size limit${l.bytes ? ` (${Math.round(l.bytes / 1024 / 1024)} MB)` : ''}`)
+  }
   for (const e of excluded) out(`  Not uploaded: ${e.key}/${e.file} (${e.reason === 'git-dir' ? 'a Git directory' : e.reason === 'owner-only' ? 'readable by its owner only' : 'looks like a secret file'})`)
 }
 

@@ -274,13 +274,13 @@ export interface ScanResult {
   mcps: Array<{ candidate: McpCandidate; found: FoundMcp }>
 }
 
-export async function scanForImport(p: ImportPaths, catalog?: Catalog, options: { offline?: boolean } = {}): Promise<ScanResult> {
+export async function scanForImport(p: ImportPaths, catalog?: Catalog, options: { matchCatalog?: boolean } = {}): Promise<ScanResult> {
   const problems: ImportScan['problems'] = []
   const [agents, found, mcpsFound] = await Promise.all([detectAgents(p), findSkills(p), findMcps(p, problems)])
   const skills = groupSkills(found)
   const mcps = mcpsFound.map(f => ({ candidate: mcpCandidate(f), found: f }))
   let catalogChecked = false
-  if (catalog && !options.offline) {
+  if (catalog && options.matchCatalog) {
     try {
       for (const s of skills) {
         if (!s.candidate.importable) continue

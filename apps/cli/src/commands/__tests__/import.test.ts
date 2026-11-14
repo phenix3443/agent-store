@@ -28,7 +28,7 @@ function engine(calls: unknown[][]): Engine {
 
 test('scan prints the agents, every candidate and why some cannot be imported', async () => {
   const lines: string[] = []
-  expect(await runImport(engine([]), ['scan', '--offline'], s => lines.push(s))).toBe(0)
+  expect(await runImport(engine([]), ['scan'], s => lines.push(s))).toBe(0)
   const text = lines.join('\n')
   expect(text).toContain('Claude Code: found (2.1.80 (Claude Code))')
   expect(text).toContain('Codex: not found; CLI not on PATH')
@@ -39,8 +39,8 @@ test('scan prints the agents, every candidate and why some cannot be imported', 
 test('apply --all takes only the importable candidates; undo passes --force', async () => {
   const calls: unknown[][] = []
   const e = engine(calls)
-  expect(await runImport(e, ['apply', '--all', '--offline'], () => {})).toBe(0)
-  expect(calls[1]).toEqual(['apply', ['skill:notes', 'mcp:github'], { offline: true }])
+  expect(await runImport(e, ['apply', '--all', '--match-catalog'], () => {})).toBe(0)
+  expect(calls[1]).toEqual(['apply', ['skill:notes', 'mcp:github'], { matchCatalog: true }])
   expect(await runImport(e, ['undo', 'imp-1', '--force'], () => {})).toBe(0)
   expect(calls[2]).toEqual(['undo', 'imp-1', { force: true }])
   expect(await runImport(e, ['apply'], () => {})).toBe(2)

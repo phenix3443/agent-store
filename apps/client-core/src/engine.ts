@@ -21,7 +21,7 @@ import { scanForImport, type ImportPaths } from './import/scan'
 import { applyImport, listImportRecords, summarize, undoImport } from './import/apply'
 import { ResourceCatalog, toItem, type Catalog } from './catalog'
 import { resourceLongSlug } from '@as/types'
-import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
+import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag, isLocalEntry } from './registry/index'
 import { createAdapters, type KindAdapter } from './adapters'
 import { ProjectService } from './projects/service'
 import { BackupService } from './backup/service'
@@ -341,7 +341,7 @@ export class EngineImpl implements Engine {
     const failures: Array<{ slug: string; error: string }> = []
     for (const entry of entries) {
       try {
-        if (entry.parentSlug || (entry.imported && !entry.resourceId)) continue
+        if (entry.parentSlug || isLocalEntry(entry)) continue
         const fromVersion = entry.version
         const latest = await latestFor(this.catalog, entry)
         const latestItem = { ...latest.item, slug: entry.slug }

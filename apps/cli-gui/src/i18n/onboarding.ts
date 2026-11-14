@@ -28,6 +28,9 @@ export const onboardingZh: Dict = {
       skills: '技能 {0}',
       mcps: 'MCP {0}',
       sameAsCatalog: '与目录条目相同',
+      match: '与 Agent Store 目录对照',
+      matchSub: '会把下面这些技能和 MCP 的名字发给 Agent Store 的目录服务，只发名字。与目录完全相同的技能导入后可以随目录更新；不对照时一律作为本地条目导入。',
+      shared: '其他工具也读取 ~/.agents/skills，默认不勾选；导入后这里会换成指向技能库的链接。',
       env: '环境变量 {0}',
       lossy: '经 {0} 命令停用再启用会丢失 {1}',
       reason: {
@@ -89,6 +92,9 @@ export const onboardingEn: Dict = {
       skills: 'Skills {0}',
       mcps: 'MCP {0}',
       sameAsCatalog: 'Same as the catalog entry',
+      match: "Compare with Agent Store's catalog",
+      matchSub: "Sends the names of the skills and MCP servers below, and nothing else, to Agent Store's catalog service. A skill identical to a catalog entry can then be updated from the catalog; without this everything is imported as a local item.",
+      shared: 'Other tools read ~/.agents/skills too, so this is unchecked by default; importing replaces it with a link to the skill library.',
       env: 'Environment variables {0}',
       lossy: 'Disabling and enabling it again with the {0} command drops {1}',
       reason: {

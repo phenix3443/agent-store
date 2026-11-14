@@ -250,7 +250,7 @@ test('apply refuses ids a scan does not offer, before writing anything', async (
   expect(existsSync(join(home, 'imports'))).toBe(false)
 })
 
-test('a skill identical to a catalog entry is tied to it; only names are sent', async () => {
+test('only with matchCatalog are names sent; a skill identical to a catalog entry is then tied to it', async () => {
   skill(join(claude, 'skills', 'notes'), 'notes')
   const content = readFileSync(join(claude, 'skills', 'notes', 'SKILL.md'))
   const sha = createHash('sha1').update(`blob ${content.length}\0`).update(content).digest('hex')
@@ -263,11 +263,12 @@ test('a skill identical to a catalog entry is tied to it; only names are sent', 
     get: async () => ({ id: 'github:o/r/notes', kind: 'skill', name: 'notes', version: '1.2.0', origin: {}, files: [{ path: 'SKILL.md', type: 'file', mode: '100644', size: content.length, sha, downloadUrl: '' }] }) as never,
     resolveItem: async () => { throw new Error('unused') },
   })
-  const scan = await engine.scanImports()
+  expect((await engine.scanImports()).catalogChecked).toBe(false)
+  expect(queries).toEqual([])
+  const scan = await engine.scanImports({ matchCatalog: true })
   expect(scan.catalogChecked).toBe(true)
   expect(scan.skills[0].catalog).toEqual({ id: 'github:o/r/notes', name: 'notes', version: '1.2.0', exact: true })
   expect(queries).toEqual(['notes'])
-  await engine.applyImport(['skill:notes'])
+  await engine.applyImport(['skill:notes'], { matchCatalog: true })
   expect((await engine.list())[0]).toMatchObject({ resourceId: 'github:o/r/notes', version: '1.2.0' })
-  expect((await engine.scanImports({ offline: true })).catalogChecked).toBe(false)
 })

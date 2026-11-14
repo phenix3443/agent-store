@@ -56,13 +56,13 @@ Codex entries of one name become one item that keeps each agent's entry.
 
 ### Catalog lookup
 
-Unless `--offline` (`{ offline: true }` over RPC), each candidate's name is searched in the catalog. Only names are
-sent. A skill matches exactly when every file's git blob sha equals the catalog's file list; the import then records
-the catalog `resourceId` and version, so `aas update` works on it. A same-name skill with other content is reported but
-imported as a local item. MCP matches (by npm / PyPI package or remote URL) are only reported: an imported MCP entry is
-always local, because a catalog entry's launch is built from its config form and would drop the user's own arguments.
-
-When the catalog cannot be reached, `catalogChecked` is false and nothing is matched.
+Off by default. With `--match-catalog` (`{ matchCatalog: true }` over RPC, the opt-in checkbox in the desktop guide),
+each candidate's name is searched in Agent Store's catalog service; only names are sent. A skill matches exactly when
+every file's git blob sha equals the catalog's file list; the import then records the catalog `resourceId` and version,
+so `aas update` works on it. A same-name skill with other content is reported but imported as a local item. MCP matches
+(by npm / PyPI package or remote URL) are only reported: an imported MCP entry is always local, because a catalog
+entry's launch is built from its config form and would drop the user's own arguments. Without the lookup, or when the
+catalog cannot be reached (`catalogChecked: false`), everything is imported as a local item.
 
 ### What a scan shows of an MCP entry
 
@@ -75,6 +75,13 @@ parse is listed in `problems` with a fixed message that never quotes the file.
 `env`, `url` and `bearer_token_env_var` in a Codex table). Importing keeps them. A disable and enable through the CLI
 would drop them; without the CLI the file edit keeps a Claude entry exactly and refuses a Codex table it cannot
 rewrite.
+
+## In the desktop client
+
+The guide (`WelcomeDialog.tsx`) and Settings › Agents › 查找 show the scan with a checkbox per candidate. Everything
+importable is checked except skills in `~/.agents/skills`, which other tools read too; the row says so. The catalog
+lookup is a separate checkbox, unchecked by default, that says it sends the names to Agent Store's catalog service;
+checking it scans again with `matchCatalog`, and the import then uses it too.
 
 ## Import
 
@@ -131,8 +138,8 @@ content, link targets, mtimes) and both config files before the import and after
 ## Commands and RPC
 
 ```
-aas import scan [--json] [--offline]
-aas import apply <id>... | --all [--offline]
+aas import scan [--json] [--match-catalog]
+aas import apply <id>... | --all [--match-catalog]
 aas import undo [<import-id>] [--force]
 aas import list
 ```
@@ -140,10 +147,24 @@ aas import list
 RPC methods: `detectAgents`, `importScan`, `importApply`, `importUndo`, `listImports` (the Tauri capability only
 allows method names made of letters).
 
+## Backups
+
+`aas backup` (`apps/client-core/src/backup/`) treats imported items like this:
+
+- An imported skill is backed up like any other skill (its files and marker). Another device restores it as a local
+  item with version `local` and deploys it under the original directory name; if that device has its own directory
+  there, the deploy is refused and reported as blocked, nothing is replaced. The `imported` record is not in the
+  backup, so the import can only be undone on the device that made it. Entries with version `local` and no catalog id
+  are never offered catalog updates (`isLocalEntry`), so a restored local skill is not replaced by a same-name catalog
+  skill.
+- An imported MCP entry holds the user's own values, secrets included, so it is never uploaded: the backup records it
+  as kept on its device only (`localOnly: imported-mcp`), other devices report it as not restorable and do not delete
+  it.
+
 ## Not covered
 
 - Project-level skills and MCP entries.
 - Skills that are links.
 - macOS and Windows have not been run. On macOS a GUI app gets a short `PATH` without Homebrew or `~/.local/bin`, so
   the sidecar may not find `claude` / `codex` even when a terminal does; detection then reports no CLI and MCP writes go
-  through the file edit, the same as before this change.
+  through the file edit, the same as before this change (#203).

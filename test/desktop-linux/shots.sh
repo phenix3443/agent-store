@@ -355,8 +355,9 @@ stop_app
 cli projects show "$PROJ"
 
 # 12. Importing what the user already has (#193): Settings › Agents › 查找 opens the guide's
-#     second step with every importable item checked; 导入所选 takes them over, then 撤销 in
-#     Settings puts every file back. Compared on disk before and after.
+#     second step with everything importable checked except the skill in ~/.agents/skills
+#     (other tools read it) and without the catalog lookup; 导入所选 takes them over, then
+#     撤销 in Settings puts every file back. Compared on disk before and after.
 user_state() {
   (cd "$HOME" && {
     find .claude/skills/my-notes .codex/skills/my-notes .agents/skills/users-own -printf '%y %m %p %l\n' | sort
@@ -381,6 +382,7 @@ xdotool key Return
 sleep 20
 shot 30-import-done
 check "the imported skill is in the library, linked back for both agents" 'links_to "$HOME/.claude/skills/my-notes" "$LIB/my-notes" && links_to "$HOME/.codex/skills/my-notes" "$LIB/my-notes" && [ -f "$LIB/my-notes/.agent-store.json" ]'
+check "the skill in ~/.agents/skills was left unchecked and untouched" '[ -d "$HOME/.agents/skills/users-own" ] && [ ! -L "$HOME/.agents/skills/users-own" ]'
 check "the skill linked from dotfiles was not imported" 'links_to "$HOME/.claude/skills/dot-linked" "$HOME/dotfiles/dot-linked"'
 check "importing the MCP server left ~/.claude.json byte for byte" '[ "$(sha256sum < "$HOME/.claude.json")" = "$CLAUDE_JSON_PRE" ]'
 check "the import record and the MCP manifest are 0600" '[ "$(stat -c %a "$HOME"/.agent-store/imports/*/import.json)" = 600 ] && [ "$(stat -c %a "$HOME/.agent-store/mcps/my-fs/manifest.json")" = 600 ]'
@@ -400,7 +402,7 @@ shot 33-import-undone
 stop_app
 check "undo put every file back as it was before the import" '[ "$(user_state)" = "$BEFORE_IMPORT" ]'
 check "undo removed the library copy and the MCP record" '[ ! -e "$LIB/my-notes" ] && [ ! -e "$HOME/.agent-store/mcps/my-fs" ]'
-"$SIDECAR" import scan --offline > "$OUT/import-scan.txt" 2>&1
+"$SIDECAR" import scan > "$OUT/import-scan.txt" 2>&1
 check "aas import scan lists the user's MCP server without its secret" 'grep -q "my-fs" "$OUT/import-scan.txt" && grep -q "MY_FS_TOKEN" "$OUT/import-scan.txt" && ! grep -q "$USER_SECRET" "$OUT/import-scan.txt"'
 
 cli search find-skills --kind skill

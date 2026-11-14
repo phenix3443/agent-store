@@ -3,12 +3,14 @@ import { EXIT_FAILURE, EXIT_OK, EXIT_USAGE, errorMessage } from '../utils/exit-c
 
 const USAGE = `Usage: aas import <command>
 
-  scan [--json] [--offline]            Your own skills and MCP servers that Agent Store does not manage (read-only)
-  apply <id>... | --all [--offline]    Take them over; originals are backed up and can be put back
-  undo [<import-id>] [--force]         Put the latest import (or <import-id>) back as it was
-  list                                 Past imports
+  scan [--json] [--match-catalog]          Your own skills and MCP servers that Agent Store does not manage (read-only)
+  apply <id>... | --all [--match-catalog]  Take them over; originals are backed up and can be put back
+  undo [<import-id>] [--force]             Put the latest import (or <import-id>) back as it was
+  list                                     Past imports
 
---offline: do not look the names up in the catalog (only names are ever sent).
+--match-catalog: look each name up in Agent Store's catalog, which sends the names (nothing else)
+to the catalog service. A skill identical to a catalog entry is then tied to it and can be updated;
+without it everything is imported as a local item.
 <id> is what scan prints, e.g. skill:my-notes or mcp:github.`
 
 const AGENT = { claude: 'Claude Code', codex: 'Codex' } as const
@@ -53,17 +55,17 @@ export function printScan(scan: ImportScan, out: (s: string) => void): void {
   for (const s of scan.skills) for (const l of skillLine(s)) out(l)
   out(`  MCP servers (${scan.mcps.length})`)
   for (const m of scan.mcps) for (const l of mcpLine(m)) out(l)
-  if (!scan.catalogChecked) out('  (not compared with the catalog)')
+  if (!scan.catalogChecked) out('  (not compared with the catalog; --match-catalog does)')
 }
 
 export async function runImport(engine: Engine, args: string[], out: (s: string) => void = console.log): Promise<number> {
   const [sub, ...rest] = args
-  const offline = rest.includes('--offline')
+  const matchCatalog = rest.includes('--match-catalog')
   const positional = rest.filter(a => !a.startsWith('--'))
   try {
     switch (sub) {
       case 'scan': {
-        const scan = await engine.scanImports({ offline })
+        const scan = await engine.scanImports({ matchCatalog })
         if (rest.includes('--json')) out(JSON.stringify(scan, null, 2))
         else printScan(scan, out)
         return EXIT_OK
@@ -71,12 +73,12 @@ export async function runImport(engine: Engine, args: string[], out: (s: string)
       case 'apply': {
         let ids = positional
         if (rest.includes('--all')) {
-          const scan = await engine.scanImports({ offline })
+          const scan = await engine.scanImports({ matchCatalog })
           ids = [...scan.skills.filter(s => s.importable).map(s => s.id), ...scan.mcps.map(m => m.id)]
           if (!ids.length) { out('  Nothing to import'); return EXIT_OK }
         }
         if (!ids.length) { out(USAGE); return EXIT_USAGE }
-        const result = await engine.applyImport(ids, { offline })
+        const result = await engine.applyImport(ids, { matchCatalog })
         for (const i of result.items) out(`  imported ${i.id} as ${i.slug} (${i.agents.map(a => AGENT[a]).join(', ')})`)
         out(`  Import ${result.importId}; undo with: aas import undo ${result.importId}`)
         return EXIT_OK
