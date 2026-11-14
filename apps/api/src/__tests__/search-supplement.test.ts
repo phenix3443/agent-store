@@ -421,7 +421,7 @@ describe('a failing site', () => {
       skillhub: () => json({ code: 500, message: 'error' }),
     }))
     const s = supplement(f)
-    expect(await settle(s, 'terraform')).toEqual({ status: 'unavailable', reason: 'no_results', resources: [], listings: [], partial: false, retryAfterSeconds: 30 })
+    expect(await settle(s, 'terraform')).toEqual({ status: 'unavailable', sources: ['clawhub', 'skillhub'], reason: 'no_results', resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: 30 })
     expect(s.lookup('terraform', null).status).toBe('unavailable')
     expect(f.calls).toHaveLength(2)
     up = true
