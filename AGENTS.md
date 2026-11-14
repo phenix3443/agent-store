@@ -23,9 +23,12 @@ The web store (`apps/store`) and the desktop client follow different design sour
 **Web store.** Since 2026-11-11 (issue #58) the web store has its own visual system.
 Before implementing or reviewing any web store screen, read `apps/store/DESIGN.md`
 (tokens, layout, components, do's and don'ts) and `apps/store/PRODUCT.md` (product
-facts). The direction contract for the store list and detail drawer is in
-`apps/store/.impeccable/surfaces/`. Tokens live in `apps/store/app/globals.css`; change
-them there and in `DESIGN.md` together. `docs/ui/Agent Store.dc.html` is only a record of
+facts). Since #158 the site is being redone in direction C; the interaction and copy
+reference is the prototype in `docs/design/mockups/site/` on branch
+`design/redesign-prototype`. The old direction contract for the store list and detail
+drawer is in `apps/store/.impeccable/surfaces/`; its visual part no longer applies.
+Tokens live in `apps/store/app/globals.css`; change them there and in `DESIGN.md`
+together. `docs/ui/Agent Store.dc.html` is only a record of
 the old look for the web store and no longer constrains it. Since #66 every web store
 page uses the new system; do not restyle any of them back toward the old mockup.
 
@@ -67,7 +70,8 @@ Required steps before calling UI work complete:
 2. Compare rendered screens against the design reference side by side, screen by screen:
    `apps/store/DESIGN.md` for the web store, `docs/ui/Agent Store.dc.html` for the
    desktop client. For the web store, check every changed screen at 390px, 820px and
-   1440px, in light and dark, in both Chinese and English (the only two locales).
+   1440px, in both Chinese and English (the only two locales). The web store has only a
+   dark theme since #159.
 3. For the desktop client specifically, take a real screenshot of the native window
    (e.g. via `screencapture` on macOS) rather than only checking the underlying dev-server
    page in a browser — a plain browser tab has no Tauri IPC bridge, so RPC-backed data and

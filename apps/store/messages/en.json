@@ -2,21 +2,21 @@
   "store": {
     "nav": {
       "store": "Store",
+      "client": "Desktop app",
       "docs": "Docs",
       "pricing": "Pricing",
-      "login": "Sign in",
-      "settings": "Settings",
+      "search": "Search",
+      "login": "Log in",
+      "download": "Download",
+      "downloadLong": "Download the desktop app",
       "menu": "Menu",
+      "close": "Close",
+      "main": "Main",
       "account": "Account menu",
-      "main": "Main navigation",
-      "skip": "Skip to content",
-      "theme": "Theme",
-      "themeLight": "Light",
-      "themeDark": "Dark",
-      "themeSystem": "System",
+      "dashboard": "Dashboard",
+      "logout": "Log out",
       "language": "Language",
-      "logout": "Sign out",
-      "download": "Download"
+      "skip": "Skip to content"
     },
     "categories": {
       "all": "All",
@@ -149,8 +149,7 @@
   },
   "site": {
     "footer": {
-      "label": "Footer",
-      "tagline": "A catalog of skills, MCP servers and providers for Claude Code / Codex. Every package states what runs when you install it.",
+      "tagline": "Skills and MCP servers for your agents. One click to install.",
       "product": "Product",
       "resources": "Resources",
       "legal": "Legal",
@@ -159,10 +158,12 @@
       "pricing": "Pricing",
       "download": "Download",
       "source": "Source code",
-      "releases": "Releases",
+      "releases": "All releases",
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
-      "copyright": "© 2026 Agent Store"
+      "copyright": "© 2026 Agent Store",
+      "cli": "The aas CLI",
+      "supported": "Works with Claude Code and Codex today. More agents on the way."
     },
     "home": {
       "metaTitle": "Agent Store: skills, MCP servers and providers for Claude Code / Codex",

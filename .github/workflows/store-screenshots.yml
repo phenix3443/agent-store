@@ -1,8 +1,8 @@
 name: store-screenshots
 
 # Builds the store image against the test API and screenshots the key pages at
-# 390/820/1440 px, light and dark, zh and en, for PR review. Runs on the runner,
-# never on the shared host (see AGENTS.md).
+# 390/820/1440 px, zh and en, for PR review. The store has only a dark theme. Runs on
+# the runner, never on the shared host (see AGENTS.md).
 on:
   pull_request:
     paths:

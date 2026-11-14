@@ -2,21 +2,21 @@
   "store": {
     "nav": {
       "store": "商店",
+      "client": "客户端",
       "docs": "文档",
       "pricing": "定价",
+      "search": "搜索",
       "login": "登录",
-      "settings": "设置",
+      "download": "下载",
+      "downloadLong": "下载桌面客户端",
       "menu": "菜单",
-      "account": "账号菜单",
+      "close": "关闭",
       "main": "主导航",
-      "skip": "跳到正文",
-      "theme": "外观",
-      "themeLight": "浅色",
-      "themeDark": "深色",
-      "themeSystem": "跟随系统",
-      "language": "界面语言",
+      "account": "账号菜单",
+      "dashboard": "个人面板",
       "logout": "退出登录",
-      "download": "下载"
+      "language": "界面语言",
+      "skip": "跳到正文"
     },
     "categories": {
       "all": "全部",
@@ -149,8 +149,7 @@
   },
   "site": {
     "footer": {
-      "label": "页脚",
-      "tagline": "Claude Code / Codex 的技能、MCP 与供应商目录，每个包写明安装后会执行什么。",
+      "tagline": "给你的 agent 装技能和 MCP，一键装好。",
       "product": "产品",
       "resources": "资源",
       "legal": "条款",
@@ -159,10 +158,12 @@
       "pricing": "定价",
       "download": "下载",
       "source": "源代码",
-      "releases": "版本发布",
+      "releases": "所有版本",
       "privacy": "隐私政策",
       "terms": "服务条款",
-      "copyright": "© 2026 Agent Store"
+      "copyright": "© 2026 Agent Store",
+      "cli": "命令行 aas",
+      "supported": "已支持 Claude Code、Codex，更多 agent 陆续加入。"
     },
     "home": {
       "metaTitle": "Agent Store：Claude Code / Codex 的技能、MCP 与供应商",
