@@ -19,6 +19,24 @@ const PAGES = [
   { name: 'detail', path: DETAIL },
   // The drawer only opens from the list (an intercepted route).
   { name: 'drawer', path: '/store', click: 'a[data-item-link]' },
+  { name: 'docs', path: '/docs' },
+  { name: 'docs-relay', path: '/docs/relay' },
+  { name: 'docs-install', path: '/docs/install' },
+  { name: 'privacy', path: '/privacy' },
+  { name: 'terms', path: '/terms' },
+  { name: 'notfound', path: '/no-such-page', status: 404 },
+  // Signed out, the dashboard opens the log-in dialog over its gate. Viewport-only shots.
+  { name: 'login', path: '/dashboard', wait: '[role="dialog"]', viewport: true },
+  { name: 'login-failed', path: '/?error=auth_failed', wait: '[role="alert"]', viewport: true },
+  { name: 'auth-desktop', path: '/auth/desktop', wait: '[role="status"] a', viewport: true },
+]
+// Signed-in pages, one demo session per plan (ci-demo-session.mjs, SHOT_SESSIONS).
+const SESSIONS = JSON.parse(process.env.SHOT_SESSIONS || '{}')
+const SIGNED_IN = [
+  { name: 'dashboard', plan: 'free', path: '/dashboard' },
+  { name: 'dashboard-free', plan: 'free', path: '/dashboard?tab=subscription' },
+  { name: 'dashboard-pro', plan: 'pro', path: '/dashboard?tab=subscription' },
+  { name: 'account-menu', plan: 'free', path: '/docs', click: 'header button[aria-haspopup="menu"]', minWidth: 1024 },
 ]
 // Interaction states of the store toolbar's sort control, on a filtered page so the
 // clear link shows too. Viewport-only shots.
@@ -56,14 +74,15 @@ for (const locale of LOCALES) {
       const file = `${out}/${p.name}-${width}-${locale}.png`
       try {
         const res = await page.goto(base + p.path, { waitUntil: 'networkidle', timeout: 60_000 })
-        if (!res || res.status() >= 400) throw new Error(`HTTP ${res?.status()}`)
+        if (!res || (p.status ? res.status() !== p.status : res.status() >= 400)) throw new Error(`HTTP ${res?.status()}`)
+        if (p.wait) await page.locator(p.wait).first().waitFor({ timeout: 30_000 })
         if (p.click) {
           await page.locator(p.click).first().click()
           await page.locator('[data-item-drawer]').waitFor({ timeout: 30_000 })
           await page.waitForLoadState('networkidle')
         }
         await page.evaluate(() => document.fonts.ready)
-        await page.screenshot({ path: file, fullPage: !p.click })
+        await page.screenshot({ path: file, fullPage: !p.click && !p.viewport })
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
         if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
         console.log(`ok ${file}`)
@@ -99,6 +118,33 @@ for (const locale of LOCALES) {
     }
     if (errors.length) failures.push(`${locale}/${width}: page errors: ${errors.join(' | ')}`)
     await context.close()
+
+    for (const p of SIGNED_IN) {
+      if (!SESSIONS[p.plan] || width < (p.minWidth ?? 0)) continue
+      const file = `${out}/${p.name}-${width}-${locale}.png`
+      const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: 'dark', deviceScaleFactor: 1 })
+      await ctx.addCookies([
+        { name: 'locale', value: locale, url: base },
+        { name: 'better-auth.session_token', value: SESSIONS[p.plan], url: base, httpOnly: true },
+      ])
+      const pg = await ctx.newPage()
+      try {
+        const res = await pg.goto(base + p.path, { waitUntil: 'networkidle', timeout: 60_000 })
+        if (!res || res.status() >= 400) throw new Error(`HTTP ${res?.status()}`)
+        if (p.click) {
+          await pg.locator(p.click).last().click()
+          await pg.locator('[role="menu"]').waitFor({ timeout: 10_000 })
+        } else if (!(await pg.locator('.dash').count())) throw new Error('not signed in')
+        await pg.evaluate(() => document.fonts.ready)
+        await pg.screenshot({ path: file, fullPage: !p.click })
+        const overflow = await pg.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+        if (overflow > 0) failures.push(`${file}: horizontal overflow ${overflow}px`)
+        console.log(`ok ${file}`)
+      } catch (e) {
+        failures.push(`${file}: ${e.message}`)
+      }
+      await ctx.close()
+    }
   }
 }
 

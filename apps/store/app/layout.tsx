@@ -10,6 +10,7 @@ import { SiteFooter } from '@/components/SiteFooter'
 import { InstallNoticeProvider } from '@/components/InstallNotice'
 import { SkipLink } from '@/components/SkipLink'
 import { getCurrentUser } from '@/lib/auth'
+import { enabledLoginProviders } from '@/lib/auth/providers'
 import './globals.css'
 
 const jakarta = Plus_Jakarta_Sans({
@@ -80,7 +81,7 @@ export default async function RootLayout({
                   <i />
                   <i />
                 </div>
-                <Header user={user} />
+                <Header user={user} loginProviders={enabledLoginProviders()} />
                 <main id="main" tabIndex={-1} className="flex-1 outline-none">
                   {children}
                 </main>

@@ -3,17 +3,19 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Search, X } from 'lucide-react'
 import type { CurrentUser } from '@/lib/auth'
+import type { LoginProvider } from '@/lib/auth/providers'
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@/i18n/config'
 import { LoginModal } from './LoginModal'
 import { SearchInput } from './SearchInput'
 
 interface HeaderProps {
   user: CurrentUser | null
+  loginProviders?: LoginProvider[]
 }
 
 const NAV = [
@@ -182,11 +184,30 @@ function MobileMenu({
   )
 }
 
-export function Header({ user }: HeaderProps) {
+// /auth/login sends a sign-in that did not finish back with ?error=auth_failed.
+function AuthFailedWatcher({ onFailed }: { onFailed: () => void }) {
+  const failed = useSearchParams().get('error') === 'auth_failed'
+  useEffect(() => {
+    if (!failed) return
+    onFailed()
+    const url = new URL(window.location.href)
+    url.searchParams.delete('error')
+    window.history.replaceState(null, '', url)
+  }, [failed, onFailed])
+  return null
+}
+
+export function Header({ user, loginProviders }: HeaderProps) {
   const pathname = usePathname()
   const t = useTranslations('store.nav')
   const [loginOpen, setLoginOpen] = useState(false)
+  const [loginFailed, setLoginFailed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const tl = useTranslations('site.login')
+  const openFailedLogin = useCallback(() => {
+    setLoginFailed(true)
+    setLoginOpen(true)
+  }, [])
 
   return (
     <>
@@ -252,7 +273,18 @@ export function Header({ user }: HeaderProps) {
       </header>
 
       <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} user={user} onLogin={() => setLoginOpen(true)} />
-      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
+      <Suspense>
+        <AuthFailedWatcher onFailed={openFailedLogin} />
+      </Suspense>
+      <LoginModal
+        open={loginOpen}
+        onOpenChange={(open) => {
+          setLoginOpen(open)
+          if (!open) setLoginFailed(false)
+        }}
+        providers={loginProviders}
+        error={loginFailed ? tl('failed') : undefined}
+      />
     </>
   )
 }

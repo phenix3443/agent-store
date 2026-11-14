@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
+import { Search } from 'lucide-react'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('site.notFound')
@@ -10,17 +11,29 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NotFound() {
   const t = await getTranslations('site.notFound')
   return (
-    <div className="px-4 pb-24 pt-16 lg:px-10 lg:pt-24">
-      <h1 className="max-w-[14ch] text-[44px] leading-[1.02] tracking-[-0.03em] sm:text-[72px]">{t('title')}</h1>
-      <p className="mt-6 max-w-[52ch] text-lg leading-7 text-ink-2">{t('body')}</p>
-      <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-ink pt-8">
-        <Link href="/store" className="btn btn-primary">
-          {t('store')}
-        </Link>
-        <Link href="/" className="btn min-h-12 px-5">
-          {t('home')}
-        </Link>
+    <section className="page-hero py-[clamp(80px,14vh,160px)] text-center">
+      <div className="narrow">
+        <p aria-hidden className="text-grad font-mono text-[clamp(72px,16vw,160px)] font-semibold leading-none">
+          404
+        </p>
+        <h1 className="h2 mb-3 mt-2.5">{t('title')}</h1>
+        <p className="lede mx-auto">{t('body')}</p>
+        <form role="search" action="/store" className="searchbar mx-auto mt-7 max-w-[560px] text-left">
+          <Search size={20} aria-hidden />
+          <input type="search" name="q" aria-label={t('search')} placeholder={t('search')} autoComplete="off" />
+          <button type="submit" className="btn btn-primary btn-sm">
+            {t('submit')}
+          </button>
+        </form>
+        <p className="mt-[22px] flex flex-wrap justify-center gap-[18px]">
+          <Link href="/store" className="link text-fg-2">
+            {t('store')}
+          </Link>
+          <Link href="/" className="link text-fg-2">
+            {t('home')}
+          </Link>
+        </p>
       </div>
-    </div>
+    </section>
   )
 }

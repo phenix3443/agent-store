@@ -70,5 +70,5 @@ const SECTIONS: LegalSection[] = [
 ]
 
 export default function TermsPage() {
-  return <LegalPage title="服务条款" updated={UPDATED} sections={SECTIONS} />
+  return <LegalPage title="服务条款" updated={UPDATED} sections={SECTIONS} other="privacy" />
 }

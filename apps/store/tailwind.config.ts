@@ -27,12 +27,11 @@ const config: Config = {
         warn: 'var(--warn)',
         bad: 'var(--bad)',
 
-        // Names from the previous design, still used by pages that #160–#162 redo.
+        // Names from the previous design, still used by the store list and detail that #161 redoes.
         // Remove each once nothing references it.
         paper: 'var(--bg)',
         plate: 'var(--bg-2)',
         ink: { DEFAULT: 'var(--fg)', 2: 'var(--fg-2)' },
-        'on-ink': 'var(--bg)',
         sel: 'var(--panel-2)',
         fill: 'var(--panel)',
         danger: 'var(--bad)',
