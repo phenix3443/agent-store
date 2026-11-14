@@ -23,6 +23,7 @@
     "@iarna/toml": "^2.2.5",
     "js-yaml": "^4.1.0",
     "proper-lockfile": "^4.1.2",
+    "read-cmd-shim": "^7.0.1",
     "write-file-atomic": "^8.0.0"
   },
   "devDependencies": {
