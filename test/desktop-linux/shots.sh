@@ -348,6 +348,8 @@ check "a provider is installed to hold the marker key" '[ -n "$PROVIDER_SLUG" ]'
 printf '["%s",{"apiKey":"%s"}]\n' "$PROVIDER_SLUG" "$MARK" | "$SIDECAR" __rpc setConfig - >>"$OUT/cli.txt" 2>&1
 remote_has() { git --git-dir="$REMOTE" log --all -p --binary 2>/dev/null | grep -qE "$1"; }
 backup_page() { point_at_window; xdotool key ctrl+6; sleep 2; settings_tab 3 "${1:-10}"; }
+# The settings tabs scroll with the page; scroll back up before clicking them.
+to_top() { xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2)); xdotool click --repeat 20 4; sleep 1; }
 palette() { xdotool key ctrl+k; sleep 2; xdotool type --delay 60 "$1"; sleep 2; xdotool key Return; sleep "${2:-25}"; }
 HOME_B=$(mktemp -d)
 cli_b() { echo "\$ (laptop-b) aas $*" >>"$OUT/cli.txt"; HOME=$HOME_B "$SIDECAR" "$@" >>"$OUT/cli.txt" 2>&1; echo >>"$OUT/cli.txt"; }
@@ -415,6 +417,7 @@ check "kept both: the remote version is installed as legacy-skill-laptop-b" '[ -
 check "kept both: this machine's version stays" 'grep -q "Edited on desk-a" "$LIB/legacy-skill/SKILL.md"'
 check "kept both: the copy is enabled for no agent" '[ ! -e "$HOME/.claude/skills/legacy-skill-laptop-b" ] && [ ! -e "$HOME/.codex/skills/legacy-skill-laptop-b" ]'
 # The newest snapshot is the one taken before that choice: Tab to its 恢复…, confirm (focus is on 取消).
+to_top
 settings_tab 3 6
 xdotool key Tab Tab Tab Tab Tab Tab Return
 sleep 2
@@ -440,6 +443,7 @@ shot 39-backup-secret-found
 check "the found key never reached the remote" '! remote_has "$GH_FAKE"'
 rm -f "$LIB/legacy-skill/leaked.md"
 # 断开…: panel, 拉取, 立即备份, the switch, 断开…; the dialog focuses 取消.
+to_top
 settings_tab 3 8
 xdotool key Tab Tab Tab Tab Tab Return
 sleep 2

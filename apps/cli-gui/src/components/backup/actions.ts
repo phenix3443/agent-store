@@ -8,7 +8,9 @@ import { useTerminalLog } from '../../state/TerminalLog'
 import { toast } from '../ui/toast'
 
 export function syncSummary(mode: 'now' | 'pull', r: BackupSyncResult, t: TFn): string {
-  if (!r.uploaded.length && !r.applied.length) return t('bk.resultNothing')
+  if (!r.uploaded.length && !r.applied.length) {
+    return r.conflicts.length ? t('bk.resultConflicts').replace('{0}', String(r.conflicts.length)) : t('bk.resultNothing')
+  }
   if (mode === 'pull') return t('bk.resultPull').replace('{0}', String(r.applied.length))
   return t('bk.resultNow').replace('{0}', String(r.uploaded.length)).replace('{1}', String(r.applied.length))
 }

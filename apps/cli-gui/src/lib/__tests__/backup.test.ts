@@ -82,3 +82,11 @@ test('a pasted token never reaches the activity log', () => {
   expect(redactRemote('https://me:ghp_secret@github.com/me/b.git')).toBe('https://github.com/me/b.git')
   expect(redactRemote('git@github.com:me/b.git')).toBe('git@github.com:me/b.git')
 })
+
+test('a run that only found conflicts says so instead of "nothing to sync"', async () => {
+  const { syncSummary } = await import('../../components/backup/actions')
+  const base = { pushed: null, uploaded: [], applied: [], snapshot: 's', conflicts: [], missingSecrets: [], failed: [], localOnly: [], notRestorable: [], excludedFiles: [] }
+  const conflict = { key: 'skill/a', category: 'skill' as const, slug: 'a', reason: 'both-changed' as const, parts: ['content' as const], detectedAt: '' }
+  expect(syncSummary('now', base, zh)).toBe(zh('bk.resultNothing'))
+  expect(syncSummary('now', { ...base, conflicts: [conflict] }, zh)).toBe('有 1 项冲突待处理，其余内容已经一致。')
+})
