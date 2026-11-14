@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 import { AppShot, SHOTS, WindowFrame } from './Window'
 
 export const DEMO_VIEWS = [
-  { id: 'install', kind: 'skill', Icon: MousePointerClick, shot: SHOTS.skills },
+  { id: 'install', kind: 'skill', Icon: MousePointerClick, shot: SHOTS.install },
   { id: 'mcp', kind: 'mcp', Icon: Server, shot: SHOTS.mcp },
   { id: 'providers', kind: 'provider', Icon: Route, shot: SHOTS.relay },
   { id: 'usage', kind: 'provider', Icon: BarChart3, shot: SHOTS.usage },

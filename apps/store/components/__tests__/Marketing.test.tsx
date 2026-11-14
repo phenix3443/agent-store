@@ -20,7 +20,8 @@ afterEach(() => {
 })
 
 const { DownloadButton, SupportedAgents } = await import('../marketing/Marketing')
-const { ProductDemo, DEMO_VIEWS } = await import('../marketing/ProductDemo')
+const { ProductDemo } = await import('../marketing/ProductDemo')
+const { SHOTS, shotSrc } = await import('../marketing/Window')
 const { CatalogShelf } = await import('../marketing/CatalogShelf')
 const { cardArt } = await import('../marketing/shelf')
 const { Faq, FAQ_KEYS } = await import('../marketing/Faq')
@@ -52,17 +53,23 @@ test('the product demo shows one real screenshot per dock tab', async () => {
   render(<ProductDemo />)
   const tabs = screen.getAllByRole('tab')
   expect(tabs.map((t) => t.getAttribute('aria-label'))).toEqual(['安装', 'MCP', '供应商', '用量'])
-  expect(screen.getByRole('tabpanel').querySelector('img')!.getAttribute('src')).toBe(DEMO_VIEWS[0].shot.src)
+  expect(screen.getByRole('tabpanel').querySelector('img')!.getAttribute('src')).toBe('/landing/zh/install.webp')
 
   fireEvent.mouseDown(tabs[1], { button: 0 })
-  expect(screen.getByRole('tabpanel').querySelector('img')!.getAttribute('src')).toBe('/landing/mcp.webp')
+  expect(screen.getByRole('tabpanel').querySelector('img')!.getAttribute('src')).toBe('/landing/zh/mcp.webp')
   expect(document.body.textContent).toContain('停用不用删')
 
   act(() => tabs[1].focus())
   fireEvent.keyDown(tabs[1], { key: 'ArrowRight' })
   await waitFor(() => expect(tabs[2]).toHaveFocus())
   expect(tabs[2].getAttribute('aria-selected')).toBe('true')
-  expect(screen.getByRole('tabpanel').querySelector('img')!.getAttribute('src')).toBe('/landing/relay.webp')
+  expect(screen.getByRole('tabpanel').querySelector('img')!.getAttribute('src')).toBe('/landing/zh/relay.webp')
+})
+
+test('screenshots come in the page language, Chinese for anything else', () => {
+  expect(shotSrc(SHOTS.usage, 'en')).toBe('/landing/en/usage.webp')
+  expect(shotSrc(SHOTS.skillsNarrow, 'zh')).toBe('/landing/zh/skills-narrow.webp')
+  expect(shotSrc(SHOTS.skills, 'ja')).toBe('/landing/zh/skills.webp')
 })
 
 test('shelf cards draw their art from the record itself', () => {

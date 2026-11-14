@@ -237,22 +237,22 @@
         "install": {
           "name": "Install",
           "caption": "One click. Every agent that supports it, set up.",
-          "alt": "The Skills page of the desktop app: configured and recommended skills on the left, the details and install command of brainstorming on the right"
+          "alt": "The install dialog: agent-browser going in globally, a switch for Claude Code and one for Codex, and what installing writes"
         },
         "mcp": {
           "name": "MCP",
           "caption": "See which agents each MCP server is on for. Disable without deleting.",
-          "alt": "Context7 settings: switches for Claude Code and Codex under Applies to"
+          "alt": "The MCP page: three installed MCP servers, each with a switch for Claude Code and one for Codex; Context7's details on the right: per-agent switches, API key and how it runs"
         },
         "providers": {
           "name": "Providers",
           "caption": "Switch API providers without touching env vars. Requests go through the local relay and are logged one by one.",
-          "alt": "The local relay card: listening on 127.0.0.1:18780, running, with recent requests below"
+          "alt": "The Providers page: the local relay is running and passes Codex's requests to OpenRouter"
         },
         "usage": {
           "name": "Usage",
           "caption": "See what each provider used, at a glance.",
-          "alt": "The overview page: the usage trend and totals for cost, tokens, requests and models"
+          "alt": "The Usage page: spend over the last 7 days, totals for cost, tokens, requests, success rate and models, and a breakdown by provider, model and agent"
         }
       },
       "keys": {
@@ -279,10 +279,10 @@
       "manage": {
         "title": "Dozens installed. Which ones are live?",
         "dim": "One window shows them all.",
-        "lede": "Every skill, MCP server and provider you've installed is listed in the app. Open one to see which agents it's on for, and switch each agent separately.",
+        "lede": "Every skill, MCP server and provider you've installed is listed in the app. Each row has a switch per agent, so you can see what's on where.",
         "link": "See how the app manages them",
         "window": "Agent Store · Skills",
-        "alt": "The Skills page of the desktop app: brainstorming, canvas-design and executing-plans configured, recommended skills below"
+        "alt": "The Skills page in a narrow window: six installed skills, each with a switch for Claude Code and one for Codex"
       },
       "catalog": {
         "title": "If your agent can use it, it's here.",
@@ -313,7 +313,7 @@
       "lede": "Install in a click, toggle per agent, switch providers without editing env vars.",
       "installGuide": "Install guide",
       "heroWindow": "Agent Store · Skills",
-      "heroAlt": "The Skills page of the desktop app: configured and recommended skills on the left, the details and install command of brainstorming on the right",
+      "heroAlt": "The Skills page of the desktop app: six installed skills, each with a switch for Claude Code and one for Codex",
       "library": {
         "title": "Set it up once.",
         "dim": "Each agent gets its own switch.",
@@ -330,7 +330,7 @@
         "lede": "MCP servers that need an API key get it here. One switch per agent; disabling flips the switch and keeps your settings.",
         "link": "Find Context7 in the store",
         "window": "Agent Store · MCP",
-        "alt": "Context7 settings: switches for Claude Code and Codex under Applies to"
+        "alt": "The MCP page: three installed MCP servers, each with a switch for Claude Code and one for Codex; Context7's details on the right: per-agent switches, API key and how it runs"
       },
       "web": {
         "title": "Click install in your browser.",
@@ -361,7 +361,7 @@
         "pro": "Pro: budget and overspend alerts, usage analytics and billing export.",
         "link": "See pricing",
         "window": "Agent Store · Usage",
-        "alt": "The overview page: the usage trend and totals for cost, tokens, requests and models, with Pro's budget and overspend alerts below"
+        "alt": "The Usage page: spend over the last 7 days, totals for cost, tokens, requests, success rate and models, and a breakdown by provider, model and agent"
       },
       "faq": {
         "title": "FAQ",
