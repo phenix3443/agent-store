@@ -6,8 +6,25 @@
     { id: 'codex', name: 'Codex', mark: 'Cx', dir: '~/.codex', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', mcpKey: 'mcp_servers', env: 'CODEX_HOME', color: '#5fd6a4' }
   ];
 
+  /* 项目示例：old-site 的目录已不存在；admux 模拟队友提交、本机还没填密钥的情形。 */
+  function seedProjects() {
+    return [
+      { id: 'agent-store', name: 'agent-store', path: '~/code/agent-store', items: [
+        { key: 'handoff', kind: 'skill', name: 'handoff', id: 'github:mattpocock/skills/handoff', ours: true, version: '9b1d44e07c21', on: { claude: true, codex: true } },
+        { key: 'release-checklist', kind: 'skill', name: 'release-checklist', id: null, ours: false, on: { claude: true, codex: false } },
+        { key: 'context7', kind: 'mcp', name: 'context7', id: 'mcp-registry:io.github.upstash/context7', ours: true, version: '4.7.0', on: { claude: true, codex: false }, vars: { CONTEXT7_API_KEY: 'ctx7sk-88d0c3a917f2' } },
+        { key: 'admux', kind: 'mcp', name: 'admux', id: null, ours: false, on: { claude: true, codex: false }, needs: ['ADMUX_API_KEY'], vars: {} }
+      ] },
+      { id: 'blog', name: 'blog', path: '~/code/blog', items: [] },
+      { id: 'old-site', name: 'old-site', path: '~/code/old-site', missing: true, items: [
+        { key: 'tdd', kind: 'skill', name: 'tdd', id: 'github:mattpocock/skills/tdd', ours: true, version: '41c0be7d92aa', on: { claude: true, codex: false } }
+      ] }
+    ];
+  }
+
   function seed() {
     return {
+      projects: seedProjects(),
       lang: /^zh/i.test(navigator.language || '') ? 'zh' : 'en',
       signedIn: false, plan: 'free', agents: 'both', platform: 'mac', offline: false, size: 'auto',
       onboarded: false, legacy: true, usage: 'sample', relay: true, budget: null, favs: [], log: [],
@@ -29,6 +46,7 @@
   var S;
   try { S = JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
   if (!S || !S.installed) S = seed();
+  if (!S.projects) S.projects = seedProjects();
   var ql = /[?&]lang=(zh|en)/.exec(location.search); if (ql) S.lang = ql[1];
 
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -37,6 +55,8 @@
   function item(id) { for (var i = 0; i < AS_DATA.length; i++) if (AS_DATA[i].id === id) return AS_DATA[i]; return null; }
   function entry(slug) { for (var i = 0; i < S.installed.length; i++) if (S.installed[i].slug === slug) return S.installed[i]; return null; }
   function entryFor(id) { for (var i = 0; i < S.installed.length; i++) if (S.installed[i].id === id && !S.installed[i].parent) return S.installed[i]; return null; }
+  function project(id) { for (var i = 0; i < S.projects.length; i++) if (S.projects[i].id === id) return S.projects[i]; return null; }
+  function projItem(p, key) { for (var i = 0; p && i < p.items.length; i++) if (p.items[i].key === key) return p.items[i]; return null; }
   function detected(agent) { return S.agents === 'both' || (S.agents === 'claude' && agent === 'claude'); }
   function isPro() { return S.plan === 'pro'; }
 
@@ -75,5 +95,5 @@
     return null;
   }
 
-  window.AS = { state: S, AGENTS: AGENTS, save: save, reset: reset, item: item, entry: entry, entryFor: entryFor, detected: detected, isPro: isPro, transport: transport, needs: needs, blocker: blocker };
+  window.AS = { state: S, AGENTS: AGENTS, save: save, reset: reset, item: item, entry: entry, entryFor: entryFor, detected: detected, isPro: isPro, transport: transport, needs: needs, blocker: blocker, project: project, projItem: projItem, seedProjects: seedProjects };
 })();

@@ -63,6 +63,15 @@
   function mask(v) { return v ? v.slice(0, 6) + '••••••••' + v.slice(-4) : ''; }
   function ofKind(k) { return S.installed.filter(function (e) { return e.kind === k; }); }
   function updates() { return S.installed.filter(function (e) { return e.latest; }); }
+  /* 项目级技能目录。项目级 MCP 只写 <项目>/.mcp.json，目前只对 Claude Code 生效。 */
+  var PDIR = { claude: '.claude/skills', codex: '.agents/skills' };
+  function joinNames(a) { return a.join(S.lang === 'en' ? ', ' : '、'); }
+  function projNeeds(x) { var it = A.item(x.id); return x.kind !== 'mcp' ? [] : x.needs || (it ? A.needs(it).map(function (n) { return n.key; }) : []); }
+  function projMiss(x) { return projNeeds(x).some(function (k) { return !(x.vars || {})[k]; }); }
+  function projOver(x) { return x.kind !== 'mcp' ? null : S.installed.filter(function (e) { return e.kind === 'mcp' && e.slug === x.key; })[0] || null; }
+  function projKey(it) { return it.kind === 'skill' ? it.name : slugFor(it); }
+  function projHas(p, it) { return p.items.filter(function (x) { return x.id === it.id; })[0] || null; }
+  function intoProj() { var p = R.q.into && A.project(R.q.into); return p && !p.missing ? p : null; }
 
   /* ---------- 路由 ---------- */
   function parse() {
@@ -77,7 +86,7 @@
     return s + (qs ? '?' + qs : '');
   }
   function go(view, arg, q) { var h = href(view, arg, q); if (location.hash === h) render(); else location.hash = h; }
-  function keepQ() { var q = {}; ['q', 'kind', 'sort'].forEach(function (k) { if (R.q[k]) q[k] = R.q[k]; }); return q; }
+  function keepQ() { var q = {}; ['q', 'kind', 'sort', 'into'].forEach(function (k) { if (R.q[k]) q[k] = R.q[k]; }); return q; }
   function libHref(e) { return href(e.kind === 'skill' ? 'skills' : e.kind === 'mcp' ? 'mcp' : 'providers', e.slug); }
 
   /* ---------- 提示与记录 ---------- */
@@ -132,6 +141,12 @@
       '<div class="side-h">' + t('nav.local') + '</div>' +
       nav('skills', 'skill', 'skill', ofKind('skill').length) + nav('mcp', 'mcp', 'mcp', ofKind('mcp').length) + nav('providers', 'provider', 'provider', ofKind('provider').length) +
       nav('usage', 'usage') +
+      '<a class="side-h" href="' + href('projects') + '">' + t('nav.projects') + '</a>' +
+      '<a class="nav-i nav-n" href="' + href('projects') + '"' + (/^projects?$/.test(R.view) ? ' aria-current="page"' : '') + ' title="' + t('nav.projects') + '" aria-label="' + t('nav.projects') + '">' + ic('folder') + '</a>' +
+      '<div class="side-pj">' + S.projects.map(function (p) {
+        return '<a class="nav-i" href="' + href('project', p.id) + '"' + (R.view === 'project' && R.arg === p.id ? ' aria-current="page"' : '') + ' title="' + esc(p.path) + '">' + ic('folder') + '<span class="lbl">' + esc(p.name) + '</span>' + (p.missing ? '<span class="n warn" title="' + t('pj.missing.chip') + '">' + ic('warn') + '<span class="sr">' + t('pj.missing.chip') + '</span></span>' : '<span class="n">' + p.items.length + '</span>') + '</a>';
+      }).join('') + '</div>' +
+      '<button type="button" class="nav-i nav-add" data-act="pj-new">' + ic('plus') + '<span class="lbl">' + t('pj.add') + '</span></button>' +
       '<div class="side-foot">' + nav('settings', 'settings') +
       '<a class="relay-mini" href="' + href('providers') + '" title="' + t('relay.title') + '"><i class="pulse' + (S.relay ? ' on' : '') + '"></i><span>' + t(S.relay ? 'relay.on.short' : 'relay.off.short') + '</span></a>' +
       '<button type="button" class="acct" data-act="menu" aria-haspopup="menu" aria-expanded="' + U.menu + '" title="' + esc(who) + '"><span class="avatar' + (S.signedIn ? ' in' : '') + '">' + (S.signedIn ? 'L' : ic('user')) + '</span><span class="acct-t"><b>' + esc(who) + '</b><small>' + (S.signedIn ? (A.isPro() ? 'Pro' : 'Free') : t('acct.out.sub')) + '</small></span></button></div>';
@@ -187,8 +202,9 @@
     return rows;
   }
   function catRow(it) {
-    var e = A.entryFor(it.id), sel = R.arg === it.id, btn;
-    if (it.kind === 'provider') btn = '<button type="button" class="btn btn-sm btn-kind" data-act="install" data-arg="' + esc(it.id) + '">' + t(e ? 'act.addcfg' : 'act.install') + '</button>';
+    var e = A.entryFor(it.id), sel = R.arg === it.id, btn, into = intoProj();
+    if (into && it.kind !== 'provider') btn = projHas(into, it) ? '<a class="btn btn-sm" href="' + href('project', into.id) + '">' + t('pj.inproj') + '</a>' : '<button type="button" class="btn btn-sm btn-kind" data-act="install" data-arg="' + esc(it.id) + '">' + t('act.install') + '</button>';
+    else if (it.kind === 'provider') btn = '<button type="button" class="btn btn-sm btn-kind" data-act="install" data-arg="' + esc(it.id) + '">' + t(e ? 'act.addcfg' : 'act.install') + '</button>';
     else if (e && e.latest) btn = '<button type="button" class="btn btn-sm btn-kind" data-act="update" data-arg="' + esc(e.slug) + '">' + t('act.update') + '</button>';
     else if (e) btn = '<a class="btn btn-sm" href="' + libHref(e) + '">' + t('act.manage') + '</a>';
     else btn = '<button type="button" class="btn btn-sm btn-kind" data-act="install" data-arg="' + esc(it.id) + '">' + t('act.install') + '</button>';
@@ -205,12 +221,13 @@
       (S.offline ? '' : '<div class="more"><button type="button" class="btn btn-sm" data-act="more">' + t('disc.more') + '</button></div>');
   }
   function viewDiscover() {
-    var k = R.q.kind || '';
+    var k = R.q.kind || '', into = intoProj();
     var segs = [['', t('kind.all')], ['skill', t('kinds.skill')], ['mcp', 'MCP'], ['provider', t('kinds.provider')]].map(function (x) {
       return '<button type="button" data-act="kind" data-arg="' + x[0] + '"' + (x[0] ? ' data-kind="' + x[0] + '"' : '') + ' aria-pressed="' + (k === x[0]) + '">' + x[1] + '</button>';
     }).join('');
     var sorts = [['', 'sort.default'], ['installs', 'sort.installs'], ['updated', 'sort.updated']].map(function (x) { return '<option value="' + x[0] + '"' + ((R.q.sort || '') === x[0] ? ' selected' : '') + '>' + t(x[1]) + '</option>'; }).join('');
     return '<div class="view"><div class="vh"><div><h1>' + t('disc.h') + '</h1><p class="sub">' + t('disc.sub', num(AS_CATALOG.mcp), num(AS_CATALOG.skill)) + '</p></div></div>' +
+      (into ? banner('info', '<b>' + t('pj.into.t', esc(into.name)) + '</b><p>' + t('pj.into.d') + '</p>', '<div class="acts"><a class="btn btn-sm" href="' + href('project', into.id) + '">' + t('pj.into.back') + '</a><button type="button" class="btn btn-sm" data-act="pj-into-clear">' + t('pj.into.clear') + '</button></div>') : '') +
       (S.offline ? banner('', '<b>' + t('off.t') + '</b><p>' + t('off.d') + '</p>', '<div class="acts"><button type="button" class="btn btn-sm" data-act="retry">' + t('off.retry') + '</button></div>') : '') +
       (R.q.state === 'error' ? banner('err', '<b>' + t('err.catalog.t') + '</b><p>' + t('err.catalog.d') + '</p>', '<div class="acts"><button type="button" class="btn btn-sm" data-act="retry">' + t('off.retry') + '</button></div>') : '') +
       '<div class="bar"><div class="field">' + ic('search') + '<input class="inp" id="q" type="search" autocomplete="off" spellcheck="false" placeholder="' + t('disc.ph') + '" aria-label="' + t('disc.ph') + '" value="' + esc(R.q.q || '') + '"></div>' +
@@ -219,9 +236,11 @@
   }
 
   /* ---------- 详情栏：目录条目 ---------- */
-  function writes(it, slug) {
+  function writes(it, slug, lp, tg) {
     var out = [];
-    if (it.kind === 'skill') { out.push(t('w.skill.fetch') + ' ~/.agent-store/skills/' + slug); out.push(t('w.skill.link')); }
+    if (lp && it.kind === 'skill') A.AGENTS.forEach(function (a) { if (!tg || tg[a.id]) out.push(t('p.mcp.write') + ' ' + lp.path + '/' + PDIR[a.id] + '/' + it.name); });
+    else if (lp && it.kind === 'mcp') { var ptr = A.transport(it); out.push((ptr.remote ? t('w.mcp.connect') : t('w.mcp.run')) + ' ' + ptr.text); out.push(t('p.mcp.write') + ' ' + lp.path + '/.mcp.json'); A.needs(it).forEach(function (n) { out.push(t('w.pj.ref') + ' ${' + n.key + '}'); }); }
+    else if (it.kind === 'skill') { out.push(t('w.skill.fetch') + ' ~/.agent-store/skills/' + slug); out.push(t('w.skill.link')); }
     else if (it.kind === 'mcp') { var tr = A.transport(it); out.push((tr.remote ? t('w.mcp.connect') : t('w.mcp.run')) + ' ' + tr.text); A.needs(it).forEach(function (n) { out.push(t('w.mcp.needs') + ' ' + n.key); }); out.push(t('w.mcp.write')); }
     else out.push(it.id === 'builtin:local' ? t('w.prov.local') : t('w.prov.preset'));
     return out;
@@ -234,8 +253,9 @@
     return s.replace(/[^a-z0-9-]+/g, '-');
   }
   function paneCatalog(it) {
-    var e = A.entryFor(it.id), fav = S.favs.indexOf(it.id) > -1, tr = A.transport(it), nd = A.needs(it), act;
-    if (it.kind === 'provider') act = '<button type="button" class="btn btn-pri" data-act="install" data-arg="' + esc(it.id) + '">' + t(e ? 'act.addcfg' : 'act.install') + '</button>' + (e ? '<a class="btn" href="' + libHref(e) + '">' + t('act.manage') + '</a>' : '');
+    var e = A.entryFor(it.id), fav = S.favs.indexOf(it.id) > -1, tr = A.transport(it), nd = A.needs(it), act, into = intoProj();
+    if (into && it.kind !== 'provider') act = projHas(into, it) ? '<span class="chip ok">' + ic('check') + t('pj.inproj.chip') + '</span><a class="btn" href="' + href('project', into.id) + '">' + t('pj.open') + '</a>' : '<button type="button" class="btn btn-pri" data-act="install" data-arg="' + esc(it.id) + '">' + t('pj.into.install', esc(into.name)) + '</button>';
+    else if (it.kind === 'provider') act = '<button type="button" class="btn btn-pri" data-act="install" data-arg="' + esc(it.id) + '">' + t(e ? 'act.addcfg' : 'act.install') + '</button>' + (e ? '<a class="btn" href="' + libHref(e) + '">' + t('act.manage') + '</a>' : '');
     else if (e) act = '<span class="chip ok">' + ic('check') + t('st.installed') + '</span><a class="btn" href="' + libHref(e) + '">' + t('act.manage') + '</a>' + (e.latest ? '<button type="button" class="btn btn-kind" data-act="update" data-arg="' + esc(e.slug) + '">' + t('act.update.to', ver(e.latest)) + '</button>' : '');
     else act = '<button type="button" class="btn btn-pri" data-act="install" data-arg="' + esc(it.id) + '">' + t('act.install') + '</button>';
     var facts = [[t('f.kind'), '<span class="kind">' + t('kind.' + it.kind) + '</span>']];
@@ -272,7 +292,8 @@
     var head = '<div class="vh"><div><h1>' + t('lib.' + kind + '.h') + '</h1><p class="sub">' + t('lib.' + kind + '.sub') + '</p></div><span class="sp"></span>' +
       '<button type="button" class="btn btn-sm" data-act="check">' + ic('sync') + t('upd.check') + '</button>' +
       (up.length ? '<button type="button" class="btn btn-sm btn-kind" data-kind="' + kind + '" data-act="updateall" data-arg="' + kind + '">' + t('upd.all', up.length) + '</button>' : '') +
-      '<a class="btn btn-sm" href="' + href('discover', '', { kind: kind }) + '">' + ic('plus') + t('lib.add') + '</a></div>';
+      '<a class="btn btn-sm" href="' + href('discover', '', { kind: kind }) + '">' + ic('plus') + t('lib.add') + '</a></div>' +
+      '<p class="pj-hint">' + ic('folder') + '<span>' + t('lib.global.hint') + '</span><a class="lnk" href="' + href('projects') + '">' + t('lib.global.go') + '</a></p>';
     if (R.q.state === 'loading') return '<div class="view">' + head + skeleton(5) + '</div>';
     if (!all.length || R.q.state === 'empty') return '<div class="view">' + head + empty(kind, t('lib.' + kind + '.empty.t'), t('lib.' + kind + '.empty.d'), '<a class="btn btn-pri" href="' + href('discover', '', { kind: kind }) + '">' + t('lib.browse.' + kind) + '</a>') + '</div>';
     var rows = all.filter(function (e) {
@@ -472,6 +493,55 @@
       '<div class="cards c2" style="margin-top:12px;align-items:start"><div class="card"><h3>' + t('use.by') + '<span class="sp"></span><button type="button" class="btn btn-sm" data-act="dlg" data-arg="reqlog">' + t('relay.log') + '</button></h3><div style="margin:8px -4px 0">' + table + '</div></div>' + budget + '</div></div>';
   }
 
+  /* ---------- 项目 ---------- */
+  function viewProjects() {
+    var list = R.q.state === 'empty' ? [] : S.projects;
+    var head = '<div class="vh"><div><h1>' + t('pj.h') + '</h1><p class="sub">' + t('pj.sub') + '</p></div><span class="sp"></span><button type="button" class="btn btn-sm" data-act="pj-new">' + ic('plus') + t('pj.add') + '</button></div>';
+    if (R.q.state === 'loading') return '<div class="view">' + head + skeleton(3) + '</div>';
+    if (!list.length) return '<div class="view">' + head + empty('folder', t('pj.none.t'), t('pj.none.d'), '<button type="button" class="btn btn-pri" data-act="pj-new">' + t('pj.add') + '</button>') + '</div>';
+    return '<div class="view">' + head + '<div class="list" id="rows">' + list.map(function (p) {
+      var miss = p.items.filter(projMiss).length;
+      return '<div class="row" data-kind="folder"><a class="row-main" href="' + href('project', p.id) + '">' + tile('folder') + '<div class="row-t"><b><span class="nm">' + esc(p.name) + '</span>' + (p.missing ? '<span class="chip warn">' + t('pj.missing.chip') + '</span>' : '') + (miss && !p.missing ? '<span class="chip warn">' + t('st.nokey') + '</span>' : '') + '</b><p class="mono" style="font-size:11.5px">' + esc(p.path) + '</p></div></a>' +
+        '<div class="row-x"><span class="row-meta" style="display:block">' + t('pj.count', p.items.length) + '</span></div></div>';
+    }).join('') + '</div></div>';
+  }
+  function pjWhere(p, x) {
+    if (x.kind === 'mcp') return ['.mcp.json › mcpServers.' + x.name, p.path + '/.mcp.json'];
+    var ags = A.AGENTS.filter(function (a) { return x.on[a.id]; });
+    return [ags.map(function (a) { return PDIR[a.id] + '/' + x.name; }).join(' · '), p.path + '/' + PDIR[ags[0] ? ags[0].id : 'claude'] + '/' + x.name];
+  }
+  function pjRow(p, x) {
+    var dis = p.missing ? ' disabled' : '', arg = esc(p.id + '|' + x.key), over = projOver(x), miss = projMiss(x), w = pjWhere(p, x), open = U.over === x.key && over;
+    var ags = A.AGENTS.filter(function (a) { return x.on[a.id]; }).map(function (a) { return a.name; });
+    var chips = '<span class="chip' + (x.ours ? ' ok' : '') + '" title="' + t(x.ours ? 'pj.src.ours.d' : 'pj.src.own.d') + '">' + t(x.ours ? 'pj.src.ours' : 'pj.src.own') + '</span>';
+    if (over) chips += '<button type="button" class="chip" data-act="pj-over" data-arg="' + esc(x.key) + '" aria-expanded="' + !!open + '" aria-controls="ov-' + esc(x.key) + '" title="' + esc(t('pj.over.d', x.name)) + '">' + t('pj.over') + ic(open ? 'up' : 'down') + '</button>';
+    if (miss) chips += '<button type="button" class="chip warn" data-act="pj-vars" data-arg="' + arg + '"' + dis + ' title="' + t('pj.vars.fill') + '">' + ic('lock') + t('st.nokey') + '</button>';
+    var acts = (projNeeds(x).length && !miss ? '<button type="button" class="btn btn-sm btn-ic" data-act="pj-vars" data-arg="' + arg + '"' + dis + ' aria-label="' + esc(t('pj.vars.edit') + ' · ' + x.name) + '" title="' + t('pj.vars.edit') + '">' + ic('lock') + '</button>' : '') +
+      '<button type="button" class="btn btn-sm btn-ic" data-act="reveal-dir" data-arg="' + esc(w[1]) + '"' + dis + ' aria-label="' + esc(t('act.showdir') + ' · ' + x.name) + '" title="' + t('act.showdir') + '">' + ic('folder') + '</button>' +
+      (x.ours ? '<button type="button" class="btn btn-sm btn-bad" data-act="pj-un" data-arg="' + arg + '"' + dis + ' aria-label="' + esc(t('act.uninstall') + ' · ' + x.name) + '">' + t('act.uninstall') + '</button>' : '');
+    return '<div class="row pj-row' + (p.missing ? ' off' : '') + '" data-kind="' + x.kind + '">' + tile(x.kind) + '<div class="row-t"><b><span class="nm">' + esc(x.name) + '</span>' + chips + '</b><p>' + t('pj.for', joinNames(ags)) + ' · <span class="mono" style="font-size:11.5px">' + esc(w[0]) + '</span>' + (x.version ? ' · <span class="mono" style="font-size:11.5px">' + esc(ver(x.version)) + '</span>' : '') + '</p></div><div class="row-x">' + acts + '</div></div>' +
+      (open ? '<div class="row-note" id="ov-' + esc(x.key) + '"><p>' + t('pj.over.long', esc(x.name)) + '</p><a class="lnk" href="' + libHref(over) + '">' + t('pj.over.view') + '</a></div>' : '');
+  }
+  function pjSec(p, kind) {
+    var xs = p.items.filter(function (x) { return x.kind === kind; });
+    return '<h2 class="pj-h" data-kind="' + kind + '"><span class="kind">' + t(kind === 'skill' ? 'kinds.skill' : 'kind.mcp') + '</span><small>' + xs.length + '</small><span class="sp"></span><small class="w">' + t('pj.where.' + kind) + '</small></h2>' +
+      (xs.length ? '<div class="list">' + xs.map(function (x) { return pjRow(p, x); }).join('') + '</div>' : '<div class="empty" style="padding:20px"><p>' + t('pj.sec.none.' + kind) + '</p></div>');
+  }
+  function viewProject() {
+    var p = A.project(R.arg);
+    if (!p) return '<div class="view">' + empty('folder', t('pj.nf.t'), t('pj.nf.d'), '<a class="btn btn-pri" href="' + href('projects') + '">' + t('pj.h') + '</a>') + '</div>';
+    var dis = p.missing ? ' disabled' : '';
+    var head = '<div class="vh"><div style="min-width:0"><p class="crumb"><a class="lnk" href="' + href('projects') + '">' + t('pj.h') + '</a> /</p><h1>' + esc(p.name) + '</h1><p class="sub mono">' + esc(p.path) + '</p></div><span class="sp"></span>' +
+      '<button type="button" class="btn btn-sm btn-kind" data-act="pj-addto" data-arg="' + esc(p.id) + '"' + dis + '>' + ic('plus') + t('pj.addto') + '</button>' +
+      '<button type="button" class="btn btn-sm" data-act="reveal-dir" data-arg="' + esc(p.path) + '"' + dis + '>' + ic('folder') + t('act.showdir') + '</button>' +
+      '<button type="button" class="btn btn-sm btn-bad" data-act="pj-remove" data-arg="' + esc(p.id) + '">' + t('pj.rm') + '</button></div>';
+    if (R.q.state === 'loading') return '<div class="view">' + head + skeleton(4) + '</div>';
+    if (R.q.state === 'error') return '<div class="view">' + head + banner('err', '<b>' + t('pj.err.t') + '</b><p>' + t('pj.err.d') + '</p>', '<div class="acts"><button type="button" class="btn btn-sm" data-act="retry">' + t('off.retry') + '</button></div>') + '</div>';
+    var gone = p.missing ? banner('', '<b>' + t('pj.missing.t') + '</b><p>' + t('pj.missing.d', '<code class="mono">' + esc(p.path) + '</code>') + '</p>', '<div class="acts"><button type="button" class="btn btn-sm" data-act="pj-relocate" data-arg="' + esc(p.id) + '">' + t('pj.rel') + '</button><button type="button" class="btn btn-sm btn-bad" data-act="pj-remove" data-arg="' + esc(p.id) + '">' + t('pj.rm') + '</button></div>') : '';
+    if (!p.items.length || R.q.state === 'empty') return '<div class="view">' + head + gone + (p.missing ? '' : empty('folder', t('pj.empty.t'), t('pj.empty.d'), '<button type="button" class="btn btn-pri" data-act="pj-addto" data-arg="' + esc(p.id) + '">' + t('pj.addto') + '</button>')) + '</div>';
+    return '<div class="view">' + head + gone + '<p class="pj-hint">' + ic('info') + '<span>' + t(p.missing ? 'pj.missing.last' : 'pj.vcs') + '</span></p>' + pjSec(p, 'skill') + pjSec(p, 'mcp') + '</div>';
+  }
+
   /* ---------- 设置 ---------- */
   var CLI = ['search [query] [--kind <skill|mcp|provider>]', 'install <id|slug> [--target <agent>] [--force]', 'uninstall <slug> [--force]', 'enable <slug> --for <agent> [--replace] [--force]', 'disable <slug> --for <agent> [--force]', 'config <slug>', 'sync [--for <agent>]', 'relay <start|stop|status>', 'usage [--days N] [--provider <slug>]', 'update [slug]', 'info <id|slug>', 'list [--for <agent>]', 'doctor', 'migrate'];
   function setRow(title, sub, right, cls) { return '<div class="set-r ' + (cls || '') + '"><div class="set-t"><b>' + title + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + (right || '') + '</div>'; }
@@ -553,8 +623,9 @@
   function openDlg(d) { D = d; drawDlg(); var el = $('#dlg'); if (!el.open) el.showModal(); var f = $('[data-autofocus]', el); if (f) f.focus(); }
   function closeDlg() { var el = $('#dlg'); D = null; if (el.open) el.close(); render(); }
   function dlgItem(it, slug) { return '<div class="dl-item" data-kind="' + it.kind + '">' + tile(it.kind) + '<div><b>' + esc(it.name) + '</b><small>' + esc(it.id) + ' · ' + esc(ver(it.version)) + '</small></div></div>'; }
-  function tgReason(it, a, vals) {
+  function tgReason(it, a, vals, loc) {
     if (!A.detected(a.id)) return t('ag.missing', a.name);
+    if (loc && it.kind === 'mcp' && a.id === 'codex') return t('pj.mcp.codex');
     var b = A.blocker(it, a.id, vals || { apiKey: 1 });
     return b === 'incompatible' ? t('err.incompatible', a.name) : b === 'sse' ? t('err.codexSse') : '';
   }
@@ -567,19 +638,23 @@
       body = '<h2>' + t('inst.confirm') + '</h2><p class="lede" role="status" style="display:flex;gap:10px;align-items:center;margin-top:12px"><span class="spin"></span>' + t('link.loading') + ' <code class="mono" style="font-size:12px;word-break:break-all">' + esc(d.ref) + '</code></p>';
       foot = cancel;
     } else if (d.step === 'targets') {
-      var any = A.AGENTS.some(function (a) { return d.tg[a.id]; });
-      body = '<h2>' + t(d.from === 'web' ? 'inst.confirm' : 'inst.h', it.name) + '</h2>' + dlgItem(it) +
-        '<div class="sec" style="margin-top:0"><h3>' + t(it.kind === 'provider' ? 'inst.targets.prov' : 'inst.targets') + '</h3><div class="ag">' + A.AGENTS.map(function (a) {
-          var why = tgReason(it, a);
-          return '<div class="ag-r"><span class="ag-ic" style="color:' + a.color + '">' + a.mark + '</span><div class="ag-t"><b>' + a.name + '</b><small class="wrap">' + esc(why || (it.kind === 'skill' ? a.skills + '/' : it.kind === 'mcp' ? a.mcp : t('prov.via'))) + '</small></div><button type="button" class="sw" role="switch" data-kind="' + it.kind + '" aria-checked="' + !!d.tg[a.id] + '" data-act="tg" data-arg="' + a.id + '"' + (why ? ' disabled' : '') + ' aria-label="' + a.name + '"></button></div>';
+      var any = A.AGENTS.some(function (a) { return d.tg[a.id]; }), lp = d.loc ? A.project(d.loc) : null;
+      var locSec = it.kind === 'provider' ? '' : '<div class="sec" style="margin-top:0"><h3><label for="d-loc">' + t('inst.loc') + '</label></h3><select class="inp" id="d-loc" style="width:100%"><option value="">' + t('inst.loc.global') + '</option>' + S.projects.map(function (p) {
+        var why = p.missing ? t('pj.missing.chip') : projHas(p, it) ? t('st.installed') : A.projItem(p, projKey(it)) ? t('inst.loc.clash') : '';
+        return '<option value="' + esc(p.id) + '"' + (why ? ' disabled' : '') + (d.loc === p.id ? ' selected' : '') + '>' + esc(t('inst.loc.proj', p.name) + ' · ' + p.path + (why ? ' · ' + why : '')) + '</option>';
+      }).join('') + '<option value="__add">' + t('pj.add.more') + '</option></select>' + (lp ? '<p class="loc-note">' + t('inst.loc.vcs') + (it.kind === 'mcp' ? (S.lang === 'en' ? ' ' : '') + t('inst.loc.approve') : '') + '</p>' : '') + '</div>';
+      body = '<h2>' + t(d.from === 'web' ? 'inst.confirm' : 'inst.h', it.name) + '</h2>' + dlgItem(it) + locSec +
+        '<div class="sec"' + (locSec ? '' : ' style="margin-top:0"') + '><h3>' + t(it.kind === 'provider' ? 'inst.targets.prov' : 'inst.targets') + '</h3><div class="ag">' + A.AGENTS.map(function (a) {
+          var why = tgReason(it, a, null, d.loc);
+          return '<div class="ag-r"><span class="ag-ic" style="color:' + a.color + '">' + a.mark + '</span><div class="ag-t"><b>' + a.name + '</b><small class="wrap">' + esc(why || (lp ? lp.path + '/' + (it.kind === 'skill' ? PDIR[a.id] + '/' : '.mcp.json') : it.kind === 'skill' ? a.skills + '/' : it.kind === 'mcp' ? a.mcp : t('prov.via'))) + '</small></div><button type="button" class="sw" role="switch" data-kind="' + it.kind + '" aria-checked="' + !!d.tg[a.id] + '" data-act="tg" data-arg="' + a.id + '"' + (why ? ' disabled' : '') + ' aria-label="' + a.name + '"></button></div>';
         }).join('') + '<div class="ag-r soon"><span class="ag-ic soon">+</span><div class="ag-t"><b>' + t('ag.soon') + '</b><small>' + t('ag.soon.d') + '</small></div></div></div></div>' +
-        '<div class="sec"><h3>' + t('sec.writes') + '</h3><ul class="steps">' + writes(it, d.slug).map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul></div>' + web;
-      foot = cancel + '<button type="button" class="btn btn-pri" data-act="d-next"' + (d.from === 'web' ? '' : ' data-autofocus') + '>' + t(!any && it.kind !== 'provider' ? 'inst.only' : nd.length ? 'inst.next' : 'act.install') + '</button>';
+        '<div class="sec"><h3>' + t('sec.writes') + '</h3><ul class="steps">' + writes(it, d.slug, lp, d.tg).map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul></div>' + web;
+      foot = cancel + '<button type="button" class="btn btn-pri" data-act="d-next"' + (d.from === 'web' ? '' : ' data-autofocus') + (lp && !any ? ' disabled title="' + t('inst.loc.noagent') + '"' : '') + '>' + t(!any && it.kind !== 'provider' ? 'inst.only' : nd.length ? 'inst.next' : 'act.install') + '</button>';
     } else if (d.step === 'vars') {
       var full = nd.every(function (n) { return d.vals[n.key]; });
       body = '<h2>' + t('inst.vars') + '</h2><p class="lede">' + t(it.kind === 'provider' ? 'inst.vars.prov' : 'inst.vars.d') + '</p>' + nd.map(function (n, i) {
         return '<div class="fld"><label for="v-' + i + '">' + esc(n.key === 'apiKey' ? t('prov.key') : n.key) + ' <span class="req">*</span></label><input class="inp mono" id="v-' + i + '" type="password" autocomplete="off" data-val="' + esc(n.key) + '" value="' + esc(d.vals[n.key] || '') + '" placeholder="' + esc(n.key === 'apiKey' ? 'sk-…' : n.key) + '"' + (i === 0 ? ' data-autofocus' : '') + '>' + (n.bearer && d.tg.codex ? '<p class="hint">' + t('mcp.codexenv') + ' <code class="mono">export ' + esc(n.key) + '=…</code></p>' : '') + '</div>';
-      }).join('') + '<p style="font-size:12px;color:var(--fg3)">' + t('inst.vars.store') + '</p>';
+      }).join('') + '<p style="font-size:12px;color:var(--fg3)">' + (d.loc ? esc(t('inst.vars.pj', nd[0].key)) : t('inst.vars.store')) + '</p>';
       foot = '<button type="button" class="btn" data-act="d-back">' + t('back') + '</button><span class="sp"></span><button type="button" class="btn" data-act="d-skip">' + t('inst.later') + '</button><button type="button" class="btn btn-pri" id="d-go" data-act="d-install"' + (full ? '' : ' disabled') + '>' + t('act.install') + '</button>';
     } else if (d.step === 'progress' || d.step === 'conflict' || d.step === 'failed') {
       body = '<h2>' + t(d.step === 'failed' ? 'inst.failed' : 'inst.running', it.name) + '</h2>' + dlgItem(it) + '<ul class="prog" data-kind="' + it.kind + '">' + d.prog.map(function (s) {
@@ -593,17 +668,18 @@
         foot = '<button type="button" class="btn" data-act="d-close" data-autofocus>' + t('close') + '</button><button type="button" class="btn btn-pri" data-act="d-retry">' + t('off.retry') + '</button>';
       } else foot = '<span style="color:var(--fg3);font-size:12.5px" role="status">' + t('inst.wait') + '</span><span class="sp"></span><button type="button" class="btn" disabled>' + t('inst.installing') + '</button>';
     } else if (d.step === 'done') {
-      var e = A.entry(d.slug), on = A.AGENTS.filter(function (a) { return e.on[a.id]; });
+      var dp = d.loc ? A.project(d.loc) : null, e = dp ? A.projItem(dp, d.pkey) : A.entry(d.slug), on = A.AGENTS.filter(function (a) { return e.on[a.id]; });
       var needCfg = d.skip || (it.kind === 'provider');
-      body = '<div class="done" data-kind="' + it.kind + '"><span class="ring">' + ic('check') + '</span><h2>' + t('inst.done', it.name) + '</h2><p>' + (on.length ? t('inst.done.on', on.map(function (a) { return a.name; }).join(S.lang === 'en' ? ' and ' : '、')) : t(d.skip ? 'inst.done.skip' : 'inst.done.off')) + '</p>' +
+      body = '<div class="done" data-kind="' + it.kind + '"><span class="ring">' + ic('check') + '</span><h2>' + t('inst.done', it.name) + '</h2><p>' + (dp ? t('inst.done.pj', esc(dp.name), on.map(function (a) { return a.name; }).join(S.lang === 'en' ? ' and ' : '、')) + (S.lang === 'en' ? ' ' : '') + t(projMiss(e) ? 'inst.done.pj.nokey' : 'inst.done.pj.commit') : on.length ? t('inst.done.on', on.map(function (a) { return a.name; }).join(S.lang === 'en' ? ' and ' : '、')) : t(d.skip ? 'inst.done.skip' : 'inst.done.off')) + '</p>' +
         '<div class="ag sum">' + A.AGENTS.map(function (a) {
-          var why = e.on[a.id] ? '' : d.skipped === a.id ? t('conf.skipped') : tgReason(it, a) || (d.skip ? t('mcp.fillfirst') : t('dep.none'));
-          return '<div class="ag-r"><span class="ag-ic" style="color:' + a.color + '">' + a.mark + '</span><div class="ag-t"><b>' + a.name + '</b>' + (why ? '<small class="wrap">' + esc(why) + '</small>' : d.replaced === a.id ? '<small class="wrap">' + t('conf.replaced') + '</small>' : '') + '</div><span class="chip ' + (e.on[a.id] ? 'ok' : '') + '">' + t(e.on[a.id] ? 'st.on' : 'st.off') + '</span></div>';
+          var why = e.on[a.id] ? '' : d.skipped === a.id ? t('conf.skipped') : tgReason(it, a, null, d.loc) || (d.skip && !dp ? t('mcp.fillfirst') : t('dep.none'));
+          return '<div class="ag-r"><span class="ag-ic" style="color:' + a.color + '">' + a.mark + '</span><div class="ag-t"><b>' + a.name + '</b>' + (why ? '<small class="wrap">' + esc(why) + '</small>' : d.replaced === a.id ? '<small class="wrap">' + t('conf.replaced') + '</small>' : '') + '</div><span class="chip ' + (e.on[a.id] ? 'ok' : '') + '">' + t(dp ? (e.on[a.id] ? 'pj.st.on' : 'pj.st.off') : e.on[a.id] ? 'st.on' : 'st.off') + '</span></div>';
         }).join('') + '</div>' + (it.kind !== 'provider' && on.length ? '<p style="font-size:12px;color:var(--fg3);margin-top:10px">' + t('inst.restart') + '</p>' : '') + '</div>';
-      foot = '<button type="button" class="btn" data-act="d-close">' + t('done') + '</button><button type="button" class="btn btn-pri" data-act="d-open" data-autofocus>' + t(needCfg ? 'inst.opencfg' : 'inst.view') + '</button>';
+      foot = '<button type="button" class="btn" data-act="d-close">' + t('done') + '</button><button type="button" class="btn btn-pri" data-act="d-open" data-autofocus>' + t(dp ? 'pj.open' : needCfg ? 'inst.opencfg' : 'inst.view') + '</button>';
     }
     el.innerHTML = '<div class="dl-b">' + body + '</div><div class="dl-f">' + foot + '</div>';
   }
+  var PICKS = ['~/code/agent-store', '~/code/docs-site', '~/work/api-server', '~/code/archive/old-site'];
   var REQS = [['12:41:07', 'claude', 'claude-sonnet-4-5', 'skyapi', 0, 1840, 200], ['12:40:52', 'codex', 'gpt-5-codex', 'openrouter', 0, 2210, 200], ['12:39:18', 'claude', 'claude-haiku-4-5', 'skyapi', 0, 640, 200], ['12:37:44', 'codex', 'gpt-5-codex', 'openrouter', 0, 30012, 529], ['12:37:44', 'codex', 'gpt-5-codex', 'yls', 1, 2630, 200], ['12:31:02', 'claude', 'claude-sonnet-4-5', 'skyapi', 0, 2105, 200]];
   function drawDlg() {
     var el = $('#dlg'), d = D; if (!d) return;
@@ -639,6 +715,28 @@
       el.className = 'wide';
       body = '<h2>' + t('log.title') + '</h2><p class="lede">' + t('log.d') + '</p>' + (S.log.length ? '<div class="code logl" style="padding-right:11px;max-height:320px;overflow:auto">' + S.log.map(function (l) { return '<span class="' + l[1] + '">' + esc(l[0]) + '</span>'; }).join('\n') + '</div>' : '<div class="empty" style="padding:28px"><b>' + t('log.none') + '</b><p>' + t('log.none.d') + '</p></div>');
       if (S.log.length) foot = '<button type="button" class="btn" data-act="clearlog">' + t('log.clear') + '</button><span class="sp"></span>' + foot;
+    } else if (d.type === 'pj-new') {
+      var rel = d.relocate ? A.project(d.relocate) : null;
+      body = '<h2>' + (rel ? t('pj.rel.h', esc(rel.name)) : t('pj.new.h')) + '</h2><p class="lede">' + t(rel ? 'pj.rel.d' : 'pj.new.d') + '</p>' +
+        '<div class="fld"><label for="pj-path">' + t('pj.new.path') + '</label><input class="inp mono' + (d.err ? ' bad' : '') + '" id="pj-path" autocomplete="off" spellcheck="false" value="' + esc(d.path || '') + '" placeholder="~/code/my-repo" data-autofocus' + (d.err ? ' aria-invalid="true" aria-describedby="pj-err"' : '') + '>' + (d.err ? '<p class="hint bad" id="pj-err" role="alert">' + d.err + '</p>' : '') + '</div>' +
+        '<div class="fld" style="margin-bottom:0"><span class="lb">' + t('pj.new.pick') + '<span class="chip sample">' + t('pj.new.proto') + '</span></span><div class="picks">' + PICKS.map(function (x) { return '<button type="button" class="chip mono" data-act="pj-pick" data-arg="' + x + '" aria-pressed="' + (d.path === x) + '">' + x + '</button>'; }).join('') + '</div></div>';
+      foot = '<button type="button" class="btn" data-act="' + (d.ret ? 'pj-back' : 'd-close') + '">' + t(d.ret ? 'back' : 'cancel') + '</button><button type="button" class="btn btn-pri" data-act="pj-save">' + t(rel ? 'pj.rel.go' : 'pj.add') + '</button>';
+    } else if (d.type === 'pj-remove') {
+      var rp = A.project(d.pid);
+      body = '<h2>' + t('pj.rm.h', esc(rp.name)) + '</h2><p class="lede">' + t('pj.rm.d') + '</p><ul class="steps"><li>' + t('pj.rm.1') + '</li><li>' + esc(t('pj.rm.2', rp.path)) + '</li></ul>';
+      foot = '<button type="button" class="btn" data-act="d-close" data-autofocus>' + t('cancel') + '</button><button type="button" class="btn btn-bad" data-act="pj-rm-go">' + t('pj.rm') + '</button>';
+    } else if (d.type === 'pj-un') {
+      var up = A.project(d.pid), ux = A.projItem(up, d.key), ul = [];
+      if (ux.kind === 'skill') A.AGENTS.forEach(function (a) { if (ux.on[a.id]) ul.push(t('un.skill.1', up.path + '/' + PDIR[a.id] + '/' + ux.name)); });
+      else { ul.push(t('pj.un.mcp', up.path + '/.mcp.json')); if (Object.keys(ux.vars || {}).length) ul.push(t('pj.un.vars')); if (projOver(ux)) ul.push(t('pj.un.over', ux.name)); }
+      body = '<h2>' + t('pj.un.h', esc(ux.name), esc(up.name)) + '</h2><p class="lede">' + t('un.d') + '</p><ul class="steps" data-kind="' + ux.kind + '">' + ul.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul><p class="loc-note">' + t('pj.un.vcs') + '</p>';
+      foot = '<button type="button" class="btn" data-act="d-close" data-autofocus>' + t('cancel') + '</button><button type="button" class="btn btn-bad" data-act="pj-un-go">' + t('act.uninstall') + '</button>';
+    } else if (d.type === 'pj-vars') {
+      var vx = A.projItem(A.project(d.pid), d.key);
+      body = '<h2>' + t('pj.vars.h', esc(vx.name)) + '</h2><p class="lede">' + t('pj.vars.d') + '</p>' + projNeeds(vx).map(function (k, i) {
+        return '<div class="fld"><label for="pv-' + i + '">' + esc(k) + '</label><input class="inp mono" id="pv-' + i + '" type="password" autocomplete="off" data-pv="' + esc(k) + '" value="' + esc((vx.vars || {})[k] || '') + '" placeholder="' + esc(k) + '"' + (i === 0 ? ' data-autofocus' : '') + '><p class="hint">' + t('pj.vars.ref') + ' <code class="mono">${' + esc(k) + '}</code></p></div>';
+      }).join('');
+      foot = '<button type="button" class="btn" data-act="d-close">' + t('cancel') + '</button><button type="button" class="btn btn-pri" data-act="pj-vars-save">' + t('save') + '</button>';
     } else if (d.type === 'shortcuts') {
       var m = S.platform === 'mac' ? '⌘' : 'Ctrl';
       body = '<h2>' + t('keys.t') + '</h2><table class="tbl" style="margin-top:8px"><tbody>' + [[m + ' K', 'keys.palette'], [m + ' 1 – 6', 'keys.nav'], [m + ' ,', 'keys.settings'], ['/', 'keys.search'], ['↑ ↓', 'keys.list'], ['Enter', 'keys.open'], ['Esc', 'keys.esc'], ['Tab', 'keys.tab'], ['?', 'keys.help']].map(function (k) { return '<tr><td><kbd class="kbd">' + k[0] + '</kbd></td><td>' + t(k[1]) + '</td></tr>'; }).join('') + '</tbody></table>';
@@ -650,12 +748,26 @@
   function openInstall(id, from) {
     var it = A.item(id); if (!it) return;
     var d = { type: 'install', it: it, from: from || 'app', ref: id, step: from === 'web' ? 'loading' : 'targets', tg: {}, vals: {}, slug: slugFor(it), prog: [] };
-    A.AGENTS.forEach(function (a) { d.tg[a.id] = !tgReason(it, a); });
+    var into = d.from === 'app' && it.kind !== 'provider' ? intoProj() : null;
+    d.loc = into && !projHas(into, it) && !A.projItem(into, projKey(it)) ? into.id : '';
+    initTg(d);
     openDlg(d);
     if (from === 'web') setTimeout(function () { if (D === d) { d.step = 'targets'; drawDlg(); var f = $('#dlg [data-autofocus]'); if (f) f.focus(); } }, 800);
   }
+  function initTg(d) { A.AGENTS.forEach(function (a) { d.tg[a.id] = !tgReason(d.it, a, null, d.loc); }); }
   function runInstall() {
-    var d = D, it = d.it, steps = [];
+    var d = D, it = d.it, steps = [], lp = d.loc ? A.project(d.loc) : null;
+    if (lp) {
+      steps.push({ text: t('p.pj.fetch') + ' ' + it.id });
+      if (it.kind === 'skill') A.AGENTS.forEach(function (a) { if (d.tg[a.id]) steps.push({ text: t('p.mcp.write') + ' ' + lp.path + '/' + PDIR[a.id] + '/' + it.name }); });
+      else {
+        steps.push({ text: t('p.mcp.write') + ' ' + lp.path + '/.mcp.json › mcpServers.' + d.slug });
+        if (A.needs(it).length) steps.push(d.skip ? { text: t('p.pj.vars'), skip: true, note: t('p.pj.novars') } : { text: t('p.pj.vars') });
+      }
+      d.prog = steps; d.i = 0; d.step = 'progress'; d.resolved = false; d.skipped = d.replaced = null;
+      log(t('log.pj.install', it.name, lp.path));
+      return tick();
+    }
     steps.push({ text: it.kind === 'skill' ? t('w.skill.fetch') + ' ~/.agent-store/skills/' + d.slug : t('p.record') + ' ~/.agent-store/' + (it.kind === 'mcp' ? 'mcps/' : 'providers/') + d.slug });
     A.AGENTS.forEach(function (a) {
       if (!d.tg[a.id]) return;
@@ -673,12 +785,22 @@
     var s = d.prog[d.i];
     if (S.offline) { s.st = 'bad'; d.step = 'failed'; d.err = t('err.catalogDown'); log('✗ CatalogUnavailableError', 'er'); return drawDlg(); }
     if (s.skip) { s.st = 'skip'; d.i++; return tick(); }
-    if (s.agent === 'claude' && d.it.id.indexOf('front-end-checklist') > -1 && !d.resolved) { s.st = 'run'; d.step = 'conflict'; drawDlg(); var f = $('#dlg [data-autofocus]'); if (f) f.focus(); return; }
+    if (!d.loc && s.agent === 'claude' && d.it.id.indexOf('front-end-checklist') > -1 && !d.resolved) { s.st = 'run'; d.step = 'conflict'; drawDlg(); var f = $('#dlg [data-autofocus]'); if (f) f.focus(); return; }
     s.st = 'run'; drawDlg();
     setTimeout(function () { if (D !== d) return; s.st = 'ok'; d.i++; tick(); }, 620);
   }
   function finish() {
     var d = D, it = d.it, on = {}, cfg = {};
+    if (d.loc) {
+      var lp = A.project(d.loc), x = { key: projKey(it), kind: it.kind, name: projKey(it), id: it.id, ours: true, version: it.version, on: {} };
+      A.AGENTS.forEach(function (a) { x.on[a.id] = !!d.tg[a.id]; });
+      if (it.kind === 'mcp') { x.vars = {}; if (!d.skip) Object.keys(d.vals).forEach(function (k) { if (d.vals[k]) x.vars[k] = d.vals[k]; }); }
+      lp.items.push(x); d.pkey = x.key; A.save();
+      log('✓ ' + t('log.pj.installed', x.name, lp.name), 'ok');
+      d.step = 'done'; drawDlg(); renderBehind();
+      var pf = $('#dlg [data-autofocus]'); if (pf) pf.focus();
+      return;
+    }
     A.AGENTS.forEach(function (a) { on[a.id] = !!d.tg[a.id] && !d.skip && d.skipped !== a.id; });
     Object.keys(d.vals).forEach(function (k) { if (d.vals[k]) cfg[k] = d.vals[k]; });
     var e = { slug: d.slug, id: it.id, kind: it.kind, version: it.version, on: on, cfg: cfg };
@@ -718,10 +840,15 @@
     [['discover', 'discover'], ['skills', 'skill'], ['mcp', 'mcp'], ['providers', 'provider'], ['usage', 'usage'], ['settings', 'settings']].forEach(function (n, i) {
       if (hit(t('nav.' + n[0]) + ' ' + n[0])) out.push({ g: 'pal.go', icon: n[1], label: t('nav.' + n[0]), hint: mod + ' ' + (i + 1), run: function () { go(n[0]); } });
     });
-    [['upd.check', 'sync', function () { act('check'); }], [S.signedIn ? 'acct.signout' : 'acct.signin', 'user', function () { act(S.signedIn ? 'signout' : 'signin'); }], ['pal.lang', 'globe', function () { act('lang', S.lang === 'zh' ? 'en' : 'zh'); }], [S.relay ? 'relay.stop' : 'relay.start', 'provider', function () { act('relay'); }], ['log.title', 'term', function () { openDlg({ type: 'activity' }); }], ['relay.log', 'term', function () { openDlg({ type: 'reqlog' }); }], ['keys.t', 'kbd', function () { openDlg({ type: 'shortcuts' }); }], ['set.agents', 'settings', function () { go('settings', 'agents'); }]].forEach(function (a) {
+    if (hit(t('nav.projects') + ' projects')) out.push({ g: 'pal.go', icon: 'folder', label: t('nav.projects'), run: function () { go('projects'); } });
+    [['pj.add', 'plus', function () { act('pj-new'); }], ['upd.check', 'sync', function () { act('check'); }], [S.signedIn ? 'acct.signout' : 'acct.signin', 'user', function () { act(S.signedIn ? 'signout' : 'signin'); }], ['pal.lang', 'globe', function () { act('lang', S.lang === 'zh' ? 'en' : 'zh'); }], [S.relay ? 'relay.stop' : 'relay.start', 'provider', function () { act('relay'); }], ['log.title', 'term', function () { openDlg({ type: 'activity' }); }], ['relay.log', 'term', function () { openDlg({ type: 'reqlog' }); }], ['keys.t', 'kbd', function () { openDlg({ type: 'shortcuts' }); }], ['set.agents', 'settings', function () { go('settings', 'agents'); }]].forEach(function (a) {
       if (hit(t(a[0]))) out.push({ g: 'pal.act', icon: a[1], label: t(a[0]), run: a[2] });
     });
     if (q) {
+      S.projects.forEach(function (p) {
+        if (hit(p.name + ' ' + p.path)) out.push({ g: 'pal.proj', icon: 'folder', label: p.name, hint: p.path, run: function () { go('project', p.id); } });
+        p.items.forEach(function (x) { if (hit(x.name)) out.push({ g: 'pal.proj', kind: x.kind, label: x.name, hint: t('pj.in', p.name), run: function () { go('project', p.id); } }); });
+      });
       S.installed.forEach(function (e) { if (hit(nameOf(e) + ' ' + e.slug)) out.push({ g: 'pal.inst', kind: e.kind, label: nameOf(e), hint: t('kind.' + e.kind), run: function () { location.hash = libHref(e); } }); });
       AS_DATA.filter(function (it) { return hit(it.name + ' ' + (it.author || '')) || it.description.toLowerCase().indexOf(q) > -1; }).slice(0, 6).forEach(function (it) {
         out.push({ g: 'pal.cat', kind: it.kind, label: it.name, hint: (it.author || '') + (A.entryFor(it.id) ? ' · ' + t('st.installed') : ''), run: function () { go('discover', it.id); } });
@@ -762,6 +889,7 @@
       row(t('pc.platform'), seg('platform', [['mac', 'macOS'], ['win', 'Windows'], ['linux', 'Linux']])) +
       row(t('pc.size'), seg('size', [['auto', t('pc.auto')], ['full', '1200×764'], ['narrow', '900×640']])) +
       row(t('pc.lang'), seg('lang', [['zh', '中文'], ['en', 'English']])) +
+      row(t('pc.projects'), '<div class="seg">' + [['sample', t('pc.projects.sample')], ['none', t('pc.projects.none')]].map(function (o) { return '<button type="button" data-act="pc-projects" data-arg="' + o[0] + '" aria-pressed="' + ((S.projects.length ? 'sample' : 'none') === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>') +
       row(t('pc.net'), seg('offline', [[false, t('pc.online')], [true, t('pc.offline')]])) +
       row(t('pc.link'), '<div class="fld-row"><select class="inp" id="sim" aria-label="' + t('pc.link') + '">' + Object.keys(LINKS).map(function (k) { return '<option value="' + k + '">' + t('pc.link.' + k) + '</option>'; }).join('') + '</select><button type="button" class="btn btn-sm" data-act="sim">' + t('pc.send') + '</button></div>') +
       '<div class="fld-row"><button type="button" class="btn btn-sm" data-act="rewelcome" style="flex:1">' + t('set.welcome.btn') + '</button><button type="button" class="btn btn-sm btn-bad" data-act="reset" style="flex:1">' + t('pc.reset') + '</button></div></div>';
@@ -769,7 +897,7 @@
   }
 
   /* ---------- 渲染 ---------- */
-  var VIEWS = { discover: viewDiscover, skills: function () { return viewLib('skill'); }, mcp: function () { return viewLib('mcp'); }, providers: viewProviders, usage: viewUsage, settings: viewSettings, welcome: function () { return ''; } };
+  var VIEWS = { discover: viewDiscover, skills: function () { return viewLib('skill'); }, mcp: function () { return viewLib('mcp'); }, providers: viewProviders, usage: viewUsage, settings: viewSettings, projects: viewProjects, project: viewProject, welcome: function () { return ''; } };
   function renderMain() { $('#main').innerHTML = (VIEWS[R.view] || function () { return '<div class="view">' + empty('mcp', t('nf.t'), t('nf.d'), '<a class="btn btn-pri" href="' + href('discover') + '">' + t('nav.discover') + '</a>') + '</div>'; })(); }
   function renderPane() {
     var p = $('#pane'), html = '';
@@ -822,6 +950,7 @@
     toast(t('toast.uninstalled', nm)); go(view);
   }
   function update(slug, quiet) { var e = A.entry(slug); if (!e || !e.latest) return; e.version = e.latest; delete e.latest; A.save(); log('$ aas update ' + slug); log('✓ ' + slug + ' ' + ver(e.version), 'ok'); if (!quiet) { toast(t('toast.updated', nameOf(e), ver(e.version))); render(); } }
+  function shut() { var el = $('#dlg'); D = null; if (el.open) el.close(); }
   function cfgOf(slug) { var e = A.entry(slug); e.cfg = e.cfg || {}; return e.cfg; }
   function flashSaved() { var s = $('#saved'); if (!s) return; s.classList.add('on'); clearTimeout(flashSaved.t); flashSaved.t = setTimeout(function () { s.classList.remove('on'); }, 1600); }
 
@@ -899,6 +1028,32 @@
       case 'pc': S[p[0]] = p[1] === 'true' ? true : p[1] === 'false' ? false : p[1]; if (p[0] === 'signedIn' && !S.signedIn) S.plan = 'free'; if (p[0] === 'plan' && p[1] === 'pro') S.signedIn = true; A.save(); render(); break;
       case 'sim': c = $('#sim') ? $('#sim').value : arg; U.pc = false; renderPc(); incoming(LINKS[c] || LINKS.skill); break;
       case 'reset': A.reset(); S = A.state; U = { menu: false, pc: false, loading: false, err: null, reveal: {}, lib: {}, period: '7', busy: {}, updMsg: '' }; toast(t('pc.reset.done')); go('welcome'); break;
+      case 'pc-projects': S.projects = arg === 'none' ? [] : A.seedProjects(); A.save(); if (R.view === 'project' && !A.project(R.arg)) go('projects'); else render(); break;
+      /* 项目 */
+      case 'pj-new': U.menu = false; openDlg({ type: 'pj-new', path: '' }); break;
+      case 'pj-relocate': e = A.project(arg); openDlg({ type: 'pj-new', relocate: arg, path: e.path }); break;
+      case 'pj-pick': D.path = arg; D.err = null; drawDlg(); $('#pj-path').focus(); break;
+      case 'pj-back': D = D.ret; drawDlg(); c = $('#d-loc'); if (c) c.focus(); break;
+      case 'pj-save':
+        c = ($('#pj-path').value || '').trim().replace(/(.)\/+$/, '$1'); D.path = c; D.err = null;
+        if (!/^(~\/|\/)[^\s]/.test(c)) D.err = t('pj.new.err.path');
+        else { e = S.projects.filter(function (x) { return x.path === c && x.id !== D.relocate; })[0]; if (e) D.err = t('pj.new.err.dup', esc(e.name)) + ' <a class="lnk" href="' + href('project', e.id) + '" data-act="d-go">' + t('pj.new.err.open') + '</a>'; }
+        if (D.err) { drawDlg(); $('#pj-path').focus(); break; }
+        if (D.relocate) { e = A.project(D.relocate); e.path = c; delete e.missing; A.save(); shut(); toast(t('pj.rel.done', e.name)); render(); break; }
+        var base = c.split('/').pop(), pid = base.toLowerCase().replace(/[^a-z0-9-]+/g, '-') || 'project', k = 1; while (A.project(pid)) pid = pid.replace(/-\d+$/, '') + '-' + (++k);
+        S.projects.push({ id: pid, name: base, path: c, items: [] }); A.save(); log('✓ ' + t('pj.new.done', base), 'ok'); toast(t('pj.new.done', base));
+        if (D.ret) { e = D.ret; e.loc = pid; initTg(e); D = e; drawDlg(); renderBehind(); $('#d-loc').focus(); }
+        else { shut(); go('project', pid); }
+        break;
+      case 'pj-remove': openDlg({ type: 'pj-remove', pid: arg }); break;
+      case 'pj-rm-go': e = A.project(D.pid); S.projects = S.projects.filter(function (x) { return x.id !== e.id; }); A.save(); shut(); log('✓ ' + t('pj.rm.done', e.name), 'ok'); toast(t('pj.rm.done', e.name)); go('projects'); break;
+      case 'pj-addto': go('discover', '', { into: arg }); break;
+      case 'pj-into-clear': c = keepQ(); delete c.into; go('discover', R.arg, c); break;
+      case 'pj-over': U.over = U.over === arg ? null : arg; render(); break;
+      case 'pj-un': openDlg({ type: 'pj-un', pid: p[0], key: p[1] }); break;
+      case 'pj-un-go': e = A.project(D.pid); c = A.projItem(e, D.key); e.items = e.items.filter(function (x) { return x !== c; }); A.save(); shut(); log('✓ ' + t('log.pj.uninstalled', c.name, e.name), 'ok'); toast(t('toast.uninstalled', c.name)); render(); break;
+      case 'pj-vars': openDlg({ type: 'pj-vars', pid: p[0], key: p[1] }); break;
+      case 'pj-vars-save': c = A.projItem(A.project(D.pid), D.key); c.vars = {}; $$('#dlg [data-pv]').forEach(function (i) { if (i.value.trim()) c.vars[i.dataset.pv] = i.value.trim(); }); A.save(); shut(); toast(t(projMiss(c) ? 'pj.vars.partial' : 'pj.vars.saved', c.name)); render(); break;
       /* 对话框内 */
       case 'd-close': closeDlg(); break;
       case 'd-go': D = null; $('#dlg').close(); break;
@@ -913,7 +1068,7 @@
         if (arg === 'skip') { c.st = 'skip'; c.note = t('conf.skipped'); D.skipped = 'claude'; D.i++; }
         else { c.note = t('conf.replaced'); D.replaced = 'claude'; log('$ aas enable ' + D.slug + ' --for claude --replace'); }
         D.resolved = true; D.step = 'progress'; tick(); break;
-      case 'd-open': e = A.entry(D.slug); D = null; $('#dlg').close(); location.hash = libHref(e); render(); break;
+      case 'd-open': if (D.loc) { c = D.loc; shut(); go('project', c); break; } e = A.entry(D.slug); D = null; $('#dlg').close(); location.hash = libHref(e); render(); break;
       case 'auth': D.phase = 'wait'; D.provider = arg; ext('agent-store.example/auth/desktop?provider=' + arg.toLowerCase()); drawDlg(); $('#dlg [data-autofocus]').focus(); break;
       case 'auth-reopen': ext('agent-store.example/auth/desktop?provider=' + D.provider.toLowerCase()); break;
       case 'auth-done': S.signedIn = true; A.save(); closeDlg(); toast(t('toast.signedin', 'lin@example.com')); break;
@@ -949,11 +1104,15 @@
       clearTimeout(cfgTimer);
       if (el.tagName === 'SELECT') render();
     } else if (el.dataset.keyI) { cfgOf(el.dataset.slug).apiKeys[Number(el.dataset.keyI)] = el.value; A.save(); flashSaved(); }
+    else if (el.id === 'pj-path' && D) D.path = el.value;
     else if (el.dataset.val && D) { D.vals[el.dataset.val] = el.value.trim(); var go2 = $('#d-go'); if (go2) go2.disabled = !A.needs(D.it).every(function (n) { return D.vals[n.key]; }); }
   });
   document.addEventListener('change', function (ev) {
     var el = ev.target;
-    if (el.id === 'sort') { var q = keepQ(); if (el.value) q.sort = el.value; else delete q.sort; go('discover', R.arg, q); }
+    if (el.id === 'd-loc' && D) {
+      if (el.value === '__add') openDlg({ type: 'pj-new', path: '', ret: D });
+      else { D.loc = el.value; initTg(D); drawDlg(); $('#d-loc').focus(); }
+    } else if (el.id === 'sort') { var q = keepQ(); if (el.value) q.sort = el.value; else delete q.sort; go('discover', R.arg, q); }
     else if (el.dataset.cfg && el.tagName !== 'SELECT') { clearTimeout(cfgTimer); cfgTimer = setTimeout(function () { if (!$('#dlg').open) render(); }, 220); }
   });
   document.addEventListener('toggle', function (ev) { var k = ev.target.dataset && ev.target.dataset.fold; if (k) U[k] = ev.target.open; }, true);
@@ -965,7 +1124,12 @@
       else if (ev.key === 'Enter') { ev.preventDefault(); runPal(U.palSel); }
       return;
     }
-    if ($('#dlg').open) { if (ev.key === 'Enter' && el && el.dataset.val && $('#d-go') && !$('#d-go').disabled) act('d-install'); return; }
+    if ($('#dlg').open) {
+      if (ev.key === 'Enter' && el && el.dataset.val && $('#d-go') && !$('#d-go').disabled) act('d-install');
+      else if (ev.key === 'Enter' && el && el.id === 'pj-path') { ev.preventDefault(); act('pj-save'); }
+      else if (ev.key === 'Enter' && el && el.dataset.pv) { ev.preventDefault(); act('pj-vars-save'); }
+      return;
+    }
     if (R.view === 'welcome') return;
     if (mod && /^[1-6]$/.test(ev.key)) { ev.preventDefault(); return go(['discover', 'skills', 'mcp', 'providers', 'usage', 'settings'][Number(ev.key) - 1]); }
     if (mod && ev.key === ',') { ev.preventDefault(); return go('settings'); }
@@ -973,7 +1137,8 @@
       if (U.menu) { U.menu = false; renderSide(); $('.acct').focus(); }
       else if (U.pc) { U.pc = false; renderPc(); }
       else if (typing && el.value && (el.id === 'q' || el.id === 'lq')) { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); }
-      else if (R.arg && R.view !== 'settings') { var sel = href(R.view, R.arg, keepQ()); go(R.view, '', keepQ()); setTimeout(function () { var r = $('.row-main[href="' + CSS.escape(sel) + '"]') || $('.row-main'); if (r) r.focus(); }, 0); }
+      else if (U.over) { U.over = null; render(); }
+      else if (R.arg && R.view !== 'settings' && R.view !== 'project') { var sel = href(R.view, R.arg, keepQ()); go(R.view, '', keepQ()); setTimeout(function () { var r = $('.row-main[href="' + CSS.escape(sel) + '"]') || $('.row-main'); if (r) r.focus(); }, 0); }
       return;
     }
     if (ev.key === 'ArrowDown' && typing && (el.id === 'q' || el.id === 'lq')) { var first = $('#rows .row-main'); if (first) { ev.preventDefault(); first.focus(); } return; }
