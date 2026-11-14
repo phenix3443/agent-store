@@ -109,7 +109,7 @@ test('on a phone the detail panel explains where to run the command and drops th
       <InstallPanel resource={skill} command={skillCommand} note="" />
     </InstallNoticeProvider>
   )
-  expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['复制命令'])
+  expect(screen.getAllByRole('button').map((b) => b.textContent || b.getAttribute('aria-label'))).toEqual(['复制命令', `收藏 ${skill.name}`])
   expect(screen.getByText('在电脑上运行这条命令，或用桌面客户端安装。')).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: '下载桌面客户端' })).toBeNull()
 })

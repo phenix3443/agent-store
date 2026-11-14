@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { usePhone } from '@/lib/use-phone'
 import { CopyCommandButton } from './CopyCommandButton'
+import { FavoriteButton } from './Favorites'
 import { InstallButton } from './InstallButton'
 import { useInstalledHere } from './LocalInstalled'
 
@@ -22,7 +23,10 @@ export function InstallPanel({ resource, command, note }: InstallPanelProps) {
 
   return (
     <section data-kind={resource.kind} className="card install-card">
-      <InstallButton resource={resource} command={command} variant="primary" className="w-full" />
+      <div className="flex items-center gap-2.5">
+        <InstallButton resource={resource} command={command} variant="primary" className="min-w-0 flex-1" />
+        <FavoriteButton id={resource.id} name={resource.name} size="panel" />
+      </div>
       {here ? (
         <p className="mt-2.5 text-[12.5px] text-fg-3">{t('installedNote')}</p>
       ) : (

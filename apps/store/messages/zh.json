@@ -16,7 +16,8 @@
       "dashboard": "个人面板",
       "logout": "退出登录",
       "language": "界面语言",
-      "skip": "跳到正文"
+      "skip": "跳到正文",
+      "favorites": "收藏"
     },
     "categories": {
       "all": "全部",
@@ -184,6 +185,18 @@
       "none": "其他技能目录中也未找到「{q}」。",
       "unavailable": "暂时无法查询其他技能目录。",
       "retry": "重试"
+    },
+    "favorite": {
+      "add": "收藏 {name}",
+      "remove": "取消收藏 {name}",
+      "loginBody": "登录后就能收藏。",
+      "toastLabel": "收藏",
+      "toast": {
+        "saved": "已收藏",
+        "removed": "已取消收藏",
+        "failed": "没能保存，请稍后再试。",
+        "full": "收藏已满 500 个，先移除一些。"
+      }
     }
   },
   "site": {
@@ -674,10 +687,11 @@
       "tabs": "个人面板分区",
       "tab": {
         "account": "账户",
-        "subscription": "订阅"
+        "subscription": "订阅",
+        "favorites": "收藏"
       },
       "gateTitle": "请先登录",
-      "gateBody": "账户和订阅都在这里。",
+      "gateBody": "账户、订阅和收藏都在这里。",
       "home": "回到首页",
       "name": "名称",
       "email": "邮箱",
@@ -686,7 +700,7 @@
       "planUnknown": "暂时查不到",
       "view": "查看",
       "logoutTitle": "退出",
-      "logoutBody": "退出后，订阅仍在账号里。",
+      "logoutBody": "退出后，收藏和订阅仍在账号里。",
       "logout": "退出登录",
       "planError": "暂时查不到订阅状态。稍后刷新再看。",
       "status": {
@@ -740,11 +754,21 @@
       "billing": "账单",
       "merchant": "代收方",
       "freeBody": "安装和管理都能用。Pro 加上预算告警、用量分析、智能路由和多 Key 轮换。",
-      "upgrade": "升级 Pro"
+      "upgrade": "升级 Pro",
+      "favCount": "{count} 个",
+      "favEmptyTitle": "还没有收藏",
+      "favEmptyBody": "在商店里点心形按钮。",
+      "favEmptyAction": "去商店",
+      "favView": "查看",
+      "favViewLabel": "查看 {name}",
+      "favRemove": "移除",
+      "favRemoveLabel": "从收藏移除 {name}",
+      "favGone": "目录里已没有这个条目",
+      "favError": "暂时查不到收藏。稍后刷新再看。"
     },
     "login": {
       "title": "登录 Agent Store",
-      "body": "登录后可以订阅 Pro。",
+      "body": "登录后可以收藏，也可以订阅 Pro。",
       "github": "用 GitHub 登录",
       "google": "用 Google 登录",
       "consent": "继续即表示同意<terms>服务条款</terms>和<privacy>隐私政策</privacy>。",

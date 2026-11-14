@@ -12,6 +12,7 @@ import { cancelSubscription, customerPortalUrl, resumeSubscription } from './bil
 import { getAuthUser } from './auth'
 import { resourceRoutes } from './catalog/routes'
 import { catalogReader, searchSupplement } from './catalog/runtime'
+import { favoriteRoutes } from './favorites'
 import {
   isWebhookProcessed,
   recordWebhook,
@@ -67,6 +68,16 @@ app.get('/readyz', async (c) => {
 
 // Aggregated catalog, read from catalog.db, and the search supplement (see src/catalog).
 app.route('/', resourceRoutes(catalogReader, searchSupplement))
+
+app.route(
+  '/',
+  favoriteRoutes({
+    db: (c) => getDb(c.env as DbEnv),
+    user: (c) => getAuthUser(c.env as AuthEnv, c.req.header('Authorization')),
+    reader: catalogReader,
+    supplement: searchSupplement,
+  })
+)
 
 // ── Billing (Waffo Pancake, Merchant of Record) ──────────────────────────────
 

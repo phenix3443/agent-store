@@ -1,7 +1,9 @@
 // CI only (store-screenshots.yml): the store's server-side API_URL. Forwards every
 // request to the test API, except /api/me/entitlements and /api/me/subscription:
 // the test API cannot verify the JWTs a CI store mints, so this answers from the
-// first word of the token's email instead (see ci-demo-session.mjs).
+// first word of the token's email instead (see ci-demo-session.mjs). /api/me/favorites
+// is kept in memory, the pro user starting with three, their summaries read from the
+// test API.
 //
 // Usage: node scripts/ci-entitlements-proxy.mjs <upstream> <port>
 import { createServer } from 'node:http'
@@ -29,12 +31,56 @@ const SUBSCRIPTIONS = {
   canceled: { plan: 'pro', status: 'canceled', period: 'monthly', currentPeriodEnd: day(-3) },
 }
 
-function json(res, body) {
-  res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(body))
+function json(res, body, status = 200) {
+  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(body))
+}
+
+const SEEDED = [
+  'github:vercel-labs/skills/find-skills',
+  'mcp-registry:com.browser-use/browser-use',
+  'builtin:openrouter',
+]
+const favorites = new Map()
+function favoritesOf(email) {
+  if (!favorites.has(email)) {
+    const now = Date.now()
+    const seed = email.startsWith('pro') ? SEEDED : []
+    favorites.set(email, new Map(seed.map((id, i) => [id, new Date(now - i * 60_000).toISOString()])))
+  }
+  return favorites.get(email)
+}
+
+async function summary(id) {
+  try {
+    const path = id.split('/').map(encodeURIComponent).join('/')
+    const r = await fetch(`${upstream}/api/resources/${path}`)
+    if (!r.ok) return null
+    const { resource } = await r.json()
+    const { id: rid, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin } = resource
+    return { id: rid, kind, name, description, author, version, homepageUrl, installs, stars, verified, tags, transports, origin }
+  } catch {
+    return null
+  }
 }
 
 createServer(async (req, res) => {
   const who = emailOf(req.headers.authorization).split('-')[0]
+  if (req.url?.startsWith('/api/me/favorites')) {
+    const email = emailOf(req.headers.authorization)
+    if (!email) return json(res, { error: 'Unauthorized' }, 401)
+    const mine = favoritesOf(email)
+    const rest = req.url.slice('/api/me/favorites'.length).split('?')[0]
+    if (req.method === 'GET' && !rest) {
+      const rows = [...mine].sort((a, b) => b[1].localeCompare(a[1]))
+      const list = await Promise.all(rows.map(async ([id, createdAt]) => ({ id, createdAt, resource: await summary(id) })))
+      return json(res, { favorites: list })
+    }
+    const id = decodeURIComponent(rest.slice(1))
+    if (req.method === 'PUT') mine.set(id, mine.get(id) ?? new Date().toISOString())
+    else if (req.method === 'DELETE') mine.delete(id)
+    else return json(res, { error: 'Method not allowed' }, 405)
+    return json(res, { id, favorited: req.method === 'PUT' })
+  }
   if (req.url?.startsWith('/api/me/entitlements')) {
     return json(res, { plan: who === 'pro' || who === 'canceling' ? 'pro' : 'free' })
   }
