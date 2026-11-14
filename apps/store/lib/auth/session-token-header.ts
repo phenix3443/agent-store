@@ -8,7 +8,7 @@ export function withoutSessionTokenHeader(res: Response): Response {
   res.headers.forEach((value, key) => {
     if (key !== 'set-cookie' && key !== 'set-auth-token') headers.append(key, value)
   })
-  for (const cookie of res.headers.getSetCookie()) headers.append('set-cookie', cookie)
+  for (const cookie of res.headers.getSetCookie?.() ?? []) headers.append('set-cookie', cookie)
   const exposed = headers
     .get('access-control-expose-headers')
     ?.split(',')
