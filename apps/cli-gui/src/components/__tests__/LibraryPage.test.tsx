@@ -205,3 +205,134 @@ test('an MCP entry changed outside Agent Store explains the refusal', async () =
   const pane = await screen.findByRole('complementary', { name: 'admux' })
   expect(await within(pane).findByText(/在 Agent Store 之外被改动过/)).toBeInTheDocument()
 })
+
+const skill2 = { ...skill, slug: 'legacy-skill', resourceId: undefined, enabledFor: { claude: true, codex: true } }
+const skill2Info = { ...skill2, name: 'legacy-skill', description: '', publisher, tags: [], downloads: 0 }
+
+test('全部更新 reports each item, and one failing does not stop the rest', async () => {
+  const calls = mockRpc({
+    list: () => [skill, skill2],
+    info: (slug) => (slug === 'legacy-skill' ? skill2Info : skillInfo),
+    checkUpdates: () => [
+      { slug: 'skills-find-skills', currentVersion: 'abc123', latestVersion: 'def456' },
+      { slug: 'legacy-skill', currentVersion: '1.0.0', latestVersion: '1.1.0' },
+    ],
+    update: (slug) => {
+      if (slug === 'skills-find-skills') throw new rpcModule.RpcError('catalog down', 'CatalogUnavailableError')
+      return [{ slug, fromVersion: '1.0.0', toVersion: '1.1.0' }]
+    },
+  })
+  renderLib('skill')
+  await act(async () => { fireEvent.click(await screen.findByRole('button', { name: '全部更新（2）' })) })
+  const results = await screen.findByRole('list', { name: '更新结果' })
+  expect(screen.getByText('已更新 1 项，1 项失败')).toBeInTheDocument()
+  expect(results).toHaveTextContent('find-skills')
+  expect(results).toHaveTextContent('catalog down')
+  expect(results).toHaveTextContent('legacy-skillv1.0.0 → v1.1.0')
+  expect(calls.filter((c) => c.method === 'update').map((c) => c.args)).toEqual([['skills-find-skills'], ['legacy-skill']])
+})
+
+test('selecting rows shows the bulk bar; bulk uninstall confirms, runs one batch and reports each item', async () => {
+  const calls = mockRpc({
+    list: () => [skill, skill2],
+    info: (slug) => (slug === 'legacy-skill' ? skill2Info : skillInfo),
+    batch: (ops) => (ops as { action: string; slug: string }[]).map((op) =>
+      op.slug === 'legacy-skill' ? { ...op, ok: false, error: { message: 'changed', code: 'SkillConflictError', reason: 'changed' } } : { ...op, ok: true }
+    ),
+  })
+  renderLib('skill')
+  await screen.findByText('legacy-skill')
+  fireEvent.click(screen.getByRole('checkbox', { name: '全选' }))
+  const bar = screen.getByRole('toolbar', { name: '已选 2 项' })
+  await act(async () => { fireEvent.click(within(bar).getByRole('button', { name: '卸载' })) })
+  const confirm = await screen.findByRole('dialog', { name: '卸载 2 项？' })
+  expect(confirm).toHaveTextContent('技能：删除技能库里的目录')
+  expect(calls.some((c) => c.method === 'batch')).toBe(false)
+  await act(async () => { fireEvent.click(within(confirm).getByRole('button', { name: '卸载' })) })
+  const results = await screen.findByRole('dialog', { name: '批量卸载结果' })
+  expect(results).toHaveTextContent('1 项成功 · 1 项失败')
+  expect(results).toHaveTextContent('这个技能的文件在本地被改动过，普通卸载不会删除它们。')
+  expect(calls.filter((c) => c.method === 'batch').map((c) => c.args)).toEqual([[[{ action: 'uninstall', slug: 'skills-find-skills' }, { action: 'uninstall', slug: 'legacy-skill' }]]])
+  expect(screen.getByTestId('log')).toHaveTextContent('$ aas uninstall legacy-skill')
+})
+
+test('bulkOperations only asks for what changes and leaves out agents an entry does not support', async () => {
+  const { bulkOperations } = await import('../library/Bulk')
+  const rows = [
+    { ...skillInfo, compatibleWith: ['claude', 'codex'], enabledFor: { claude: true, codex: false } },
+    { ...skill2Info, compatibleWith: ['claude'], enabledFor: { claude: true } },
+  ] as never
+  expect(bulkOperations('enable', rows, ['claude', 'codex'])).toEqual([{ action: 'enable', slug: 'skills-find-skills', target: 'codex' }])
+  expect(bulkOperations('disable', rows, ['claude'])).toEqual([
+    { action: 'disable', slug: 'skills-find-skills', target: 'claude' },
+    { action: 'disable', slug: 'legacy-skill', target: 'claude' },
+  ])
+})
+
+test('a same-name MCP entry offers 替换现有条目, which explains itself and enables with replace', async () => {
+  let replaced = false
+  const calls = mockRpc({
+    getTargetStatus: () => [{ target: 'claude', compatible: true, enabled: replaced }, { target: 'codex', compatible: true, enabled: false }],
+    info: () => ({ ...mcpInfo, configSchema: {}, dir: '/home/u/.agent-store/mcps/admux' }),
+    enable: (_s, _t, opts) => {
+      if (!(opts as { replace?: boolean } | undefined)?.replace) throw new rpcModule.RpcError('exists', 'McpConflictError', { tool: 'claude' })
+      replaced = true
+    },
+  })
+  renderLib('mcp')
+  await act(async () => { fireEvent.click(await screen.findByRole('switch', { name: 'Claude Code · admux' })) })
+  const pane = await screen.findByRole('complementary', { name: 'admux' })
+  expect(await within(pane).findByText(/可以替换它/)).toBeInTheDocument()
+  fireEvent.click(within(pane).getByRole('button', { name: '替换现有条目' }))
+  const dialog = await screen.findByRole('dialog', { name: '替换 Claude Code 里的同名条目？' })
+  expect(dialog).toHaveTextContent('把原条目保存到 /home/u/.agent-store/mcps/admux/targets.json')
+  expect(dialog).toHaveTextContent('对 Claude Code 停用或卸载这个 MCP 时，把原条目写回并核对')
+  expect(dialog).toHaveTextContent('~/.claude.json 里的其他 MCP 条目')
+  await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: '替换' })) })
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '替换 Claude Code 里的同名条目？' })).toBeNull())
+  expect(calls.filter((c) => c.method === 'enable').at(-1)!.args).toEqual(['admux', 'claude', { replace: true }])
+  expect(screen.getByTestId('log')).toHaveTextContent('$ aas enable admux --for claude --replace')
+})
+
+test('a refused takeover stays in the dialog with the reason', async () => {
+  mockRpc({
+    getTargetStatus: () => [{ target: 'claude', compatible: true, enabled: false }, { target: 'codex', compatible: true, enabled: false }],
+    info: () => ({ ...mcpInfo, configSchema: {} }),
+    enable: (_s, _t, opts) => {
+      if ((opts as { replace?: boolean } | undefined)?.replace) throw new rpcModule.RpcError('no cli', 'McpNotRestorableError', { tool: 'claude', reason: 'no-cli' })
+      throw new rpcModule.RpcError('exists', 'McpConflictError', { tool: 'claude' })
+    },
+  })
+  renderLib('mcp')
+  await act(async () => { fireEvent.click(await screen.findByRole('switch', { name: 'Claude Code · admux' })) })
+  const pane = await screen.findByRole('complementary', { name: 'admux' })
+  fireEvent.click(await within(pane).findByRole('button', { name: '替换现有条目' }))
+  const dialog = await screen.findByRole('dialog', { name: '替换 Claude Code 里的同名条目？' })
+  await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: '替换' })) })
+  expect(await within(dialog).findByText(/没有找到 Claude Code 的命令行/)).toBeInTheDocument()
+})
+
+test('uninstalling an MCP that took over an entry says the entry is written back', async () => {
+  mockRpc({
+    list: () => [{ ...mcp, enabledFor: { claude: true } }],
+    info: () => ({ ...mcpInfo, enabledFor: { claude: true }, replacedFor: ['claude'] }),
+    getTargetStatus: () => [{ target: 'claude', compatible: true, enabled: true }, { target: 'codex', compatible: true, enabled: false }],
+  })
+  renderLib('mcp', 'admux')
+  const pane = await screen.findByRole('complementary', { name: 'admux' })
+  expect(pane).toHaveTextContent('原条目已保存，停用或卸载时写回')
+  fireEvent.click(within(pane).getByRole('button', { name: '卸载' }))
+  const confirm = await screen.findByRole('dialog', { name: '卸载 admux' })
+  expect(confirm).toHaveTextContent('把此前替换掉的原条目写回 Claude Code')
+})
+
+test('the skill pane shows the library folder the engine reports and reveals it in the file manager', async () => {
+  const reveal = await import('../../lib/reveal')
+  const spy = spyOn(reveal, 'revealPath').mockImplementation(async () => {})
+  mockRpc({ info: () => ({ ...skillInfo, dir: '/home/u/.agent-store/skills/skills-find-skills' }) })
+  renderLib('skill', 'skills-find-skills')
+  const pane = await screen.findByRole('complementary', { name: 'skills-find-skills' })
+  await waitFor(() => expect(pane).toHaveTextContent('/home/u/.agent-store/skills/skills-find-skills'))
+  await act(async () => { fireEvent.click(within(pane).getByRole('button', { name: '在文件管理器中显示 · find-skills' })) })
+  expect(spy).toHaveBeenCalledWith('/home/u/.agent-store/skills/skills-find-skills')
+})

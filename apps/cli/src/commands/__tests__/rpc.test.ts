@@ -228,3 +228,16 @@ test('readFirstLine accepts input that ends without a newline', async () => {
   async function* chunks() { yield '["x"]' }
   expect(await readFirstLine(chunks())).toBe('["x"]')
 })
+
+test('runRpc passes the batch steps through and returns each outcome', async () => {
+  let got: unknown
+  const batch = async (ops: unknown) => {
+    got = ops
+    return [{ action: 'uninstall', slug: 'a', ok: true }]
+  }
+  const lines: string[] = []
+  const code = await runRpc(makeEngine({ batch } as Partial<Engine>), ['batch', '[[{"action":"uninstall","slug":"a"}]]'], s => lines.push(s))
+  expect(code).toBe(0)
+  expect(got).toEqual([{ action: 'uninstall', slug: 'a' }])
+  expect(JSON.parse(lines[0]).data).toEqual([{ action: 'uninstall', slug: 'a', ok: true }])
+})
