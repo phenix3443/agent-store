@@ -25,7 +25,7 @@ export function InstallPanel({ resource, command, note }: InstallPanelProps) {
       <h3 className="mb-2.5 mt-[18px] text-sm font-bold text-fg-2">{t('commandTitle')}</h3>
       {command ? (
         <>
-          <div className="code-block">
+          <div className="code-block relative">
             {/* Wraps rather than scrolls: a hidden scrollbar cut the slug off mid-word. */}
             <pre className={phone ? undefined : 'pr-[108px]'}>
               <code>{command}</code>

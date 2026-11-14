@@ -89,7 +89,7 @@ export function ItemDetail({ resource: r, title, readme, layout = 'page' }: Item
   return (
     <article data-kind={r.kind}>
       <header className="flex flex-wrap items-start gap-5">
-        <KindTile kind={r.kind} className={drawer ? '' : 'tile-lg'} size={drawer ? 22 : 32} />
+        <KindTile kind={r.kind} className={drawer ? '' : 'kind-tile-lg'} size={drawer ? 22 : 32} />
         <div className="min-w-0 flex-1">
           {title}
           <p className="mt-2 flex flex-wrap items-center gap-x-[18px] gap-y-2 text-sm text-fg-2">
@@ -138,8 +138,8 @@ export function ItemDetail({ resource: r, title, readme, layout = 'page' }: Item
         </dl>
       )}
 
-      <div className={`mt-6 grid items-start gap-4 ${drawer ? '' : 'lg:mt-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8'}`}>
-        <aside className={`grid gap-4 ${drawer ? '' : 'lg:sticky lg:top-[92px] lg:order-last'}`}>
+      <div className={`mt-6 grid grid-cols-[minmax(0,1fr)] items-start gap-4 ${drawer ? '' : 'lg:mt-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8'}`}>
+        <aside className={`grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 ${drawer ? '' : 'lg:sticky lg:top-[92px] lg:order-last'}`}>
           {/* A client component: it gets only what it reads, not the whole record. */}
           <InstallPanel
             resource={{ id: r.id, kind: r.kind, name: r.name, origin: r.origin }}
@@ -168,7 +168,7 @@ export function ItemDetail({ resource: r, title, readme, layout = 'page' }: Item
           )}
         </aside>
 
-        <div className="grid min-w-0 gap-4">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
           <DetailCard title={t('detail.runsTitle')} note={t('detail.upstream')}>
             {runs.length === 0 ? (
               <p className="text-sm text-fg-2">{r.kind === 'provider' ? t('detail.localNote') : t('detail.runsNone')}</p>

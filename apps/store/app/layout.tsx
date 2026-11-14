@@ -37,17 +37,17 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://agent-store-alpha.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Agent Store — skills, MCP servers & providers for Claude Code / Codex',
+    default: 'Agent Store: Everything your agents need',
     template: '%s · Agent Store',
   },
   description:
-    '一个入口，装齐所有 Agent 能力。发现并一键安装 Claude Code / Codex 的技能、MCP 服务器与模型供应商，本地代理统一转发、自动降级。',
+    'Agent 所需，尽在于此。7 万多个技能和 MCP，点一下装进你的 agent，不用再手改配置文件。已支持 Claude Code、Codex，更多 agent 陆续加入。',
   openGraph: {
     type: 'website',
     siteName: 'Agent Store',
     url: SITE_URL,
-    title: 'Agent Store — skills, MCP servers & providers for AI coding agents',
-    description: '发现并一键安装 Claude Code / Codex 的技能、MCP 与供应商。',
+    title: 'Agent Store: Everything your agents need',
+    description: '70,000+ skills and MCP servers, one click into your agents. Works with Claude Code and Codex today.',
   },
   twitter: { card: 'summary_large_image' },
 }

@@ -120,7 +120,7 @@ function Found({ result }: { result: SearchSupplementResponse }) {
           <ul className="store-rows">
             {result.listings.map((l) => (
               <li key={l.key} data-kind="skill" className="store-row">
-                <span aria-hidden className="tile">
+                <span aria-hidden className="kind-tile">
                   <ExternalLink size={18} />
                 </span>
                 <div className="min-w-0">

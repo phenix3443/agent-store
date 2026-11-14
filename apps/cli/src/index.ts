@@ -15,6 +15,7 @@ import { realRelayOps } from './relay-ops'
 import { runUsage } from './commands/usage'
 import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
+import { runProjects } from './commands/projects'
 import { runRelayDaemon, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome } from '@as/client-core'
 import { migrateHomeOnStartup, refreshRelayOnStartup } from './startup'
 import { ensureRelayRunning } from './commands/relay'
@@ -25,9 +26,13 @@ Usage: aas <command> [options]
 
 Commands:
   search [query] [--kind <skill|mcp|provider>]   Search the catalog
-  install <id|slug> [--target <tool>] [--force]
-                                   Install from the catalog (or reinstall)
-  uninstall <slug> [--force]       Uninstall an item
+  install <id|slug> [--target <tool>] [--project <id|dir>] [--force]
+                                   Install from the catalog (or reinstall); --project writes
+                                   into that project's files instead of your user config
+  uninstall <slug> [--project <id|dir> [--target <tool>]] [--force]
+                                   Uninstall an item
+  projects <list|add|remove|move|show|set-env|unset-env|env|exec>
+                                   Project-level skills and MCP servers (aas projects for help)
   enable <slug> --for <tool> [--replace] [--force]   Enable for claude or codex
   disable <slug> --for <tool> [--force]              Disable for claude or codex
   config <slug>                    Configure an item's settings
@@ -76,6 +81,7 @@ async function main(): Promise<void> {
     case 'relay':     await runRelay(rest, realRelayOps()); break
     case 'usage':     await runUsage(engine, rest); break
     case 'migrate':   process.exitCode = await runMigrateCommand(() => runMigrate(resolvePaths())); break
+    case 'projects':  process.exitCode = await runProjects(engine, rest); break
     case 'doctor':    process.exitCode = await runDoctorCommand(() => runDoctor(resolvePaths())); break
     case '__relay-daemon': {
       const paths = resolvePaths()

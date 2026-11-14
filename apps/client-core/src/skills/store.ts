@@ -198,6 +198,31 @@ async function fetchFiles(files: SkillFile[], dest: string): Promise<void> {
 }
 
 /**
+ * Downloads the skill's whole directory into `dest` (an empty directory) and checks
+ * it is a skill: SKILL.md with a frontmatter name and description.
+ */
+export async function fetchSkillInto(item: SkillItem, dest: string): Promise<{ source: SkillMarker['source']; frontmatter: { name: string; description: string } }> {
+  let source: SkillMarker['source'] = null
+  if (item.source && item.files?.length && /^[0-9a-f]{40}$/.test(item.source.ref)) {
+    await fetchFiles(item.files, dest)
+    source = { repo: item.source.repo, ref: item.source.ref, resolvedSha: item.source.ref, path: item.source.dir }
+  } else if (item.source) {
+    const sha = await resolveRef(item.source.repo, item.source.ref)
+    const gz = await download(`${codeloadUrl()}/${item.source.repo}/tar.gz/${sha}`)
+    await extractSkillDir(gz, item.source.dir, dest)
+    source = { repo: item.source.repo, ref: item.source.ref, resolvedSha: sha, path: item.source.dir }
+  } else {
+    if (!item.contentUrl) throw new Error(`${item.slug} has neither a source nor a contentUrl`)
+    await writeFile(join(dest, 'SKILL.md'), await download(item.contentUrl))
+  }
+  // Exact case: a case-insensitive disk would also open skill.md.
+  if (!(await readdir(dest)).includes('SKILL.md')) throw new Error(`${item.slug}: the skill has no SKILL.md`)
+  const fm = parseFrontmatter(await readFile(join(dest, 'SKILL.md'), 'utf-8'))
+  if (!fm?.name || !fm.description) throw new Error(`${item.slug}: SKILL.md frontmatter needs name and description`)
+  return { source, frontmatter: { name: fm.name, description: fm.description } }
+}
+
+/**
  * Stages the skill's full directory and renames it to ~/.agent-store/skills/<slug>.
  * A failure before the rename leaves nothing behind.
  */
@@ -221,25 +246,7 @@ export async function installSkillContent(
   await mkdir(store, { recursive: true })
   const stage = await mkdtemp(join(store, `.as-stage-${item.slug}-`))
   try {
-    let source: SkillMarker['source'] = null
-    if (item.source && item.files?.length && /^[0-9a-f]{40}$/.test(item.source.ref)) {
-      await fetchFiles(item.files, stage)
-      source = { repo: item.source.repo, ref: item.source.ref, resolvedSha: item.source.ref, path: item.source.dir }
-    } else if (item.source) {
-      const sha = await resolveRef(item.source.repo, item.source.ref)
-      const gz = await download(`${codeloadUrl()}/${item.source.repo}/tar.gz/${sha}`)
-      await extractSkillDir(gz, item.source.dir, stage)
-      source = { repo: item.source.repo, ref: item.source.ref, resolvedSha: sha, path: item.source.dir }
-    } else {
-      if (!item.contentUrl) throw new Error(`${item.slug} has neither a source nor a contentUrl`)
-      await writeFile(join(stage, 'SKILL.md'), await download(item.contentUrl))
-    }
-
-    // Exact case: a case-insensitive disk would also open skill.md.
-    if (!(await readdir(stage)).includes('SKILL.md')) throw new Error(`${item.slug}: the skill has no SKILL.md`)
-    const text = await readFile(join(stage, 'SKILL.md'), 'utf-8')
-    const fm = parseFrontmatter(text)
-    if (!fm?.name || !fm.description) throw new Error(`${item.slug}: SKILL.md frontmatter needs name and description`)
+    const { source, frontmatter: fm } = await fetchSkillInto(item, stage)
 
     const result: SkillMarker = {
       slug: item.slug,

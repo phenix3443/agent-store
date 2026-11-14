@@ -7,6 +7,17 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 
+// With --require-key the server is the project-level probe: it refuses to start
+// without E2E_PROBE_KEY and returns a token built from it, so a passing check
+// proves the value reached the server through the agent's environment.
+const requireKey = process.argv.includes('--require-key')
+const key = process.env.E2E_PROBE_KEY
+if (requireKey && !key) {
+  console.error('E2E_PROBE_KEY is not set')
+  process.exit(3)
+}
+const token = requireKey ? `E2E_KEYED_${key}` : 'E2E_MCP_OK'
+
 const server = new Server(
   { name: 'e2e-probe-mcp', version: '1.0.0' },
   { capabilities: { tools: {} } }
@@ -24,7 +35,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   if (req.params.name === 'magic_token') {
-    return { content: [{ type: 'text', text: 'E2E_MCP_OK' }] }
+    return { content: [{ type: 'text', text: token }] }
   }
   throw new Error(`Unknown tool: ${req.params.name}`)
 })

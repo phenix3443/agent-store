@@ -195,137 +195,199 @@
       "terms": "Terms of Service",
       "copyright": "© 2026 Agent Store",
       "cli": "The aas CLI",
-      "supported": "Works with Claude Code and Codex today. More agents on the way."
+      "supported": "Works with Claude Code and Codex today. More agents on the way.",
+      "client": "Desktop app"
     },
-    "home": {
-      "metaTitle": "Agent Store: skills, MCP servers and providers for Claude Code / Codex",
-      "titleA": "Skills, MCP and providers.",
-      "titleB": "Read before you install.",
-      "lede": "Find skills, MCP servers and model providers for Claude Code and Codex. Every package lists the commands it will run and the files it will write; the desktop client installs, enables and uninstalls them, and runs the local relay.",
-      "browse": "Browse the store",
-      "downloadMac": "Download for macOS",
+    "marketing": {
+      "supLabel": "Supported agents",
+      "supMore": "More coming",
+      "supLine": "Works with Claude Code and Codex today. More agents on the way.",
+      "downloadFree": "Download free",
+      "downloadMac": "Download for Mac",
       "downloadWin": "Download for Windows",
       "downloadLinux": "Download for Linux",
-      "osHint": "Picked for your system",
-      "otherOs": "Other systems: ",
-      "unsigned": "The installers are not signed yet, so the system blocks them on first launch.",
-      "unsignedLink": "See how to allow it",
-      "price": "Free to use; Pro from {monthly} / month",
-      "trustLabel": "What you can rely on",
-      "trust": {
-        "preview": "See the commands, addresses and files a package uses before you install it",
-        "restore": "Uninstall puts your Claude Code and Codex config back byte for byte",
-        "keys": "API keys stay on this machine in 0600 files; the local relay only accepts requests with its token"
+      "platforms": "macOS · Windows · Linux",
+      "shotNote": "Screenshots of the Linux app.",
+      "cta": {
+        "title": "Skip the setup.",
+        "dim": "Free for macOS, Windows and Linux.",
+        "cap": "Pro is optional, from {price} / month"
       },
-      "heroShotAlt": "The Agent Store desktop client's skills view (Linux build): installed and recommended skills on the left, the brainstorming skill's details, install command and install steps on the right",
-      "map": {
-        "title": "Where an install writes",
-        "lede": "See which files an install changes and how it is enabled in Claude Code and Codex.",
-        "tabsLabel": "Package kind",
-        "tabs": {
-          "skill": "Skill",
-          "mcp": "MCP",
-          "provider": "Provider"
-        },
-        "package": "From the catalog",
-        "placeholder": "Catalog unavailable",
-        "skill": {
-          "claude": "A symlink to the library copy, named after the skill. Disable removes only this link",
-          "codex": "Its own symlink in Codex's skills directory, switched on and off separately from Claude Code",
-          "store": "The library: the only copy of the skill, which no tool reads directly. The marker file says Agent Store installed it; uninstall removes only marked skills"
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Couldn't copy. Select the text and copy it manually."
+    },
+    "home": {
+      "metaTitle": "Agent Store: Everything your agents need",
+      "metaDescription": "70,000+ skills and MCP servers, one click into your agents. No config files to edit. Works with Claude Code and Codex today, more agents on the way.",
+      "titleA": "Everything your agents need",
+      "titleComma": "",
+      "titleB": "All in one place",
+      "titlePlain": "Everything your agents need. All in one place",
+      "lede": "70,000+ skills and MCP servers, one click into your agents. No config files to edit.",
+      "cli": "Install with the CLI",
+      "allReleases": "All releases",
+      "browse": "Browse the store",
+      "demo": {
+        "title": "It edits the config files.",
+        "dim": "You click install.",
+        "window": "Agent Store for desktop",
+        "tabsLabel": "Switch the demo",
+        "install": {
+          "name": "Install",
+          "caption": "One click. Every agent that supports it, set up.",
+          "alt": "The Skills page of the desktop app: configured and recommended skills on the left, the details and install command of brainstorming on the right"
         },
         "mcp": {
-          "claude": "A user-scope MCP entry, added through claude mcp add-json when the claude command is installed",
-          "codex": "command, args and env, or the url of a remote server; added through codex mcp add when the codex command is installed",
-          "store": "Records which entries were written; disable and uninstall remove only those and put back any entry they replaced"
+          "name": "MCP",
+          "caption": "See which agents each MCP server is on for. Disable without deleting.",
+          "alt": "Context7 settings: switches for Claude Code and Codex under Applies to"
         },
-        "provider": {
-          "claude": "Points at the local relay. The token is the relay's token, not your API key",
-          "codex": "Adds an aas-relay provider and makes it current, also pointing at the local relay",
-          "store": "Your API key is stored only here, in a 0600 file"
-        },
-        "unsupported": "This package does not support {tool}; nothing is written for it"
-      },
-      "terminal": {
-        "title": "From the terminal too",
-        "lede": "Use aas to search for and install skills and MCP servers, then enable them in Claude Code or Codex.",
-        "note": "Command-line usage examples.",
-        "tabsLabel": "Command"
-      },
-      "features": {
-        "title": "The desktop client",
-        "lede": "Manage skills, MCP servers, providers and usage in the desktop client. Usage figures in the screenshots are test data.",
-        "skill": {
-          "title": "Skills",
-          "body": "Installed and recommended skills, with the install command and install steps in the details. Each skill is stored once and shared by Claude Code and Codex.",
-          "alt": "Skills view: brainstorming, canvas-design and executing-plans installed, with brainstorming's details on the right"
-        },
-        "mcp": {
-          "title": "MCP config, enabled per tool",
-          "body": "Fill in what an MCP server needs, then turn it on or off for Claude Code and Codex separately.",
-          "alt": "Context7's config panel, with Claude Code and Codex toggles under Applies to"
-        },
-        "relay": {
-          "title": "Providers and the local relay",
-          "body": "Providers are tried in priority order; when one cannot be reached, is rate limited or returns a 5xx, the relay moves on to the next. The free plan fails over between up to two. Recent requests list the model, provider, latency and status.",
-          "alt": "Local relay card: listening on 127.0.0.1:18780 and running, with recent requests below"
+        "providers": {
+          "name": "Providers",
+          "caption": "Switch API providers without touching env vars. Requests go through the local relay and are logged one by one.",
+          "alt": "The local relay card: listening on 127.0.0.1:18780, running, with recent requests below"
         },
         "usage": {
-          "title": "Usage and budget",
-          "body": "Cost, tokens and requests for today, the last 7 days and the last 30 days, recorded on this machine. Budget limits and overspend alerts are Pro features.",
-          "alt": "Overview: usage trend with total cost, tokens, requests and models"
+          "name": "Usage",
+          "caption": "See what each provider used, at a glance.",
+          "alt": "The overview page: the usage trend and totals for cost, tokens, requests and models"
         }
+      },
+      "keys": {
+        "title": "Set it up once.",
+        "dim": "Every agent gets it. No repeat setup.",
+        "more": "See the app",
+        "click": {
+          "title": "One click.",
+          "body": "Config written for you."
+        },
+        "agents": {
+          "title": "Every agent.",
+          "body": "Install once, live in every agent that supports it."
+        },
+        "toggle": {
+          "title": "On and off.",
+          "body": "Toggle per agent, anytime."
+        },
+        "web": {
+          "title": "From the web.",
+          "body": "Click install in your browser. The app takes over."
+        }
+      },
+      "manage": {
+        "title": "Dozens installed. Which ones are live?",
+        "dim": "One window shows them all.",
+        "lede": "Every skill, MCP server and provider you've installed is listed in the app. Open one to see which agents it's on for, and switch each agent separately.",
+        "link": "See how the app manages them",
+        "window": "Agent Store · Skills",
+        "alt": "The Skills page of the desktop app: brainstorming, canvas-design and executing-plans configured, recommended skills below"
+      },
+      "catalog": {
+        "title": "If your agent can use it, it's here.",
+        "dim": "70,000+ skills and MCP servers, refreshed every 6 hours.",
+        "tabsLabel": "Categories",
+        "shelfLabel": "{kind} samples. Scroll sideways",
+        "note": "As of 2026-11-13: 61,815 MCP servers and 8,391 skills.",
+        "all": "See all {kind}",
+        "empty": "The catalog can't be reached right now. Try again later.",
+        "unknownAuthor": "Unknown author",
+        "kinds": {
+          "skill": "skills",
+          "mcp": "MCP servers",
+          "provider": "providers"
+        },
+        "tabs": {
+          "skill": "Skills",
+          "mcp": "MCP",
+          "provider": "Providers"
+        }
+      }
+    },
+    "client": {
+      "metaTitle": "Desktop app",
+      "metaDescription": "Install skills and MCP servers in a click, toggle them per agent, and switch providers without editing env vars. Works with Claude Code and Codex.",
+      "title": "The desktop app",
+      "dim": "Install and manage, in one window.",
+      "lede": "Install in a click, toggle per agent, switch providers without editing env vars.",
+      "installGuide": "Install guide",
+      "heroWindow": "Agent Store · Skills",
+      "heroAlt": "The Skills page of the desktop app: configured and recommended skills on the left, the details and install command of brainstorming on the right",
+      "library": {
+        "title": "Set it up once.",
+        "dim": "Each agent gets its own switch.",
+        "lede": "A skill is stored once and every agent that supports it reads that copy. Flip the switch where you need it.",
+        "window": "tdd · per-agent switches (diagram)",
+        "source": "One copy in the library",
+        "sameSource": "The same copy",
+        "reads": "{tool} reads here",
+        "enable": "Enable for {tool}"
+      },
+      "mcp": {
+        "title": "Fill in settings once.",
+        "dim": "Disable without deleting.",
+        "lede": "MCP servers that need an API key get it here. One switch per agent; disabling flips the switch and keeps your settings.",
+        "link": "Find Context7 in the store",
+        "window": "Agent Store · MCP",
+        "alt": "Context7 settings: switches for Claude Code and Codex under Applies to"
+      },
+      "web": {
+        "title": "Click install in your browser.",
+        "dim": "The app takes it from there.",
+        "clickTitle": "Click Install",
+        "clickBody": "Packages in the store have an Install button. It sends an install link.",
+        "openTitle": "The app opens",
+        "openBody": "The app asks you to confirm and shows the publisher and category. Confirm, and it installs into every agent that supports it.",
+        "noAppTitle": "No app yet",
+        "noAppBody": "The page gives you an install command to paste into a terminal."
+      },
+      "relay": {
+        "title": "Switch providers without touching env vars.",
+        "dim": "If one fails, the next takes over.",
+        "lede": "Set the order. Requests go to the first provider and move to the next when it errors.",
+        "plans": "Free fails over between the first two. Pro has no limit and steers around providers that failed recently.",
+        "fail": "Make the first one fail (demo)",
+        "relay": "Local relay",
+        "provider": "Provider {x}",
+        "retry": "retry {name}",
+        "alt": "Requests go from your agents to the local relay, then to providers in order. When the first fails, the second gets the request"
+      },
+      "usage": {
+        "title": "What each provider used.",
+        "dim": "At a glance.",
+        "lede": "Cost, tokens and requests for today, 7 days and 30 days, kept on your machine.",
+        "free": "Free: usage dashboard.",
+        "pro": "Pro: budget and overspend alerts, usage analytics and billing export.",
+        "link": "See pricing",
+        "window": "Agent Store · Usage",
+        "alt": "The overview page: the usage trend and totals for cost, tokens, requests and models, with Pro's budget and overspend alerts below"
       },
       "faq": {
-        "title": "Questions",
-        "config": {
-          "q": "Will it change my existing Claude Code / Codex config?",
-          "a": "It only adds and removes its own entries. If a skill or MCP server with the same name exists and Agent Store did not install it, the install stops with a conflict instead of overwriting it; for MCP you can take it over explicitly with --replace, and uninstall puts the original entry back. Before a provider is enabled, your existing settings such as ANTHROPIC_BASE_URL are saved and restored when you disable it."
+        "title": "FAQ",
+        "agents": {
+          "q": "Which agents does it support?",
+          "a": "Works with Claude Code and Codex today. More agents on the way. One install sets up every agent that supports the package."
         },
-        "keys": {
-          "q": "Where are my API keys stored?",
-          "a": "On this machine, in the provider's config.json under ~/.agent-store/providers/, with 0600 permissions. Claude Code and Codex only get the local relay's address and the relay token, not your key; the relay adds the key when it forwards a request."
+        "noApp": {
+          "q": "Can I use it without the app?",
+          "a": "Yes. A package's details include an install command to paste into a terminal, unless the upstream lists no install method. The app also ships the aas CLI for installing and managing from a terminal."
         },
-        "relay": {
-          "q": "Does the relay send my requests anywhere else?",
-          "a": "No. It listens only on 127.0.0.1 (port 18780 by default), requires the relay token and rejects requests from web pages. Requests go only to the providers you enabled; tokens and cost for each request are recorded on this machine and not uploaded."
+        "os": {
+          "q": "Which operating systems?",
+          "a": "macOS, Windows and Linux."
         },
-        "uninstall": {
-          "q": "Can I uninstall cleanly?",
-          "a": "Yes. Uninstall removes the entries it wrote for Claude Code and Codex and leaves files Agent Store did not install alone. Skills, MCP servers and providers have round-trip tests on both tools: after install, enable, disable and uninstall, every config file is compared byte for byte. JSON config is written back with two-space indentation; if yours used another indentation, the content is unchanged but the layout becomes two spaces."
+        "price": {
+          "q": "Is it free?",
+          "a": "Browsing, installing, the local relay and the usage dashboard are free. Pro adds budget alerts, usage analytics, smart routing and multi-key rotation."
+        },
+        "update": {
+          "q": "How do I update what's installed?",
+          "a": "Update in the app, or run aas update."
         },
         "unsigned": {
-          "q": "Why is the installer unsigned?",
-          "a": "Apple and Windows code signing is not set up yet, so the system blocks the app once on first launch. The installers are built from the public source by GitHub Actions and published on GitHub Releases; the files are not damaged. The download page has the steps to allow it."
+          "q": "Why does my OS block the first launch?",
+          "a": "The installers aren't code-signed yet. The <link>download page</link> has the steps."
         }
-      },
-      "download": {
-        "title": "Download the desktop client",
-        "version": "Latest version",
-        "allReleases": "All releases and release notes",
-        "recommendedOs": "Picked for your system",
-        "recommendedFile": "Recommended",
-        "os": {
-          "mac": "macOS",
-          "win": "Windows",
-          "linux": "Linux"
-        },
-        "detail": {
-          "mac": "Universal, works on Apple silicon and Intel",
-          "win": "64-bit (x64)",
-          "linux": "x86_64"
-        },
-        "kind": {
-          "dmg": "Disk image (.dmg)",
-          "exe": "Installer (.exe)",
-          "msi": "MSI package",
-          "deb": "Debian / Ubuntu (.deb)",
-          "rpm": "Fedora / openSUSE (.rpm)",
-          "appimage": "Other distributions (.AppImage)"
-        },
-        "unavailable": "The file list of the latest release cannot be read right now.",
-        "unavailableLink": "Download from GitHub Releases",
-        "downloadPage": "Download page"
       }
     },
     "docs": {
@@ -348,7 +410,7 @@
         {
           "id": "install",
           "title": "Install the desktop client",
-          "body": "Get the macOS (Universal, works on Apple silicon and Intel), Windows or Linux (.deb / .rpm) desktop client from the download page. The client manages installed resources on this machine, maintains provider configurations, runs the local relay and shows usage. After signing in, installed skills, MCP servers and providers sync across devices.",
+          "body": "Get the macOS (Universal, works on Apple silicon and Intel), Windows or Linux (.deb / .rpm) desktop client from the download page. The client manages installed resources on this machine, maintains provider configurations, runs the local relay and shows usage.",
           "bullets": [
             "The installers are currently unsigned, so the system blocks them on first launch. This is expected; the files are not damaged",
             "If macOS says the app \"is damaged and can't be opened\": drag the app into \"Applications\", run xattr -cr \"/Applications/Agent Store.app\" in Terminal, then double-click to open it",
@@ -434,73 +496,131 @@
     },
     "pricing": {
       "metaTitle": "Pricing",
+      "metaDescription": "Installing and managing is free. Pro adds budget alerts, usage analytics, smart routing and multi-key rotation.",
       "title": "Pricing",
-      "lede": "Browsing, installing, the local relay and the usage dashboard are free. Pro is about usage: budget alerts and usage analytics are live; smart routing and multi-key rotation are planned.",
+      "dim": "Installing and managing is free.",
+      "lede": "Pro adds budget alerts, usage analytics, smart routing and multi-key rotation.",
       "period": "Billing period",
       "monthly": "Monthly",
       "yearly": "Yearly",
-      "yearlyNote": "About 2 months free",
-      "free": "Free",
-      "freeSub": "Free forever",
-      "pro": "Pro",
-      "perMonth": "/ month",
-      "perYear": "/ year",
       "lifetime": "Lifetime",
-      "lifetimeSub": "One-time",
+      "note": {
+        "monthly": "Billed monthly. Cancel anytime",
+        "yearly": "Two months free",
+        "lifetime": "Pay once"
+      },
+      "per": {
+        "monthly": "/ month",
+        "yearly": "/ year",
+        "lifetime": "one-time"
+      },
+      "free": "Free",
+      "pro": "Pro",
+      "freePrice": "Free forever",
+      "freeSub": "No account needed.",
+      "chipTrial": "{days}-day free trial",
+      "chipLifetime": "One-time",
+      "proSub": "Then {price} {per}. Cancel anytime.",
+      "lifetimeSub": "One payment. Pro forever.",
       "freeFeatures": [
-        "Browse, search and install all resources",
-        "Local relay: forwards by Level, falls back automatically on failure",
+        "Browse, search and install everything",
+        "Local relay: Level-based routing with automatic failover (up to two providers)",
         "Usage dashboard"
       ],
       "proFeatures": [
         "Everything in Free",
-        "Budgets and overspend alerts",
+        "Budget and overspend alerts",
         "Usage analytics and billing export",
-        "Smart routing (planned)",
-        "Multi-key rotation (planned)"
+        "Smart routing: no provider limit, steers around ones that failed recently",
+        "Multi-key rotation: several keys for one provider, used in turn"
       ],
       "lifetimeFeatures": [
         "All local Pro features",
         "Pay once, use forever",
         "No subscription or monthly fee"
       ],
-      "startFree": "Start free",
-      "trial": "Try free for {days} days",
-      "upgrade": "Upgrade to Pro now",
+      "trial": "Start {days}-day trial",
+      "upgrade": "Upgrade now",
       "buy": "Buy lifetime",
       "working": "Opening checkout…",
-      "trialNote": "After {days} days you'll be charged {price} {per}. Cancel anytime.",
       "failed": "Couldn't open checkout. Please try again later.",
-      "merchant": "Payments are collected by Waffo (Merchant of Record); prices include tax. Lifetime covers all local Pro features."
+      "merchant": "Payments by Waffo. Prices include tax.",
+      "compare": {
+        "title": "Compare plans",
+        "dim": "Where Free and Pro differ.",
+        "feature": "Feature",
+        "yes": "Yes",
+        "no": "No",
+        "rows": [
+          "Browse, search and install everything",
+          "Local relay: Level-based routing with automatic failover",
+          "Providers in a failover",
+          "Usage dashboard",
+          "Budget and overspend alerts",
+          "Usage analytics and billing export",
+          "Smart routing",
+          "Multi-key rotation"
+        ],
+        "failoverFree": "2",
+        "failoverPro": "No limit"
+      }
     },
     "download": {
       "metaTitle": "Download",
-      "title": "Download the desktop client",
-      "lede": "The desktop client manages the skills, MCP servers and providers installed on this machine, runs the local relay and shows usage. It also takes over when you click \"Install\" on the web.",
+      "metaDescription": "Download the Agent Store desktop app for macOS, Windows and Linux. Free.",
+      "title": "Download the desktop app",
+      "dimOs": "Your {os} installer is highlighted.",
+      "dimAny": "For macOS, Windows and Linux.",
+      "lede": "Free. Once it's installed, the store's Install buttons hand off to it.",
+      "version": "Latest version {version}",
       "platformsLabel": "Installers",
-      "mac": "macOS",
-      "macDetail": "Universal .dmg, works on Apple silicon and Intel",
-      "macAction": "Download .dmg",
-      "win": "Windows",
-      "winDetail": "Installer setup.exe",
-      "winAction": "Download .exe",
-      "linux": "Linux",
-      "linuxDetail": "x86_64. .deb for Debian / Ubuntu, .rpm for Fedora / openSUSE",
-      "linuxDebAction": "Download .deb",
-      "linuxRpmAction": "Download .rpm",
-      "linuxDetailWithAppImage": "x86_64. .deb for Debian / Ubuntu, .rpm for Fedora / openSUSE, a no-install .AppImage for other distributions",
-      "linuxAppImageAction": "Download .AppImage",
-      "linuxAppImageSteps": "The AppImage needs no install: run chmod +x file.AppImage, then run it. Without FUSE on the system, add --appimage-extract-and-run. After its first run, \"Install\" on the web opens it.",
-      "allReleases": "All releases and release notes",
-      "unsignedTitle": "First launch",
-      "unsignedBody": "The installers are not signed yet, so the system will block them once. The files are not damaged; follow the steps below to allow them. This won't be needed once code signing is in place.",
-      "macSteps": "If macOS says the app \"is damaged and can't be opened\", drag the app into \"Applications\", run this command in Terminal, then double-click to open it:",
-      "winSteps": "If Windows shows \"Unknown publisher\", click \"More info\", then \"Run anyway\".",
-      "linuxSteps": "Linux does not block it. On Debian / Ubuntu run sudo apt install ./file.deb, on Fedora sudo dnf install ./file.rpm; once installed, \"Install\" on the web opens it.",
-      "nextTitle": "After installing",
-      "nextBody": "Click \"Install\" in the store and the web page opens the desktop client; the local relay and provider configurations are set up in the client.",
-      "nextStore": "Go to the store",
-      "nextDocs": "Read the docs"
+      "os": {
+        "mac": "macOS",
+        "win": "Windows",
+        "linux": "Linux"
+      },
+      "detail": {
+        "mac": "Universal. Apple silicon and Intel",
+        "win": "64-bit (x64)",
+        "linux": "x86_64"
+      },
+      "kind": {
+        "dmg": "Disk image",
+        "exe": "Installer",
+        "msi": "MSI package",
+        "deb": "Debian / Ubuntu",
+        "rpm": "Fedora / openSUSE",
+        "appimage": "Other distros, no install"
+      },
+      "recommended": "Recommended",
+      "unavailable": "The file list of the latest release can't be read right now. The buttons below go to the latest installers.",
+      "unsigned": "Installers aren't code-signed yet. Your OS blocks the first launch once.",
+      "unsignedLink": "See how to allow it",
+      "firstRun": {
+        "title": "First launch",
+        "dim": "Your OS blocks it once. Allow it and go.",
+        "macTitle": "It says \"damaged and can't be opened\"",
+        "macBody": "Drag the app to Applications, run this in Terminal, then open it.",
+        "winTitle": "It says \"Unknown publisher\"",
+        "winBody": "Click More info, then Run anyway.",
+        "linuxTitle": "No prompt",
+        "linuxBody": "On Debian or Ubuntu run <code>sudo apt install ./file.deb</code>. On Fedora run <code>sudo dnf install ./file.rpm</code>.",
+        "linuxAppImage": "AppImage: <code>chmod +x file.AppImage</code>, then run it.",
+        "copyName": "The command to allow the app"
+      },
+      "releases": {
+        "title": "All releases",
+        "dim": "Release notes are there too.",
+        "body": "The app ships the <code>aas</code> CLI.",
+        "link": "View on GitHub"
+      },
+      "next": {
+        "title": "After installing",
+        "body": "Go back to the store and click Install. The app takes over.",
+        "store": "Go to the store",
+        "docs": "Read the docs",
+        "client": "See the app"
+      }
     },
     "dashboard": {
       "metaTitle": "Dashboard",
@@ -516,7 +636,7 @@
     },
     "login": {
       "title": "Sign in to Agent Store",
-      "body": "After signing in you can sync installed skills, MCP servers and providers across devices.",
+      "body": "Sign in to subscribe to Pro.",
       "github": "Sign in with GitHub",
       "google": "Sign in with Google",
       "consent": "By continuing, you agree to the <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",

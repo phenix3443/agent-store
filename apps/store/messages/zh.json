@@ -195,137 +195,199 @@
       "terms": "服务条款",
       "copyright": "© 2026 Agent Store",
       "cli": "命令行 aas",
-      "supported": "已支持 Claude Code、Codex，更多 agent 陆续加入。"
+      "supported": "已支持 Claude Code、Codex，更多 agent 陆续加入。",
+      "client": "客户端"
     },
-    "home": {
-      "metaTitle": "Agent Store：Claude Code / Codex 的技能、MCP 与供应商",
-      "titleA": "技能、MCP 和供应商，",
-      "titleB": "装之前先看清。",
-      "lede": "给 Claude Code 和 Codex 找技能、MCP 服务和模型供应商。每个包都写明装上后要运行的命令和要写入的文件；桌面客户端负责安装、启用和卸载，并运行本地代理。",
-      "browse": "浏览商店",
+    "marketing": {
+      "supLabel": "已支持的 agent",
+      "supMore": "更多即将支持",
+      "supLine": "已支持 Claude Code、Codex，更多 agent 陆续加入。",
+      "downloadFree": "免费下载",
       "downloadMac": "下载 macOS 版",
       "downloadWin": "下载 Windows 版",
       "downloadLinux": "下载 Linux 版",
-      "osHint": "根据你的系统推荐",
-      "otherOs": "其他系统：",
-      "unsigned": "安装包暂未签名，首次打开会被系统拦截。",
-      "unsignedLink": "查看放行步骤",
-      "price": "免费使用；Pro {monthly} / 月起",
-      "trustLabel": "可以放心的地方",
-      "trust": {
-        "preview": "装之前就能看到它要运行的命令、连接的地址和写入的文件",
-        "restore": "卸载后，Claude Code 和 Codex 的配置逐字节还原",
-        "keys": "API 密钥只存在本机，文件权限 0600；本地代理只接受带 token 的请求"
+      "platforms": "macOS · Windows · Linux",
+      "shotNote": "截图来自 Linux 版客户端，界面为英文。",
+      "cta": {
+        "title": "把配置的时间省下来。",
+        "dim": "免费下载，macOS、Windows、Linux 都有。",
+        "cap": "Pro 可选，{price} / 月起"
       },
-      "heroShotAlt": "Agent Store 桌面客户端的技能页（Linux 版截图）：左侧是已装和推荐的技能，右侧是 brainstorming 的详情、安装命令和安装步骤",
-      "map": {
-        "title": "装了会写到哪",
-        "lede": "查看安装会修改哪些文件，以及如何在 Claude Code 和 Codex 中启用。",
-        "tabsLabel": "包的类别",
-        "tabs": {
+      "copy": "复制",
+      "copied": "已复制",
+      "copyFailed": "复制失败，请手动选中复制"
+    },
+    "home": {
+      "metaTitle": "Agent Store：Agent 所需，尽在于此",
+      "metaDescription": "7 万多个技能和 MCP，点一下装进你的 agent，不用再手改配置文件。已支持 Claude Code、Codex，更多 agent 陆续加入。",
+      "titleA": "Agent 所需",
+      "titleComma": "，",
+      "titleB": "尽在于此",
+      "titlePlain": "Agent 所需，尽在于此",
+      "lede": "7 万多个技能和 MCP，点一下装进你的 agent。不用再手改配置文件。",
+      "cli": "用命令行安装",
+      "allReleases": "所有版本",
+      "browse": "逛商店",
+      "demo": {
+        "title": "配置文件，交给它改。",
+        "dim": "你只管点安装。",
+        "window": "Agent Store 桌面客户端",
+        "tabsLabel": "切换演示内容",
+        "install": {
+          "name": "安装",
+          "caption": "点一下安装，兼容的 agent 同时装好。",
+          "alt": "桌面客户端的技能页：左侧是已配置和推荐的技能，右侧是 brainstorming 的详情和安装命令"
+        },
+        "mcp": {
+          "name": "MCP",
+          "caption": "每个 MCP 对哪个 agent 开着，一眼看清。停用不用删。",
+          "alt": "Context7 的设置：Applies to 下面是 Claude Code 和 Codex 两个开关"
+        },
+        "providers": {
+          "name": "供应商",
+          "caption": "换 API 供应商，不用碰环境变量。请求经本地代理转发，逐条记下。",
+          "alt": "本地代理卡片：监听 127.0.0.1:18780，运行中；下面是最近的请求"
+        },
+        "usage": {
+          "name": "用量",
+          "caption": "每家供应商用了多少，一眼看清。",
+          "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总"
+        }
+      },
+      "keys": {
+        "title": "装一次就够。",
+        "dim": "每个 agent 都能用，不用各配一遍。",
+        "more": "看客户端",
+        "click": {
+          "title": "一键安装。",
+          "body": "点一下，配置自动写好。"
+        },
+        "agents": {
+          "title": "多 agent。",
+          "body": "装一次，兼容的 agent 都生效。"
+        },
+        "toggle": {
+          "title": "随时开关。",
+          "body": "按 agent 单独启用、停用。"
+        },
+        "web": {
+          "title": "网页直装。",
+          "body": "浏览器里点安装，客户端接手。"
+        }
+      },
+      "manage": {
+        "title": "装了几十个，哪个在生效？",
+        "dim": "一个窗口，全部看见。",
+        "lede": "装过的技能、MCP 和供应商都列在客户端里。点开一个，就能看到它对哪个 agent 开着，并单独开关。",
+        "link": "看客户端怎么管",
+        "window": "Agent Store · 技能",
+        "alt": "桌面客户端的技能页：已配置的 brainstorming、canvas-design、executing-plans，下面是推荐的技能"
+      },
+      "catalog": {
+        "title": "你的 agent 用得上的，这里都有。",
+        "dim": "7 万多个技能和 MCP，每 6 小时更新。",
+        "tabsLabel": "资源类别",
+        "shelfLabel": "{kind}样本，可横向滚动",
+        "note": "截至 2026-11-13：61,815 个 MCP，8,391 个技能。",
+        "all": "看全部{kind}",
+        "empty": "目录暂时取不到，稍后再试。",
+        "unknownAuthor": "作者不详",
+        "kinds": {
           "skill": "技能",
           "mcp": "MCP",
           "provider": "供应商"
         },
-        "package": "目录里的包",
-        "placeholder": "目录暂时取不到",
-        "skill": {
-          "claude": "软链接，指向技能库里的那一份，以技能名命名；停用只删这个链接",
-          "codex": "Codex 技能目录里单独的一个软链接，和 Claude Code 分开启停",
-          "store": "技能库：技能只存这一份，任何工具都不直接读这里；标记文件说明它由 Agent Store 安装，卸载时只删带标记的"
-        },
-        "mcp": {
-          "claude": "user 级别的 MCP 条目；本机装了 claude 命令时经 claude mcp add-json 写入",
-          "codex": "command、args、env，或远程服务的 url；本机装了 codex 命令时经 codex mcp add 写入",
-          "store": "记下写过哪些条目，停用和卸载只删这些，被替换的原条目会放回去"
-        },
-        "provider": {
-          "claude": "指向本机的本地代理；这里的 token 是代理 token，不是你的 API 密钥",
-          "codex": "新增 aas-relay 供应商并设为当前供应商，同样指向本地代理",
-          "store": "API 密钥只存在这里，文件权限 0600"
-        },
-        "unsupported": "这个包不支持 {tool}，不会写它的配置"
-      },
-      "terminal": {
-        "title": "也可以在终端里装",
-        "lede": "使用 aas 命令搜索、安装技能和 MCP，并为 Claude Code 或 Codex 启用。",
-        "note": "命令行使用示例。",
-        "tabsLabel": "命令"
-      },
-      "features": {
-        "title": "桌面客户端",
-        "lede": "在桌面客户端管理技能、MCP、供应商和用量。截图中的用量为测试数据。",
-        "skill": {
-          "title": "技能",
-          "body": "列出装好的和推荐的技能，详情里写着安装命令和安装步骤。技能只存一份，Claude Code 和 Codex 共用。",
-          "alt": "技能页：已装的 brainstorming、canvas-design、executing-plans，右侧是 brainstorming 的详情"
-        },
-        "mcp": {
-          "title": "MCP 配置，按工具启用",
-          "body": "需要参数的 MCP 先填好配置，再分别对 Claude Code 和 Codex 打开或关闭。",
-          "alt": "Context7 的配置面板：Applies to 下面是 Claude Code 和 Codex 两个开关"
-        },
-        "relay": {
-          "title": "供应商与本地代理",
-          "body": "供应商按优先级排好，前一家连不上、限流或返回 5xx 时换下一家，免费版最多在两家之间切换。最近的请求逐条列出模型、供应商、耗时和状态码。",
-          "alt": "本地代理卡片：监听 127.0.0.1:18780，运行中；下面是最近的请求"
-        },
-        "usage": {
-          "title": "用量与预算",
-          "body": "费用、Token 和请求数按今天、近 7 天、近 30 天汇总，记在本机。预算上限和超支提醒是 Pro 功能。",
-          "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总"
+        "tabs": {
+          "skill": "技能",
+          "mcp": "MCP",
+          "provider": "供应商"
         }
+      }
+    },
+    "client": {
+      "metaTitle": "桌面客户端",
+      "metaDescription": "点一下装好技能和 MCP，按 agent 开关，换供应商不用改环境变量。已支持 Claude Code、Codex。",
+      "title": "桌面客户端",
+      "dim": "装和管，都在这一个窗口。",
+      "lede": "点一下装好，按 agent 开关，换供应商不用改环境变量。",
+      "installGuide": "安装说明",
+      "heroWindow": "Agent Store · 技能",
+      "heroAlt": "桌面客户端的技能页：左侧是已配置和推荐的技能，右侧是 brainstorming 的详情和安装命令",
+      "library": {
+        "title": "装一次就够。",
+        "dim": "每个 agent 各有开关。",
+        "lede": "一个技能只存一份，兼容的 agent 都从这一份读。哪个要用，就打开哪个开关。",
+        "window": "tdd · 按 agent 开关（示意）",
+        "source": "技能库里的一份",
+        "sameSource": "同一份",
+        "reads": "{tool} 从这里读",
+        "enable": "对 {tool} 启用"
+      },
+      "mcp": {
+        "title": "设置填一次。",
+        "dim": "停用不用删。",
+        "lede": "需要 API Key 的 MCP 在这里填。每个 agent 一个开关，停用只是关掉开关，设置还在。",
+        "link": "在商店里找 Context7",
+        "window": "Agent Store · MCP",
+        "alt": "Context7 的设置：Applies to 下面是 Claude Code 和 Codex 两个开关"
+      },
+      "web": {
+        "title": "浏览器里点安装。",
+        "dim": "客户端接手。",
+        "clickTitle": "点安装",
+        "clickBody": "商店里的包都有安装按钮，点了会发出一条安装链接。",
+        "openTitle": "客户端打开",
+        "openBody": "客户端弹出确认窗口，写明发布者和类别。确认后装进兼容的 agent。",
+        "noAppTitle": "还没装客户端",
+        "noAppBody": "网页给你一条安装命令，复制到终端运行。"
+      },
+      "relay": {
+        "title": "换供应商，不用碰环境变量。",
+        "dim": "一家不可用，自动换下一家。",
+        "lede": "排好顺序，请求先发给第一家。它出错时，自动改发下一家。",
+        "plans": "Free 在前两家之间切换；Pro 不限家数，并先避开最近出错的供应商。",
+        "fail": "让第一家出错（演示）",
+        "relay": "本地代理",
+        "provider": "供应商 {x}",
+        "retry": "改发 {name}",
+        "alt": "请求从 agent 发到本地代理，再按顺序转给供应商；第一家出错时改发第二家"
+      },
+      "usage": {
+        "title": "每家用了多少。",
+        "dim": "一眼看清。",
+        "lede": "费用、Token 和请求数，按今天、近 7 天、近 30 天汇总，记在本机。",
+        "free": "Free：用量仪表盘。",
+        "pro": "Pro：预算与超支告警，用量分析与账单导出。",
+        "link": "看定价",
+        "window": "Agent Store · 用量",
+        "alt": "概览页：用量趋势，以及费用、Token、请求数、模型数四项汇总；下面是 Pro 的预算与超支告警"
       },
       "faq": {
         "title": "常见问题",
-        "config": {
-          "q": "会改动我现有的 Claude Code / Codex 配置吗？",
-          "a": "只增删它自己写的条目。同名的技能或 MCP 已经存在、又不是 Agent Store 装的，安装会停下来报冲突，不覆盖；MCP 可以用 --replace 明确接管，卸载时把原来的条目放回去。启用供应商前，原来的 ANTHROPIC_BASE_URL 等设置会先存下来，停用时还原。"
+        "agents": {
+          "q": "支持哪些 agent？",
+          "a": "已支持 Claude Code、Codex，更多 agent 陆续加入。一次安装，兼容的 agent 都会写好。"
         },
-        "keys": {
-          "q": "API 密钥存在哪？",
-          "a": "存在本机 ~/.agent-store/providers/ 下该供应商目录的 config.json 里，文件权限 0600。写进 Claude Code 和 Codex 配置的只有本地代理的地址和代理 token，不是你的密钥；转发请求时由本地代理附上密钥。"
+        "noApp": {
+          "q": "没装客户端能用吗？",
+          "a": "能。包的详情里有安装命令，复制到终端运行即可；上游没有列出安装方式的包除外。客户端自带命令行工具 aas，也能用它安装和管理。"
         },
-        "relay": {
-          "q": "本地代理会把请求发到别处吗？",
-          "a": "不会。它只监听 127.0.0.1（默认端口 18780），请求必须带代理 token，来自网页的请求一律拒绝。请求只转给你启用的供应商地址；每次请求的 Token 和费用记在本机，不上传。"
+        "os": {
+          "q": "支持哪些系统？",
+          "a": "macOS、Windows 和 Linux。"
         },
-        "uninstall": {
-          "q": "能干净卸载吗？",
-          "a": "能。卸载会撤掉它写进 Claude Code 和 Codex 的条目，不是 Agent Store 装的文件原样保留。技能、MCP、供应商在两个工具上都有往返测试：安装、启用、停用、卸载之后，逐字节比较所有配置文件。JSON 配置按两空格缩进写回；如果你的文件用别的缩进，内容不变，排版会变成两空格。"
+        "price": {
+          "q": "要付费吗？",
+          "a": "浏览、安装、本地代理和用量仪表盘免费。Pro 加上预算告警、用量分析、智能路由和多 Key 轮换。"
+        },
+        "update": {
+          "q": "怎么更新已安装的包？",
+          "a": "在客户端里更新，或者运行 aas update。"
         },
         "unsigned": {
-          "q": "为什么安装包没有签名？",
-          "a": "还没有接入 Apple 和 Windows 的代码签名，所以首次打开时系统会拦一次。安装包由 GitHub Actions 从公开的源码构建，发布在 GitHub Release 上，文件没有损坏。放行步骤见下载页。"
+          "q": "为什么第一次打开会被系统拦？",
+          "a": "安装包还没有代码签名。放行步骤在<link>下载页</link>。"
         }
-      },
-      "download": {
-        "title": "下载桌面客户端",
-        "version": "最新版本",
-        "allReleases": "全部版本与更新说明",
-        "recommendedOs": "根据你的系统推荐",
-        "recommendedFile": "推荐",
-        "os": {
-          "mac": "macOS",
-          "win": "Windows",
-          "linux": "Linux"
-        },
-        "detail": {
-          "mac": "通用版，Apple 芯片与 Intel 都能用",
-          "win": "64 位（x64）",
-          "linux": "x86_64"
-        },
-        "kind": {
-          "dmg": "磁盘映像（.dmg）",
-          "exe": "安装程序（.exe）",
-          "msi": "MSI 安装包",
-          "deb": "Debian / Ubuntu（.deb）",
-          "rpm": "Fedora / openSUSE（.rpm）",
-          "appimage": "其他发行版（.AppImage）"
-        },
-        "unavailable": "暂时读不到最新版本的文件列表。",
-        "unavailableLink": "去 GitHub 发布页下载",
-        "downloadPage": "下载页"
       }
     },
     "docs": {
@@ -348,7 +410,7 @@
         {
           "id": "install",
           "title": "安装桌面客户端",
-          "body": "在下载页获取 macOS（通用版，Apple 芯片与 Intel 都能用）、Windows 或 Linux（.deb / .rpm）桌面客户端。客户端管理本机已安装的资源、维护供应商配置、运行本地代理，并显示用量。登录后可跨设备同步已安装的技能、MCP 和供应商。",
+          "body": "在下载页获取 macOS（通用版，Apple 芯片与 Intel 都能用）、Windows 或 Linux（.deb / .rpm）桌面客户端。客户端管理本机已安装的资源、维护供应商配置、运行本地代理，并显示用量。",
           "bullets": [
             "当前安装包未签名，首次打开会被系统拦截，这是正常现象，文件没有损坏",
             "macOS 提示「已损坏，无法打开」时：把 App 拖进「应用程序」，在终端运行 xattr -cr \"/Applications/Agent Store.app\"，再双击打开",
@@ -434,73 +496,131 @@
     },
     "pricing": {
       "metaTitle": "定价",
+      "metaDescription": "安装和管理免费。Pro 加上预算告警、用量分析、智能路由和多 Key 轮换。",
       "title": "定价",
-      "lede": "浏览、安装、本地代理和用量仪表盘免费。Pro 管的是用量：预算告警和用量分析已经上线，智能路由与多 Key 轮换在规划中。",
+      "dim": "安装和管理，免费。",
+      "lede": "Pro 加上预算告警、用量分析、智能路由和多 Key 轮换。",
       "period": "计费周期",
       "monthly": "按月",
       "yearly": "按年",
-      "yearlyNote": "相当于少付 2 个月",
-      "free": "Free",
-      "freeSub": "永久免费",
-      "pro": "Pro",
-      "perMonth": "/ 月",
-      "perYear": "/ 年",
       "lifetime": "终身买断",
-      "lifetimeSub": "一次性",
+      "note": {
+        "monthly": "按月付，随时取消",
+        "yearly": "相当于少付 2 个月",
+        "lifetime": "一次付清"
+      },
+      "per": {
+        "monthly": "/ 月",
+        "yearly": "/ 年",
+        "lifetime": "一次性"
+      },
+      "free": "Free",
+      "pro": "Pro",
+      "freePrice": "永久免费",
+      "freeSub": "不用登录。",
+      "chipTrial": "{days} 天免费试用",
+      "chipLifetime": "买断",
+      "proSub": "{days} 天后按 {price} {per} 收费，可随时取消。",
+      "lifetimeSub": "一次付款，永久 Pro。",
       "freeFeatures": [
         "浏览、搜索、安装全部资源",
-        "本地代理：按 Level 转发、失败自动降级",
+        "本地代理：按 Level 转发，失败自动降级（最多两家）",
         "用量仪表盘"
       ],
       "proFeatures": [
         "Free 的全部功能",
         "预算与超支告警",
         "用量分析与账单导出",
-        "智能路由（规划中）",
-        "多 Key 轮换（规划中）"
+        "智能路由：不限家数，先避开最近出错的供应商",
+        "多 Key 轮换：同一供应商的多把 Key 轮流使用"
       ],
       "lifetimeFeatures": [
         "Pro 的全部本地功能",
         "一次付清，永久使用",
         "没有订阅和月费"
       ],
-      "startFree": "免费开始",
       "trial": "免费试用 {days} 天",
       "upgrade": "直接升级 Pro",
       "buy": "买断",
       "working": "正在打开支付页…",
-      "trialNote": "{days} 天后按 {price} {per} 收费，可随时取消。",
       "failed": "没能打开支付页，请稍后再试。",
-      "merchant": "由 Waffo（Merchant of Record）代收，价格含税。终身买断覆盖全部本地 Pro 功能。"
+      "merchant": "由 Waffo 代收，价格含税。",
+      "compare": {
+        "title": "逐项对比",
+        "dim": "看清 Free 和 Pro 差在哪。",
+        "feature": "功能",
+        "yes": "有",
+        "no": "无",
+        "rows": [
+          "浏览、搜索、安装全部资源",
+          "本地代理：按 Level 转发、失败自动降级",
+          "失败降级的供应商数",
+          "用量仪表盘",
+          "预算与超支告警",
+          "用量分析与账单导出",
+          "智能路由",
+          "多 Key 轮换"
+        ],
+        "failoverFree": "2 家",
+        "failoverPro": "不限"
+      }
     },
     "download": {
       "metaTitle": "下载",
+      "metaDescription": "下载 Agent Store 桌面客户端，macOS、Windows、Linux 都有，免费。",
       "title": "下载桌面客户端",
-      "lede": "桌面客户端管理本机已安装的技能、MCP 与供应商，运行本地代理并显示用量。网页上点「安装」时，也是它接手。",
+      "dimOs": "已为你标出 {os} 安装包。",
+      "dimAny": "macOS、Windows、Linux 都有。",
+      "lede": "免费。装好后，商店里的安装按钮直接交给它。",
+      "version": "最新版本 {version}",
       "platformsLabel": "安装包",
-      "mac": "macOS",
-      "macDetail": "通用版 .dmg，Apple 芯片与 Intel 都能用",
-      "macAction": "下载 .dmg",
-      "win": "Windows",
-      "winDetail": "安装程序 setup.exe",
-      "winAction": "下载 .exe",
-      "linux": "Linux",
-      "linuxDetail": "x86_64。Debian / Ubuntu 用 .deb，Fedora / openSUSE 用 .rpm",
-      "linuxDebAction": "下载 .deb",
-      "linuxRpmAction": "下载 .rpm",
-      "linuxDetailWithAppImage": "x86_64。Debian / Ubuntu 用 .deb，Fedora / openSUSE 用 .rpm，其他发行版用免安装的 .AppImage",
-      "linuxAppImageAction": "下载 .AppImage",
-      "linuxAppImageSteps": "AppImage 不用安装：chmod +x 文件名.AppImage 后直接运行。系统没有 FUSE 时，加参数 --appimage-extract-and-run。第一次运行后，网页上的「安装」就能唤起它。",
-      "allReleases": "所有版本与更新说明",
-      "unsignedTitle": "首次打开",
-      "unsignedBody": "安装包暂未签名，系统会拦一次。文件没有损坏，按下面的步骤放行；接入代码签名之后就不再需要。",
-      "macSteps": "macOS 提示「已损坏，无法打开」时，把 App 拖进「应用程序」，在终端运行这条命令，再双击打开：",
-      "winSteps": "Windows 提示「未知发布者」时，点「更多信息」，再点「仍要运行」。",
-      "linuxSteps": "Linux 不会拦截。Debian / Ubuntu 运行 sudo apt install ./文件名.deb，Fedora 运行 sudo dnf install ./文件名.rpm；装好后网页上的「安装」就能唤起它。",
-      "nextTitle": "装好之后",
-      "nextBody": "在商店里点「安装」，网页会唤起桌面客户端；本地代理和供应商配置在客户端里设置。",
-      "nextStore": "去商店",
-      "nextDocs": "阅读文档"
+      "os": {
+        "mac": "macOS",
+        "win": "Windows",
+        "linux": "Linux"
+      },
+      "detail": {
+        "mac": "通用版，Apple 芯片和 Intel 都能用",
+        "win": "64 位（x64）",
+        "linux": "x86_64"
+      },
+      "kind": {
+        "dmg": "磁盘映像",
+        "exe": "安装程序",
+        "msi": "MSI 安装包",
+        "deb": "Debian / Ubuntu",
+        "rpm": "Fedora / openSUSE",
+        "appimage": "其他发行版，免安装"
+      },
+      "recommended": "推荐",
+      "unavailable": "暂时读不到最新版本的文件列表，下面的按钮会跳到最新版本的安装包。",
+      "unsigned": "安装包还没有代码签名，首次打开会被系统拦一次。",
+      "unsignedLink": "看放行步骤",
+      "firstRun": {
+        "title": "首次打开",
+        "dim": "系统拦一次，放行即可。",
+        "macTitle": "提示「已损坏，无法打开」",
+        "macBody": "把 App 拖进「应用程序」，在终端运行这条命令，再打开。",
+        "winTitle": "提示「未知发布者」",
+        "winBody": "点「更多信息」，再点「仍要运行」。",
+        "linuxTitle": "不会拦截",
+        "linuxBody": "Debian / Ubuntu 运行 <code>sudo apt install ./文件名.deb</code>，Fedora 运行 <code>sudo dnf install ./文件名.rpm</code>。",
+        "linuxAppImage": "AppImage：<code>chmod +x 文件名.AppImage</code> 后直接运行。",
+        "copyName": "放行命令"
+      },
+      "releases": {
+        "title": "所有版本",
+        "dim": "更新说明也在那里。",
+        "body": "客户端自带命令行工具 <code>aas</code>。",
+        "link": "在 GitHub 上看"
+      },
+      "next": {
+        "title": "装好之后",
+        "body": "回商店点安装，客户端会接手。",
+        "store": "去商店",
+        "docs": "阅读文档",
+        "client": "看客户端"
+      }
     },
     "dashboard": {
       "metaTitle": "个人面板",
@@ -516,7 +636,7 @@
     },
     "login": {
       "title": "登录 Agent Store",
-      "body": "登录后可以在不同设备间同步已安装的技能、MCP 和供应商。",
+      "body": "登录后可以订阅 Pro。",
       "github": "使用 GitHub 登录",
       "google": "使用 Google 登录",
       "consent": "继续即表示同意<terms>服务条款</terms>和<privacy>隐私政策</privacy>。",

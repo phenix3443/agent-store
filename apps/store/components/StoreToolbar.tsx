@@ -15,7 +15,7 @@ interface StoreToolbarProps {
 export function StoreHero({ category, sort }: StoreToolbarProps) {
   const t = useTranslations('store.list')
   return (
-    <header className="pb-7 pt-[clamp(40px,7vw,96px)]">
+    <div className="pb-7 pt-[clamp(40px,7vw,96px)]">
       <h1 className="text-[clamp(34px,4.8vw,58px)] font-extrabold leading-[1.18] [text-wrap:balance]">
         {t('title')}
         <span className="block text-fg-3">{t('hero')}</span>
@@ -28,7 +28,7 @@ export function StoreHero({ category, sort }: StoreToolbarProps) {
         <CategoryFilter active={category} className="hidden sm:inline-flex" />
         <FilterSheet category={category} sort={sort} className="sm:hidden" />
       </div>
-    </header>
+    </div>
   )
 }
 
