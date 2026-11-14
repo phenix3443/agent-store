@@ -40,7 +40,7 @@ beforeEach(() => {
   agents = join(root, 'agents', 'skills')
   claudeJson = join(claude, '.claude.json')
   codexToml = join(codex, 'config.toml')
-  for (const d of [claude, codex, agents]) mkdirSync(d, { recursive: true })
+  for (const d of [join(claude, 'skills'), join(codex, 'skills'), agents]) mkdirSync(d, { recursive: true })
   makeEngine()
 })
 afterEach(() => rmSync(root, { recursive: true, force: true }))

@@ -16,7 +16,8 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }))
 
 function fakeCli(name: string, output: string): string {
-  const bin = join(root, name)
+  mkdirSync(join(root, 'bin'), { recursive: true })
+  const bin = join(root, 'bin', name)
   writeFileSync(bin, `#!/bin/sh\necho '${output}'\n`)
   chmodSync(bin, 0o755)
   return bin
