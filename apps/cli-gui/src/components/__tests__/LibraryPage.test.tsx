@@ -85,7 +85,7 @@ test('the skill library lists installed skills with one switch per agent and the
   expect(screen.getByRole('switch', { name: 'Claude Code · find-skills' })).toBeChecked()
   expect(screen.getByRole('switch', { name: 'Codex · find-skills' })).not.toBeChecked()
   expect(screen.getByText('显示 1 / 1 项')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '全部更新（1）' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '全部更新（1）' })).toBeInTheDocument()
 })
 
 test('a switch enables the skill for that agent and logs the command', async () => {
@@ -119,7 +119,7 @@ test('the skill pane shows the deployment, the library path and the version', as
   const pane = await screen.findByRole('complementary', { name: 'skills-find-skills' })
   expect(pane).toHaveTextContent('/home/u/.claude/skills/find-skills · 链接到技能库')
   expect(pane).toHaveTextContent('~/.agent-store/skills/skills-find-skills')
-  expect(pane).toHaveTextContent('abc123 → def456')
+  await waitFor(() => expect(pane).toHaveTextContent('abc123 → def456'))
   expect(within(pane).getByRole('button', { name: '更新到 def456' })).toBeInTheDocument()
 })
 

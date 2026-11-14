@@ -262,7 +262,7 @@ export function DiscoverPage() {
             { value: 'provider', label: t('categories.provider'), kind: 'provider' },
           ]}
         />
-        <Select aria-label={t('disc.sortLabel')} className="w-auto" value={sort} onChange={(e) => setSort(e.target.value as DiscoverSort)}>
+        <Select fit aria-label={t('disc.sortLabel')} value={sort} onChange={(e) => setSort(e.target.value as DiscoverSort)}>
           {SORTS.map((s) => (
             <option key={s} value={s}>
               {t(`disc.sort.${s}`)}

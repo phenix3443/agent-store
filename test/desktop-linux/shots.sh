@@ -28,7 +28,8 @@ install_link() { open_link "agent-store://install?id=$(enc "$1")"; }
 # A web link's dialog focuses Cancel; the primary button is the next one.
 confirm() { xdotool key Tab Return; sleep "${1:-15}"; }
 # The finished install focuses its primary button (查看 / 打开配置).
-open_result() { xdotool key Return; sleep "${1:-6}"; }
+# The library pages read every installed entry through the sidecar, one process per call.
+open_result() { xdotool key Return; sleep "${1:-15}"; }
 # No window manager in the container: keys go to the window under the pointer.
 point_at_window() {
   WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
@@ -119,7 +120,7 @@ check "aas disable --for codex removed only the Codex link" '[ ! -e "$HOME/.code
 install_link "$SKILL_ID"
 shot 04-already-installed
 xdotool key Tab Return
-sleep 6
+sleep 15
 shot 05-skill-detail-codex-off
 stop_app
 
@@ -172,7 +173,7 @@ stop_app
 # 9. The installed list, opened from the 已经安装过了 notice.
 install_link "$NPM_MCP_ID"
 xdotool key Tab Return
-sleep 6
+sleep 15
 shot 13-installed-list
 # The status bar's activity button sits right after the detail pane, so once it has focus
 # Shift+Tab reaches the pane's last control, 卸载.
@@ -200,13 +201,13 @@ sleep "$SETTLE"
 point_at_window
 shot 14-shell-discover
 xdotool key ctrl+2
-sleep 8
+sleep 15
 shot 14b-skills-library
 xdotool key ctrl+3
-sleep 10
+sleep 15
 shot 14c-mcp-library
 xdotool key ctrl+4
-sleep 8
+sleep 15
 shot 14d-providers
 xdotool key ctrl+k
 sleep 2
