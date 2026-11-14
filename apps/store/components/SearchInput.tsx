@@ -11,7 +11,13 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
 }
 
-export function SearchInput({ className = '' }: { className?: string }) {
+/** `page` is the wide search bar at the top of the store; `nav` the compact one elsewhere. */
+export function SearchInput({
+  className = '',
+  variant = 'nav',
+  ...rest
+}: { className?: string; variant?: 'nav' | 'page'; 'data-nav-search'?: boolean }) {
+  const page = variant === 'page'
   const t = useTranslations('store.search')
   const { setParams, isPending, searchParams, onStore } = useStoreQuery()
   const urlQuery = onStore ? (searchParams.get('q') ?? '') : ''
@@ -50,6 +56,8 @@ export function SearchInput({ className = '' }: { className?: string }) {
 
   return (
     <form
+      {...rest}
+      data-store-search={page ? '' : undefined}
       role="search"
       action="/store"
       onSubmit={(e) => {
@@ -57,12 +65,16 @@ export function SearchInput({ className = '' }: { className?: string }) {
         commit(value.trim())
         commit.flush()
       }}
-      className={`flex h-9 items-center gap-2 rounded-control border border-line bg-well pl-2.5 pr-1.5 text-fg-3 transition-[border-color,box-shadow] duration-200 hover:border-line-strong focus-within:border-mcp/70 focus-within:shadow-[0_0_0_4px_rgb(var(--mcp-rgb)/0.14)] ${className}`}
+      className={
+        page
+          ? `searchbar ${className}`
+          : `flex h-9 items-center gap-2 rounded-control border border-line bg-well pl-2.5 pr-1.5 text-fg-3 transition-[border-color,box-shadow] duration-200 hover:border-line-strong focus-within:border-mcp/70 focus-within:shadow-[0_0_0_4px_rgb(var(--mcp-rgb)/0.14)] ${className}`
+      }
     >
       {isPending ? (
-        <Loader2 size={15} aria-hidden className="shrink-0 animate-spin motion-reduce:animate-none" />
+        <Loader2 size={page ? 20 : 15} aria-hidden className="shrink-0 animate-spin motion-reduce:animate-none" />
       ) : (
-        <Search size={15} aria-hidden className="shrink-0" />
+        <Search size={page ? 20 : 15} aria-hidden className="shrink-0" />
       )}
       <input
         ref={inputRef}
@@ -78,12 +90,13 @@ export function SearchInput({ className = '' }: { className?: string }) {
         aria-label={t('label')}
         aria-keyshortcuts="/ Meta+K Control+K"
         autoComplete="off"
-        className="h-full min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none"
+        className={
+          page
+            ? undefined
+            : 'h-full min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-fg-3 [&::-webkit-search-cancel-button]:appearance-none'
+        }
       />
-      <kbd
-        title={t('shortcut')}
-        className="kbd hidden !h-[22px] shrink-0 text-[11px] sm:!grid"
-      >
+      <kbd title={t('shortcut')} className={page ? 'kbd hidden shrink-0 sm:!grid' : 'kbd hidden !h-[22px] shrink-0 text-[11px] sm:!grid'}>
         /
       </kbd>
       <span role="status" aria-live="polite" className="sr-only">

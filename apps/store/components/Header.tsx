@@ -126,7 +126,7 @@ function MobileMenu({
           <div className="grid content-start gap-1.5 overflow-y-auto overscroll-contain px-4 pb-6 pt-4">
             <Suspense>
               {/* SearchInput is its own form; its submit bubbles here once it has navigated. */}
-              <div onSubmit={close} className="mb-2">
+              <div onSubmit={close} data-nav-search className="mb-2">
                 <SearchInput className="h-11" />
               </div>
             </Suspense>
@@ -211,7 +211,7 @@ export function Header({ user }: HeaderProps) {
 
           <div className="ml-auto flex items-center justify-end gap-2">
             <Suspense>
-              <SearchInput className="hidden w-40 lg:flex xl:w-52" />
+              <SearchInput data-nav-search className="hidden w-40 lg:flex xl:w-52" />
             </Suspense>
             <LanguageToggle className="hidden lg:grid" />
             {user ? (
@@ -233,6 +233,7 @@ export function Header({ user }: HeaderProps) {
             <button
               type="button"
               aria-label={t('search')}
+              data-nav-search
               onClick={() => setMenuOpen(true)}
               className="grid h-[38px] w-[38px] place-items-center rounded-control border border-line text-fg-2 transition-colors hover:border-line-strong hover:text-fg lg:hidden"
             >

@@ -24,7 +24,8 @@ beforeEach(() => {
 afterEach(() => { cleanup() })
 
 const { CategoryFilter } = await import('../CategoryFilter')
-const { SortSelect } = await import('../SortSelect')
+const { SortFilter } = await import('../SortFilter')
+const { FilterSheet } = await import('../FilterSheet')
 const { SearchInput } = await import('../SearchInput')
 
 test('category filter shows every category, without counts the paged API cannot give', () => {
@@ -48,19 +49,45 @@ test('choosing a category replaces the URL and keeps the other params', () => {
   expect(push).not.toHaveBeenCalled()
 })
 
-test('sort offers the five orders the catalog API supports', () => {
-  render(<SortSelect active="default" />)
-  const options = screen.getAllByRole('option').map((o) => o.textContent)
-  expect(options).toEqual(['推荐', '最多安装', '最多星标', '最近更新', '名称'])
+test('sort offers the five orders the catalog API supports, as a pressed-button group', () => {
+  render(<SortFilter active="default" />)
+  expect(screen.getByRole('group', { name: '排序' })).toBeInTheDocument()
+  expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['推荐', '最多安装', '最多星标', '最近更新', '名称'])
+  expect(screen.getByRole('button', { name: '推荐' }).getAttribute('aria-pressed')).toBe('true')
 })
 
-test('selecting a sort writes ?sort= to the URL; the default leaves it out', () => {
+test('choosing a sort writes ?sort= to the URL; the default leaves it out', () => {
   search = 'sort=name'
-  render(<SortSelect active="name" />)
-  fireEvent.change(screen.getByLabelText('排序'), { target: { value: 'installs' } })
+  render(<SortFilter active="name" />)
+  fireEvent.click(screen.getByRole('button', { name: '最多安装' }))
   expect(replace).toHaveBeenLastCalledWith('/store?sort=installs', { scroll: false })
-  fireEvent.change(screen.getByLabelText('排序'), { target: { value: 'default' } })
+  fireEvent.click(screen.getByRole('button', { name: '推荐' }))
   expect(replace).toHaveBeenLastCalledWith('/store', { scroll: false })
+})
+
+test('the category buttons carry their kind for colour, All carries none', () => {
+  render(<CategoryFilter active="all" />)
+  expect(screen.getAllByRole('button').map((b) => b.dataset.kind ?? '')).toEqual(['', 'skill', 'mcp', 'provider'])
+})
+
+test('on a phone one button opens category and sort as radio lists that apply at once', () => {
+  search = 'q=anki'
+  render(<FilterSheet category="all" sort="default" />)
+  fireEvent.click(screen.getByRole('button', { name: '全部 · 推荐' }))
+  const dialog = screen.getByRole('dialog', { name: '筛选与排序' })
+  expect(dialog).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('radio', { name: '技能' }))
+  expect(replace).toHaveBeenLastCalledWith('/store?q=anki&category=skill', { scroll: false })
+  fireEvent.click(screen.getByRole('radio', { name: '最近更新' }))
+  expect(replace).toHaveBeenLastCalledWith('/store?q=anki&sort=updated', { scroll: false })
+})
+
+test('the wide search bar is marked so the nav drops its own box', () => {
+  const { container } = render(<SearchInput variant="page" />)
+  expect(container.querySelector('form[data-store-search]')).not.toBeNull()
+  cleanup()
+  const { container: nav } = render(<SearchInput />)
+  expect(nav.querySelector('form[data-store-search]')).toBeNull()
 })
 
 test('search is debounced and replaces instead of pushing history', async () => {
