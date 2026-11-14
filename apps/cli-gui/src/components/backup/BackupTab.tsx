@@ -457,7 +457,7 @@ function Connected({ status }: { status: BackupStatus }) {
 export function BackupTab() {
   const t = useT()
   const backup = useBackup()
-  if (!backup) return null
+  if (!backup) return <></>
   const { status, loadError } = backup
   if (!status) {
     if (loadError) {

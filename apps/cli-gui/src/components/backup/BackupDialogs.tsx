@@ -330,7 +330,7 @@ function RestoreBody({ snapshot, onClose }: { snapshot: BackupSnapshot; onClose:
   return (
     <>
       <DialogBody>
-        <DialogTitle>{t('bk.restoreT')}</DialogTitle>
+        <DialogTitle>{t('bk.snapRestoreT')}</DialogTitle>
         <p className="mb-1 text-[13px] text-fg-2">
           {when} · {snapshotLabel(snapshot.reason, t)} · <code className="font-mono text-[11.5px]">{snapshot.id}</code>
         </p>
@@ -342,7 +342,7 @@ function RestoreBody({ snapshot, onClose }: { snapshot: BackupSnapshot; onClose:
           {t('common.cancel')}
         </Button>
         <Button variant="danger" disabled={busy} onClick={() => void restore()}>
-          {t('bk.restoreBtn')}
+          {t('bk.snapRestoreBtn')}
         </Button>
       </DialogFooter>
     </>
