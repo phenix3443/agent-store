@@ -118,6 +118,10 @@ icacls $std /grant 'Users:(OI)(CI)M' | Out-Null
 $secret = ConvertTo-SecureString "As1-$([guid]::NewGuid())" -AsPlainText -Force
 New-LocalUser -Name assmoke -Password $secret -AccountNeverExpires -ErrorAction Stop | Out-Null
 $cred = New-Object System.Management.Automation.PSCredential('assmoke', $secret)
+# A process started with -Credential inherits this one's TEMP, which that user cannot write.
+$savedTemp = $env:TEMP, $env:TMP
+New-Item -ItemType Directory -Force "$std\tmp" | Out-Null
+$env:TEMP = "$std\tmp"; $env:TMP = "$std\tmp"
 try {
   Start-Process cmd.exe -Credential $cred -LoadUserProfile -WorkingDirectory $std -ArgumentList '/c', "whoami /groups /priv > $std\whoami.txt" -Wait -WindowStyle Hidden
   $sp = Start-Process "$std\bun.exe" -Credential $cred -LoadUserProfile -WorkingDirectory $std -Wait -PassThru -WindowStyle Hidden `
@@ -131,7 +135,22 @@ try {
   Log "FAIL: could not run as a standard user: $_"
   $script:failed = $true
 }
+$env:TEMP, $env:TMP = $savedTemp
 if ($null -ne $DevMode) { Set-ItemProperty $devKey AllowDevelopmentWithoutDevLicense $DevMode }
+
+# 3c. With Claude Code installed from npm, the engine writes MCP entries through `claude mcp`.
+#     npm puts an extensionless sh script, claude.cmd and claude.ps1 on PATH.
+npm install -g @anthropic-ai/claude-code --silent 2>&1 | Out-Null
+Log "claude on PATH: $((Get-Command claude -All -ErrorAction SilentlyContinue | ForEach-Object Source) -join ', ')"
+$cc = Join-Path $env:RUNNER_TEMP 'as-smoke-npm-claude'
+$saved = @{}
+foreach ($k in 'AS_HOME', 'CLAUDE_CONFIG_DIR', 'CODEX_HOME', 'AS_CODEX_BIN') { $saved[$k] = [Environment]::GetEnvironmentVariable($k) }
+$env:AS_HOME = "$cc\agent-store"; $env:CLAUDE_CONFIG_DIR = "$cc\claude"; $env:CODEX_HOME = "$cc\codex"; $env:AS_CODEX_BIN = ''
+New-Item -ItemType Directory -Force $env:AS_HOME, $env:CLAUDE_CONFIG_DIR, $env:CODEX_HOME | Out-Null
+$viaCli = '["mcp-registry:io.github.upstash/context7",{"target":"claude"}]' | & $Sidecar __rpc installAndEnable - 2>&1 | Out-String
+foreach ($k in $saved.Keys) { [Environment]::SetEnvironmentVariable($k, $saved[$k]) }
+Log "installAndEnable with npm Claude Code: $($viaCli.Trim())"
+Check 'an MCP install succeeds with Claude Code installed from npm' { ($viaCli | ConvertFrom-Json).ok -eq $true -and (Get-Content "$cc\claude\.claude.json" -Raw) -match 'context7' }
 
 # 4. First launch.
 $started = Start-Process $script:AppExe -PassThru

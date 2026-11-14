@@ -12,9 +12,8 @@ on:
       - 'apps/client-core/**'
       - 'packages/**'
       - 'test/desktop-smoke/**'
+      - '!test/desktop-smoke/**/*.md'
       - '.github/workflows/desktop-smoke.yml'
-  push:
-    branches: [ci/desktop-smoke-macos-windows]
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -46,7 +45,7 @@ jobs:
             sidecar-targets: ''
             tauri-args: ''
     runs-on: ${{ matrix.host }}
-    timeout-minutes: 45
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -95,6 +94,7 @@ jobs:
 
       - name: Smoke test (macOS)
         if: runner.os == 'macOS'
+        timeout-minutes: 15
         shell: bash
         env:
           OUT: ${{ github.workspace }}/out
@@ -102,6 +102,7 @@ jobs:
 
       - name: Smoke test (Windows)
         if: runner.os == 'Windows'
+        timeout-minutes: 15
         shell: pwsh
         env:
           OUT: ${{ github.workspace }}\out

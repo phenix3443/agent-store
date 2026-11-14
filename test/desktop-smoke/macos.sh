@@ -21,10 +21,12 @@ check() { if eval "$2"; then log "ok: $1"; else log "FAIL: $1"; failed=1; fi; }
 enc() { python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"; }
 shot() { screencapture -x "$OUT/macos-$1.png" 2>>"$OUT/screencapture.log" || log "screencapture $1 failed"; }
 app_pids() { pgrep -x app; }
+# Runs a command, killing it after $1 seconds (macOS has no timeout(1)).
+bounded() { local t=$1; shift; "$@" & local p=$!; ( sleep "$t"; kill "$p" 2>/dev/null ) & local w=$!; wait "$p"; local rc=$?; kill "$w" 2>/dev/null; return $rc; }
 stop_app() { for p in $(app_pids); do kill "$p"; done; sleep 3; }
 # Keys go to the frontmost app through System Events (needs Accessibility for this shell).
 keys() { osascript -e 'tell application "Agent Store" to activate' -e 'delay 1' -e "tell application \"System Events\" to $1" >>"$OUT/osascript.log" 2>&1; }
-confirm() { keys 'key code 48' && sleep 1 && keys 'key code 36'; sleep "${1:-20}"; }
+confirm() { keys 'key code 48' && sleep 1 && keys 'key code 36'; sleep 20; }
 windows_of() { swift "$ROOT/test/desktop-smoke/windows.swift" "$1" 2>>"$OUT/swift.log"; }
 new_crash_reports() { find "$HOME/Library/Logs/DiagnosticReports" /Library/Logs/DiagnosticReports -newer "$STAMP" \( -name 'app*' -o -name 'aas*' -o -name 'Agent Store*' \) 2>/dev/null; }
 
@@ -71,12 +73,16 @@ fi
 
 # What a user gets on double-clicking the downloaded copy. Escape dismisses the dialog
 # (its other button moves the app to the Trash).
-open "$APP" 2>>"$OUT/open.log"
+# `open` does not return while the dialog is up.
+open "$APP" 2>>"$OUT/open.log" &
+OPEN_PID=$!
 sleep 10
 shot gatekeeper-quarantined
 log "quarantined app running after open: $([ -n "$(app_pids)" ] && echo yes || echo no)"
-osascript -e 'tell application "System Events" to key code 53' >>"$OUT/osascript.log" 2>&1
+log "open returned while the dialog was up: $(kill -0 "$OPEN_PID" 2>/dev/null && echo no || echo yes)"
+bounded 30 osascript -e 'tell application "System Events" to key code 53' >>"$OUT/osascript.log" 2>&1
 sleep 2
+kill "$OPEN_PID" 2>/dev/null
 stop_app
 check "the app is still in /Applications after the Gatekeeper dialog" '[ -x "$APP/Contents/MacOS/app" ]'
 
