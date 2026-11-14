@@ -36,7 +36,7 @@ export type {
   ClaudeMcpApproval, ProjectEnvVar, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
   ProjectUninstallOptions, ProjectUninstallResult,
 } from './projects'
-export type { Plan, SubscriptionStatus, Entitlements } from './entitlement'
+export type { Plan, SubscriptionStatus, SubscriptionPeriod, MySubscription, Entitlements } from './entitlement'
 export { PRICING, formatPrice } from './pricing'
 export type { BillingPeriod } from './pricing'
 export type {

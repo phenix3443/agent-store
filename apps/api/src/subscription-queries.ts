@@ -1,5 +1,5 @@
 import type { Plan } from '@as/types'
-import { desc, eq, sql } from 'drizzle-orm'
+import { asc, desc, eq, sql } from 'drizzle-orm'
 import { getDb, type Database, type DbEnv } from './db/client'
 import { processedWebhooks, subscriptions } from './db/schema'
 import { planForSubscription, type SubscriptionRecord, type SubscriptionStatus } from './billing'
@@ -64,6 +64,8 @@ export function subscriptionUpsertQuery(db: Pick<Database, 'insert'>, record: Su
     waffoStoreId: record.storeId,
     mode: record.mode,
     eventTimestamp: record.eventTimestamp ? new Date(record.eventTimestamp) : null,
+    billingPeriod: record.billingPeriod,
+    currentPeriodEnd: record.currentPeriodEnd,
   }
   return db
     .insert(subscriptions)
@@ -79,6 +81,9 @@ export function subscriptionUpsertQuery(db: Pick<Database, 'insert'>, record: Su
         waffoStoreId: values.waffoStoreId,
         mode: values.mode,
         eventTimestamp: values.eventTimestamp,
+        // subscription.payment_succeeded carries no period fields.
+        billingPeriod: sql`coalesce(excluded.billing_period, ${subscriptions.billingPeriod})`,
+        currentPeriodEnd: sql`coalesce(excluded.current_period_end, ${subscriptions.currentPeriodEnd})`,
       },
       setWhere: sql`${subscriptions.eventTimestamp} is null or excluded.event_timestamp >= ${subscriptions.eventTimestamp}`,
     })
@@ -98,16 +103,54 @@ export async function getPlanByEmail(env: DbEnv | undefined, email: string): Pro
   return planForSubscription(row.status as SubscriptionStatus, row.plan as Plan)
 }
 
-/** Resolves the current entitlement plan for an authenticated app user from their most recent subscription row. */
-export async function getPlanByUserId(env: DbEnv | undefined, userId: string): Promise<Plan> {
+/**
+ * The subscription row that decides an app user's plan: one that still grants
+ * the plan wins over a newer ended one (a lifetime purchase outlives a canceled
+ * monthly), otherwise the most recent.
+ */
+export async function getSubscriptionByUserId(env: DbEnv | undefined, userId: string) {
   const db = getDb(env)
-  const row = db
-    .select({ plan: subscriptions.plan, status: subscriptions.status })
+  return db
+    .select({
+      waffoOrderId: subscriptions.waffoOrderId,
+      plan: subscriptions.plan,
+      status: subscriptions.status,
+      waffoStoreId: subscriptions.waffoStoreId,
+      mode: subscriptions.mode,
+      billingPeriod: subscriptions.billingPeriod,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+    })
     .from(subscriptions)
     .where(eq(subscriptions.buyerIdentity, userId))
-    .orderBy(desc(subscriptions.eventTimestamp))
+    .orderBy(
+      // The statuses isActiveStatus grants the plan for.
+      asc(sql`case when ${subscriptions.status} in ('active', 'canceling', 'trialing') then 0 else 1 end`),
+      desc(subscriptions.eventTimestamp)
+    )
     .limit(1)
     .get()
+}
+
+/** Resolves the current entitlement plan for an authenticated app user. */
+export async function getPlanByUserId(env: DbEnv | undefined, userId: string): Promise<Plan> {
+  const row = await getSubscriptionByUserId(env, userId)
   if (!row) return 'free'
   return planForSubscription(row.status as SubscriptionStatus, row.plan as Plan)
+}
+
+/**
+ * Records the status Waffo returned for a cancel or resume, so the dashboard
+ * shows it before the webhook arrives. The event timestamp is left alone: the
+ * webhook for the same change must still apply.
+ */
+export async function setSubscriptionStatus(
+  env: DbEnv | undefined,
+  waffoOrderId: string,
+  status: SubscriptionStatus
+): Promise<void> {
+  getDb(env)
+    .update(subscriptions)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(subscriptions.waffoOrderId, waffoOrderId))
+    .run()
 }
