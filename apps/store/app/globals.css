@@ -298,6 +298,11 @@
     white-space: nowrap;
   }
 
+  .chip-warn {
+    border-color: rgb(var(--warn-rgb) / 0.5);
+    color: var(--warn);
+  }
+
   .kind {
     display: inline-flex;
     align-items: center;

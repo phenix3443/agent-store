@@ -91,7 +91,7 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 
 ### 搜索补充（本地结果不够时去别的技能站补搜）
 
-**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态：网页还没有告诉用户「搜索词会发给第三方站点」，等新的搜索界面带上这句说明后，再在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp` 打开。
+**默认关闭。** 不设 `SEARCH_FALLBACK_SOURCES`（或设为空、`none`）时，API 不向任何外部站点发请求，`GET /api/search/supplement` 一律返回 `status: "disabled"`，`GET /api/discovery/export` 返回空列表。测试环境目前就是这个状态。打开时在部署里设 `SEARCH_FALLBACK_SOURCES=clawhub,skillhub,skillsmp`：商店页在发送前列出 `sources` 里的站点，访客点「发送并查找」后才发请求（`apps/store/components/StoreSupplement.tsx`）。
 
 `GET /api/resources` 的行为不变。补搜是单独的接口 `GET /api/search/supplement`，由前端在搜索词稳定后、且只在第一页调用一次；本地结果照常立即返回，不等补搜。代码在 `apps/api/src/catalog/supplement.ts`（规则与调度）、`found-store.ts`（持久化）和 `sources/` 下各站点的搜索函数。
 
@@ -102,9 +102,11 @@ SkillsMP 没有接入：公开接口必须带关键词或作者，不支持通�
 | 字段 | 含义 |
 |---|---|
 | `status` | `disabled`：部署里没打开补搜，界面不显示任何补搜相关内容；`not_needed`：本地结果够用，或这个词不补搜；`searching`：正在查，`retryAfterSeconds` 秒后再问；`found` / `none`：查完了，有 / 没有；`unavailable`：现在一个站点都问不了，`retryAfterSeconds` 秒后可重试 |
+| `sources` | 本部署会把搜索词发给哪些站点，按询问顺序；`disabled` 时为空。界面发送前列出的就是这些站点，用空搜索词探测也会返回 |
 | `reason` | 为什么本地结果不够：`no_results`、`few_results`、`low_relevance`；`disabled`、`not_needed` 时为 `null` |
 | `resources` | 已从 GitHub 仓库读到并校验过、但已发布的 `catalog.db` 里还没有的技能，结构与列表接口的条目相同，详情走 `GET /api/resources/<id>`，可以安装 |
 | `listings` | 别的站点上有、这里还装不了的技能：`key`、`site`、`name`、`description`、`author`、`url`（该站点上的页面）。只能作为外链展示，不能当成可安装的资源 |
+| `foundOn` | `resources` 里每条技能的 id → 哪些站点的条目指向它（同一技能或同一 GitHub 仓库）；没有对应条目的 id 不出现 |
 | `partial` | 有站点超时、被限流或超出额度，结果可能不全 |
 | `retryAfterSeconds` | 见 `status` |
 
@@ -187,6 +189,22 @@ Better Auth 跑在商店里（`apps/store/lib/auth/server.ts`），用 Node 内�
 ## 支付（Waffo Pancake）
 
 API 已接入：`POST /api/billing/checkout` 建订单，`POST /api/webhooks/waffo` 收 webhook 写 `subscriptions`，`GET /api/me/entitlements` 返回当前套餐。
+
+订阅管理（个人面板的「订阅」页）走下面四个接口，都要登录（`Authorization: Bearer <JWT>`），只操作当前用户自己的订单：
+
+| 接口 | 做什么 | Waffo 调用 |
+|---|---|---|
+| `GET /api/me/subscription` | 返回套餐、状态、计费周期和本期结束日；没买过返回 `null` | 不调用，读 `subscriptions` |
+| `POST /api/me/subscription/cancel` | 到期后取消：状态变成 `canceling`，Pro 保留到本期结束 | `auth.issueSessionToken` + `customer().cancelSubscription` |
+| `POST /api/me/subscription/resume` | 撤回取消，状态回到 `active` | `auth.issueSessionToken` + `customer().reactivateSubscription` |
+| `POST /api/me/subscription/portal` | 返回 Waffo 客户门户的登录链接（订单、订阅、付款记录），带 `Cache-Control: no-store` | `auth.createCustomerPortalLink` |
+
+- 取消和恢复用 Waffo 的买家会话（customer session），令牌按 `buyerIdentity`（即用户 id）签发，Waffo 只允许操作该身份名下的订单。环境取订单记录里的 `mode`（`test` / `prod`）。门户的环境跟 API 私钥走，测试私钥打开测试门户。
+- 取消、恢复成功后先把 Waffo 返回的状态写进 `subscriptions`，再等 webhook（`subscription.canceling`、`subscription.uncanceled`）补上结束日；本期结束时 Waffo 发 `subscription.canceled`，状态才变成已取消、套餐回到 Free。API 不按日期自己判断到期。
+- 计费周期和本期结束日来自 webhook 的 `billingPeriod`、`currentPeriodEnd`（`order.completed` 记为 `lifetime`）。`subscription.payment_succeeded` 不带这两个字段，收到时保留原值。还没收到过带这两个字段的事件时，页面不写日期，写「本期结束」。
+- 一个用户有多条订单时，仍在生效的（`active`、`canceling`、`trialing`）优先，其次取最近的一条；`/api/me/entitlements` 用同一条。
+- 终身买断和已取消、付款未成功的订阅不能取消（409）。没有订单返回 404，没配 Waffo 返回 501，Waffo 出错返回 502。
+- 客户门户里能做哪些操作以 Waffo 为准。
 
 | 变量 | 用途 |
 |---|---|

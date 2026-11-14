@@ -172,11 +172,12 @@
       "note": "Counts as of 2026-11-13. The catalog refreshes every 6 hours."
     },
     "supplement": {
-      "offerTitle": "Look for “{q}” in other skill directories",
-      "offerBody": "Your search term is sent to the third-party skill directories ClawHub, SkillHub and SkillsMP. Only the term is sent, never your account or anything else.",
+      "offerTitle": "Search other skill directories for “{q}”",
+      "offerBody": "Your search term will be sent to the third-party sites {sites}. Only the term is sent, never your account or other personal details.",
       "offerAction": "Send and search",
       "searching": "Searching other skill directories…",
       "foundTitle": "From other skill directories",
+      "foundVia": "Via {sites}",
       "listingsNote": "These skills are not in the store yet. See their own site for how to install them.",
       "viewOn": "View on {site}",
       "partial": "Some sites did not answer, so there may be more.",
@@ -533,7 +534,8 @@
             "Free: browse and install resources, local relay forwarding (failover across up to two providers), usage dashboard",
             "Pro monthly: {monthly} / month",
             "Pro yearly: {yearly} / year",
-            "Lifetime: {lifetime}, pay once, Pro forever"
+            "Lifetime: {lifetime}, pay once, Pro forever",
+            "Cancel or resume on the Subscription tab of your dashboard. After canceling, Pro stays until the period ends and can be resumed until then; orders and payments are on Waffo's billing page"
           ]
         }
       ]
@@ -687,8 +689,53 @@
       "logoutBody": "Your subscription stays on the account.",
       "logout": "Log out",
       "planError": "We can't read your subscription right now. Refresh in a moment.",
-      "active": "Active",
-      "manage": "To cancel or change your subscription, email <mail>support@panghuli.tech</mail>.",
+      "status": {
+        "active": "Active",
+        "trialing": "Trial",
+        "canceling": "Cancels at period end",
+        "canceled": "Canceled",
+        "past_due": "Payment failed"
+      },
+      "line": {
+        "renews": "Renews on {date}.",
+        "renewsUndated": "Renews automatically at period end.",
+        "lifetime": "Lifetime. No renewals.",
+        "canceling": "Pro stays until {date}. After that you're on Free and won't be charged.",
+        "cancelingUndated": "Pro stays until the period ends. After that you're on Free and won't be charged.",
+        "canceled": "Ended on {date}. You're on Free.",
+        "canceledUndated": "This subscription has ended. You're on Free.",
+        "pastDue": "The last renewal payment didn't go through, so Pro is paused. Check the payment on Waffo's billing page."
+      },
+      "cancel": "Cancel subscription",
+      "resume": "Resume subscription",
+      "resubscribe": "Subscribe again",
+      "portal": "Orders and payments",
+      "portalNote": "Waffo keeps your orders, subscription and payments. See them on its billing page.",
+      "working": {
+        "cancel": "Canceling…",
+        "resume": "Resuming…",
+        "portal": "Opening…"
+      },
+      "failed": {
+        "cancel": "Couldn't cancel. Refresh in a moment to check.",
+        "resume": "Couldn't resume. Refresh in a moment to check.",
+        "portal": "Couldn't open Waffo's billing page. Please try again later."
+      },
+      "done": {
+        "cancel": "Set to cancel at period end.",
+        "resume": "Subscription resumed."
+      },
+      "confirm": {
+        "title": "Cancel your subscription?",
+        "happens": "Pro stays until {date}. After that you're on Free and won't be renewed.",
+        "happensUndated": "Pro stays until the period ends. After that you're on Free and won't be renewed.",
+        "notHappens": "Canceling doesn't refund what you've paid. You can resume any time before the period ends.",
+        "keep": "Keep Pro",
+        "confirm": "Cancel subscription",
+        "close": "Close"
+      },
+      "retry": "Try again",
+      "loading": "Loading",
       "perks": "What Pro includes",
       "billing": "Billing",
       "merchant": "Payments by",

@@ -5,6 +5,9 @@ import {
   isActiveStatus,
   subscriptionRecordFromEvent,
   planForSubscription,
+  subscriptionView,
+  canCancel,
+  canResume,
 } from '../billing'
 
 function makeEvent(eventType: string, overrides: Partial<WebhookEventData> = {}): WebhookEvent<WebhookEventData> {
@@ -32,6 +35,9 @@ test('statusForEventType maps subscription events to statuses', () => {
   expect(statusForEventType('subscription.payment_succeeded')).toBe('active')
   expect(statusForEventType('subscription.uncanceled')).toBe('active')
   expect(statusForEventType('subscription.updated')).toBe('active')
+  expect(statusForEventType('subscription.renewed')).toBe('active')
+  expect(statusForEventType('subscription.recovered')).toBe('active')
+  expect(statusForEventType('subscription.plan_changed')).toBe('active')
   expect(statusForEventType('subscription.canceling')).toBe('canceling')
   expect(statusForEventType('subscription.canceled')).toBe('canceled')
   expect(statusForEventType('subscription.past_due')).toBe('past_due')
@@ -68,7 +74,18 @@ test('subscriptionRecordFromEvent builds a record for a subscription event', () 
     storeId: 'STO_1',
     mode: 'prod',
     eventTimestamp: '2026-07-06T00:00:00.000Z',
+    billingPeriod: null,
+    currentPeriodEnd: null,
   })
+})
+
+test('subscriptionRecordFromEvent keeps the billing period and its end', () => {
+  const record = subscriptionRecordFromEvent(
+    makeEvent('subscription.canceling', { billingPeriod: 'yearly', currentPeriodEnd: '2027-07-06' })
+  )
+  expect(record?.status).toBe('canceling')
+  expect(record?.billingPeriod).toBe('yearly')
+  expect(record?.currentPeriodEnd).toBe('2027-07-06')
 })
 
 test('subscriptionRecordFromEvent binds the app userId from orderMetadata over buyer identity', () => {
@@ -85,6 +102,7 @@ test('subscriptionRecordFromEvent builds an active record for a one-time (lifeti
   const record = subscriptionRecordFromEvent(makeEvent('order.completed'))
   expect(record?.status).toBe('active')
   expect(record?.plan).toBe('pro')
+  expect(record?.billingPeriod).toBe('lifetime')
 })
 
 test('subscriptionRecordFromEvent returns null for refunds', () => {
@@ -96,4 +114,20 @@ test('planForSubscription grants the plan while active-ish, else free', () => {
   expect(planForSubscription('canceling', 'pro')).toBe('pro')
   expect(planForSubscription('canceled', 'pro')).toBe('free')
   expect(planForSubscription('past_due', 'pro')).toBe('free')
+})
+
+test('subscriptionView drops a billing period the dashboard does not know', () => {
+  const row = { plan: 'pro', status: 'active', billingPeriod: 'quarterly', currentPeriodEnd: '2026-12-01' }
+  expect(subscriptionView(row)).toEqual({ plan: 'pro', status: 'active', period: null, currentPeriodEnd: '2026-12-01' })
+  expect(subscriptionView({ ...row, billingPeriod: 'monthly' }).period).toBe('monthly')
+})
+
+test('only an active subscription can be canceled, and only a canceling one resumed', () => {
+  expect(canCancel({ status: 'active', period: 'monthly' })).toBe(true)
+  expect(canCancel({ status: 'active', period: null })).toBe(true)
+  expect(canCancel({ status: 'active', period: 'lifetime' })).toBe(false)
+  expect(canCancel({ status: 'canceling', period: 'monthly' })).toBe(false)
+  expect(canCancel({ status: 'past_due', period: 'monthly' })).toBe(false)
+  expect(canResume({ status: 'canceling' })).toBe(true)
+  expect(canResume({ status: 'canceled' })).toBe(false)
 })

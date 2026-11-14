@@ -274,7 +274,7 @@ describe('when a lookup runs', () => {
     const s = supplement(f)
     // 'pdf' is a skill's exact name; 'skill' is in one name and every description.
     for (const q of ['pdf', 'PDF', 'skill', 'x', 'someone@example.com']) {
-      expect(s.lookup(q, null)).toEqual({ status: 'not_needed', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null })
+      expect(s.lookup(q, null)).toEqual({ status: 'not_needed', sources: ['clawhub', 'skillhub'], reason: null, resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: null })
     }
     expect(s.lookup('terraform', 'mcp').status).toBe('not_needed')
     expect(s.lookup('terraform', 'provider').status).toBe('not_needed')
@@ -288,7 +288,7 @@ describe('when a lookup runs', () => {
     }))
     const s = supplement(f)
     const first = s.lookup('Terraform', null)
-    expect(first).toEqual({ status: 'searching', reason: 'no_results', resources: [], listings: [], partial: false, retryAfterSeconds: 2 })
+    expect(first).toEqual({ status: 'searching', sources: ['clawhub', 'skillhub'], reason: 'no_results', resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: 2 })
     await s.settled('Terraform', 5000)
     const done = s.lookup('terraform', null)
     expect(done).toMatchObject({ status: 'found', reason: 'no_results', partial: false, retryAfterSeconds: null, resources: [] })
@@ -421,7 +421,7 @@ describe('a failing site', () => {
       skillhub: () => json({ code: 500, message: 'error' }),
     }))
     const s = supplement(f)
-    expect(await settle(s, 'terraform')).toEqual({ status: 'unavailable', reason: 'no_results', resources: [], listings: [], partial: false, retryAfterSeconds: 30 })
+    expect(await settle(s, 'terraform')).toEqual({ status: 'unavailable', sources: ['clawhub', 'skillhub'], reason: 'no_results', resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: 30 })
     expect(s.lookup('terraform', null).status).toBe('unavailable')
     expect(f.calls).toHaveLength(2)
     up = true
@@ -495,6 +495,9 @@ describe('what a lookup found', () => {
     expect(done.resources.map((r) => r.id)).toEqual([ACME_PLAN, ACME_DRIFT])
     expect(done.resources[0]).toMatchObject({ kind: 'skill', name: 'terraform-plan', origin: { site: 'github', unavailableAt: null } })
     expect(done.listings.map((l) => l.key)).toEqual(['clawhub:ivan/terraform'])
+    // SkillsMP named the repo through one of its skills; both skills read from it credit it.
+    expect(done.foundOn).toEqual({ [ACME_PLAN]: ['skillsmp'], [ACME_DRIFT]: ['skillsmp'] })
+    expect(done.sources).toEqual(['clawhub', 'skillsmp'])
 
     const app = resourceRoutes(reader, () => s)
     const detail = await app.fetch(new Request(`http://local/api/resources/${ACME_PLAN}`))
@@ -514,6 +517,7 @@ describe('what a lookup found', () => {
     const done = await settle(supplement(f, { sources: both, config: { scanMaxSkills: 1 } }), 'terraform')
     expect(done.resources).toEqual([])
     expect(done.listings.map((l) => l.key)).toEqual(['clawhub:ivan/terraform', ACME_PLAN])
+    expect(done.foundOn).toEqual({})
     expect(calls(f, 'raw.githubusercontent.com')).toEqual([])
   })
 
@@ -597,7 +601,7 @@ describe('repeated queries', () => {
   test('nothing found is remembered: no second request until it expires, also across a restart', async () => {
     const f = fakeFetch(searchRoutes({ clawhub: clawhubOk(), skillhub: skillhubOk() }))
     const s = supplement(f)
-    expect(await settle(s, 'zzqxjv')).toEqual({ status: 'none', reason: 'no_results', resources: [], listings: [], partial: false, retryAfterSeconds: null })
+    expect(await settle(s, 'zzqxjv')).toEqual({ status: 'none', sources: ['clawhub', 'skillhub'], reason: 'no_results', resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: null })
     advance(5 * HOUR)
     expect(s.lookup('zzqxjv', null).status).toBe('none')
     expect(supplement(f).lookup('zzqxjv', null).status).toBe('none')
@@ -664,7 +668,7 @@ describe('routes', () => {
 })
 
 describe('SEARCH_FALLBACK_SOURCES', () => {
-  const off = { status: 'disabled', reason: null, resources: [], listings: [], partial: false, retryAfterSeconds: null }
+  const off = { status: 'disabled', sources: [], reason: null, resources: [], listings: [], foundOn: {}, partial: false, retryAfterSeconds: null }
 
   test('unset, empty or none: the endpoint answers disabled and no request leaves the process', async () => {
     const original = globalThis.fetch
@@ -703,7 +707,7 @@ describe('SEARCH_FALLBACK_SOURCES', () => {
     }))
     const s = buildSearchSupplement({ SEARCH_FALLBACK_SOURCES: 'clawhub, skillhub,skillsmp', APP_DB_PATH: appDbPath }, { reader, fetch: f })!
     const done = await settle(s, 'terraform')
-    expect(done).toMatchObject({ status: 'found', partial: false })
+    expect(done).toMatchObject({ status: 'found', partial: false, sources: ['clawhub', 'skillhub', 'skillsmp'] })
     expect(done.resources.map((r) => r.id)).toEqual([ACME_PLAN, ACME_DRIFT])
     expect(done.listings.map((l) => l.key)).toEqual(['clawhub:ivan/terraform', 'skillhub:ops/terraform-wrap'])
     for (const host of ['clawhub.ai', 'api.skillhub.cn', 'skillsmp.com']) expect(calls(f, host)).toHaveLength(1)
@@ -712,6 +716,9 @@ describe('SEARCH_FALLBACK_SOURCES', () => {
   test('only the sites named are asked', async () => {
     const f = fakeFetch(searchRoutes({ clawhub: clawhubOk() }))
     const s = buildSearchSupplement({ SEARCH_FALLBACK_SOURCES: 'clawhub,nowhere', APP_DB_PATH: appDbPath }, { reader, fetch: f })!
+    // The empty query the web store probes with names the sites and is sent nowhere.
+    expect(s.lookup('', null)).toMatchObject({ status: 'not_needed', sources: ['clawhub'] })
+    expect(f.calls).toHaveLength(0)
     expect((await settle(s, 'terraform')).status).toBe('none')
     expect(f.calls).toHaveLength(1)
   })

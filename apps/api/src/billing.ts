@@ -1,8 +1,7 @@
 import type { WebhookEvent, WebhookEventData } from '@waffo/pancake-ts'
-import type { Plan } from '@as/types'
+import type { MySubscription, Plan, SubscriptionPeriod, SubscriptionStatus } from '@as/types'
 
-/** Subscription lifecycle status we persist, derived from Waffo webhook event types. */
-export type SubscriptionStatus = 'active' | 'canceling' | 'canceled' | 'past_due' | 'trialing'
+export type { SubscriptionStatus }
 
 /** A subscription row derived from a webhook event, ready to upsert. */
 export interface SubscriptionRecord {
@@ -15,6 +14,9 @@ export interface SubscriptionRecord {
   storeId: string
   mode: 'test' | 'prod'
   eventTimestamp: string
+  /** Null when the event carries no period; the stored value is then kept. */
+  billingPeriod: string | null
+  currentPeriodEnd: string | null
 }
 
 /**
@@ -29,7 +31,10 @@ export function statusForEventType(eventType: string): SubscriptionStatus | null
     case 'order.completed':
     case 'subscription.activated':
     case 'subscription.payment_succeeded':
+    case 'subscription.renewed':
+    case 'subscription.recovered':
     case 'subscription.uncanceled':
+    case 'subscription.plan_changed':
     case 'subscription.updated':
       return 'active'
     case 'subscription.canceling':
@@ -68,10 +73,38 @@ export function subscriptionRecordFromEvent(event: WebhookEvent<WebhookEventData
     storeId: event.storeId,
     mode: event.mode === 'test' ? 'test' : 'prod',
     eventTimestamp: event.timestamp,
+    billingPeriod: event.eventType === 'order.completed' ? 'lifetime' : (data.billingPeriod ?? null),
+    currentPeriodEnd: data.currentPeriodEnd ?? null,
   }
 }
 
 /** Resolves the entitlement plan for a subscription's status: the plan while active-ish, else free. */
 export function planForSubscription(status: SubscriptionStatus, plan: Plan): Plan {
   return isActiveStatus(status) ? plan : 'free'
+}
+
+/** What the user may do with a subscription from the dashboard. Waffo only cancels an active subscription and only resumes a canceling one. */
+export function canCancel(sub: Pick<MySubscription, 'status' | 'period'>): boolean {
+  return (sub.status === 'active' || sub.status === 'trialing') && sub.period !== 'lifetime'
+}
+
+export function canResume(sub: Pick<MySubscription, 'status'>): boolean {
+  return sub.status === 'canceling'
+}
+
+const PERIODS: readonly string[] = ['monthly', 'yearly', 'lifetime'] satisfies SubscriptionPeriod[]
+
+/** The dashboard view of a stored subscription row. */
+export function subscriptionView(row: {
+  plan: string
+  status: string
+  billingPeriod: string | null
+  currentPeriodEnd: string | null
+}): MySubscription {
+  return {
+    plan: row.plan === 'team' ? 'team' : 'pro',
+    status: row.status as SubscriptionStatus,
+    period: row.billingPeriod && PERIODS.includes(row.billingPeriod) ? (row.billingPeriod as SubscriptionPeriod) : null,
+    currentPeriodEnd: row.currentPeriodEnd,
+  }
 }
