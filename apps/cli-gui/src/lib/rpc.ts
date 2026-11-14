@@ -34,9 +34,29 @@ export function errorText(err: unknown): string {
 
 type RpcEnvelope<T> = RpcSuccess<T> | RpcFailure
 
+interface SidecarOutput {
+  stdout: string
+  stderr: string
+}
+
+// The arguments carry secret values (project keys, MCP config, provider API keys), so they go
+// through stdin, never argv where other local users can read them with `ps`. The shell plugin
+// cannot close a child's stdin: the sidecar reads one line, so the payload must end in a newline.
+function runSidecar(argv: string[], input: string): Promise<SidecarOutput> {
+  const command = Command.sidecar('binaries/aas', argv)
+  const stdout: string[] = []
+  const stderr: string[] = []
+  command.stdout.on('data', line => stdout.push(line))
+  command.stderr.on('data', line => stderr.push(line))
+  return new Promise((resolve, reject) => {
+    command.on('error', err => reject(new Error(err)))
+    command.on('close', () => resolve({ stdout: stdout.join('\n'), stderr: stderr.join('\n') }))
+    command.spawn().then(child => child.write(input)).catch(reject)
+  })
+}
+
 export async function callRpc<T>(method: string, args: unknown[] = []): Promise<T> {
-  const command = Command.sidecar('binaries/aas', ['__rpc', method, JSON.stringify(args)])
-  const output = await command.execute()
+  const output = await runSidecar(['__rpc', method, '-'], `${JSON.stringify(args)}\n`)
 
   let envelope: RpcEnvelope<T>
   try {
