@@ -8,6 +8,8 @@ import type {
   InstallOutcome, TargetStatus, EnableBlocker,
   UsageSummaryRow, UsageSummaryOptions, LocalRelayConfig,
   RecentRequestRow, RelayStatus, ProviderHealth, Entitlements, BudgetConfig, BudgetStatus,
+  AddProjectOptions, Project, ProjectDetail, ProjectInstallOptions, ProjectInstallResult,
+  ProjectUninstallOptions, ProjectUninstallResult,
 } from '@as/types'
 import { StoreClient } from '@as/sdk'
 import { resolvePaths, itemDir, assertSafeSlug, type Category } from './paths'
@@ -15,6 +17,7 @@ import { ResourceCatalog, toItem, type Catalog } from './catalog'
 import { resourceLongSlug } from '@as/types'
 import { readRegistry, updateRegistry, patchEntry, findEntry, upsertEntry, removeEntry, setDeploymentRecord, setEnabledFlag } from './registry/index'
 import { createAdapters, type KindAdapter } from './adapters'
+import { ProjectService } from './projects/service'
 import { checkUpdates as _checkUpdates, latestFor } from './updater/index'
 import { duplicateProviderConnection } from './config/provider'
 import { atomicWriteSecretFile } from './config/safe-file'
@@ -65,11 +68,13 @@ export class EngineImpl implements Engine {
   private readonly client: StoreClient
   private readonly adapters: Record<Category, KindAdapter>
   private readonly catalog: Catalog
+  private readonly projects: ProjectService
 
   constructor(pathOverrides?: Partial<Paths>, storeUrl?: string, options: EngineOptions = {}) {
     this.paths = resolvePaths(pathOverrides)
     this.client = new StoreClient(storeUrl, { timeoutMs: 8000 })
     this.catalog = options.catalog ?? new ResourceCatalog(this.client, this.paths.aasHome)
+    this.projects = new ProjectService(this.paths, this.catalog)
     this.adapters = createAdapters({
       paths: this.paths,
       startRelay: options.startRelay,
@@ -497,5 +502,45 @@ export class EngineImpl implements Engine {
 
   async getBudgetStatus(): Promise<BudgetStatus> {
     return getBudgetStatus(this.paths.aasHome)
+  }
+
+  listProjects(): Promise<Project[]> {
+    return this.projects.list()
+  }
+
+  addProject(path: string, options?: AddProjectOptions): Promise<Project> {
+    return this.projects.add(path, options)
+  }
+
+  removeProject(ref: string): Promise<void> {
+    return this.projects.remove(ref)
+  }
+
+  relocateProject(ref: string, newPath: string): Promise<Project> {
+    return this.projects.relocate(ref, newPath)
+  }
+
+  getProject(ref: string): Promise<ProjectDetail> {
+    return this.projects.detail(ref)
+  }
+
+  installToProject(ref: string, itemRef: string, options?: ProjectInstallOptions): Promise<ProjectInstallResult> {
+    return this.projects.install(ref, itemRef, options)
+  }
+
+  uninstallFromProject(ref: string, slug: string, options?: ProjectUninstallOptions): Promise<ProjectUninstallResult> {
+    return this.projects.uninstall(ref, slug, options)
+  }
+
+  setProjectEnv(ref: string, name: string, value: string): Promise<void> {
+    return this.projects.setEnv(ref, name, value)
+  }
+
+  unsetProjectEnv(ref: string, name: string): Promise<void> {
+    return this.projects.unsetEnv(ref, name)
+  }
+
+  getProjectEnvValues(ref: string): Promise<Record<string, string>> {
+    return this.projects.envValues(ref)
   }
 }

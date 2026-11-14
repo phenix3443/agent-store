@@ -13,6 +13,9 @@ import { readMcpTargets } from './config/mcp-targets'
 import { readClaudeMcpEntry } from './config/claude-mcp'
 import { readCodexMcpEntry } from './config/codex-mcp'
 import { mcpEntryDiff } from './config/mcp-compare'
+import { readProjects, toProject, type ProjectRecord } from './projects/store'
+import { ProjectService } from './projects/service'
+import { codexTrusted, CODEX_MCP_FILE, CLAUDE_MCP_FILE, mcpFileFor, readCodexProjectServers } from './projects/files'
 
 export interface DoctorPaths {
   aasHome: string
@@ -28,6 +31,8 @@ export interface DoctorFinding {
   level: 'error' | 'warn'
   code: string
   slug?: string
+  /** Id of the registered project the finding is about. */
+  project?: string
   message: string
 }
 
@@ -118,24 +123,80 @@ function serverNames(container: unknown): string[] {
 /** Places that override the user-scope entry `name` (§5.5); phase one only warns about them. */
 async function mcpShadows(p: DoctorPaths, tool: ToolTarget, name: string): Promise<string[]> {
   const found: string[] = []
+  const registered = await registeredProjects(p)
   if (tool === 'claude') {
-    let json: { projects?: Record<string, unknown> }
-    try { json = JSON.parse(await readFile(p.claudeJsonPath, 'utf-8')) } catch { return found }
-    for (const [dir, project] of Object.entries(json.projects ?? {})) {
-      if (serverNames(project).includes(name)) found.push(`local scope in ${dir}`)
+    let json: { projects?: Record<string, unknown> } = {}
+    try { json = JSON.parse(await readFile(p.claudeJsonPath, 'utf-8')) } catch { /* no user file */ }
+    const dirs = new Set([...Object.keys(json.projects ?? {}), ...registered.map(r => r.path)])
+    for (const dir of dirs) {
+      if (serverNames(json.projects?.[dir]).includes(name)) found.push(`local scope in ${dir}`)
       try {
-        const mcpJson = join(dir, '.mcp.json')
+        const mcpJson = join(dir, CLAUDE_MCP_FILE)
         if (serverNames(JSON.parse(await readFile(mcpJson, 'utf-8'))).includes(name)) found.push(`project scope in ${mcpJson}`)
       } catch { /* no project file */ }
     }
   } else {
-    let config: { profiles?: Record<string, unknown> }
-    try { config = parse(await readFile(join(p.codexConfigDir, 'config.toml'), 'utf-8')) as typeof config } catch { return found }
+    let config: { profiles?: Record<string, unknown> } = {}
+    try { config = parse(await readFile(join(p.codexConfigDir, 'config.toml'), 'utf-8')) as typeof config } catch { /* no user file */ }
     for (const [profile, table] of Object.entries(config.profiles ?? {})) {
       if (serverNames(table).includes(name)) found.push(`profile "${profile}"`)
     }
+    // Codex merges a trusted project's table into the user one key by key.
+    for (const r of registered) {
+      if (!(await codexTrusted(fullPaths(p), r.path))) continue
+      const servers = await readCodexProjectServers(r.path).catch(() => ({}))
+      if (name in servers) found.push(`project scope in ${join(r.path, CODEX_MCP_FILE)} (merged over the user entry)`)
+    }
   }
   return found
+}
+
+function fullPaths(p: DoctorPaths) {
+  return { aasHome: p.aasHome, claudeConfigDir: p.claudeConfigDir, claudeJsonPath: p.claudeJsonPath, codexConfigDir: p.codexConfigDir }
+}
+
+async function registeredProjects(p: DoctorPaths): Promise<ProjectRecord[]> {
+  try { return (await readProjects(p.aasHome)).projects } catch { return [] }
+}
+
+/** What `aas projects show` reports, turned into findings: one source for both. */
+async function checkProjects(p: DoctorPaths, out: DoctorFinding[]): Promise<void> {
+  let records: ProjectRecord[]
+  try {
+    records = (await readProjects(p.aasHome)).projects
+  } catch (e) {
+    out.push({ level: 'error', code: 'projects-unreadable', message: (e as Error).message })
+    return
+  }
+  const service = new ProjectService(fullPaths(p))
+  for (const record of records) {
+    const add = (level: DoctorFinding['level'], code: string, message: string, slug?: string) =>
+      out.push({ level, code, project: record.id, ...(slug ? { slug } : {}), message })
+    if (!(await toProject(record)).exists) {
+      add('warn', 'project-missing', `project ${record.name} (${record.path}) no longer exists; run: aas projects move ${record.id} <new path>, or aas projects remove ${record.id}`)
+      continue
+    }
+    const detail = await service.detail(record.id)
+    for (const item of record.items) {
+      const shown = item.kind === 'skill'
+        ? detail.skills.find(s => s.slug === item.slug)?.locations ?? []
+        : detail.mcps.find(m => m.slug === item.slug)?.locations ?? []
+      for (const agent of Object.keys(item.targets) as ToolTarget[]) {
+        const loc = shown.find(l => l.agent === agent && l.managed)
+        const where = item.kind === 'skill' ? item.targets[agent]!.path : mcpFileFor(agent)
+        if (!loc) add('warn', 'project-item-missing', `${item.slug} is no longer in ${join(record.path, where)}; reinstall: aas install ${item.slug} --project ${record.id} --target ${agent}`, item.slug)
+        else if (loc.modified) add('warn', 'project-item-modified', `${item.slug} in ${join(record.path, where)} was edited since Agent Store installed it; reinstalling or uninstalling it needs --force`, item.slug)
+      }
+    }
+    for (const mcp of detail.mcps) {
+      if (mcp.missingEnv.length) {
+        add('warn', 'project-env-missing', `MCP server "${mcp.name}" in ${record.path} reads ${mcp.missingEnv.join(', ')}, which have no value on this machine; set them with: aas projects set-env ${record.id} <NAME>`, mcp.slug)
+      }
+      if (!detail.codexTrusted && mcp.managed && mcp.locations.some(l => l.agent === 'codex' && l.managed)) {
+        add('warn', 'project-codex-untrusted', `Codex ignores ${join(record.path, CODEX_MCP_FILE)} until the project is trusted (trust it once in Codex, or add [projects."${record.path}"] trust_level = "trusted" to ${join(p.codexConfigDir, 'config.toml')})`, mcp.slug)
+      }
+    }
+  }
 }
 
 async function checkMcp(p: DoctorPaths, entry: InstalledItem, out: DoctorFinding[]): Promise<void> {
@@ -201,5 +262,6 @@ export async function runDoctor(p: DoctorPaths): Promise<DoctorFinding[]> {
     else if (entry.category === 'mcp') await checkMcp(p, entry, out)
   }
   await checkOrphans(p, new Set(registry.installed.filter(e => e.category === 'skill').map(e => e.slug)), out)
+  await checkProjects(p, out)
   return out
 }

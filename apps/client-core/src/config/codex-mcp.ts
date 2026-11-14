@@ -136,13 +136,20 @@ export function resolveCodexCli(env: NodeJS.ProcessEnv = process.env): CodexMcpC
 
 // ── File access ──────────────────────────────────────────────────────────────
 
-async function readText(at: CodexLocation): Promise<string | undefined> {
+async function readPath(path: string): Promise<string | undefined> {
   try {
-    return await readFile(configPath(at), 'utf-8')
+    return await readFile(path, 'utf-8')
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') return undefined
     throw e
   }
+}
+
+const readText = (at: CodexLocation) => readPath(configPath(at))
+
+/** `mcp_servers` of the TOML file at `path`; empty when the file does not exist, ConfigParseError when it does not parse. */
+export async function readCodexMcpServers(path: string): Promise<Record<string, unknown>> {
+  return JSON.parse(JSON.stringify(parseServers(path, await readPath(path)))) as Record<string, unknown>
 }
 
 function parseConfig(path: string, text: string | undefined): Record<string, unknown> {
@@ -171,18 +178,23 @@ const tomlString = (s: string) => JSON.stringify(s).replace(/\u007f/g, '\\u007f'
 
 const tomlKey = (k: string) => /^[A-Za-z0-9_-]+$/.test(k) ? k : tomlString(k)
 
-function tableText(name: string, entry: CodexMcpEntry): string {
+const tomlValue = (v: unknown): string => Array.isArray(v) ? `[${v.map(x => tomlString(String(x))).join(', ')}]` : tomlString(String(v))
+
+/** Strings and string arrays as keys, string maps as sub-tables after them. */
+function tableText(name: string, entry: Record<string, unknown>): string {
   const lines = [`[mcp_servers.${tomlKey(name)}]`]
-  if ('url' in entry) {
-    lines.push(`url = ${tomlString(entry.url)}`)
-    if (entry.bearer_token_env_var) lines.push(`bearer_token_env_var = ${tomlString(entry.bearer_token_env_var)}`)
-  } else {
-    lines.push(`command = ${tomlString(entry.command)}`)
-    if (entry.args) lines.push(`args = [${entry.args.map(tomlString).join(', ')}]`)
-    if (entry.env && Object.keys(entry.env).length) {
-      lines.push('', `[mcp_servers.${tomlKey(name)}.env]`)
-      for (const [k, v] of Object.entries(entry.env)) lines.push(`${tomlKey(k)} = ${tomlString(v)}`)
+  const tables: Array<[string, Record<string, unknown>]> = []
+  for (const [key, value] of Object.entries(entry)) {
+    if (value === undefined) continue
+    if (isPlainObject(value)) {
+      if (Object.keys(value).length) tables.push([key, value])
+    } else {
+      lines.push(`${tomlKey(key)} = ${tomlValue(value)}`)
     }
+  }
+  for (const [key, table] of tables) {
+    lines.push('', `[mcp_servers.${tomlKey(name)}.${tomlKey(key)}]`)
+    for (const [k, v] of Object.entries(table)) lines.push(`${tomlKey(k)} = ${tomlValue(v)}`)
   }
   return lines.join('\n') + '\n'
 }
@@ -229,10 +241,15 @@ function others(config: Record<string, unknown>, name: string): Record<string, u
   return copy
 }
 
-/** Fallback when the binary is missing: parse-or-abort, text edit of our table only, check, back up, atomic write. */
-async function editConfigFile(ctx: CodexMcpContext, name: string, entry: CodexMcpEntry | undefined): Promise<void> {
-  const path = configPath(ctx)
-  const before = await readText(ctx)
+/**
+ * Rewrites only the `[mcp_servers.<name>]` table of the TOML file at `path` (or drops
+ * it when `entry` is undefined): parse-or-abort, text edit, check that nothing else
+ * changed, back up, atomic write. Comments and formatting elsewhere survive.
+ */
+export async function editCodexMcpTable(
+  aasHome: string, path: string, name: string, entry: Record<string, unknown> | undefined, newFileMode = 0o600,
+): Promise<void> {
+  const before = await readPath(path)
   const parsedBefore = parseConfig(path, before)
   parseServers(path, before)
   let text = withoutTable(before ?? '', name).replace(/\n*$/, '\n')
@@ -246,8 +263,13 @@ async function editConfigFile(ctx: CodexMcpContext, name: string, entry: CodexMc
       !deepEqual(others(parsedAfter, name), others(parsedBefore, name))) {
     throw cantEdit()
   }
-  await backupFile(ctx.aasHome, path)
-  await atomicWriteFile(path, text, 0o600, before === undefined)
+  await backupFile(aasHome, path)
+  await atomicWriteFile(path, text, newFileMode, before === undefined)
+}
+
+/** Fallback when the binary is missing. */
+async function editConfigFile(ctx: CodexMcpContext, name: string, entry: CodexMcpEntry | undefined): Promise<void> {
+  await editCodexMcpTable(ctx.aasHome, configPath(ctx), name, entry)
 }
 
 async function addEntry(ctx: CodexMcpContext, name: string, entry: CodexMcpEntry): Promise<void> {
