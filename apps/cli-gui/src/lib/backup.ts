@@ -4,7 +4,7 @@ import type { FriendlyError } from './errors'
 import { RpcError, errorText } from './rpc'
 
 /** RPC methods that change what the backup holds; auto-sync waits for them and runs after them. */
-export const BACKED_UP_METHODS = new Set(['install', 'installAndEnable', 'uninstall', 'enable', 'disable', 'setConfig', 'update', 'duplicateProvider'])
+export const BACKED_UP_METHODS = new Set(['install', 'installAndEnable', 'uninstall', 'enable', 'disable', 'setConfig', 'update', 'duplicateProvider', 'batch'])
 
 export interface AutoTiming {
   /** Quiet time after the last local change before backing up. */

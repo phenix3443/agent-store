@@ -12,7 +12,7 @@ import { Button } from '../ui/button'
 import { Banner } from '../ui/states'
 import { ErrorDetails, Steps } from './parts'
 
-export type UninstallTarget = Pick<ItemDetail, 'slug' | 'category' | 'enabledFor'> & { name: string }
+export type UninstallTarget = Pick<ItemDetail, 'slug' | 'category' | 'enabledFor' | 'replacedFor'> & { name: string }
 
 type Phase =
   | { kind: 'confirm'; item: UninstallTarget; running: boolean }
@@ -53,7 +53,14 @@ export function useUninstall(onDone: (slug: string) => void) {
     if (item.category === 'skill') {
       return [t('un.skill1').replace('{0}', `~/.agent-store/skills/${item.slug}`), ...(on.length ? [t('un.skill2').replace('{0}', names)] : [])]
     }
-    if (item.category === 'mcp') return [...(on.length ? [t('un.mcp1').replace('{0}', names)] : []), t('un.mcp2')]
+    if (item.category === 'mcp') {
+      const restored = AGENTS.filter((a) => item.replacedFor?.includes(a.id)).map((a) => a.name)
+      return [
+        ...(on.length ? [t('un.mcp1').replace('{0}', names)] : []),
+        ...(restored.length ? [t('takeover.unRestore').replace('{0}', joinNames(restored, locale))] : []),
+        t('un.mcp2'),
+      ]
+    }
     return [t('un.prov1'), ...(on.length ? [t('un.prov2').replace('{0}', names)] : [])]
   }
 

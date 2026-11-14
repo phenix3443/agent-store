@@ -334,7 +334,102 @@ shot 27-project-trusted-key-stored
 stop_app
 cli projects show "$PROJ"
 
-# 12. Backup and sync (#112). A local bare repository is the remote; a second home with its own
+# 12. Library gaps (#194). 在文件管理器中显示 goes to the desktop's file manager over D-Bus; a
+#     stand-in records what it was asked to show.
+REVEAL_LOG=$OUT/reveal.txt
+python3 /work/test/desktop-linux/fake-filemanager.py "$REVEAL_LOG" >"$OUT/fake-filemanager.log" 2>&1 &
+sleep 2
+"$APP" >"$OUT/app-library.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+2
+sleep 15
+# From the page search: the four filter buttons, select all, the row's checkbox, then the row.
+xdotool key slash
+xdotool type --delay 60 'legacy'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab Tab Tab Return
+sleep 4
+shot 28-skill-pane-library-path
+# The row's two switches, the pane's close button and its two switches, then 在文件管理器中显示.
+xdotool key Tab Tab Tab Tab Tab Tab Return
+sleep 3
+shot 28b-skill-revealed
+check "在文件管理器中显示 handed the skill's library folder to the file manager" 'grep -q "^items file://$LIB/legacy-skill$" "$REVEAL_LOG"'
+
+# Select both skills, then 停用 › Codex for all of them in one batch.
+xdotool key Escape
+sleep 1
+xdotool key slash ctrl+a BackSpace
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+shot 29-bulk-bar
+xdotool key Tab Tab Return
+sleep 1
+xdotool key Down Down Return
+sleep 12
+shot 29b-bulk-disable-results
+check "bulk 停用 › Codex removed the Codex link and kept Claude's" '[ ! -e "$HOME/.codex/skills/legacy-skill" ] && links_to "$HOME/.claude/skills/legacy-skill" "$LIB/legacy-skill"'
+xdotool key Escape
+sleep 1
+stop_app
+
+# 替换现有条目: Claude Code already has its own entry under context7's name. Taking it over needs
+# the claude CLI, which tries the restore in a scratch config first.
+CLAUDE_CLI=/opt/claude-cli/bin/claude
+CTX=$(printf '[]\n' | "$SIDECAR" __rpc list - | python3 -c 'import json,sys; print(next(e["slug"] for e in json.load(sys.stdin)["data"] if e.get("resourceId") == sys.argv[1]))' "$NPM_MCP_ID")
+cli uninstall "$CTX"
+"$CLAUDE_CLI" mcp add-json --scope user "$CTX" '{"type":"stdio","command":"echo","args":["mine"]}' >>"$OUT/cli.txt" 2>&1
+check "the user's own context7 entry is in ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\")" "$HOME/.claude.json" "$CTX"'
+export AS_CLAUDE_BIN=$CLAUDE_CLI CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+install_link "$NPM_MCP_ID"
+confirm 25
+shot 30-takeover-conflict
+# Focus is on 跳过 Claude Code; the next button is 替换现有条目.
+xdotool key Tab Return
+sleep 30
+shot 31-takeover-done
+check "替换现有条目 saved the user's entry in targets.json" 'python3 -c "import json,sys; p=json.load(open(sys.argv[1]))[\"claude\"][\"previous\"]; sys.exit(p[\"command\"] != \"echo\")" "$HOME/.agent-store/mcps/$CTX/targets.json"'
+check "替换现有条目 wrote Agent Store's entry in its place" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(\"@upstash/context7-mcp\" not in json.dumps(e))" "$HOME/.claude.json" "$CTX"'
+stop_app
+
+# Bulk 卸载 on the MCP page: confirmed, then the entry it replaced is written back.
+"$APP" >"$OUT/app-bulk-uninstall.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+xdotool key ctrl+3
+sleep 20
+xdotool key slash
+xdotool type --delay 60 'context7'
+sleep 2
+xdotool key Tab Tab Tab Tab Tab space
+sleep 1
+xdotool key Tab Tab Tab Return
+sleep 2
+shot 32-bulk-uninstall-confirm
+# The confirmation opens on 取消; 卸载 is next.
+xdotool key Tab Return
+sleep 25
+shot 32b-bulk-uninstall-results
+check "bulk 卸载 wrote the user's own entry back to ~/.claude.json" 'python3 -c "import json,sys; e=json.load(open(sys.argv[1]))[\"mcpServers\"][sys.argv[2]]; sys.exit(e[\"command\"] != \"echo\" or e[\"args\"] != [\"mine\"])" "$HOME/.claude.json" "$CTX"'
+check "bulk 卸载 removed context7 from the library" '[ ! -e "$HOME/.agent-store/mcps/$CTX" ]'
+stop_app
+unset AS_CLAUDE_BIN CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+
+# A project folder that is gone: the page shows what it last read there, read-only.
+check "the project page remembered what it last read" '[ -n "$(find "$XDG_DATA_HOME" -path "*agent-store-cli/project-snapshots.json" 2>/dev/null)" ]'
+mv "$PROJ" "$PROJ.moved"
+"$APP" >"$OUT/app-project-missing.log" 2>&1 &
+sleep "$SETTLE"
+point_at_window
+shot 33-sidebar-project-missing
+open_project
+shot 33b-project-missing-last-read
+stop_app
+mv "$PROJ.moved" "$PROJ"
+
+# 13. Backup and sync (#112). A local bare repository is the remote; a second home with its own
 #     ~/.agent-store plays the other device through aas. Device A is the window: connect, back up,
 #     pull what B pushed, resolve a conflict both ways, restore the snapshot taken before that
 #     choice, a secret that stops the backup, and disconnect. The remote must never hold the
@@ -357,21 +452,21 @@ cli_b() { echo "\$ (laptop-b) aas $*" >>"$OUT/cli.txt"; HOME=$HOME_B "$SIDECAR" 
 "$APP" >"$OUT/app-backup-1.log" 2>&1 &
 sleep "$SETTLE"
 backup_page
-shot 28-backup-not-connected
+shot 34-backup-not-connected
 # From the tab: the panel, then 连接仓库…; the dialog focuses the URL field.
 xdotool key Tab Tab Return
 sleep 2
 xdotool type --delay 30 "$REMOTE"
 xdotool key Tab Tab
 xdotool type --delay 60 'desk-a'
-shot 29-backup-connect-form
+shot 35-backup-connect-form
 xdotool key Return
 sleep 15
-shot 30-backup-connected
+shot 36-backup-connected
 # The connected step focuses 立即备份.
 xdotool key Return
 sleep 30
-shot 31-backup-first-sync
+shot 37-backup-first-sync
 stop_app
 check "connect wrote this device's connection" 'grep -q desk-a "$HOME/.agent-store/backup/connection.json"'
 check "the first backup pushed a commit by desk-a" '[ "$(git --git-dir="$REMOTE" log -1 --format=%an main 2>/dev/null)" = desk-a ]'
@@ -388,7 +483,7 @@ sleep "$SETTLE"
 point_at_window
 palette 'backup-pull'
 backup_page
-shot 32-backup-pulled
+shot 38-backup-pulled
 stop_app
 check "the pull applied laptop-b's change: no Claude link for the skill" '[ ! -e "$HOME/.claude/skills/find-skills" ]'
 
@@ -401,18 +496,18 @@ sleep "$SETTLE"
 point_at_window
 palette 'backup-now'
 backup_page
-shot 33-backup-conflict
+shot 39-backup-conflict
 # Panel, 拉取, 立即备份, the auto-sync switch, 断开…, then the conflict's 处理….
 xdotool key Tab Tab Tab Tab Tab Tab Return
 sleep 2
-shot 34-backup-resolve-dialog
+shot 40-backup-resolve-dialog
 # The first choice has focus; arrows move to 两份都保留. Then 取消, 确定.
 xdotool key Down Down
 sleep 1
-shot 34b-backup-resolve-both
+shot 40b-backup-resolve-both
 xdotool key Tab Tab Return
 sleep 25
-shot 35-backup-resolved
+shot 41-backup-resolved
 check "kept both: the remote version is installed as legacy-skill-laptop-b" '[ -f "$LIB/legacy-skill-laptop-b/SKILL.md" ] && grep -q "Edited on laptop-b" "$LIB/legacy-skill-laptop-b/SKILL.md"'
 check "kept both: this machine's version stays" 'grep -q "Edited on desk-a" "$LIB/legacy-skill/SKILL.md"'
 check "kept both: the copy is enabled for no agent" '[ ! -e "$HOME/.claude/skills/legacy-skill-laptop-b" ] && [ ! -e "$HOME/.codex/skills/legacy-skill-laptop-b" ]'
@@ -421,14 +516,14 @@ to_top
 settings_tab 3 6
 xdotool key Tab Tab Tab Tab Tab Tab Return
 sleep 2
-shot 36-backup-restore-confirm
+shot 42-backup-restore-confirm
 xdotool key Tab Return
 sleep 25
-shot 37-backup-restored
+shot 43-backup-restored
 check "restoring the snapshot undid the choice" '[ ! -e "$LIB/legacy-skill-laptop-b" ]'
 xdotool click --repeat 15 5
 sleep 1
-shot 38-backup-snapshots-history
+shot 44-backup-snapshots-history
 stop_app
 
 # A key pasted into a skill stops the backup before anything is written; the page names the file.
@@ -439,7 +534,7 @@ sleep "$SETTLE"
 point_at_window
 palette 'backup-now' 20
 backup_page
-shot 39-backup-secret-found
+shot 45-backup-secret-found
 check "the found key never reached the remote" '! remote_has "$GH_FAKE"'
 rm -f "$LIB/legacy-skill/leaked.md"
 # 断开…: panel, 拉取, 立即备份, the switch, 断开…; the dialog focuses 取消.
@@ -447,10 +542,10 @@ to_top
 settings_tab 3 8
 xdotool key Tab Tab Tab Tab Tab Return
 sleep 2
-shot 40-backup-disconnect-confirm
+shot 46-backup-disconnect-confirm
 xdotool key Tab Return
 sleep 10
-shot 41-backup-disconnected
+shot 47-backup-disconnected
 stop_app
 check "disconnect removed only this machine's backup folder" '[ ! -e "$HOME/.agent-store/backup" ] && git --git-dir="$REMOTE" rev-parse -q --verify main >/dev/null'
 check "the remote never held the marker key, the bearer token or the project key" '! remote_has "$MARK|test-token|tok-project"'

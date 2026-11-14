@@ -255,7 +255,7 @@ Settings › Backup & sync (`apps/cli-gui/src/components/backup/`) covers connec
 existing one), status, conflicts, missing keys, snapshots, history and disconnecting. Automatic sync runs in the client,
 since the CLI has no resident process:
 
-- after a change made through the client (install, enable, config, update…) has been quiet for about 2 minutes, it backs up;
+- after a change made through the client (install, enable, config, update, bulk actions…) has been quiet for about 2 minutes, it backs up;
 - every 10 minutes it checks the remote: local changes are backed up, a remote ahead is pulled;
 - it starts after the first sync the user runs, never before, and can be switched off;
 - it waits while one of the client's own changes is still running, and queues every backup call so the client never races

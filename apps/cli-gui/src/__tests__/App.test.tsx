@@ -20,6 +20,7 @@ function mockAllRpcs() {
     if (method === 'getRecentRequests') return []
     if (method === 'checkUpdates') return []
     if (method === 'listProjects') return [{ id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true }]
+    if (method === 'projectSummaries') return [{ id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true, skills: 2, mcps: 1, installed: [] }]
     if (method === 'getProject') return { id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true, codexTrusted: true, skills: [], mcps: [], env: [] }
     if (method === 'getBackupStatus') return { connected: false, localChanges: [], remoteAhead: null, conflicts: [], missingSecrets: [], failed: [], localOnly: [], notRestorable: [], excludedFiles: [], secretFindings: [] }
     if (method === 'getEntitlements') return { plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }
@@ -133,4 +134,16 @@ test('the palette finds a project by name and has 添加项目', async () => {
   fireEvent.change(within(dialog).getByRole('combobox'), { target: { value: 'demo' } })
   fireEvent.click(await within(dialog).findByText('demo'))
   expect(await screen.findByRole('heading', { name: 'demo' })).toBeInTheDocument()
+})
+
+test('each project in the sidebar shows how many skills and MCP servers its agents use there', async () => {
+  // A wide window: at happy-dom's default 1024px the sidebar is the icon-only one, without project rows.
+  spyOn(window, 'matchMedia').mockImplementation(((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia)
+  mockAllRpcs()
+  render(<App />)
+  const row = await nav().findByRole('button', { name: /demo/ })
+  expect(await within(row).findByText('3 项')).toBeInTheDocument()
 })

@@ -59,6 +59,7 @@ function ActivityBody() {
 export function ShellDialogs() {
   const t = useT()
   const { shellDialog, setShellDialog } = useAppState()
+  const log = useTerminalLog()
   const close = (open: boolean) => !open && setShellDialog(null)
   return (
     <>
@@ -83,6 +84,12 @@ export function ShellDialogs() {
             <ActivityBody />
           </DialogBody>
           <DialogFooter>
+            {log.lines.length > 0 && (
+              <>
+                <Button onClick={log.clear}>{t('actlog.clear')}</Button>
+                <span className="flex-1" />
+              </>
+            )}
             <DialogClose asChild>
               <Button>{t('ui.close')}</Button>
             </DialogClose>

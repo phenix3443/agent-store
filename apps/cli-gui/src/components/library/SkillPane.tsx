@@ -5,6 +5,7 @@ import { KindLabel } from '../ui/badge'
 import { AgentList, AgentSwitch, CodeLine, DetailPane, FailureBanner, PaneHead, Section } from './parts'
 import { DangerSection, VersionSection } from './common'
 import type { TargetToggle } from './useTargetToggle'
+import { RevealButton } from '../ui/reveal'
 
 export function SkillPane({
   row,
@@ -22,7 +23,7 @@ export function SkillPane({
   updating: boolean
 }) {
   const t = useT()
-  const path = `~/.agent-store/skills/${row.slug}`
+  const path = row.dir ?? `~/.agent-store/skills/${row.slug}`
   const failure = toggle.failure?.slug === row.slug ? toggle.failure : null
 
   return (
@@ -66,7 +67,7 @@ export function SkillPane({
       </Section>
 
       <Section title={t('sec.libPath')}>
-        <CodeLine text={path} />
+        <CodeLine text={path} extra={row.dir ? <RevealButton path={row.dir} label={row.name} iconOnly /> : undefined} />
         <p className="mt-1.5 text-[11.5px] text-fg-3">{t('lib.pathHint')}</p>
       </Section>
 
