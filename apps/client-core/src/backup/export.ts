@@ -121,6 +121,14 @@ export async function exportLocal(paths: Required<Paths>, dir: string, options: 
         throw new BackupExportError(key, `its manifest.json does not parse (${(e as Error).message})`)
       })
       if (!manifest) throw new BackupExportError(key, `${join(source, 'manifest.json')} is missing`)
+      if ((manifest as { localEntries?: unknown }).localEntries) {
+        item.localOnly = 'imported-mcp'
+        result.localOnly.push({ key, category: entry.category, slug: entry.slug, reason: 'imported-mcp' })
+        await writeFile(join(root, 'content', 'item.json'), stableJson(item))
+        await writeFile(join(root, 'state.json'), stableJson(stateOf(entry, options.wanted)))
+        result.keys.push(key)
+        continue
+      }
       const config = (await readJsonFile(join(source, 'config.json')).catch(() => undefined) ?? {}) as Record<string, unknown>
       const { shared, secret } = splitSecrets(config, (manifest as { configSchema?: unknown }).configSchema, entry.category)
       for (const [k, v] of Object.entries(secret)) {

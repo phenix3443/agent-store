@@ -162,10 +162,10 @@ export async function applyItem(ctx: ApplyContext, root: string, key: string, pa
   }
   const item = await readItemFile(root, key)
   const state = await readStateFile(root, key)
-  if (item.localOnly === 'too-large' && !local) return { ...outcome, notRestorable: true }
+  if (item.localOnly && !local) return { ...outcome, notRestorable: true }
 
   let contentWritten = false
-  if ((!local || parts.content) && item.localOnly !== 'too-large') {
+  if ((!local || parts.content) && !item.localOnly) {
     if (category === 'skill') {
       await writeSkillLibrary(ctx.paths.aasHome, slug, filesDir(root, key))
       await registerSkill(ctx.paths.aasHome, slug, item, local)
@@ -210,7 +210,7 @@ export async function applyItem(ctx: ApplyContext, root: string, key: string, pa
 /** Installs the version of `key` in `root` under `newSlug`, not enabled anywhere. */
 export async function installCopy(ctx: ApplyContext, root: string, key: string, newSlug: string): Promise<void> {
   const item = await readItemFile(root, key)
-  if (item.localOnly === 'too-large') throw new BackupApplyError(`${key} is too large to be in the backup; there is no remote copy to keep`)
+  if (item.localOnly) throw new BackupApplyError(`${key} is kept on its own device only (${item.localOnly}); there is no remote copy to keep`)
   if (item.category === 'skill') {
     await writeSkillLibrary(ctx.paths.aasHome, newSlug, filesDir(root, key), m => ({
       ...m, slug: newSlug, runtimeNames: { ...m.runtimeNames, claude: newSlug }, manifest: { ...m.manifest, slug: newSlug },

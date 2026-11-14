@@ -48,7 +48,8 @@ export interface BackupFailure extends BackupItemRef {
 }
 
 export interface BackupLocalOnly extends BackupItemRef {
-  reason: 'too-large'
+  /** `imported-mcp`: an MCP entry taken over by `aas import`; it holds the user's own values, secrets included. */
+  reason: 'too-large' | 'imported-mcp'
   bytes?: number
 }
 

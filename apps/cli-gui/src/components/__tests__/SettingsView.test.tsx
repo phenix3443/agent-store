@@ -102,16 +102,32 @@ test('General switches the language, the target agent, and opens shortcuts and t
   localStorage.setItem('as-locale', 'zh')
 })
 
-test('Agents lists Claude Code and Codex with their paths, and runs doctor', async () => {
+test('Agents shows what was detected, the import entry, and runs doctor', async () => {
   localStorage.setItem('as-locale', 'zh')
-  const calls = renderView((method) =>
-    method === 'doctor' ? [{ level: 'warn', code: 'mcp-shadowed', slug: 'ctx', message: 'project scope overrides it' }] : undefined
-  )
+  const calls = renderView((method) => {
+    if (method === 'doctor') return [{ level: 'warn', code: 'mcp-shadowed', slug: 'ctx', message: 'project scope overrides it' }]
+    if (method === 'detectAgents')
+      return [
+        { agent: 'claude', binary: '/usr/bin/claude', version: '2.1.80 (Claude Code)', configDir: '/h/.claude', configDirExists: true, mcpConfigPath: '/h/.claude.json', mcpConfigExists: true, detected: true },
+        { agent: 'codex', binary: null, version: null, configDir: '/h/.codex', configDirExists: true, mcpConfigPath: '/h/.codex/config.toml', mcpConfigExists: true, detected: true },
+      ]
+    if (method === 'listImports') return [{ importId: 'imp-1', createdAt: '2026-11-14T08:00:00Z', state: 'applied', items: [{ kind: 'skill', id: 'skill:a', slug: 'a', agents: ['claude'], paths: [] }] }]
+    if (method === 'importUndo') return { importId: 'imp-1', items: [] }
+    return undefined
+  })
   openTab('Agent')
   expect(screen.getByText('Claude Code')).toBeInTheDocument()
-  expect(screen.getByText('~/.codex/config.toml')).toBeInTheDocument()
+  expect(await screen.findByText('2.1.80 (Claude Code)')).toBeInTheDocument()
+  expect(screen.getAllByText('已检测到')).toHaveLength(2)
+  expect(screen.getByText('没有找到 codex 命令：MCP 配置改为直接写入 /h/.codex/config.toml，不能接管同名条目。')).toBeInTheDocument()
   expect(screen.getByText('CLAUDE_CONFIG_DIR')).toBeInTheDocument()
-  expect(screen.queryByText(/已检测到|未检测到/)).toBeNull()
+
+  fireEvent.click(screen.getByRole('button', { name: '查找' }))
+  expect(screen.getByTestId('probe').textContent).toBe('claude:import:')
+
+  fireEvent.click(await screen.findByRole('button', { name: '撤销' }))
+  expect(await screen.findByText('已撤销，文件恢复到导入前的状态')).toBeInTheDocument()
+  expect(calls.find(([m]) => m === 'importUndo')![1]).toEqual(['imp-1', {}])
 
   fireEvent.click(screen.getByRole('button', { name: '开始检查' }))
   expect(await screen.findByText('发现 0 个错误、1 个提醒')).toBeInTheDocument()

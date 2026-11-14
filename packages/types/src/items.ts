@@ -65,6 +65,13 @@ interface BaseMCPItem extends BaseItem {
    * without it only the url is templated.
    */
   templated?: boolean
+  /**
+   * An entry taken over by `aas import`: each agent's entry exactly as the user had it, written back
+   * as is instead of being built from `configSchema`.
+   */
+  localEntries?: Partial<Record<ToolTarget, unknown>>
+  /** Name of the entry in the agent configs, when it differs from `slug`. */
+  entryName?: string
 }
 
 export interface StdioMCPItem extends BaseMCPItem {

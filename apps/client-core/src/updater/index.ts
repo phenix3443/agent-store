@@ -1,5 +1,6 @@
 import type { RegistryJson, UpdateAvailable } from '@as/types'
 import type { Catalog, CatalogItem } from '../catalog'
+import { isLocalEntry } from '../registry/index'
 
 /** What an installed entry updates from: its catalog id, or its slug for installs from before /api/resources. */
 export function latestFor(catalog: Catalog, entry: RegistryJson['installed'][number]): Promise<CatalogItem> {
@@ -17,8 +18,8 @@ export async function checkUpdates(
 
   const updates: UpdateAvailable[] = []
   for (const entry of entries) {
-    // Duplicated providers have no catalog entry of their own.
-    if (entry.parentSlug) continue
+    // Duplicated providers and imported local items have no catalog entry of their own.
+    if (entry.parentSlug || isLocalEntry(entry)) continue
     let latest: CatalogItem
     try {
       latest = await latestFor(catalog, entry)

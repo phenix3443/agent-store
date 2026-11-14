@@ -11,6 +11,9 @@ import type {
   BackupConflictChoice, BackupConnectOptions, BackupConnectResult, BackupHistoryEntry, BackupResolveResult,
   BackupRestoreResult, BackupSnapshot, BackupStatus, BackupSyncResult,
 } from './backup'
+import type {
+  AgentDetection, ImportApplyResult, ImportRecordSummary, ImportScan, ImportScanOptions, ImportUndoOptions, ImportUndoResult,
+} from './imports'
 
 /** The canonical union for supported tool targets */
 export type ToolTarget = 'claude' | 'codex'
@@ -195,6 +198,8 @@ export interface InstalledItem {
   resourceId?: string
   /** Skills: one record per tool the skill is deployed to. */
   deployments?: Partial<Record<ToolTarget, SkillDeployment>>
+  /** Taken over from the user's own files by `aas import`; without `resourceId` it is a local item with no catalog entry. */
+  imported?: { importId: string; at: string }
 }
 
 /**
@@ -215,6 +220,7 @@ export interface ItemDetail {
   parentSlug?: string
   resourceId?: string
   deployments?: Partial<Record<ToolTarget, SkillDeployment>>
+  imported?: { importId: string; at: string }
   // Store metadata
   name: string
   description: string
@@ -430,4 +436,13 @@ export interface Engine {
   listBackupHistory(options?: { limit?: number }): Promise<BackupHistoryEntry[]>
   /** Forgets the connection, local snapshots and the stored token on this device; the remote is left as it is. */
   disconnectBackup(): Promise<void>
+  /** Whether each agent's CLI and config directory are on this machine. Read-only. */
+  detectAgents(): Promise<AgentDetection[]>
+  /** The user's own skills and MCP entries Agent Store does not manage. Read-only; secrets left out. */
+  scanImports(options?: ImportScanOptions): Promise<ImportScan>
+  /** Takes over the candidates with these ids (from scanImports), after backing up what it moves. */
+  applyImport(ids: string[], options?: ImportScanOptions): Promise<ImportApplyResult>
+  /** Puts an import (the latest by default) back as it was; refuses, changing nothing, if that would destroy something. */
+  undoImport(importId?: string, options?: ImportUndoOptions): Promise<ImportUndoResult>
+  listImports(): Promise<ImportRecordSummary[]>
 }

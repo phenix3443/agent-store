@@ -18,7 +18,8 @@ import { runDoctorCommand } from './commands/doctor'
 import { runMigrateCommand } from './commands/migrate'
 import { runProjects } from './commands/projects'
 import { runBackup } from './commands/backup'
-import { runRelayDaemon, startLocalApi, readRegistry, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome } from '@as/client-core'
+import { runRelayDaemon, startLocalApi, readRegistry, resolvePaths, runDoctor, runMigrate, refreshRelayTakeover, migrateHome, legacyAasHome, detectAgents } from '@as/client-core'
+import { runImport } from './commands/import'
 import { migrateHomeOnStartup, refreshRelayOnStartup } from './startup'
 import { ensureRelayRunning } from './commands/relay'
 
@@ -37,6 +38,8 @@ Commands:
                                    Project-level skills and MCP servers (aas projects for help)
   backup <connect|status|now|pull|conflicts|resolve|snapshots|restore|log|disconnect>
                                    Back up to your own Git repository and sync devices (aas backup for help)
+  import <scan|apply|undo|list>    Take over your own skills and MCP servers, and put them back
+                                   (aas import for help)
   enable <slug> --for <tool> [--replace] [--force]   Enable for claude or codex
   disable <slug> --for <tool> [--force]              Disable for claude or codex
   config <slug>                    Configure an item's settings
@@ -46,7 +49,7 @@ Commands:
   update [slug]                    Update installed items
   migrate                          Convert skills installed by older versions (backs up first)
   info <id|slug>                   Show an installed item, or a catalog entry
-  doctor                           Compare the registry with what Claude Code and Codex actually see
+  doctor                           Which agents are installed, and the registry against what they actually see
   list [--for <tool>]              List installed items`
 
 async function main(): Promise<void> {
@@ -93,7 +96,8 @@ async function main(): Promise<void> {
     case 'migrate':   process.exitCode = await runMigrateCommand(() => runMigrate(resolvePaths())); break
     case 'projects':  process.exitCode = await runProjects(engine, rest); break
     case 'backup':    process.exitCode = await runBackup(engine, rest); break
-    case 'doctor':    process.exitCode = await runDoctorCommand(() => runDoctor(resolvePaths())); break
+    case 'import':    process.exitCode = await runImport(engine, rest); break
+    case 'doctor':    process.exitCode = await runDoctorCommand(() => runDoctor(resolvePaths(), { agents: true }), console.log, () => detectAgents(resolvePaths())); break
     case '__relay-daemon': {
       const paths = resolvePaths()
       await runRelayDaemon(paths.aasHome)

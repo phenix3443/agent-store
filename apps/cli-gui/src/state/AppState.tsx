@@ -4,7 +4,7 @@ export type AgentApp = 'claude' | 'codex'
 export type NavView = 'browse' | 'overview' | 'settings' | 'projects' | 'project'
 export type CategoryFilter = 'all' | 'provider' | 'skill' | 'mcp'
 export type SettingsTab = 'general' | 'agents' | 'data' | 'account' | 'cli' | 'about'
-export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | 'welcome' | null
+export type ShellDialog = 'shortcuts' | 'activity' | 'requestLog' | 'welcome' | 'import' | null
 export type DiscoverKind = 'all' | 'skill' | 'mcp' | 'provider'
 
 interface AppStateValue {

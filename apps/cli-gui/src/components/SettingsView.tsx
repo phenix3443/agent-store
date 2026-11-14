@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Copy, ExternalLink, Github, Keyboard, RefreshCw, Stethoscope } from 'lucide-react'
-import type { InstalledItem, UpdateAvailable } from '@as/types'
+import { Copy, ExternalLink, Github, Keyboard, RefreshCw, Stethoscope, Undo2 } from 'lucide-react'
+import type { AgentDetection, ImportRecordSummary, InstalledItem, UpdateAvailable } from '@as/types'
 import { useAppState, type AgentApp, type SettingsTab } from '../state/AppState'
 import { useAuth } from '../state/Auth'
 import { useEntitlement, type ProFeature } from '../state/Entitlement'
@@ -11,7 +11,7 @@ import { openExternal } from '../lib/openExternal'
 import { getStoreBaseUrl } from '../lib/storeAuth'
 import { useAccountActions } from '../lib/useAccountActions'
 import { AGENTS } from '../lib/agents'
-import { AgentMark } from './AgentMark'
+import { AgentRows } from './WelcomeDialog'
 import { CategoryIcon } from './CategoryIcon'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -38,6 +38,7 @@ const CLI_COMMANDS: [string, string][] = [
   ['install <id|slug> [--target <agent>] [--project <id|dir>] [--force]', 'install'],
   ['uninstall <slug> [--project <id|dir> [--target <agent>]] [--force]', 'uninstall'],
   ['projects <list|add|remove|move|show|set-env|unset-env|env|exec>', 'projects'],
+  ['import <scan|apply|undo|list>', 'import'],
   ['enable <slug> --for <agent> [--replace] [--force]', 'enable'],
   ['disable <slug> --for <agent> [--force]', 'disable'],
   ['config <slug>', 'config'],
@@ -75,13 +76,6 @@ function Heading({ children }: { children: ReactNode }) {
 
 function Mono({ children }: { children: ReactNode }) {
   return <code className="font-mono text-[11.5px] text-fg-2">{children}</code>
-}
-
-function fill(template: string, values: ReactNode[]): ReactNode[] {
-  return template.split(/(\{\d\})/).map((part, i) => {
-    const m = /^\{(\d)\}$/.exec(part)
-    return m ? <Mono key={i}>{values[Number(m[1])]}</Mono> : part
-  })
 }
 
 function GeneralTab() {
@@ -152,12 +146,85 @@ function DoctorResult({ findings }: { findings: DoctorFinding[] }) {
   )
 }
 
+function ImportRows() {
+  const { t } = useI18n()
+  const { setShellDialog, shellDialog, installedVersion, bumpInstalledVersion } = useAppState()
+  const [last, setLast] = useState<ImportRecordSummary | null>(null)
+  const [state, setState] = useState<{ status: 'idle' | 'running' | 'done' | 'failed'; error?: string }>({ status: 'idle' })
+
+  useEffect(() => {
+    if (shellDialog) return
+    callRpc<ImportRecordSummary[]>('listImports').then(
+      (records) => setLast(records.filter((r) => r.state === 'applied').pop() ?? null),
+      () => setLast(null)
+    )
+  }, [shellDialog, installedVersion])
+
+  async function undo() {
+    if (!last) return
+    setState({ status: 'running' })
+    try {
+      await callRpc('importUndo', [last.importId, {}])
+      setState({ status: 'done' })
+      setLast(null)
+      bumpInstalledVersion()
+    } catch (err) {
+      setState({ status: 'failed', error: errorText(err) })
+    }
+  }
+
+  return (
+    <>
+      <RowGroup>
+        <Row title={t('onboard.settings.importTitle')} sub={t('onboard.settings.importSub')}>
+          <Button size="sm" onClick={() => setShellDialog('import')}>
+            {t('onboard.settings.importBtn')}
+          </Button>
+        </Row>
+        {last && (
+          <Row
+            title={t('onboard.settings.lastImport')}
+            sub={t('onboard.settings.lastImportSub').replace('{0}', last.createdAt.slice(0, 10)).replace('{1}', String(last.items.length))}
+          >
+            <Button size="sm" onClick={() => void undo()} disabled={state.status === 'running'}>
+              {state.status === 'running' ? <Spinner className="h-3.5 w-3.5" /> : <Undo2 />}
+              {t('onboard.settings.undo')}
+            </Button>
+          </Row>
+        )}
+      </RowGroup>
+      {state.status !== 'idle' && state.status !== 'running' && (
+        <div className="mb-4">
+          {state.status === 'done' ? (
+            <Banner tone="info" title={t('onboard.done.undone')} />
+          ) : (
+            <Banner tone="error" title={t('onboard.done.undoFailed')}>
+              {state.error}
+            </Banner>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
 function AgentsTab() {
   const { t } = useI18n()
+  const [agents, setAgents] = useState<{ status: 'loading' } | { status: 'done'; data: AgentDetection[] } | { status: 'failed'; error: string }>({ status: 'loading' })
   const [state, setState] = useState<{ status: 'idle' | 'running' | 'done' | 'failed'; findings: DoctorFinding[]; error?: string }>({
     status: 'idle',
     findings: [],
   })
+
+  function detect() {
+    setAgents({ status: 'loading' })
+    callRpc<AgentDetection[]>('detectAgents').then(
+      (data) => setAgents({ status: 'done', data }),
+      (err) => setAgents({ status: 'failed', error: errorText(err) })
+    )
+  }
+
+  useEffect(detect, [])
 
   async function runDoctor() {
     setState({ status: 'running', findings: [] })
@@ -170,31 +237,22 @@ function AgentsTab() {
 
   return (
     <>
-      <Heading>{t('settings.agents.heading')}</Heading>
-      <RowGroup>
-        {AGENTS.map((a) => (
-          <Row
-            key={a.id}
-            title={
-              <>
-                <AgentMark mark={a.mark} />
-                {a.name}
-              </>
-            }
-            sub={fill(t('settings.agents.paths'), [a.skills, a.mcp, a.env])}
-          />
-        ))}
-        <Row
-          muted
-          title={
-            <>
-              <AgentMark mark="+" soon />
-              {t('settings.agents.more')}
-            </>
-          }
-          sub={t('settings.agents.moreSub')}
-        />
-      </RowGroup>
+      <div className="flex items-center gap-2">
+        <Heading>{t('settings.agents.heading')}</Heading>
+        <Button size="sm" variant="ghost" className="mb-2 ml-auto" onClick={detect}>
+          <RefreshCw />
+          {t('onboard.settings.detect')}
+        </Button>
+      </div>
+      <AgentRows agents={agents} showEnv />
+      {agents.status === 'failed' && (
+        <div className="mb-4">
+          <Banner tone="error" title={t('onboard.agents.failed')}>
+            {agents.error}
+          </Banner>
+        </div>
+      )}
+      <ImportRows />
       <RowGroup>
         <Row title={t('settings.agents.doctor')} sub={t('settings.agents.doctorSub')}>
           <Button size="sm" onClick={() => void runDoctor()} disabled={state.status === 'running'}>
