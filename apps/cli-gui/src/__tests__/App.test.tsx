@@ -21,6 +21,7 @@ function mockAllRpcs() {
     if (method === 'checkUpdates') return []
     if (method === 'listProjects') return [{ id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true }]
     if (method === 'getProject') return { id: 'p1', path: '/w/demo', name: 'demo', addedAt: '', exists: true, codexTrusted: true, skills: [], mcps: [], env: [] }
+    if (method === 'getBackupStatus') return { connected: false, localChanges: [], remoteAhead: null, conflicts: [], missingSecrets: [], failed: [], localOnly: [], notRestorable: [], excludedFiles: [], secretFindings: [] }
     if (method === 'getEntitlements') return { plan: 'free', advancedUsageAnalytics: false, smartRouting: false, keyRotation: false }
     throw new Error(`unexpected RPC in smoke test: ${method}`)
   }) as typeof rpcModule.callRpc)

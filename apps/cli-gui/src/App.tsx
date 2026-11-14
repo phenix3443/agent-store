@@ -3,6 +3,7 @@ import { EntitlementProvider } from './state/Entitlement'
 import { AuthProvider } from './state/Auth'
 import { TerminalLogProvider } from './state/TerminalLog'
 import { ProjectsProvider } from './state/Projects'
+import { BackupProvider } from './state/Backup'
 import { I18nProvider } from './i18n'
 import { TitleBar } from './components/shell/TitleBar'
 import { Sidebar } from './components/shell/Sidebar'
@@ -18,6 +19,7 @@ import { InstallDialog } from './components/install/InstallDialog'
 import { ProjectsPage } from './components/projects/ProjectsPage'
 import { ProjectPage } from './components/projects/ProjectPage'
 import { ProjectDialogs } from './components/projects/ProjectDialogs'
+import { BackupDialogs } from './components/backup/BackupDialogs'
 import { useFirstRunWelcome } from './components/WelcomeDialog'
 import { Toaster } from './components/ui/toast'
 import { TooltipProvider } from './components/ui/tooltip'
@@ -53,6 +55,7 @@ function AppShell() {
       <ShellDialogs />
       <InstallDialog />
       <ProjectDialogs />
+      <BackupDialogs />
       <Toaster />
     </div>
   )
@@ -66,9 +69,11 @@ export function App() {
           <AuthProvider>
             <TerminalLogProvider>
               <ProjectsProvider>
-                <TooltipProvider delayDuration={300}>
-                  <AppShell />
-                </TooltipProvider>
+                <BackupProvider>
+                  <TooltipProvider delayDuration={300}>
+                    <AppShell />
+                  </TooltipProvider>
+                </BackupProvider>
               </ProjectsProvider>
             </TerminalLogProvider>
           </AuthProvider>

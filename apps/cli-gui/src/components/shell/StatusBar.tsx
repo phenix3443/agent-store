@@ -3,6 +3,7 @@ import { useAppState } from '../../state/AppState'
 import { useTerminalLog } from '../../state/TerminalLog'
 import { useT } from '../../i18n'
 import { cn } from '../ui/cn'
+import { BackupIndicator } from '../backup/BackupIndicator'
 import { version as appVersion } from '../../../src-tauri/tauri.conf.json'
 
 const LINE_COLOR = { default: '', green: 'text-provider', red: 'text-bad' } as const
@@ -25,6 +26,7 @@ export function StatusBar() {
           {last ? last.text : t('shell.activityNone')}
         </span>
       </button>
+      <BackupIndicator />
       {catalogOffline !== null && (
         <span className="flex items-center gap-1.5">
           <i aria-hidden className={cn('inline-block h-1.5 w-1.5 rounded-full', catalogOffline ? 'bg-warn' : 'bg-provider')} />

@@ -93,7 +93,7 @@ never the value. `status` shows the same finding.
 | `aas backup status [--fetch]` | Connection, last sync, local changes, conflicts, missing keys, failures, local-only items; `--fetch` counts remote commits not applied yet |
 | `aas backup log [--limit N]` | Backup commits with the device that made each |
 
-Sync runs only when one of these commands runs; there is no background sync.
+From the CLI, sync runs only when one of these commands runs. The desktop client can also sync on its own while it is open; see [For the desktop client](#for-the-desktop-client).
 
 ### How items are merged
 
@@ -241,11 +241,31 @@ reaches argv. Errors carry `code` (class name) and `reason`:
 | `export-failed` | an item could not be exported |
 | `apply-failed` | a remote change could not be applied |
 | `git-missing` | `git` is not on the PATH |
+| `busy` | another backup operation holds `~/.agent-store/backup.lock` |
+| `auth-failed` | git: the remote refused the credentials or SSH key (`GitError`) |
+| `host-key` | git: the SSH host key is not trusted yet (`GitError`) |
+| `not-found` | git: no such repository, or no access to it (`GitError`) |
+| `network` | git: the remote could not be reached (`GitError`) |
+
+The four `GitError` reasons are read from git's and ssh's English messages; any other git failure has no reason.
+
+### In the desktop client
+
+Settings › Backup & sync (`apps/cli-gui/src/components/backup/`) covers connecting (new backup or restore from an
+existing one), status, conflicts, missing keys, snapshots, history and disconnecting. Automatic sync runs in the client,
+since the CLI has no resident process:
+
+- after a change made through the client (install, enable, config, update…) has been quiet for about 2 minutes, it backs up;
+- every 10 minutes it checks the remote: local changes are backed up, a remote ahead is pulled;
+- it starts after the first sync the user runs, never before, and can be switched off;
+- it waits while one of the client's own changes is still running, and queues every backup call so the client never races
+  itself for the lock; when the CLI holds the lock it tries again on the next round;
+- failures back off (up to 32 times the interval) and show in the status bar, without pop-ups.
 
 ## Not done
 
-- **Automatic sync**, after changes or on a timer; the CLI has no process that stays running.
-- **First-launch choice** between starting fresh and restoring.
+- **Automatic sync from the CLI**; only the desktop client syncs on its own.
+- **First-launch choice** between starting fresh and restoring; the client's backup page has a restore entry instead.
 - **GitHub sign-in** with an automatically created private repository.
 - **Disconnecting further:** revoking authorization, deleting the remote.
 - **Registered projects** in the backup.

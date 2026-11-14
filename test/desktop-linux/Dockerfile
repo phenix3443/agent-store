@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
   && apt-get install -y --no-install-recommends nodejs \
     libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
     build-essential curl file ca-certificates \
-    xvfb xdotool imagemagick dbus-x11 xdg-utils desktop-file-utils libglib2.0-bin fonts-noto-cjk sudo unzip rpm2cpio cpio rpm \
+    xvfb xdotool imagemagick dbus-x11 xdg-utils desktop-file-utils libglib2.0-bin fonts-noto-cjk sudo unzip rpm2cpio cpio rpm git \
   && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash

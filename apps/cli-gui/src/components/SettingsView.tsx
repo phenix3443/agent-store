@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Logo } from './ui/icons'
 import { toast } from './ui/toast'
 import { version as appVersion } from '../../src-tauri/tauri.conf.json'
+import { BackupTab } from './backup/BackupTab'
 
 /** What the `doctor` RPC returns (apps/client-core/src/doctor.ts). */
 interface DoctorFinding {
@@ -31,7 +32,7 @@ interface DoctorFinding {
   message: string
 }
 
-const TABS: SettingsTab[] = ['general', 'agents', 'data', 'account', 'cli', 'about']
+const TABS: SettingsTab[] = ['general', 'agents', 'data', 'backup', 'account', 'cli', 'about']
 
 const CLI_COMMANDS: [string, string][] = [
   ['search [query] [--kind <skill|mcp|provider>]', 'search'],
@@ -508,6 +509,7 @@ export function SettingsView() {
     general: GeneralTab,
     agents: AgentsTab,
     data: DataTab,
+    backup: BackupTab,
     account: AccountTab,
     cli: CliTab,
     about: AboutTab,
@@ -522,7 +524,7 @@ export function SettingsView() {
         <TabsList aria-label={t('settings.title')} className="mb-4">
           {TABS.map((tab) => (
             <TabsTrigger key={tab} value={tab}>
-              {t(`settings.tabs.${tab}`)}
+              {tab === 'backup' ? t('bk.tab') : t(`settings.tabs.${tab}`)}
             </TabsTrigger>
           ))}
         </TabsList>

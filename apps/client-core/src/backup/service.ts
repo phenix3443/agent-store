@@ -51,6 +51,14 @@ export class BackupRemoteRefusedError extends Error {
   }
 }
 
+export class BackupBusyError extends Error {
+  readonly reason = 'busy'
+  constructor() {
+    super('Another backup operation is running; try again when it has finished')
+    this.name = 'BackupBusyError'
+  }
+}
+
 export class BackupNotFoundError extends Error {
   constructor(message: string, readonly reason: 'no-conflict' | 'no-snapshot' | 'ambiguous') {
     super(message)
@@ -157,7 +165,7 @@ export class BackupService {
         realpath: false, lockfilePath: lockPath(this.aasHome), retries: { retries: 5, minTimeout: 100, maxTimeout: 1000 },
       })
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ELOCKED') throw new Error('Another backup operation is running; try again when it has finished')
+      if ((e as NodeJS.ErrnoException).code === 'ELOCKED') throw new BackupBusyError()
       throw e
     }
     try {
