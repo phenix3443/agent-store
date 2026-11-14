@@ -1,7 +1,23 @@
-import type { AgentApp } from '../state/AppState'
+import type { ToolTarget } from '@as/types'
 
-/** Default locations from apps/client-core/src/paths.ts; each env var moves them. */
-export const AGENTS: { id: AgentApp; name: string; mark: string; skills: string; mcp: string; env: string }[] = [
-  { id: 'claude', name: 'Claude Code', mark: 'Cc', skills: '~/.claude/skills', mcp: '~/.claude.json', env: 'CLAUDE_CONFIG_DIR' },
-  { id: 'codex', name: 'Codex', mark: 'Cx', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', env: 'CODEX_HOME' },
+export interface AgentMeta {
+  id: ToolTarget
+  name: string
+  mark: string
+  /** Default locations from apps/client-core/src/paths.ts; `env` moves them. */
+  skills: string
+  mcp: string
+  mcpKey: string
+  env: string
+}
+
+export const AGENTS: AgentMeta[] = [
+  { id: 'claude', name: 'Claude Code', mark: 'Cc', skills: '~/.claude/skills', mcp: '~/.claude.json', mcpKey: 'mcpServers', env: 'CLAUDE_CONFIG_DIR' },
+  { id: 'codex', name: 'Codex', mark: 'Cx', skills: '~/.codex/skills', mcp: '~/.codex/config.toml', mcpKey: 'mcp_servers', env: 'CODEX_HOME' },
 ]
+
+export const TARGET_LABEL: Record<ToolTarget, string> = { claude: 'Claude Code', codex: 'Codex' }
+
+export function joinNames(names: string[], locale: string): string {
+  return names.join(locale === 'en' ? ', ' : '、')
+}

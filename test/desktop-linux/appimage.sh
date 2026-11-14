@@ -64,8 +64,8 @@ check "the handler runs the AppImage" '[ "$exec_line" = "Exec=\"$IMAGE\" %u" ]'
 (gio open "agent-store://install?id=$(enc "$SKILL_ID")" >>"$OUT/open.log" 2>&1 &)
 sleep "$SETTLE"
 shot 01-link-confirm
-# Focus starts on Cancel and loops, so Shift+Tab reaches Install.
-xdotool key shift+Tab Return
+# The dialog focuses Cancel; Install is the next button.
+xdotool key Tab Return
 sleep 15
 shot 02-link-installed
 stop_app

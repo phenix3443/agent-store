@@ -1,33 +1,12 @@
-import type { SelectedDetail } from './useSelectedDetail'
-import { formatVersion } from './catalog'
+import type { CatalogResourceDetail, Item, ItemDetail } from '@as/types'
 import type { TFn } from '../i18n'
 
+/** An installed entry as `info` returns it, or a catalog entry with its install preview. */
+export type SelectedDetail =
+  | (ItemDetail & { installed: true; resource?: undefined })
+  | (Item & { installed: false; resource: CatalogResourceDetail })
+
 export type Category = 'provider' | 'skill' | 'mcp'
-
-export const TYPE_META: Record<Category, { textClass: string; bgClass: string }> = {
-  provider: { textClass: 'text-provider', bgClass: 'bg-provider/10' },
-  skill: { textClass: 'text-skill', bgClass: 'bg-skill/10' },
-  mcp: { textClass: 'text-mcp', bgClass: 'bg-mcp/10' },
-}
-
-// Neutral on purpose: category colors mean category only, and a tier is not an audit result.
-export const TIER_META: Record<string, { textClass: string; bgClass: string }> = {
-  official: { textClass: 'text-fg', bgClass: 'bg-panel-2' },
-  verified: { textClass: 'text-fg-2', bgClass: 'bg-panel-2' },
-  community: { textClass: 'text-fg-3', bgClass: 'bg-panel' },
-}
-
-export type ReadmeBlock =
-  | { type: 'h'; text: string }
-  | { type: 'p'; text: string }
-  | { type: 'code'; text: string }
-  | { type: 'li'; text: string }
-
-function useCaseCopy(category: Category, t: TFn): string {
-  if (category === 'skill') return t('readme.useCaseSkill')
-  if (category === 'mcp') return t('readme.useCaseMcp')
-  return t('readme.useCaseProvider')
-}
 
 function formatStep(step: { type: string; command?: string; dest?: string }, t: TFn): string {
   if (step.type === 'script') return `script · ${step.command}`
@@ -35,7 +14,7 @@ function formatStep(step: { type: string; command?: string; dest?: string }, t: 
   return `file · ${step.dest}`
 }
 
-function requiredKeys(detail: SelectedDetail): string[] {
+export function requiredKeys(detail: SelectedDetail): string[] {
   const schema = ('configSchema' in detail ? detail.configSchema : undefined) as { required?: string[] } | undefined
   return schema?.required ?? []
 }
@@ -101,36 +80,4 @@ export function installStepsOf(detail: SelectedDetail, t: TFn): string[] {
   return 'installHook' in detail && detail.installHook.steps.length > 0
     ? detail.installHook.steps.map((s) => formatStep(s, t))
     : defaultSteps(detail, t)
-}
-
-/** `aas install <catalog id>` when the item has one, else its slug. */
-export function installCmdOf(ref: string): string {
-  return `aas install ${ref}`
-}
-
-export function installRefOf(detail: Pick<SelectedDetail, 'slug' | 'resourceId'>): string {
-  return detail.resourceId ?? detail.slug
-}
-
-/** Builds the overview tab content in section order:
- * overview → install → install steps → use cases → type-specific facts → footer lines. */
-export function buildReadme(detail: SelectedDetail, description: string, t: TFn): ReadmeBlock[] {
-  const steps = installStepsOf(detail, t)
-  const tier = detail.publisher.tier
-  const tierLabel = TIER_META[tier] ? t(`tier.${tier}`) : t('tier.community')
-  const blocks: ReadmeBlock[] = [
-    { type: 'h', text: t('readme.overview') },
-    { type: 'p', text: description },
-    { type: 'h', text: t('readme.install') },
-    { type: 'code', text: installCmdOf(installRefOf(detail)) },
-    { type: 'h', text: t('readme.steps') },
-    ...steps.map((s) => ({ type: 'li' as const, text: s })),
-    { type: 'h', text: t('readme.useCases') },
-    { type: 'p', text: useCaseCopy(detail.category, t) },
-    ...typeFacts(detail, t).map((fact) => ({ type: 'li' as const, text: fact })),
-    { type: 'li', text: `${t('readme.footType')}${t(`categories.${detail.category}`)}（${detail.category}）` },
-    { type: 'li', text: `${t('readme.footMaintainer')}${detail.publisher.name} · ${tierLabel}` },
-    ...(detail.version ? [{ type: 'li' as const, text: `${t('readme.footVersion')}${formatVersion(detail.version)}` }] : []),
-  ]
-  return blocks
 }

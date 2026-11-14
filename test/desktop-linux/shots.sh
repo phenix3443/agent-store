@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Screenshots of the real desktop window (Tauri + WebKitGTK on Xvfb, with the
 # bundled aas sidecar behind IPC) against the live test catalog, for the
-# catalog switch (#125), the skill library (#111), the window shell (#163) and the
-# welcome, usage and settings pages (#165). Each step is driven by an
+# catalog switch (#125), the skill library (#111), the window shell (#163), the Discover page,
+# install dialog and libraries (#164) and the welcome, usage and settings pages (#165). Each step is driven by an
 # agent-store:// link, the keyboard, or aas itself, and checked on disk.
 # Writes /out/NN-*.png, /out/result.txt and /out/cli.txt; exits non-zero if a
 # check fails.
@@ -25,8 +25,18 @@ stop_app() { pkill -x app; sleep 2; }
 enc() { python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"; }
 open_link() { (gio open "$1" >>"$OUT/open.log" 2>&1 &); sleep "$SETTLE"; }
 install_link() { open_link "agent-store://install?id=$(enc "$1")"; }
-# Focus starts on Cancel and loops, so Shift+Tab reaches Install.
-confirm() { xdotool key shift+Tab Return; sleep "${1:-15}"; }
+# A web link's dialog focuses Cancel; the primary button is the next one.
+confirm() { xdotool key Tab Return; sleep "${1:-15}"; }
+# The finished install focuses its primary button (查看 / 打开配置).
+# The library pages read every installed entry through the sidecar, one process per call.
+open_result() { xdotool key Return; sleep "${1:-15}"; }
+# No window manager in the container: keys go to the window under the pointer.
+point_at_window() {
+  WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
+  eval "$(xdotool getwindowgeometry --shell "$WIN")"
+  xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2))
+  xdotool windowfocus "$WIN" 2>/dev/null || true
+}
 cli() { echo "\$ aas $*" >>"$OUT/cli.txt"; "$SIDECAR" "$@" >>"$OUT/cli.txt" 2>&1; echo >>"$OUT/cli.txt"; }
 failed=0
 check() { if eval "$2"; then log "ok: $1"; else log "FAIL: $1"; failed=1; fi; }
@@ -84,17 +94,19 @@ check "another tool's skill in ~/.agents was left alone" '[ -f "$HOME/.agents/sk
 install_link "$SKILL_ID"
 shot 01-skill-confirm
 confirm
-shot 02-skill-installed-detail
+shot 02-skill-install-done
+open_result
+shot 02b-skill-library-detail
 check "skill library copy has the marker" '[ -f "$LIB/$SKILL_SLUG/.agent-store.json" ]'
 check "Claude deployment links to the library" 'links_to "$HOME/.claude/skills/find-skills" "$LIB/$SKILL_SLUG"'
 check "Codex deployment links to the library" 'links_to "$HOME/.codex/skills/find-skills" "$LIB/$SKILL_SLUG"'
 check "nothing went into the shared ~/.agents/skills" '[ ! -e "$HOME/.agents/skills/find-skills" ] && [ ! -e "$HOME/.agents/skills/$SKILL_SLUG" ]'
 
-# 3. Search in the store list (the window has no decorations and sits at 0,0):
-#    past the 204px sidebar, below the 44px title bar.
-WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
-eval "$(xdotool getwindowgeometry --shell "$WIN")"
-xdotool mousemove $((X + 204 + 150)) $((Y + 44 + 34)) click 1
+# 3. Search on Discover: `/` focuses the page's search field.
+point_at_window
+xdotool key ctrl+1
+sleep 2
+xdotool key slash
 sleep 1
 xdotool type --delay 60 'playwright'
 # Each RPC is a fresh sidecar process; the search waits for one plus the API.
@@ -108,29 +120,43 @@ check "aas disable --for codex removed only the Codex link" '[ ! -e "$HOME/.code
 install_link "$SKILL_ID"
 shot 04-already-installed
 xdotool key Tab Return
-sleep 6
+sleep 15
 shot 05-skill-detail-codex-off
 stop_app
 
 # 5. MCP from an npm package: the preview names the npx launch.
 install_link "$NPM_MCP_ID"
 shot 06-mcp-npm-confirm
+# Cancel leaves the entry selected on Discover behind the dialog.
+xdotool key Escape
+sleep 6
+shot 06b-discover-detail
+install_link "$NPM_MCP_ID"
 confirm
-shot 07-mcp-npm-after-install
+shot 07-mcp-npm-install-done
+open_result
+shot 07b-mcp-library-detail
 stop_app
 check "context7 written to Claude as npx" 'grep -q "@upstash/context7-mcp" "$HOME/.claude.json"'
 
-# 6. A remote MCP that needs a bearer token: the config page opens.
+# 6. A remote MCP that needs a bearer token: the dialog asks for it, then saves it.
 install_link "$BEARER_MCP_ID"
 shot 08-mcp-bearer-confirm
-confirm
-shot 09-mcp-bearer-config
+confirm 4
+shot 08b-mcp-bearer-fields
+xdotool type --delay 40 'test-token'
+xdotool key Return
+sleep 20
+shot 09-mcp-bearer-install-done
+open_result
+shot 09b-mcp-bearer-config
 stop_app
 
 # 7. An SSE-only remote: Claude only; Codex is refused with the reason.
 install_link "$SSE_MCP_ID"
+shot 10a-mcp-sse-confirm
 confirm
-shot 10-mcp-sse-after-install
+shot 10-mcp-sse-install-done
 stop_app
 check "SSE server written to Claude" 'grep -q "\"textarttools-mcp\"" "$HOME/.claude.json"'
 check "SSE server not written to Codex" '! grep -q "textarttools-mcp" "$HOME/.codex/config.toml" 2>/dev/null'
@@ -139,15 +165,31 @@ check "SSE server not written to Codex" '! grep -q "textarttools-mcp" "$HOME/.co
 install_link "$PROVIDER_ID"
 shot 11-provider-confirm
 confirm
+shot 12a-provider-install-done
+open_result
 shot 12-provider-config
 stop_app
 
 # 9. The installed list, opened from the 已经安装过了 notice.
 install_link "$NPM_MCP_ID"
 xdotool key Tab Return
-sleep 6
+sleep 15
 shot 13-installed-list
+# The status bar's activity button sits right after the detail pane, so once it has focus
+# Shift+Tab reaches the pane's last control, 卸载.
+eval "$(xdotool getwindowgeometry --shell "$(xdotool search --onlyvisible --name 'Agent Store' | head -1)")"
+xdotool mousemove $((X + 120)) $((Y + HEIGHT - 13)) click 1
+sleep 2
+shot 13b-activity-log
+xdotool key Escape
+sleep 1
+xdotool key shift+Tab Return
+sleep 2
+shot 13c-uninstall-confirm
+xdotool key Escape
+sleep 1
 stop_app
+check "cancelled uninstall left context7 installed" 'grep -q "@upstash/context7-mcp" "$HOME/.claude.json"'
 
 # 10. The window shell, driven by its shortcuts: sidebar counts, the command
 #     palette, the usage page on seeded relay usage, each settings tab, the
@@ -156,12 +198,17 @@ stop_app
 check "seeded relay usage" '[ -f "$HOME/.agent-store/usage.db" ]'
 "$APP" >"$OUT/app-shell.log" 2>&1 &
 sleep "$SETTLE"
-WIN=$(xdotool search --onlyvisible --name 'Agent Store' | head -1)
-eval "$(xdotool getwindowgeometry --shell "$WIN")"
-# No window manager in the container: keys go to the window under the pointer.
-xdotool mousemove $((X + WIDTH / 2)) $((Y + HEIGHT / 2))
-xdotool windowfocus "$WIN" 2>/dev/null || true
+point_at_window
 shot 14-shell-discover
+xdotool key ctrl+2
+sleep 15
+shot 14b-skills-library
+xdotool key ctrl+3
+sleep 15
+shot 14c-mcp-library
+xdotool key ctrl+4
+sleep 15
+shot 14d-providers
 xdotool key ctrl+k
 sleep 2
 xdotool type --delay 60 'find'

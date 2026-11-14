@@ -62,10 +62,10 @@ check "agent-store:// has a handler" '[ -n "$handler" ]'
 stop_app
 
 # 2. Cold start from a link: confirm dialog, then confirm with the keyboard.
-#    Focus starts on the first button and loops, so Shift+Tab reaches Install.
+#    The dialog focuses Cancel; Install is the next button.
 open_link "agent-store://install?slug=$SLUG&category=$CATEGORY"
 shot 01-cold-confirm
-xdotool key shift+Tab Return
+xdotool key Tab Return
 sleep 15
 shot 02-after-confirm
 log "skills: $(ls "$HOME/.claude/skills" 2>/dev/null | tr '\n' ' ')"
@@ -94,7 +94,7 @@ shot 06-warm-confirm
 instances=$(pgrep -xc app)
 log "instances while warm: $instances"
 check "warm link does not start a second instance" '[ "$instances" = 1 ]'
-xdotool key shift+Tab Return
+xdotool key Tab Return
 sleep 15
 shot 07-warm-after-confirm
 check "warm link installs $WARM_SLUG in the running window" 'skill_installed "$WARM_SLUG"'

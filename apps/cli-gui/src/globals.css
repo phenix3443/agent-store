@@ -39,24 +39,6 @@
   --font: 'Plus Jakarta Sans', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
   --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-
-  /* Legacy names still used by the pages #164 rebuilds; remove them with those pages. */
-  --sidebar: #0d0b16;
-  --content: var(--bg-2);
-  --border: var(--line);
-  --border-strong: var(--line-strong);
-  --text: var(--fg);
-  --text-2: var(--fg2);
-  --text-3: var(--fg3);
-  --accent: var(--mcp);
-  --accent-soft: rgb(var(--mcp-rgb) / 0.14);
-  --green: var(--provider);
-  --green-soft: rgb(var(--provider-rgb) / 0.12);
-  --amber: var(--warn);
-  --amber-soft: rgb(var(--warn-rgb) / 0.12);
-  --red: var(--bad);
-  --red-soft: rgb(var(--bad-rgb) / 0.1);
-  --term-bg: var(--code);
 }
 
 [data-kind='skill'] {

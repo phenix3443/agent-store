@@ -168,6 +168,9 @@ components:
 | 分页（设置页的六个分页） | `@radix-ui/react-tabs` | `src/components/ui/tabs.tsx` |
 | 菜单、语言选择 | `@radix-ui/react-dropdown-menu` | `src/components/ui/menu.tsx` |
 | 悬停提示 | `@radix-ui/react-tooltip` | `src/components/ui/tooltip.tsx` |
+| 开关（每个 agent 一个） | `@radix-ui/react-switch`，打开时轨道用类别色 | `src/components/ui/switch.tsx` |
+| 筛选分段 | 一组 `aria-pressed` 按钮 | `src/components/ui/segmented.tsx` |
+| 下拉选择 | 原生 `<select>`，外框同输入框 | `src/components/ui/input.tsx` 的 `Select` |
 | 命令面板 | `cmdk`，放在 Radix 对话框里（带隐藏标题） | `src/components/shell/CommandPalette.tsx` |
 | 提示条 | `sonner`，底部居中，样式改成本文的浮层 | `src/components/ui/toast.tsx` |
 | 按钮、输入框、徽标、按键、类别标签 | 自写的薄封装，只管样式变体 | `src/components/ui/` |
@@ -199,12 +202,18 @@ components:
 - 不加亮色主题的分支。
 - 不从网络加载字体或图标。
 
+## 页面结构
+
+发现、技能、MCP、供应商四页都是「左边列表、右边详情栏」：详情栏宽 430px，窗口不超过 1040px 时盖在列表上（不透明的 `--bg-3`），Esc 关闭。列表行整行是一个按钮，行尾的开关和按钮浮在它上面。代码在 `src/components/discover/` 和 `src/components/library/`。
+
+所有安装都走同一个对话框 `src/components/install/InstallDialog.tsx`：应用内的「安装」按钮和网页发来的 `agent-store://install` 链接。步骤是：选 agent → 填必填项（只有 MCP 有必填项时）→ 进度 → 完成，另有冲突、失败、已安装和各种无法识别的链接。网页链接打开时焦点在「取消」，回车不会安装。
+
 ## 用量、设置与首次启动
 
 - 用量页（#165）只读本机 `usage.db` 的按天汇总：一次取近 30 天，「今日」「近 7 天」「近 30 天」在界面里按 UTC 日期筛。汇总数是费用、Tokens、请求数、成功率、模型数；明细按供应商、模型、agent 合并。预算与导出按 `advancedUsageAnalytics` 开放，供应商健康按 `smartRouting` 开放，Free 显示 Pro 说明和升级按钮。本地中转卡片只读：状态、监听地址、今日请求和成功率；启动、停止只能在命令行里做（`aas relay start|stop`），界面不放开关。
 - 设置页分通用、Agent、数据、账号、命令行、关于六页。「检查配置一致性」调用 `doctor`（与 `aas doctor` 相同，只读）。「资源更新」检查已安装的资源，不是客户端自身；客户端新版本只给官网下载页。没有跨设备同步，不出现这一项。
 - 首次启动介绍：应用数据目录里没有 `agent-store-cli/welcome.json` 时弹出一次，点「开始使用」或按 Esc 后写入，之后不再出现；设置 › 通用里可以重新打开。客户端不检测本机装了哪些 agent，介绍里只列出支持的 agent 和它们的默认配置位置，不显示「已检测到 / 未检测到」。
 
-## 尚未迁移的页面
+## 旧变量名
 
-发现、技能、MCP、供应商目前仍是改版前的资源列表加详情页，由 #164 重做。它们用的旧变量名（`--accent`、`--text-2`、Tailwind 的 `store-*`）在 `globals.css` 里映射到新值，所以颜色已跟着换；这些页面重做完后删掉旧名字。新代码不要再用旧名字。
+改版前的变量名（`--accent`、`--text-2`、Tailwind 的 `store-*` 等）已随所有页面重做删除，不要再加回来。

@@ -8,28 +8,26 @@ import { Sidebar } from './components/shell/Sidebar'
 import { StatusBar } from './components/shell/StatusBar'
 import { CommandPalette } from './components/shell/CommandPalette'
 import { ShellDialogs } from './components/shell/ShellDialogs'
-import { ResourceList } from './components/ResourceList'
-import { DetailPanel } from './components/DetailPanel'
+import { DiscoverPage } from './components/discover/DiscoverPage'
+import { LibraryPage } from './components/library/LibraryPage'
+import { ProvidersPage } from './components/library/ProvidersPage'
 import { UsagePage } from './components/usage/UsagePage'
 import { SettingsView } from './components/SettingsView'
-import { InstallLinkDialog } from './components/InstallLinkDialog'
+import { InstallDialog } from './components/install/InstallDialog'
 import { useFirstRunWelcome } from './components/WelcomeDialog'
 import { Toaster } from './components/ui/toast'
 import { TooltipProvider } from './components/ui/tooltip'
 import { useShortcuts } from './lib/useShortcuts'
 
 function MainArea() {
-  const { navView } = useAppState()
+  const { navView, categoryFilter } = useAppState()
 
   if (navView === 'overview') return <UsagePage />
   if (navView === 'settings') return <SettingsView />
-
-  return (
-    <>
-      <ResourceList />
-      <DetailPanel />
-    </>
-  )
+  if (categoryFilter === 'skill') return <LibraryPage key="skill" kind="skill" />
+  if (categoryFilter === 'mcp') return <LibraryPage key="mcp" kind="mcp" />
+  if (categoryFilter === 'provider') return <ProvidersPage />
+  return <DiscoverPage />
 }
 
 function AppShell() {
@@ -47,7 +45,7 @@ function AppShell() {
       <StatusBar />
       <CommandPalette />
       <ShellDialogs />
-      <InstallLinkDialog />
+      <InstallDialog />
       <Toaster />
     </div>
   )

@@ -36,19 +36,29 @@ test('opens on Discover with the sidebar sections, relay status and account', as
     expect(nav().getByRole('button', { name: new RegExp(name) })).toBeInTheDocument()
   }
   expect(nav().getByRole('button', { name: /发现/ })).toHaveAttribute('aria-current', 'page')
-  expect(await screen.findByPlaceholderText('搜索，或用 @ 过滤…')).toBeInTheDocument()
+  expect(await screen.findByPlaceholderText('搜索名称、作者或说明')).toBeInTheDocument()
   expect(await nav().findByText('中转运行中')).toBeInTheDocument()
   expect(nav().getByRole('button', { name: /账户菜单/ })).toBeInTheDocument()
   expect(await screen.findByText('目录在线')).toBeInTheDocument()
 })
 
-test('the skills section counts installed skills and filters the list by category', async () => {
+test('the skills section counts installed skills and opens the skill library', async () => {
   mockAllRpcs()
   render(<App />)
   const skills = nav().getByRole('button', { name: /技能/ })
   expect(await within(skills).findByText('1')).toBeInTheDocument()
   fireEvent.click(skills)
   expect(skills).toHaveAttribute('aria-current', 'page')
+  expect(await screen.findByText('技能存放在本机技能库，按 agent 单独启用、停用。')).toBeInTheDocument()
+  expect(await screen.findByText('~/.agent-store/skills/find-skills')).toBeInTheDocument()
+})
+
+test('the providers section shows the local relay and the empty provider list', async () => {
+  mockAllRpcs()
+  render(<App />)
+  fireEvent.click(nav().getByRole('button', { name: /供应商/ }))
+  expect(await screen.findByRole('heading', { name: /本地中转/ })).toBeInTheDocument()
+  expect(await screen.findByText('还没有配置供应商')).toBeInTheDocument()
 })
 
 test('用量 shows the usage dashboard and 设置 the settings page', async () => {
