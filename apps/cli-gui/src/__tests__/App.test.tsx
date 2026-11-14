@@ -111,24 +111,21 @@ test('a palette search lands in the Discover search field; installed items are l
   expect(nav().getByRole('button', { name: /发现/ })).toHaveAttribute('aria-current', 'page')
 })
 
-test('the sidebar lists the projects, opens one and offers 添加项目', async () => {
+// happy-dom's window is 1024px wide, inside the narrow breakpoint: the 项目 group is one icon.
+test('in a narrow window the 项目 icon opens the project list, and a project from there', async () => {
   mockAllRpcs()
   render(<App />)
-  const demo = await nav().findByRole('button', { name: 'demo' })
-  expect(demo).toHaveAttribute('title', '/w/demo')
-  expect(nav().getByRole('button', { name: '添加项目' })).toBeInTheDocument()
-  fireEvent.click(demo)
-  expect(demo).toHaveAttribute('aria-current', 'page')
-  expect(await screen.findByRole('heading', { name: 'demo' })).toBeInTheDocument()
-  expect(await screen.findByText('这个项目还没有项目级的技能或 MCP')).toBeInTheDocument()
   fireEvent.click(nav().getByRole('button', { name: '项目' }))
   expect(await screen.findByRole('heading', { name: '项目' })).toBeInTheDocument()
+  expect(nav().getByRole('button', { name: '项目' })).toHaveAttribute('aria-current', 'page')
+  fireEvent.click(await screen.findByRole('button', { name: /demo/ }))
+  expect(await screen.findByRole('heading', { name: 'demo' })).toBeInTheDocument()
+  expect(await screen.findByText('这个项目还没有项目级的技能或 MCP')).toBeInTheDocument()
 })
 
 test('the palette finds a project by name and has 添加项目', async () => {
   mockAllRpcs()
   render(<App />)
-  await nav().findByRole('button', { name: 'demo' })
   fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
   const dialog = await screen.findByRole('dialog', { name: '命令面板' })
   expect(within(dialog).getByText('添加项目')).toBeInTheDocument()
